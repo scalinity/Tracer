@@ -1,0 +1,621 @@
+<title>Tracer Solution Architecture</title>
+<style>
+:root {
+  --bg: #F5F7F6;
+  --surface: #FFFFFF;
+  --ink: #16201D;
+  --muted: #5A6763;
+  --rule: #D9E0DD;
+  --accent: #2E6B66;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #E2EDEB;
+  --plain: #ECF1EF;
+  --ok: #2F7A4F;
+  --warn: #A26A14;
+  --bad: #B0442F;
+  --track: #E6EBE9;
+  --shadow: 0 1px 2px rgba(22, 32, 29, .06), 0 8px 24px rgba(22, 32, 29, .06);
+  --serif: ui-serif, "New York", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0F1413; --surface: #171D1C; --ink: #E4EBE8; --muted: #97A5A0; --rule: #2A3431;
+    --accent: #82BDB5; --accent-ink: #0F1413; --accent-soft: #1C2B29; --plain: #151C1B;
+    --ok: #6DBF8B; --warn: #D9A650; --bad: #E28069; --track: #242D2B;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .3);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0F1413; --surface: #171D1C; --ink: #E4EBE8; --muted: #97A5A0; --rule: #2A3431;
+  --accent: #82BDB5; --accent-ink: #0F1413; --accent-soft: #1C2B29; --plain: #151C1B;
+  --ok: #6DBF8B; --warn: #D9A650; --bad: #E28069; --track: #242D2B;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .3);
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.55;
+  padding-inline: 16px;
+  padding-block: 0 48px;
+  -webkit-text-size-adjust: 100%;
+}
+.col { max-width: 680px; margin-inline: auto; }
+.wide { max-width: 1000px; margin-inline: auto; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; text-wrap: balance; margin: 0; }
+p { margin: 0; }
+a { color: var(--accent); }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.eyebrow {
+  font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+}
+
+/* Header */
+header.top { padding-block: 40px 28px; display: grid; gap: 14px; border-bottom: 1px solid var(--rule); }
+header.top h1 { font-size: clamp(40px, 11vw, 64px); line-height: 1; letter-spacing: -.01em; }
+.lede { font-size: 19px; color: var(--ink); max-width: 34em; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 16px; color: var(--muted); font-size: 15px; }
+.framing { font-size: 15px; color: var(--muted); }
+.jump {
+  justify-self: start; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding-inline: 18px;
+  border-radius: 999px; background: var(--accent); color: var(--accent-ink); text-decoration: none; font-weight: 600; font-size: 16px;
+}
+
+/* Sections */
+section.doc { padding-block: 36px; border-bottom: 1px solid var(--rule); display: grid; gap: 16px; }
+section.doc:last-of-type { border-bottom: 0; }
+.sec-head { display: flex; align-items: baseline; gap: 12px; }
+.sec-num { font-family: var(--mono); font-size: 14px; color: var(--accent); min-width: 1.5em; }
+.sec-head h2 { font-size: 26px; line-height: 1.2; }
+.tech { display: grid; gap: 12px; }
+.plain {
+  background: var(--plain); border-radius: 10px; padding: 14px 16px; display: grid; gap: 6px; font-size: 16px;
+}
+.plain .eyebrow { color: var(--accent); }
+dl.io { display: grid; gap: 14px; margin: 0; }
+dl.io dt { font-weight: 600; }
+dl.io dd { margin: 4px 0 0; color: var(--ink); }
+dl.io ul { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 4px; }
+
+/* Segmented toggle */
+.seg {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 12px;
+  background: var(--track); max-width: 420px;
+}
+.seg button {
+  min-height: 44px; border: 0; border-radius: 9px; background: transparent; cursor: pointer; font-weight: 600; font-size: 15px; color: var(--muted);
+}
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+.flow { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.flow li { display: grid; grid-template-columns: 28px 1fr; gap: 12px; padding-block: 8px; position: relative; }
+.flow li::before {
+  content: counter(step); counter-increment: step; font-family: var(--mono); font-size: 13px;
+  width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  border: 1.5px solid var(--rule); background: var(--surface); color: var(--muted); z-index: 1;
+}
+.flow li:not(:last-child)::after {
+  content: ""; position: absolute; left: 13.5px; top: 36px; bottom: -8px; width: 1.5px; background: var(--rule);
+}
+.flow { counter-reset: step; }
+.flow li.end::before { border-color: var(--bad); color: var(--bad); }
+.flow.after li.end::before { border-color: var(--ok); color: var(--ok); }
+
+/* Run walkthrough */
+.run {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 16px; box-shadow: var(--shadow);
+  padding: 18px 16px; display: grid; gap: 18px; margin-top: 8px;
+}
+.run-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.run-head h3 { font-size: 22px; }
+.tag {
+  display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 12px; letter-spacing: .04em;
+  padding: 4px 10px; border-radius: 999px; border: 1px dashed var(--muted); color: var(--muted); white-space: nowrap;
+}
+.label {
+  display: flex; flex-wrap: wrap; gap: 6px 16px; font-family: var(--mono); font-size: 13px; color: var(--muted);
+  border: 1px solid var(--rule); border-radius: 8px; padding: 8px 12px;
+}
+.label b { color: var(--ink); font-weight: 600; }
+.rail { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.rail button {
+  min-height: 44px; border: 0; background: transparent; cursor: pointer; padding: 0; display: grid; gap: 6px; align-content: center;
+  font-family: var(--mono); font-size: 12px; color: var(--muted);
+}
+.rail button span.bar { height: 4px; border-radius: 2px; background: var(--track); }
+.rail button.done span.bar { background: var(--accent); opacity: .45; }
+.rail button[aria-current="step"] span.bar { background: var(--accent); opacity: 1; }
+.rail button[aria-current="step"] { color: var(--ink); font-weight: 600; }
+.narr { font-size: 17px; min-height: 3.1em; }
+.narr b { font-family: var(--mono); font-weight: 600; }
+.panes { display: grid; gap: 18px; }
+.pane { display: grid; gap: 10px; align-content: start; }
+.pane h4 { margin: 0; font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+.timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.timeline li { display: grid; grid-template-columns: 52px 1fr; gap: 10px; padding: 6px 8px; border-radius: 6px; font-size: 15px; }
+.timeline li .t { font-family: var(--mono); color: var(--muted); }
+.timeline li.now { background: var(--accent-soft); }
+.timeline li.now .t { color: var(--ink); }
+.timeline li.gap .what { color: var(--bad); }
+.bars { display: grid; gap: 8px; }
+.brow { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 4px 10px; align-items: center; font-size: 15px; }
+.brow .name { overflow-wrap: anywhere; }
+.brow .pct { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; font-size: 14px; }
+.brow .track { grid-column: 1 / -1; height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
+.brow .fill { display: block; height: 100%; border-radius: 4px; background: var(--accent); transition: width .35s ease; }
+.fill.ok { background: var(--ok); } .fill.warn { background: var(--warn); } .fill.bad { background: var(--bad); }
+.brow.top .name { font-weight: 600; }
+.note { font-size: 14px; color: var(--muted); }
+.clocks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.clock { border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px; display: grid; gap: 2px; }
+.clock .big { font-family: var(--mono); font-size: 22px; font-variant-numeric: tabular-nums; }
+.clock .big.late { color: var(--bad); }
+.clock .sub { font-size: 13px; color: var(--muted); }
+.alert-state { font-size: 15px; display: flex; gap: 8px; align-items: center; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--track); flex: none; }
+.dot.on { background: var(--bad); }
+.ctrls { display: flex; gap: 10px; justify-content: space-between; }
+.btn {
+  min-height: 44px; min-width: 96px; padding-inline: 18px; border-radius: 10px; border: 1px solid var(--rule);
+  background: var(--surface); cursor: pointer; font-weight: 600; font-size: 16px;
+}
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn:disabled { opacity: .4; cursor: default; }
+
+/* Alert card */
+.alert {
+  border-radius: 14px; border: 1px solid var(--rule); background: var(--bg); padding: 14px; display: grid; gap: 10px;
+  box-shadow: var(--shadow);
+}
+.alert-top { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--muted); }
+.alert-top .src { display: flex; gap: 8px; align-items: center; font-weight: 600; color: var(--ink); }
+.prio { font-family: var(--mono); font-size: 12px; color: var(--bad); border: 1px solid var(--bad); border-radius: 999px; padding: 1px 8px; }
+.alert h5 { margin: 0; font-size: 17px; font-family: var(--sans); }
+.alert .brief { font-size: 16px; }
+.alert .spec { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+.outcome { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+.outcome .btn { min-width: 0; font-size: 15px; }
+.logged { font-size: 15px; color: var(--ok); font-weight: 600; }
+
+/* Module map */
+.map {
+  display: grid; gap: 8px; justify-items: stretch; background: var(--surface); border: 1px solid var(--rule);
+  border-radius: 16px; padding: 16px; box-shadow: var(--shadow);
+}
+.node {
+  border-radius: 10px; padding: 10px 12px; min-height: 52px; display: grid; align-content: center; gap: 2px; text-align: left;
+  font-size: 15px; line-height: 1.3;
+}
+.node .n { font-weight: 600; font-size: 16px; }
+.node .k { font-size: 13px; color: var(--muted); }
+button.node { cursor: pointer; border: 1.5px solid var(--rule); background: var(--accent-soft); }
+button.node.rule { background: var(--surface); border-style: dashed; }
+button.node[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.node.io { border: 1.5px solid var(--ink); border-radius: 999px; text-align: center; justify-items: center; background: var(--surface); }
+.trio { display: grid; gap: 8px; }
+.arrow { display: grid; place-items: center; color: var(--muted); height: 20px; }
+.arrow svg { width: 16px; height: 16px; transform: rotate(90deg); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); justify-content: center; padding-top: 4px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 18px; height: 12px; border-radius: 3px; border: 1.5px solid var(--rule); background: var(--accent-soft); }
+.sw.rule { background: var(--surface); border-style: dashed; }
+.detail {
+  border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); padding: 16px; display: grid; gap: 12px;
+}
+.detail h3 { font-size: 20px; }
+.detail dl { margin: 0; display: grid; gap: 10px; }
+.detail dt { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.detail dd { margin: 2px 0 0; }
+
+footer { padding-block: 28px 0; color: var(--muted); font-size: 14px; display: grid; gap: 6px; }
+
+@media (min-width: 760px) {
+  body { font-size: 18px; }
+  .run { padding: 24px; }
+  .panes { grid-template-columns: 1fr 1fr; gap: 24px 32px; }
+  .panes .pane.span { grid-column: 1 / -1; }
+  .map { grid-template-columns: 1.1fr 20px 1.4fr 20px 1fr 20px 1.1fr 20px 1fr; align-items: center; padding: 22px; }
+  .arrow { height: auto; }
+  .arrow svg { transform: none; }
+  .legend { grid-column: 1 / -1; }
+  .detail { grid-template-columns: 1fr; }
+  .detail dl { grid-template-columns: repeat(3, 1fr); gap: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
+html { scroll-behavior: smooth; }
+</style>
+
+<div class="col">
+  <header class="top">
+    <span class="eyebrow">Milestone 2 · AI Solution Architecture</span>
+    <h1>Tracer</h1>
+    <p class="lede">Tracer finds specimens that are lost or stalled between collection and plating, and points the right person to them while there is still time to recover them.</p>
+    <div class="meta"><span>Karissa and Daniel, CAI 5724.</span></div>
+    <p class="framing">This page describes Tracer as if it were already running in a hospital microbiology lab.</p>
+    <a class="jump" href="#run">Walk through one run
+      <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v11M3 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </header>
+
+  <section class="doc" id="update">
+    <div class="sec-head"><span class="sec-num">1</span><h2>Project update</h2></div>
+    <div class="tech">
+      <p>Since Milestone 1, Karissa’s experience at the bench shifted our focus from specimens that degrade during ordinary delay to specimens that are lost or stalled, because stability windows run from 24 hours to 7 days while transport takes minutes to hours.</p>
+      <p>The stability clock runs from collection to plating. The unobserved interval also includes the time a specimen waits on the laboratory counter before it is received.</p>
+    </div>
+    <div class="plain">
+      <span class="eyebrow">In plain terms</span>
+      <p>The problem we are solving changed. Specimens rarely run out of time on an ordinary trip, so the real risk is one that disappears or gets stuck along the way. Tracer is now built around finding those.</p>
+    </div>
+  </section>
+
+  <section class="doc" id="objective">
+    <div class="sec-head"><span class="sec-num">2</span><h2>Objective</h2></div>
+    <div class="tech">
+      <p>Tracer detects specimens that are lost or stalled between collection and plating early, estimates where each one most likely is, and directs the right person to it before recollection becomes necessary.</p>
+      <p>Today the interval between collection and receipt is unobserved, so a specimen that never arrives produces no signal until someone notices it is missing.</p>
+    </div>
+    <div class="plain">
+      <span class="eyebrow">In plain terms</span>
+      <p>A missing specimen makes no noise. Tracer listens to that silence and speaks up when a specimen should have turned up by now, along with where to look.</p>
+    </div>
+  </section>
+
+  <section class="doc" id="form">
+    <div class="sec-head"><span class="sec-num">3</span><h2>Form factor</h2></div>
+    <div class="tech">
+      <p>Tracer is a background service that continuously reads specimen events from the laboratory information system and carrier events from the pneumatic tube system.</p>
+      <p>It shows a live board at the specimen receiving area that ranks every outstanding specimen by urgency, sends alerts to the receiving tech’s workstation, and keeps a timeline for each specimen with every scan, the time spent on each leg, and where the specimen most likely is now.</p>
+    </div>
+    <div class="plain">
+      <span class="eyebrow">In plain terms</span>
+      <p>A background service is software that runs all the time without anyone opening it. There is nothing to launch or log in to. Tracer shows up in three places: a screen at receiving, alerts at the workstation, and a history for each specimen.</p>
+    </div>
+  </section>
+
+  <section class="doc" id="users">
+    <div class="sec-head"><span class="sec-num">4</span><h2>User interaction</h2></div>
+    <div class="tech">
+      <p>The primary users are the receiving and plating assistants and techs, who are usually the first to notice a missing specimen today. Supervisors are the escalation tier, and collecting units are contacted when a specimen was never sent.</p>
+      <p>Tracer runs on every specimen and needs no input to start. When a specimen needs attention, it sends an alert with a short search brief to the receiving tech and posts it to the live board. The tech records where the specimen was found or that it was not, which closes the alert.</p>
+    </div>
+    <div class="plain">
+      <span class="eyebrow">In plain terms</span>
+      <p>Nobody has to remember to use it. When something looks wrong, it taps the right person on the shoulder. Their one-tap answer closes the loop and becomes a record of what happened.</p>
+    </div>
+  </section>
+
+  <section class="doc" id="context">
+    <div class="sec-head"><span class="sec-num">5</span><h2>Context, before and after</h2></div>
+    <div class="seg" role="group" aria-label="Show process">
+      <button type="button" id="ctx-before" aria-pressed="true">Today</button>
+      <button type="button" id="ctx-after" aria-pressed="false">With Tracer</button>
+    </div>
+    <div class="tech" id="ctx-before-panel">
+      <p>A missing specimen produces no signal, so it is noticed late and indirectly. The search that follows is manual and escalates in steps.</p>
+      <ol class="flow">
+        <li><span>No signal when a specimen stops moving.</span></li>
+        <li><span>Someone notices late, and indirectly.</span></li>
+        <li><span>Staff search for it by hand.</span></li>
+        <li><span>After several failed attempts, a supervisor is brought in.</span></li>
+        <li class="end"><span>If the specimen is declared lost, a hospital-wide lost-specimen alert goes out. Every department searches its area and empties stored pneumatic tubes.</span></li>
+      </ol>
+    </div>
+    <div class="tech" id="ctx-after-panel" hidden>
+      <p>Tracer runs on every specimen all the time, so there is no decision to make about using it. The search starts early and starts in the right place.</p>
+      <ol class="flow after">
+        <li><span>An abnormally long dwell on a specific leg is flagged within minutes to hours.</span></li>
+        <li><span>The alert names the most likely location and the time left before recollection would be required.</span></li>
+        <li><span>The search is targeted at that location first.</span></li>
+        <li><span>The tech records the outcome, which closes the alert.</span></li>
+        <li class="end"><span>Most losses are resolved before a hospital-wide alert would be needed, and fewer patients need to be recollected.</span></li>
+      </ol>
+    </div>
+    <div class="plain">
+      <span class="eyebrow">In plain terms</span>
+      <p>Today the search starts late and wide. With Tracer it starts early and narrow, at the one place the specimen most likely is.</p>
+    </div>
+  </section>
+
+  <section class="doc" id="io">
+    <div class="sec-head"><span class="sec-num">6</span><h2>System inputs and outputs</h2></div>
+    <div class="tech">
+      <p>A single run is one assessment of one specimen at one moment. It is triggered by a new scan or pneumatic tube event, or by a periodic check while the specimen is between scans.</p>
+      <dl class="io">
+        <div>
+          <dt>Inputs</dt>
+          <dd><ul>
+            <li>Specimen type and tests ordered, since an anaerobic culture shortens the window</li>
+            <li>Collection time and every later scan timestamp, from the laboratory information system</li>
+            <li>Carrier dispatch and arrival events, from the pneumatic tube system</li>
+            <li>The current time and the current receiving volume in the lab</li>
+          </ul></dd>
+        </div>
+        <div>
+          <dt>Outputs</dt>
+          <dd><ul>
+            <li>The specimen’s status</li>
+            <li>Its most likely location, with ranked alternatives</li>
+            <li>The expected time of its next scan</li>
+            <li>Time remaining before recollection would be required</li>
+            <li>When warranted, a prioritized alert with a short search brief, sent to the receiving tech’s workstation and the live board</li>
+          </ul></dd>
+        </div>
+      </dl>
+      <p>Everything except the alert updates the live board and the specimen’s timeline. The outcome the tech records is logged with the alert.</p>
+    </div>
+    <div class="plain">
+      <span class="eyebrow">In plain terms</span>
+      <p>Each run is Tracer taking one look at one specimen and asking three questions: is it on track, where is it, and how long do we have. It asks again on every new scan, and on a timer while nothing happens, because silence is the signal.</p>
+    </div>
+  </section>
+</div>
+
+<div class="wide" id="run">
+  <div class="run" aria-labelledby="run-title">
+    <div class="run-head">
+      <div>
+        <span class="eyebrow">One specimen, one run at a time</span>
+        <h3 id="run-title">A culture swab that stops moving</h3>
+      </div>
+      <span class="tag">Illustrative numbers</span>
+    </div>
+    <div class="label">
+      <span>ID <b>SP-0417</b></span>
+      <span>Culture swab</span>
+      <span>Window <b>24 h</b> from collection</span>
+      <span>Collected <b>08:10</b></span>
+    </div>
+
+    <div class="rail" role="group" aria-label="Steps" id="rail"></div>
+    <p class="narr" id="narr" aria-live="polite"></p>
+
+    <div id="alert-slot"></div>
+
+    <div class="panes">
+      <div class="pane">
+        <h4>Event timeline</h4>
+        <ul class="timeline" id="timeline"></ul>
+      </div>
+      <div class="pane">
+        <h4>Status</h4>
+        <div class="bars" id="status"></div>
+      </div>
+      <div class="pane">
+        <h4>Likely location</h4>
+        <div class="bars" id="location"></div>
+      </div>
+      <div class="pane">
+        <h4>Clock</h4>
+        <div class="clocks">
+          <div class="clock"><span class="sub">Receipt scan expected</span><span class="big" id="next"></span><span class="sub" id="next-range"></span></div>
+          <div class="clock"><span class="sub">Left before recollection</span><span class="big" id="left"></span><span class="sub">Window closes 08:10 tomorrow</span></div>
+        </div>
+        <p class="alert-state"><span class="dot" id="alert-dot"></span><span id="alert-text"></span></p>
+      </div>
+    </div>
+
+    <div class="ctrls">
+      <button type="button" class="btn" id="back">Back</button>
+      <button type="button" class="btn primary" id="next-btn">Next</button>
+    </div>
+  </div>
+</div>
+
+<div class="col">
+  <section class="doc" id="modules">
+    <div class="sec-head"><span class="sec-num">7</span><h2>AI modules</h2></div>
+    <div class="tech">
+      <p>Four AI modules work inside each run, and each performs one recognized AI task. A fifth step, triage, follows fixed rules and uses no AI. Tap any step to see what goes in and what comes out.</p>
+    </div>
+  </section>
+</div>
+
+<div class="wide">
+  <div class="map" role="group" aria-label="Module map">
+    <div class="node io"><span class="n">Specimen event history</span></div>
+    <div class="arrow" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="trio">
+      <button type="button" class="node" data-m="status" aria-pressed="true"><span class="n">Specimen status</span><span class="k">Tabular classification</span></button>
+      <button type="button" class="node" data-m="arrival" aria-pressed="false"><span class="n">Arrival forecast</span><span class="k">Tabular regression</span></button>
+      <button type="button" class="node" data-m="location" aria-pressed="false"><span class="n">Location estimate</span><span class="k">Multiclass tabular classification</span></button>
+    </div>
+    <div class="arrow" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <button type="button" class="node rule" data-m="triage" aria-pressed="false"><span class="n">Rule-based triage</span><span class="k">Non-AI</span></button>
+    <div class="arrow" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <button type="button" class="node" data-m="brief" aria-pressed="false"><span class="n">Search brief</span><span class="k">Text-to-text generation</span></button>
+    <div class="arrow" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="node io"><span class="n">Alert to receiving tech</span></div>
+    <div class="legend"><span><i class="sw"></i>AI module</span><span><i class="sw rule"></i>Non-AI step</span></div>
+  </div>
+</div>
+
+<div class="col">
+  <div class="detail" id="detail" aria-live="polite" style="margin-top:16px"></div>
+  <section class="doc">
+    <div class="plain">
+      <span class="eyebrow">In plain terms</span>
+      <p>The AI task names are standard labels for kinds of prediction. Classification sorts a row of facts into categories and says how likely each one is. Regression predicts a number, here a time. Text-to-text generation writes a short note from other information.</p>
+    </div>
+  </section>
+
+  <footer>
+    <p>Every number in the walkthrough is illustrative. It shows the kind of reading Tracer gives, not a measured result.</p>
+    <p>Milestone 2, AI Solution Architecture. Karissa and Daniel, CAI 5724.</p>
+  </footer>
+</div>
+
+<script>
+(function () {
+  // Before and after toggle
+  var bBtn = document.getElementById('ctx-before'), aBtn = document.getElementById('ctx-after');
+  var bP = document.getElementById('ctx-before-panel'), aP = document.getElementById('ctx-after-panel');
+  function ctx(after) {
+    bBtn.setAttribute('aria-pressed', String(!after)); aBtn.setAttribute('aria-pressed', String(after));
+    bP.hidden = after; aP.hidden = !after;
+  }
+  bBtn.addEventListener('click', function () { ctx(false); });
+  aBtn.addEventListener('click', function () { ctx(true); });
+
+  // One specimen, one run. All values are illustrative.
+  var EVENTS = [
+    { t: '08:10', what: 'Collected, bedside scan' },
+    { t: '08:31', what: 'Tube dispatch, unit station' },
+    { t: '08:35', what: 'Tube arrival, lab station' },
+    { t: '09:35', what: 'Periodic check, no receipt scan', gap: true },
+    { t: '11:05', what: 'Periodic check, no receipt scan', gap: true },
+    { t: '11:05', what: 'Alert sent to receiving tech', gap: true }
+  ];
+  var LOCS = ['On lab counter, unreceived', 'In tube', 'In tube storage', 'Misrouted to another station', 'Never sent from collecting unit'];
+  var STEPS = [
+    { narr: 'The swab is collected and scanned at the bedside. Run triggered by the collection scan.',
+      status: [97, 2, 1], loc: null, next: '08:55', range: 'Likely 08:45 to 09:10, outer bound 09:30', late: false, left: '24h 00m', alert: false },
+    { narr: 'The collecting unit sends it by pneumatic tube. Run triggered by the dispatch event.',
+      status: [96, 3, 1], loc: [3, 90, 1, 5, 1], next: '08:52', range: 'Likely 08:44 to 09:05, outer bound 09:25', late: false, left: '23h 39m', alert: false },
+    { narr: 'The carrier arrives at the lab station. Run triggered by the arrival event.',
+      status: [95, 4, 1], loc: [88, 3, 6, 2, 1], next: '08:50', range: 'Likely 08:42 to 09:02, outer bound 09:20', late: false, left: '23h 35m', alert: false },
+    { narr: 'An hour passes with no receipt scan. A periodic check runs because nothing has happened.',
+      status: [50, 40, 10], loc: [76, 3, 14, 6, 1], next: '08:50', range: 'Outer bound 09:20 passed 15 min ago', late: true, left: '22h 35m', alert: false },
+    { narr: 'Two and a half hours after arrival, still no receipt scan. Lost or stalled is now the most likely status.',
+      status: [8, 30, 62], loc: [64, 4, 22, 9, 1], next: '08:50', range: 'Overdue by 2h 15m', late: true, left: '21h 05m', alert: false },
+    { narr: 'Triage decides this warrants an alert. The search brief goes to the receiving tech’s workstation and the live board.',
+      status: [8, 30, 62], loc: [64, 4, 22, 9, 1], next: '08:50', range: 'Overdue by 2h 15m', late: true, left: '21h 05m', alert: true }
+  ];
+  var STAT = [['On track', 'ok'], ['Delayed', 'warn'], ['Lost or stalled', 'bad']];
+  var step = 0, outcome = null;
+
+  var rail = document.getElementById('rail');
+  STEPS.forEach(function (s, i) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('aria-label', 'Step ' + (i + 1) + ', ' + EVENTS[i].t);
+    b.innerHTML = '<span class="bar"></span><span>' + EVENTS[i].t + '</span>';
+    b.addEventListener('click', function () { go(i); });
+    rail.appendChild(b);
+  });
+
+  function bars(el, labels, vals, cls) {
+    var max = Math.max.apply(null, vals);
+    el.innerHTML = labels.map(function (l, i) {
+      var c = cls ? cls[i] : '';
+      return '<div class="brow' + (vals[i] === max ? ' top' : '') + '"><span class="name">' + l + '</span>' +
+        '<span class="pct">' + vals[i] + '%</span><span class="track"><span class="fill ' + c + '" style="width:' + vals[i] + '%"></span></span></div>';
+    }).join('');
+  }
+
+  function alertCard() {
+    var html = '<div class="alert" role="status">' +
+      '<div class="alert-top"><span class="src">Tracer <span class="prio">High priority</span></span><span class="mono">11:05</span></div>' +
+      '<h5>SP-0417 may be stalled at receiving</h5>' +
+      '<p class="brief">Check the receiving counter first. The carrier reached the lab station at 08:35 and no receipt scan has followed in 2h 30m, far longer than usual. If it is not there, check stored tube carriers next. About 21 hours remain before recollection.</p>' +
+      '<p class="spec">Culture swab · collected 08:10 · window closes 08:10 tomorrow</p>';
+    if (outcome) {
+      html += '<p class="logged">' + outcome + '</p>';
+    } else {
+      html += '<div class="outcome">' +
+        '<button type="button" class="btn" data-o="Found on the receiving counter. Outcome logged, alert closed.">Found at counter</button>' +
+        '<button type="button" class="btn" data-o="Found elsewhere. Location logged, alert closed.">Found elsewhere</button>' +
+        '<button type="button" class="btn" data-o="Not found. Logged, and escalated to a supervisor.">Not found</button></div>';
+    }
+    return html + '</div>';
+  }
+
+  var slot = document.getElementById('alert-slot');
+  slot.addEventListener('click', function (e) {
+    var o = e.target.closest('[data-o]');
+    if (!o) return;
+    outcome = o.getAttribute('data-o');
+    slot.innerHTML = alertCard();
+  });
+
+  function go(i) {
+    step = i;
+    var s = STEPS[i];
+    Array.prototype.forEach.call(rail.children, function (b, k) {
+      b.classList.toggle('done', k < i);
+      if (k === i) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
+    });
+    document.getElementById('narr').innerHTML = '<b>' + EVENTS[i].t + '</b> ' + s.narr;
+    // Only what has happened so far: the system does not know the future.
+    document.getElementById('timeline').innerHTML = EVENTS.slice(0, i + 1).map(function (e, k) {
+      var c = k === i ? 'now' : '';
+      if (e.gap) c += ' gap';
+      return '<li class="' + c + '"><span class="t">' + e.t + '</span><span class="what">' + e.what + '</span></li>';
+    }).join('');
+    bars(document.getElementById('status'), STAT.map(function (x) { return x[0]; }), s.status, STAT.map(function (x) { return x[1]; }));
+    var locEl = document.getElementById('location');
+    if (s.loc) {
+      var order = LOCS.map(function (l, k) { return k; }).sort(function (a, b) { return s.loc[b] - s.loc[a]; });
+      bars(locEl, order.map(function (k) { return LOCS[k]; }), order.map(function (k) { return s.loc[k]; }));
+    } else {
+      locEl.innerHTML = '<p class="note">Not needed yet. The specimen was just scanned, so its location is known.</p>';
+    }
+    var nx = document.getElementById('next');
+    nx.textContent = s.next; nx.classList.toggle('late', s.late);
+    document.getElementById('next-range').textContent = s.range;
+    document.getElementById('left').textContent = s.left;
+    document.getElementById('alert-dot').classList.toggle('on', s.alert);
+    document.getElementById('alert-text').textContent = s.alert ? 'Alert sent' : 'No alert';
+    slot.innerHTML = s.alert ? alertCard() : '';
+    document.getElementById('back').disabled = i === 0;
+    document.getElementById('next-btn').textContent = i === STEPS.length - 1 ? 'Start over' : 'Next';
+  }
+  document.getElementById('back').addEventListener('click', function () { if (step > 0) go(step - 1); });
+  document.getElementById('next-btn').addEventListener('click', function () {
+    if (step === STEPS.length - 1) { outcome = null; go(0); } else go(step + 1);
+  });
+  go(0);
+
+  // Module map
+  var MODS = {
+    status: { name: 'Specimen status', task: 'Tabular classification',
+      desc: 'Judges whether a specimen between scans is on track, delayed, or likely lost or stalled.',
+      input: 'Specimen type, ordered tests, event timestamps so far, time elapsed on the current leg, time of day, current lab volume.',
+      output: 'Probability of on track, delayed, and lost or stalled.',
+      plain: 'Sorts the specimen into one of three situations and says how confident it is in each.' },
+    arrival: { name: 'Arrival forecast', task: 'Tabular regression',
+      desc: 'Predicts when the next scan should occur.',
+      input: 'The same inputs as specimen status.',
+      output: 'Expected time of the next scan, with a likely and an outer bound.',
+      plain: 'Gives the time the next scan should happen and a window around it, so “late” has a clear meaning.' },
+    location: { name: 'Location estimate', task: 'Multiclass tabular classification',
+      desc: 'Infers where an unscanned specimen most likely is.',
+      input: 'Event timestamps, tube-system carrier events, time elapsed, current lab volume.',
+      output: 'Probability over locations: in tube, on lab counter unreceived, in tube storage, misrouted to another station, never sent from collecting unit.',
+      plain: 'Spreads its confidence across the places a missing specimen tends to end up, so the search starts at the likeliest one.' },
+    triage: { name: 'Rule-based triage', task: 'None. This step is fixed rules, not AI.',
+      desc: 'Decides from the three readings whether an alert is warranted and how to prioritize it.',
+      input: 'Outputs of specimen status, arrival forecast, and location estimate.',
+      output: 'Whether to alert, and at what priority.',
+      plain: 'A plain rulebook decides whether the readings are worrying enough to interrupt someone.' },
+    brief: { name: 'Search brief', task: 'Text-to-text generation',
+      desc: 'Tells the tech where to look first.',
+      input: 'Outputs of the three modules above, specimen details, time remaining before recollection.',
+      output: 'A short plain-language note naming where to look first, why, and how much time remains.',
+      plain: 'Turns the numbers into a few sentences a person can act on in seconds.' }
+  };
+  var detail = document.getElementById('detail');
+  var nodes = document.querySelectorAll('button.node');
+  function show(key) {
+    var m = MODS[key];
+    nodes.forEach(function (n) { n.setAttribute('aria-pressed', String(n.getAttribute('data-m') === key)); });
+    detail.innerHTML = '<div><span class="eyebrow">' + m.task + '</span><h3>' + m.name + '</h3></div>' +
+      '<p>' + m.desc + '</p>' +
+      '<dl><div><dt>Input</dt><dd>' + m.input + '</dd></div><div><dt>Output</dt><dd>' + m.output + '</dd></div>' +
+      '<div><dt>In plain terms</dt><dd>' + m.plain + '</dd></div></dl>';
+  }
+  nodes.forEach(function (n) { n.addEventListener('click', function () { show(n.getAttribute('data-m')); }); });
+  show('status');
+})();
+</script>

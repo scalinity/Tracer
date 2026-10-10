@@ -1,0 +1,25 @@
+# Simulator output and MIMIC extracts. Regenerated from a seed or downloaded; never committed.
+data/*
+!data/.gitkeep
+
+# Course materials are the instructor's work; notes hold private correspondence. Both stay local.
+docs/course/
+notes/
+
+# Agent instructions and runtime state stay local.
+CLAUDE.md
+.claude/
+.codex/
+
+# Python
+__pycache__/
+.venv/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Office lock files
+~$*
+
+# macOS
+.DS_Store

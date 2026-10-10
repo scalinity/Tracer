@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tracer — system map</title>
+<style>
+:root{
+  --canvas:#0C1417;
+  --panel:#111C20;
+  --raised:#16242A;
+  --hair:#22343A;
+  --hair-soft:#1A2A2F;
+  --ink:#E4EDEF;
+  --ink-dim:#A8BEC4;
+  --ink-mute:#7A939A;
+  --observed:#63C4D3;
+  --observed-deep:#2E7C8A;
+  --infer:#9D8DF1;
+  --infer-deep:#5B4E9E;
+  --warn:#E3A33C;
+  --alarm:#D05A4A;
+  --ok:#69B08A;
+
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+
+  --gut:clamp(20px,4vw,48px);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--canvas);color:var(--ink);
+  font:15px/1.55 var(--sans);
+  -webkit-font-smoothing:antialiased;
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+h1,h2,h3{margin:0;font-weight:400}
+p{margin:0}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--observed);outline-offset:3px;border-radius:2px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 var(--gut)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+
+/* ───────── masthead ───────── */
+.mast{border-bottom:1px solid var(--hair);padding:34px 0 22px;margin-bottom:38px}
+.mast-row{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.wordmark{font-family:var(--serif);font-size:42px;line-height:1;letter-spacing:.005em}
+.wordmark em{font-style:italic;color:var(--observed)}
+.tagline{font-family:var(--serif);font-size:17px;line-height:1.55;color:var(--ink-dim);max-width:52ch;margin-top:12px}
+.contents{display:flex;gap:28px;flex-wrap:wrap;margin-top:20px;font-size:13px}
+.contents a{
+  color:var(--ink-mute);text-decoration:none;padding-bottom:3px;
+  border-bottom:1px solid var(--hair-soft);transition:color .18s,border-color .18s;
+}
+.contents a:hover{color:var(--ink);border-bottom-color:var(--observed)}
+.stamp{
+  font-size:12px;line-height:1.5;color:var(--ink-mute);
+  border-left:2px solid rgba(227,163,60,.55);padding:2px 0 2px 12px;max-width:262px;
+}
+.stamp b{font-weight:400;color:var(--warn)}
+
+/* ───────── section furniture ───────── */
+section{margin-bottom:60px;scroll-margin-top:24px}
+.head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+.head h2{font-family:var(--serif);font-size:25px}
+.head .note{font-size:13px;color:var(--ink-mute)}
+.lede{font-size:15px;color:var(--ink-dim);max-width:74ch;margin-bottom:26px}
+
+/* ───────── plain-language answers ───────── */
+/* A two-column question and answer, set in the serif. It is the only layout of its
+   kind on the page, so the change of voice is visible before a word is read. */
+.explain{
+  margin-top:46px;padding-top:26px;border-top:1px solid var(--hair);
+  display:grid;grid-template-columns:minmax(0,24ch) minmax(0,66ch);gap:10px 52px;
+}
+.explain h3{font-family:var(--serif);font-size:20px;line-height:1.35;color:var(--ink)}
+.explain p{font-family:var(--serif);font-size:16.5px;line-height:1.75;color:var(--ink-dim)}
+.explain p + p{margin-top:14px}
+@media (max-width:860px){.explain{grid-template-columns:1fr;gap:14px}}
+
+/* ───────── journey rail ───────── */
+.rail-scroll{overflow-x:auto;overflow-y:hidden;padding-bottom:6px;-webkit-overflow-scrolling:touch}
+.rail{
+  display:grid;min-width:880px;
+  grid-template-columns:.85fr .85fr 3fr .85fr .85fr .85fr .85fr .85fr;
+  align-items:start;
+}
+.stage{display:block;position:relative;padding:56px 6px 0;text-align:center;width:100%}
+.stage .line{position:absolute;left:0;right:0;top:26px;height:1px;background:var(--observed-deep)}
+.stage:first-child .line{background:linear-gradient(to right,transparent 50%,var(--observed-deep) 50%)}
+.stage:last-child .line{background:linear-gradient(to right,var(--observed-deep) 50%,transparent 50%)}
+.stage.pre-void .line{background:linear-gradient(to right,var(--observed-deep) 30%,rgba(46,124,138,0) 100%)}
+.stage.post-void .line{background:linear-gradient(to left,var(--observed-deep) 30%,rgba(46,124,138,0) 100%)}
+.stage .dot{
+  position:absolute;left:50%;top:26px;width:9px;height:9px;margin:-4px 0 0 -4.5px;
+  border-radius:50%;background:var(--canvas);border:1.5px solid var(--observed);
+  transition:background .2s,box-shadow .2s;
+}
+.stage[aria-pressed="true"] .dot,.stage:hover .dot{background:var(--observed);box-shadow:0 0 0 4px rgba(99,196,211,.14)}
+.stage .idx{position:absolute;left:50%;top:0;transform:translateX(-50%);font-family:var(--mono);font-size:10.5px;color:var(--ink-mute)}
+.stage .name{display:inline-block;font-size:14px;color:var(--ink);border-bottom:1px solid transparent;padding-bottom:1px}
+.stage:hover .name,.stage[aria-pressed="true"] .name{border-bottom-color:var(--observed-deep)}
+.stage .sub{display:block;font-size:11.5px;color:var(--ink-mute);margin-top:3px;font-family:var(--mono)}
+.stage.done .dot{background:var(--observed)}
+
+/* the void */
+.void{position:relative;padding:56px 14px 0;text-align:center}
+.void .frame{
+  position:absolute;left:8px;right:8px;top:8px;bottom:0;
+  border-left:1px dashed #2C4148;border-right:1px dashed #2C4148;
+}
+.void .idx{position:absolute;left:50%;top:0;transform:translateX(-50%);font-family:var(--mono);font-size:10.5px;color:var(--ink-mute)}
+.void .title{font-family:var(--serif);font-style:italic;font-size:22px;color:var(--ink)}
+.void .say{font-size:13px;color:var(--ink-mute);margin-top:4px}
+.void .silence{font-size:12.5px;color:var(--warn);margin-top:7px;min-height:19px;font-family:var(--mono)}
+.smear{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 4px 0}
+.seg{text-align:center}
+.seg i{display:block;height:28px;border-radius:2px;background:var(--infer);opacity:.06;transition:opacity .18s linear}
+.seg span{display:block;font-size:10.5px;line-height:1.3;color:var(--ink-mute);margin-top:7px}
+.seg b{display:block;font-family:var(--mono);font-size:11.5px;font-weight:400;color:var(--infer);margin-top:2px}
+.void .lost{margin-top:13px;font-family:var(--mono);font-size:11.5px;color:var(--ink-mute)}
+.void .lost b{font-weight:400;color:var(--infer)}
+
+.legend{display:flex;gap:26px;flex-wrap:wrap;margin-top:30px;font-size:12.5px;color:var(--ink-mute)}
+.legend i{display:inline-block;width:22px;height:0;border-top:1.5px solid currentColor;vertical-align:middle;margin-right:8px}
+.legend .o i{color:var(--observed)}
+.legend .i i{color:var(--infer);border-top-style:dashed}
+.legend .w i{color:var(--warn)}
+
+/* ───────── worked example ───────── */
+.example{display:grid;grid-template-columns:1fr 268px;gap:26px;align-items:start}
+.plot-card{border:1px solid var(--hair);border-radius:3px;background:var(--panel);padding:18px 18px 12px}
+.controls{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.play{
+  display:inline-flex;align-items:center;gap:8px;border:1px solid var(--hair);
+  border-radius:2px;padding:7px 13px;font-size:13px;background:var(--raised);
+}
+.play:hover{border-color:var(--observed-deep)}
+.play .glyph{font-size:10px;color:var(--observed)}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;flex:1;height:22px;background:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-runnable-track{height:1px;background:var(--hair)}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:var(--ink);
+  margin-top:-5px;border:0;
+}
+.clock{font-family:var(--mono);font-size:13px;color:var(--ink);min-width:118px;text-align:right}
+.clock b{font-weight:400;color:var(--ink-mute);font-size:11.5px;display:block;margin-top:1px}
+svg.plot{display:block;width:100%;height:auto}
+.axis-note{font-size:11.5px;color:var(--ink-mute);margin-top:2px}
+
+/* readout column */
+.readout{border:1px solid var(--hair);border-radius:3px;background:var(--panel);overflow:hidden}
+.label-block{padding:14px 16px;border-bottom:1px solid var(--hair-soft);background:var(--raised)}
+.label-block .sid{font-family:var(--mono);font-size:12px;color:var(--observed);letter-spacing:.04em}
+.label-block .type{font-family:var(--serif);font-size:16px;margin-top:5px}
+.label-block .row{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-mute);margin-top:7px;font-family:var(--mono)}
+.stat{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:9px 16px;border-bottom:1px solid var(--hair-soft);font-size:12.5px}
+.stat dt{color:var(--ink-mute)}
+.stat dd{margin:0;font-family:var(--mono);font-size:13px;color:var(--ink);text-align:right}
+.stat dd.big{font-size:17px}
+.alert-card{padding:14px 16px;border-top:1px solid rgba(208,90,74,.35);background:rgba(208,90,74,.07)}
+.alert-card[hidden]{display:none}
+.alert-card .k{font-size:11px;color:var(--alarm);font-family:var(--mono);letter-spacing:.03em}
+.alert-card .t{font-family:var(--serif);font-size:16px;margin:5px 0 8px}
+.alert-card .d{font-size:12.5px;color:var(--ink-dim);line-height:1.5}
+.alert-card .d b{font-weight:400;color:var(--ink)}
+.resolved{padding:12px 16px;font-size:12.5px;color:var(--ok);border-top:1px solid rgba(105,176,138,.3);background:rgba(105,176,138,.06)}
+.resolved[hidden]{display:none}
+
+/* ───────── intelligence layer ───────── */
+.graph{position:relative}
+.graph svg.edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.cols{display:grid;grid-template-columns:repeat(4,1fr);gap:18px 46px;position:relative;z-index:1}
+.node{
+  position:relative;border:1px solid var(--hair);border-radius:3px;background:var(--panel);
+  padding:13px 30px 13px 14px;text-align:left;width:100%;transition:border-color .18s,background .18s;
+}
+.node:hover{border-color:var(--observed-deep);background:var(--raised)}
+.node[aria-pressed="true"]{border-color:var(--observed);background:var(--raised)}
+/* A plus that rotates into a cross when its panel is open. */
+.node .exp{
+  position:absolute;top:11px;right:11px;width:13px;height:13px;color:var(--ink-mute);
+  transition:transform .22s cubic-bezier(.4,0,.2,1),color .18s;
+}
+.node .exp::before,.node .exp::after{
+  content:"";position:absolute;background:currentColor;
+}
+.node .exp::before{left:0;right:0;top:6px;height:1px}
+.node .exp::after{top:0;bottom:0;left:6px;width:1px}
+.node:hover .exp{color:var(--observed)}
+.node[aria-pressed="true"] .exp{transform:rotate(45deg);color:var(--observed)}
+.statuskey{display:flex;gap:22px;flex-wrap:wrap;margin-top:20px;font-size:12px;color:var(--ink-mute);font-family:var(--mono)}
+.statuskey span{display:inline-flex;align-items:center;gap:7px}
+.statuskey span::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--ink-mute);opacity:.55}
+.statuskey .p::before{background:var(--warn);opacity:1}
+.statuskey .d::before{background:var(--ok);opacity:1}
+.node .n{font-size:14px;display:block}
+.node .r{font-size:12px;color:var(--ink-mute);margin-top:5px;display:block;line-height:1.45}
+.node .s{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;color:var(--ink-mute);margin-top:9px}
+.node .s::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--ink-mute);opacity:.55}
+.node.s-progress .s::before{background:var(--warn);opacity:1}
+.node.s-done .s::before{background:var(--ok);opacity:1}
+.span2{grid-row:span 2;align-self:center}
+.offline{border-style:dashed}
+
+/* ───────── drawer ───────── */
+.drawer{
+  position:fixed;top:0;right:0;bottom:0;width:min(400px,92vw);z-index:40;
+  background:var(--panel);border-left:1px solid var(--hair);
+  transform:translateX(100%);transition:transform .26s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;
+  padding-top:env(safe-area-inset-top,0px);
+}
+.drawer.open{transform:none;box-shadow:-24px 0 60px rgba(0,0,0,.42)}
+.drawer-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:22px 22px 14px;border-bottom:1px solid var(--hair)}
+.drawer-top h3{font-family:var(--serif);font-size:20px;line-height:1.25}
+.drawer-top .kind{font-family:var(--mono);font-size:10.5px;color:var(--ink-mute);margin-bottom:6px;display:block}
+.x{font-size:20px;line-height:1;color:var(--ink-mute);padding:2px 6px}
+.x:hover{color:var(--ink)}
+.drawer-body{padding:18px 22px 40px;overflow-y:auto;font-size:13.5px;line-height:1.6}
+.drawer-body .why{color:var(--ink-dim);margin-bottom:18px}
+.field{border-top:1px solid var(--hair-soft);padding:12px 0}
+.field dt{font-size:11.5px;color:var(--ink-mute);font-family:var(--mono);margin-bottom:4px}
+.field dd{margin:0;color:var(--ink-dim);font-size:13px;line-height:1.55}
+.badge{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11.5px;color:var(--ink-dim)}
+.badge::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ink-mute)}
+.badge.s-progress::before{background:var(--warn)}
+.badge.s-done::before{background:var(--ok)}
+
+.disclose{border:1px solid rgba(227,163,60,.3);border-radius:3px;padding:18px 20px;margin-bottom:44px}
+.disclose h3{font-family:var(--serif);font-size:18px;margin-bottom:4px}
+.disclose p{font-size:13px;color:var(--ink-dim);max-width:76ch}
+.disclose .cols2{display:grid;grid-template-columns:1fr 1fr;gap:10px 34px;margin-top:14px}
+.disclose dl{margin:0}
+.disclose dt{font-size:12px;color:var(--ink-mute);font-family:var(--mono);margin-bottom:6px}
+.disclose li{font-size:13px;color:var(--ink-dim);line-height:1.5;margin-bottom:5px}
+.disclose ul{margin:0;padding-left:17px}
+.disclose .real li::marker{color:var(--observed)}
+.disclose .fake li::marker{color:var(--warn)}
+@media (max-width:760px){.disclose .cols2{grid-template-columns:1fr}}
+footer{border-top:1px solid var(--hair);padding:22px 0 46px;font-size:12.5px;color:var(--ink-mute);line-height:1.6}
+footer a{color:var(--ink-dim)}
+
+@media (max-width:900px){
+  .example{grid-template-columns:1fr}
+  .cols{grid-template-columns:1fr;gap:12px}
+  .span2{grid-row:auto}
+  .graph svg.edges{display:none}
+  .wordmark{font-size:30px}
+}
+@media (prefers-reduced-motion:no-preference){
+  html{scroll-behavior:smooth}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition-duration:0s!important;animation-duration:0s!important}
+}
+</style>
+</head>
+<body>
+
+<header class="mast">
+  <div class="wrap mast-row">
+    <div>
+      <h1 class="wordmark">Tracer</h1>
+      <p class="tagline">A specimen leaves the patient's side and arrives at the laboratory. Everything
+        between those two scans is unrecorded. This is the map of a system built to reason about that gap.</p>
+      <nav class="contents">
+        <a href="#journey">The journey a specimen takes</a>
+        <a href="#example">Watch one go missing</a>
+        <a href="#system">What the software does</a>
+      </nav>
+    </div>
+    <p class="stamp"><b>Illustrative throughout.</b> Every number on this page comes from assumed
+      parameters rather than measurement, and no component has been built yet.</p>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- ═══════════ 1. THE JOURNEY ═══════════ -->
+<section id="journey">
+  <div class="head">
+    <h2>The specimen journey</h2>
+    <span class="note">Select any stage for detail</span>
+  </div>
+  <p class="lede">Seven of these eight stages write a scan into the record. The third writes nothing, and it
+    is the longest and least predictable of them. A specimen that fails there produces no event, which is why
+    nothing in the laboratory notices until someone asks.</p>
+
+  <div class="rail-scroll">
+    <div class="rail" id="rail">
+      <button class="stage" data-key="ordered"><span class="line"></span><span class="dot"></span><span class="idx">1</span><span class="name">Ordered</span><span class="sub">LIS</span></button>
+      <button class="stage pre-void" data-key="collected"><span class="line"></span><span class="dot"></span><span class="idx">2</span><span class="name">Collected</span><span class="sub">bedside scan</span></button>
+
+      <div class="void" id="void">
+        <div class="frame"></div>
+        <span class="idx">3</span>
+        <p class="title">In transit</p>
+        <p class="say">No scan exists here</p>
+        <p class="silence" id="silence">&nbsp;</p>
+        <div class="smear" id="smear">
+          <div class="seg"><i></i><span>Awaiting dispatch</span><b data-p="0">—</b></div>
+          <div class="seg"><i></i><span>In the tube</span><b data-p="1">—</b></div>
+          <div class="seg"><i></i><span>At the station</span><b data-p="2">—</b></div>
+        </div>
+        <p class="lost">Probably lost <b id="pLost">—</b></p>
+      </div>
+
+      <button class="stage post-void" data-key="received"><span class="line"></span><span class="dot"></span><span class="idx">4</span><span class="name">Received</span><span class="sub">lab scan</span></button>
+      <button class="stage" data-key="accessioned"><span class="line"></span><span class="dot"></span><span class="idx">5</span><span class="name">Accessioned</span><span class="sub">lab scan</span></button>
+      <button class="stage" data-key="plated"><span class="line"></span><span class="dot"></span><span class="idx">6</span><span class="name">Plated</span><span class="sub">clock stops</span></button>
+      <button class="stage" data-key="stained"><span class="line"></span><span class="dot"></span><span class="idx">7</span><span class="name">Stained</span><span class="sub">by type</span></button>
+      <button class="stage" data-key="reported"><span class="line"></span><span class="dot"></span><span class="idx">8</span><span class="name">Reported</span><span class="sub">after growth</span></button>
+    </div>
+  </div>
+
+  <p class="lede" style="margin:26px 0 0">In real hospital records the gap is wider still. A public
+    de-identified extract of 1,336 microbiology specimens holds the collection at stage 2 and the final
+    result at stage 8 and nothing whatever in between — no receipt, no accessioning, no setup — and the
+    median distance between those two timestamps is 80 hours, because it contains the incubation. Stages 3
+    through 7 are unobserved in real data too. That is why every specimen here is simulated.</p>
+
+  <p class="legend">
+    <span class="o"><i></i>Observed — a scan happened</span>
+    <span class="i"><i></i>Inferred — a model's belief, never a fact</span>
+    <span class="w"><i></i>At risk</span>
+  </p>
+
+  <div class="explain">
+    <h3>So what is the actual problem?</h3>
+    <div>
+      <p>Every step on that line leaves a record except one. While a specimen is travelling to the
+        laboratory it is out of contact — nobody can say where it is, and nobody is meant to. That is normal
+        and it is usually fine, because most of them arrive.</p>
+      <p>The trouble starts when one doesn't. A specimen that goes missing sets off no alarm, because an
+        alarm needs something to happen and nothing has. It surfaces hours later, when a doctor rings to ask
+        where a result is, or a technologist notices an order with no tube against it. By then the sample
+        has often sat too long to be worth testing, so the patient is stuck for another draw and the
+        diagnosis waits another day.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 2. WORKED EXAMPLE ═══════════ -->
+<section id="example">
+  <div class="head">
+    <h2>One specimen, minute by minute</h2>
+    <span class="note">Simulated specimen, on assumed parameters</span>
+  </div>
+  <p class="lede">A urine for culture leaves the emergency department at 02:14 and is not received. The curve
+    is computed here from the mixture-survival model in the architecture, not drawn by hand: as the normal
+    transit window passes without a scan, probability mass shifts toward the failure component and the risk
+    of missing the stability window climbs on its own. Nothing arrives to trigger it. This specimen is
+    simulated — a real record would show the collection and then the result, with the middle of this story
+    missing.</p>
+
+  <div class="example">
+    <div class="plot-card">
+      <div class="controls">
+        <button class="play" id="play"><span class="glyph" id="glyph">▶</span><span id="playLabel">Play</span></button>
+        <input type="range" id="scrub" min="0" max="130" value="0" step="1" aria-label="Minutes since collection">
+        <span class="clock mono"><span id="clockT">02:14</span><b id="clockE">0 min elapsed</b></span>
+      </div>
+      <svg class="plot" id="plot" viewBox="0 0 700 260" role="img" aria-label="Probability of missing the stability window over time"></svg>
+      <p class="axis-note">Minutes since collection. The stability window for this specimen closes 120 minutes
+        after collection — an assumed value, pending the policy table.</p>
+    </div>
+
+    <div class="readout">
+      <div class="label-block">
+        <p class="sid">SP-000412</p>
+        <p class="type">Urine, unpreserved</p>
+        <p class="row"><span>ED bay 4</span><span>Routine</span></p>
+        <p class="row"><span>Collected 02:14</span><span>Tube</span></p>
+      </div>
+      <dl style="margin:0">
+        <div class="stat"><dt>Stage</dt><dd id="rStage">Collected</dd></div>
+        <div class="stat"><dt>Since last scan</dt><dd id="rSilence">0 min</dd></div>
+        <div class="stat"><dt>Misses window</dt><dd class="big" id="rRisk">0.05</dd></div>
+        <div class="stat"><dt>Most likely</dt><dd id="rWhere">Awaiting dispatch</dd></div>
+        <div class="stat"><dt>Window closes</dt><dd>04:14</dd></div>
+      </dl>
+      <div class="alert-card" id="alertCard" hidden>
+        <p class="k" id="alertKind">STALLED IN TRANSIT</p>
+        <p class="t">Alert to the receiving technologist</p>
+        <p class="d">Check the <b>tube station at receiving</b>. Raised at <b id="alertAt">03:09</b>,
+          <b id="alertLead">65 minutes</b> before the window closes.</p>
+      </div>
+      <p class="resolved" id="resolvedNote" hidden>Found and received 03:22. Plated 03:41, inside the window
+        with 33 minutes to spare.</p>
+    </div>
+  </div>
+
+  <div class="explain">
+    <h3>Why does the risk climb when nothing has happened?</h3>
+    <div>
+      <p>Because nothing happening is the information. A urine leaving this ward usually reaches the
+        laboratory in about half an hour. At ten minutes of silence there is nothing to think about. At
+        fifty-five minutes the innocent explanations have mostly run out — the ordinary trip is over and
+        this one is still not here.</p>
+      <p>So the software is not reacting to an event. It wakes up every five minutes, looks at each
+        specimen still unaccounted for, and asks how unusual that silence is for this kind of sample from
+        this ward at this hour. When the answer gets bad enough that someone could still fix it, it says so,
+        names the most likely place to look, and sends it to the person who can walk over there. Here that
+        happens at 03:09, with an hour of the specimen's useful life still left.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 3. INTELLIGENCE LAYER ═══════════ -->
+<section id="system">
+  <div class="head">
+    <h2>The intelligence layer</h2>
+    <span class="note">Select any component for detail</span>
+  </div>
+  <p class="lede">Reading left to right. The pipeline and the twin carry state; interval fitting runs offline
+    and supplies both models with a sense of what normal looks like; triage decides whether anything is worth
+    a person's attention.</p>
+
+  <div class="graph" id="graph">
+    <svg class="edges" id="edges"></svg>
+    <div class="cols" id="cols">
+      <button class="node span2" id="n-pipeline" data-key="pipeline">
+        <span class="n">Event pipeline</span><span class="r">Validates and orders every scan from either source, then hands it on.</span><span class="s">not started</span><span class="exp" aria-hidden="true"></span>
+      </button>
+      <button class="node" id="n-twin" data-key="twin">
+        <span class="n">Specimen digital twin</span><span class="r">Current state per specimen. Re-scores everything in flight every five minutes.</span><span class="s">not started</span><span class="exp" aria-hidden="true"></span>
+      </button>
+      <button class="node" id="n-risk" data-key="risk">
+        <span class="n">Risk model</span><span class="r">Probability this specimen misses its stability window.</span><span class="s">not started</span><span class="exp" aria-hidden="true"></span>
+      </button>
+      <button class="node span2" id="n-triage" data-key="triage">
+        <span class="n">Alert triage</span><span class="r">Ranks by harm, holds the alert budget, routes to a role.</span><span class="s">not started</span><span class="exp" aria-hidden="true"></span>
+      </button>
+      <button class="node offline" id="n-mining" data-key="mining">
+        <span class="n">Interval fitting</span><span class="r">Fits how long a specimen normally takes, per type, unit and hour, and how often one never arrives. Runs offline.</span><span class="s">not started</span><span class="exp" aria-hidden="true"></span>
+      </button>
+      <button class="node" id="n-location" data-key="location">
+        <span class="n">Location posterior</span><span class="r">Where the specimen probably is, including lost. Simulation only.</span><span class="s">not started</span><span class="exp" aria-hidden="true"></span>
+      </button>
+    </div>
+  </div>
+
+  <p class="statuskey">
+    <span>not started</span><span class="p">in progress</span><span class="d">done</span>
+  </p>
+
+  <div class="explain">
+    <h3>What is the software actually doing?</h3>
+    <div>
+      <p>Four things, in order. It keeps a record card for every specimen that has been collected and not
+        yet finished, and updates the card whenever a scan comes in. It works out, from the laboratory's own
+        history, how long each kind of specimen normally takes — a urine from this ward at two in the
+        morning is a different animal from one from a clinic at noon. Every five minutes it compares each
+        card against that history and turns the answer into a number: how likely is this one to miss its
+        deadline.</p>
+      <p>Then it decides who, if anyone, hears about it. That last part matters more than it sounds.
+        A system that flags everything gets switched off in a fortnight, so it is built to stay inside a
+        fixed number of alerts per shift and spend them on the specimens where the harm would be worst.</p>
+      <p>The one piece that is honestly a guess is the map of where a missing specimen probably is. Nothing
+        records that anywhere, so it can only be tested against a simulation, and the page says so wherever
+        it appears.</p>
+    </div>
+  </div>
+</section>
+
+<section class="disclose">
+  <h3>What on this page is illustrative</h3>
+  <p>The worked example is computed from the models in the architecture, but it runs on invented numbers and
+    a scripted ending. The distinction matters, because the Week 15 demo has to be driven by the real
+    prototype rather than by a page that resembles one.</p>
+  <div class="cols2">
+    <dl><dt>computed from the design</dt><dd>
+      <ul class="real">
+        <li>The risk curve, from the mixture-survival model: a normal component, a stalled component, and a
+          mass that never completes.</li>
+        <li>The location probabilities, from a hidden semi-Markov forward filter conditioned on no scan
+          having arrived.</li>
+        <li>The alert moment, as the first five-minute tick past the operating point, and the lead time that
+          follows from it.</li>
+      </ul></dd></dl>
+    <dl><dt>illustrative, and still to close</dt><dd>
+      <ul class="fake">
+        <li>Every parameter is invented, including the 120-minute window, which is unvalidated pending the
+          clinical policy table.</li>
+        <li>The recovery is scripted. Nothing decided this specimen would be found at 03:22.</li>
+        <li>The page evaluates the equation directly with hand-set parameters; it does not load a model
+          fitted to an event log.</li>
+        <li>Build statuses are maintained by hand in the page source.</li>
+      </ul></dd></dl>
+  </div>
+  <p style="margin-top:12px">Tracked in <span class="mono">visuals/README.md</span>, with the week each one
+    closes. This notice comes off when that list is empty.</p>
+</section>
+
+<footer class="wrap">
+  <p>Tracer · CAI 5724, AI in Health Design Studio I · Daniel Escalante and Karissa Kocourek.
+  The design this map describes is in <span class="mono">docs/architecture.md</span>; the problem it addresses
+  is in <span class="mono">docs/project-spec.md</span>. Every event comes from the project's own simulator
+  and every parameter is an assumption; calibrating against real hospital data was tested and rejected, and
+  the working is in <span class="mono">docs/mimic-demo-findings.md</span>. Build status updates as
+  components land.</p>
+</footer>
+</main>
+
+<aside class="drawer" id="drawer" role="dialog" aria-modal="false" aria-labelledby="drawerTitle" aria-hidden="true">
+  <div class="drawer-top">
+    <div><span class="kind" id="drawerKind">Stage</span><h3 id="drawerTitle">—</h3></div>
+    <button class="x" id="drawerClose" aria-label="Close, or press Escape" title="Close (esc)">×</button>
+  </div>
+  <div class="drawer-body">
+    <p class="why" id="drawerWhy"></p>
+    <dl id="drawerFields"></dl>
+  </div>
+</aside>
+
+<script>
+"use strict";
+
+/* ════════════════════════════════════════════════════════════
+   1. Model. Illustrative parameters — assumptions, not measurements.
+      Mirrors docs/architecture.md §5.2 (risk) and §5.3 (location).
+   ════════════════════════════════════════════════════════════ */
+const PARAM = {
+  /* Collection → receipt, as a mixture: most specimens move normally, a few stall
+     somewhere and arrive very late, and a few never arrive. Weights sum with
+     lossFraction to 1. This is the "failure component" of architecture §5.2. */
+  mix: [
+    {w:0.88, m:24, s:0.50, label:"normal transit"},
+    {w:0.08, m:70, s:0.60, label:"stalled, arrives late"}
+  ],
+  lossFraction:  0.04,                     // never arrives
+  setupMedian:   22, setupSigma:   0.40,   // receipt → plated, minutes
+  windowMin:     120,                      // stability window
+  tickMin:       5,                        // twin re-score cadence
+  operatingPoint:0.45,                     // alert threshold on P(miss window)
+  collectedAt:   2*60 + 14,                // 02:14 in minutes past midnight
+  receivedAt:    68,                       // scenario: found after the alert
+  accessionedAt: 76,
+  platedAt:      87,
+  /* Sub-legs inside the unobserved interval, with explicit durations and where each
+     one can go next. "Stalled" is a real state rather than a long tail, because a
+     model whose only explanation for silence is loss will always cry loss. */
+  legs: [
+    {name:"Awaiting dispatch", median:6,  sigma:0.60, exit:[["leg",1,0.992],["lost",0,0.008]]},
+    {name:"In the tube",       median:4,  sigma:0.25, exit:[["leg",2,0.995],["lost",0,0.005]]},
+    {name:"At the station",    median:11, sigma:0.70, exit:[["recv",0,0.910],["leg",3,0.070],["lost",0,0.020]]},
+    {name:"Stalled",           median:45, sigma:0.80, exit:[["recv",0,0.850],["lost",0,0.150]]}
+  ],
+  /* Which leg each smear column shows. The stalled specimen is still physically at
+     the station, so those two share a column. */
+  smearOf: [[0],[1],[2,3]]
+};
+
+const erf = x => {                          // Abramowitz & Stegun 7.1.26
+  const s = x < 0 ? -1 : 1; x = Math.abs(x);
+  const t = 1/(1 + 0.3275911*x);
+  const y = 1 - ((((1.061405429*t - 1.453152027)*t + 1.421413741)*t - 0.284496736)*t + 0.254829592)*t*Math.exp(-x*x);
+  return s*y;
+};
+const normCdf = z => 0.5*(1 + erf(z/Math.SQRT2));
+const lnCdf  = (t,m,s) => t <= 0 ? 0 : normCdf(Math.log(t/m)/s);
+const lnSurv = (t,m,s) => 1 - lnCdf(t,m,s);
+const lnPdf  = (t,m,s) => t <= 0 ? 0 : Math.exp(-Math.pow(Math.log(t/m),2)/(2*s*s))/(t*s*Math.sqrt(2*Math.PI));
+
+/* P(window missed | no receipt scan yet at t minutes).
+   Mixture of a lognormal transit and a fraction that never arrives. As t passes the
+   normal transit mode, the surviving mass is increasingly the failure component. */
+function riskUnreceived(t){
+  const {mix, setupMedian:m2, setupSigma:s2, lossFraction:pl, windowMin:W} = PARAM;
+  let notReceived = pl, safe = 0;           // safe = arrives at u, then set up in time
+  for (const c of mix){
+    notReceived += c.w * lnSurv(t, c.m, c.s);
+    for (let u = Math.max(t,0) + 0.5; u < W; u += 1){
+      safe += c.w * lnPdf(u, c.m, c.s) * lnCdf(W-u, m2, s2);
+    }
+  }
+  return 1 - safe/notReceived;
+}
+/* After the receipt scan, only the in-lab leg remains. */
+const riskReceived = t => lnSurv(PARAM.windowMin - t, PARAM.setupMedian, PARAM.setupSigma);
+
+const riskAt = t => t < PARAM.receivedAt ? riskUnreceived(t)
+                  : t < PARAM.platedAt   ? riskReceived(t) : 0;
+
+/* Location posterior: forward filter over sub-legs on a one-minute grid, conditioned
+   on "no receipt scan yet". Absence of a scan is the input, not a special case. */
+function locationSeries(maxT){
+  const legs = PARAM.legs, N = legs.length, CAP = 180;
+  let alpha = legs.map(() => new Float64Array(CAP));   // [leg][minutes in that leg]
+  alpha[0][0] = 1;
+  let lost = 0, arrived = 0;
+  const out = [];
+  const snapshot = () => {
+    const mass = alpha.map(a => a.reduce((s,v) => s+v, 0));
+    const live = mass.reduce((s,v) => s+v, 0) + lost;   // conditioned on not received
+    out.push({ legs: mass.map(m => m/live), lost: lost/live });
+  };
+  snapshot();
+  for (let t = 1; t <= maxT; t++){
+    const next = legs.map(() => new Float64Array(CAP));
+    for (let i = 0; i < N; i++){
+      const {median:m, sigma:s, exit} = legs[i];
+      for (let a = 0; a < CAP-1; a++){
+        const mass = alpha[i][a];
+        if (mass < 1e-12) continue;
+        const surv = Math.max(lnSurv(a, m, s), 1e-9);
+        const hazard = Math.min(Math.max((lnCdf(a+1,m,s) - lnCdf(a,m,s))/surv, 0), 1);
+        const leaving = mass*hazard;
+        next[i][a+1] += mass - leaving;
+        for (const [kind, target, p] of exit){
+          if (kind === "leg") next[target][0] += leaving*p;
+          else if (kind === "lost") lost += leaving*p;
+          else arrived += leaving*p;
+        }
+      }
+    }
+    alpha = next;
+    snapshot();
+  }
+  return out;
+}
+
+/* ════════════════════════════════════════════════════════════
+   2. Derived series and scenario events
+   ════════════════════════════════════════════════════════════ */
+const MAXT = 130;
+const RISK = Array.from({length: MAXT+1}, (_,t) => riskAt(t));
+const LOC  = locationSeries(MAXT);
+
+/* The alert fires at the first five-minute tick past the operating point — the same
+   rule the triage component applies, so this moment is computed, not chosen. */
+let ALERT_T = null;
+for (let t = 0; t <= PARAM.receivedAt; t += PARAM.tickMin){
+  if (RISK[t] >= PARAM.operatingPoint){ ALERT_T = t; break; }
+}
+
+const hhmm = t => {
+  const m = (PARAM.collectedAt + t) % 1440;
+  return String(Math.floor(m/60)).padStart(2,"0") + ":" + String(m%60).padStart(2,"0");
+};
+const EVENTS = [
+  {t:0,                 label:"Collected", key:"collected"},
+  {t:PARAM.receivedAt,  label:"Received",  key:"received"},
+  {t:PARAM.platedAt,    label:"Plated",    key:"plated"}
+];
+
+/* ════════════════════════════════════════════════════════════
+   3. Plot
+   ════════════════════════════════════════════════════════════ */
+const NS = "http://www.w3.org/2000/svg";
+const PAD = {l:44, r:20, t:16, b:30}, VW = 700, VH = 260;
+const X = t => PAD.l + (t/MAXT)*(VW - PAD.l - PAD.r);
+const Y = p => PAD.t + (1-p)*(VH - PAD.t - PAD.b);
+const el = (n, attrs, text) => {
+  const e = document.createElementNS(NS, n);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text != null) e.textContent = text;
+  return e;
+};
+
+function drawPlot(){
+  const svg = document.getElementById("plot");
+  svg.textContent = "";
+
+  for (const p of [0, 0.5, 1]){
+    svg.appendChild(el("line", {x1:PAD.l, x2:VW-PAD.r, y1:Y(p), y2:Y(p), stroke:"#1A2A2F"}));
+    svg.appendChild(el("text", {x:PAD.l-9, y:Y(p)+4, "text-anchor":"end", fill:"#7A939A",
+      "font-size":"11", "font-family":"ui-monospace,SF Mono,Menlo,monospace"}, p.toFixed(1)));
+  }
+  svg.appendChild(el("text", {x:PAD.l, y:PAD.t-5, fill:"#7A939A", "font-size":"10.5"},
+    "probability this specimen misses its window"));
+
+  for (let t = 0; t <= MAXT; t += 30){
+    svg.appendChild(el("text", {x:X(t), y:VH-10, "text-anchor":"middle", fill:"#7A939A",
+      "font-size":"11", "font-family":"ui-monospace,SF Mono,Menlo,monospace"}, t));
+  }
+
+  // operating point
+  svg.appendChild(el("line", {x1:PAD.l, x2:VW-PAD.r, y1:Y(PARAM.operatingPoint), y2:Y(PARAM.operatingPoint),
+    stroke:"#E3A33C", "stroke-width":1, "stroke-dasharray":"3 4", opacity:".55"}));
+  svg.appendChild(el("text", {x:VW-PAD.r, y:Y(PARAM.operatingPoint)-7, "text-anchor":"end", fill:"#E3A33C",
+    "font-size":"10.5", opacity:".85"}, "operating point"));
+
+  // stability window
+  svg.appendChild(el("line", {x1:X(PARAM.windowMin), x2:X(PARAM.windowMin), y1:PAD.t-4, y2:VH-PAD.b,
+    stroke:"#D05A4A", "stroke-width":1}));
+  svg.appendChild(el("text", {x:X(PARAM.windowMin)-7, y:PAD.t+8, "text-anchor":"end", fill:"#D05A4A",
+    "font-size":"10.5", stroke:"#0C1417", "stroke-width":"3", "paint-order":"stroke"},
+    "window closes 04:14"));
+
+  // the unobserved interval, shaded behind the curve
+  svg.appendChild(el("rect", {x:X(0), y:PAD.t, width:X(PARAM.receivedAt)-X(0), height:VH-PAD.t-PAD.b,
+    fill:"#9D8DF1", opacity:".045"}));
+  svg.appendChild(el("text", {x:(X(0)+X(PARAM.receivedAt))/2, y:VH-PAD.b-8, "text-anchor":"middle",
+    fill:"#9D8DF1", "font-size":"10.5", opacity:".75"}, "no scan exists here"));
+
+  // how far the run has got, filled under the curve
+  svg.appendChild(el("path", {id:"area", d:"", fill:"#63C4D3", opacity:".15"}));
+
+  // curve
+  let d = "";
+  for (let t = 0; t <= MAXT; t++) d += (t ? "L" : "M") + X(t).toFixed(1) + " " + Y(RISK[t]).toFixed(1);
+  svg.appendChild(el("path", {d, fill:"none", stroke:"#63C4D3", "stroke-width":1.75,
+    "stroke-linejoin":"round"}));
+
+  // alert moment
+  if (ALERT_T != null){
+    svg.appendChild(el("line", {x1:X(ALERT_T), x2:X(ALERT_T), y1:Y(RISK[ALERT_T]), y2:VH-PAD.b,
+      stroke:"#E3A33C", "stroke-width":1}));
+    svg.appendChild(el("circle", {cx:X(ALERT_T), cy:Y(RISK[ALERT_T]), r:3.5, fill:"#E3A33C"}));
+    svg.appendChild(el("text", {x:X(ALERT_T)+9, y:Y(RISK[ALERT_T])-9, fill:"#E3A33C", "font-size":"11",
+      stroke:"#0C1417", "stroke-width":"3", "paint-order":"stroke"}, "alert " + hhmm(ALERT_T)));
+  }
+
+  // scan events
+  for (const e of EVENTS){
+    if (!e.t) continue;
+    svg.appendChild(el("line", {x1:X(e.t), x2:X(e.t), y1:VH-PAD.b-6, y2:VH-PAD.b,
+      stroke:"#63C4D3", "stroke-width":1.5}));
+    svg.appendChild(el("text", {x:X(e.t), y:VH-PAD.b-11, "text-anchor":"middle", fill:"#63C4D3",
+      "font-size":"10.5"}, e.label.toLowerCase()));
+  }
+
+  // playhead
+  const head = el("line", {x1:X(0), x2:X(0), y1:PAD.t-4, y2:VH-PAD.b, stroke:"#E4EDEF",
+    "stroke-width":1, opacity:".5", id:"playhead"});
+  svg.appendChild(head);
+  svg.appendChild(el("circle", {cx:X(0), cy:Y(RISK[0]), r:4, fill:"#E4EDEF", id:"playdot"}));
+}
+
+/* ════════════════════════════════════════════════════════════
+   4. Playback
+   ════════════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const stageEls = [...document.querySelectorAll(".stage")];
+const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+let t = 0, playing = false, raf = null, last = 0, holdUntil = 0;
+
+function stageAt(t){
+  if (t >= PARAM.platedAt) return "plated";
+  if (t >= PARAM.receivedAt) return "received";
+  return "collected";
+}
+function render(){
+  const risk = RISK[t], loc = LOC[Math.min(t, LOC.length-1)];
+  const received = t >= PARAM.receivedAt;
+
+  $("scrub").value = t;
+  $("clockT").textContent = hhmm(t);
+  $("clockE").textContent = t + " min elapsed";
+
+  // journey rail
+  const reached = {collected:0, received:PARAM.receivedAt,
+                   accessioned:PARAM.accessionedAt, plated:PARAM.platedAt};
+  stageEls.forEach(s => {
+    const k = s.dataset.key;
+    s.classList.toggle("done", k === "ordered" || (k in reached && t >= reached[k]));
+  });
+
+  // the void: violet mass where the specimen probably is, empty once it is found
+  const col = PARAM.smearOf.map(idx => idx.reduce((s,i) => s + loc.legs[i], 0));
+  document.querySelectorAll(".seg").forEach((seg,i) => {
+    const p = received ? 0 : col[i];
+    seg.querySelector("i").style.opacity = (0.05 + p*0.80).toFixed(3);
+    seg.querySelector("[data-p]").textContent = received ? "—" : p.toFixed(2);
+  });
+  $("pLost").textContent = received ? "—" : loc.lost.toFixed(2);
+  $("silence").innerHTML = received || t === 0 ? "&nbsp;" : t + " minutes with no scan";
+
+  // readout
+  const best = Math.max(...col);
+  const where = received ? "In the laboratory"
+    : loc.lost > best ? "Not arriving"
+    : ["Awaiting dispatch","In the tube","At the station"][col.indexOf(best)];
+  const lastEvent = EVENTS.filter(e => e.t <= t).pop();
+  $("rStage").textContent = {collected:"Collected", received:"Received", plated:"Plated"}[stageAt(t)];
+  $("rSilence").textContent = (t - (lastEvent ? lastEvent.t : 0)) + " min";
+  $("rRisk").textContent = risk.toFixed(2);
+  $("rRisk").style.color = risk >= PARAM.operatingPoint ? "#E3A33C" : "#E4EDEF";
+  $("rWhere").textContent = where;
+
+  const alerted = ALERT_T != null && t >= ALERT_T;
+  $("alertCard").hidden = !alerted;
+  $("resolvedNote").hidden = t < PARAM.platedAt;
+
+  const ph = $("playhead"), pd = $("playdot"), ar = $("area");
+  if (ph){ ph.setAttribute("x1", X(t)); ph.setAttribute("x2", X(t)); }
+  if (pd){ pd.setAttribute("cx", X(t)); pd.setAttribute("cy", Y(risk)); }
+  if (ar){
+    let d = `M${X(0).toFixed(1)} ${Y(0).toFixed(1)}`;
+    for (let i = 0; i <= t; i++) d += `L${X(i).toFixed(1)} ${Y(RISK[i]).toFixed(1)}`;
+    ar.setAttribute("d", d + `L${X(t).toFixed(1)} ${Y(0).toFixed(1)}Z`);
+  }
+}
+function step(ts){
+  if (!playing) return;
+  if (t >= MAXT){
+    // Hold the resolved ending long enough to read, then run again from collection.
+    // Looping matters for the unobserved interval: once the receipt scan lands there is
+    // no posterior to show, so a run that stops at the end leaves that band empty.
+    if (REDUCED){ setPlaying(false); return; }
+    if (!holdUntil) holdUntil = ts + 1800;
+    if (ts >= holdUntil){ holdUntil = 0; t = 0; last = ts; render(); }
+  } else if (ts - last > 52){
+    last = ts;
+    t += 1;
+    render();
+  }
+  raf = requestAnimationFrame(step);
+}
+function setPlaying(on){
+  playing = on;
+  holdUntil = 0;
+  $("glyph").textContent = on ? "❚❚" : "▶";
+  $("playLabel").textContent = on ? "Pause" : (t >= MAXT ? "Replay" : "Play");
+  if (on){ last = 0; raf = requestAnimationFrame(step); }
+  else if (raf) cancelAnimationFrame(raf);
+}
+$("play").addEventListener("click", () => { if (t >= MAXT) t = 0; setPlaying(!playing); });
+$("scrub").addEventListener("input", e => { setPlaying(false); t = +e.target.value; render(); });
+
+/* ════════════════════════════════════════════════════════════
+   5. Detail drawer
+   ════════════════════════════════════════════════════════════ */
+const DETAIL = {
+  ordered:{kind:"Stage", title:"Ordered", why:"A clinician places the order. The specimen does not exist yet, but the clock the laboratory is judged on has not started either — which is part of why delay is hard to attribute later.",
+    fields:{Record:"Order event in the LIS", Actor:"Clinician", "Scan exists":"Yes", "Tracer uses it for":"The denominator. An order with no collection is how never-collected becomes visible."}},
+  collected:{kind:"Stage", title:"Collected", why:"A nurse or phlebotomist draws the specimen and scans it at the bedside. This is the last certain fact about the specimen's location until it reaches the laboratory, and it starts the stability clock. In real hospital records it is the first of only two timestamps the specimen will ever get.",
+    fields:{Record:"Collection scan with unit and time", Actor:"Nurse or phlebotomist", "Scan exists":"Yes", "Tracer uses it for":"Starting the window, and the moment the twin begins re-scoring on a timer."}},
+  received:{kind:"Stage", title:"Received", why:"The laboratory scans the specimen on arrival. For Tracer this event is mostly an ending: it resolves the open question, closes any alert, and becomes a training label.",
+    fields:{Record:"Receipt scan at the laboratory", Actor:"Processor", "Scan exists":"Yes", "Tracer uses it for":"Auto-resolving alerts, and supplying the transit duration the mining layer fits."}},
+  accessioned:{kind:"Stage", title:"Accessioned", why:"The specimen is entered into the laboratory's worklist. Specimens can sit here, received but not worked, which is a real failure mode that looks fine on a status screen.",
+    fields:{Record:"Accession event", Actor:"Processor", "Scan exists":"Yes", "Tracer uses it for":"Detecting the arrived-but-not-worked case, and measuring in-lab backlog as a feature."}},
+  plated:{kind:"Stage", title:"Plated", why:"The specimen goes onto media. The viability clock stops here and the incubation clock starts, so this is the assumed stopping point for the stability window. Whether it is the right one is the first question for Karissa, and it is the single most consequential answer in the project: it defines what counts as a breach, and everything else is measured against that.",
+    fields:{Record:"Setup event", Actor:"Technologist", "Scan exists":"Yes", "Tracer uses it for":"Defining a breach: plated later than the window allows, or never plated at all.", Status:"ASSUMED. The clock's start and stop events are configuration resolved against the workflow graph, so a different answer is a one-line change — though it does invalidate every fitted parameter, which is why the question is being asked now rather than in November."}},
+  stained:{kind:"Stage", title:"Stained", why:"A Gram stain is read and often reported as a preliminary result. Not every specimen type is stained, so this is a conditional stage driven by the policy table rather than a fixed step in the path.",
+    fields:{Record:"Stain result", Actor:"Technologist", "Scan exists":"Yes, when performed", "Open question":"Whether stain is tracked as its own step for each specimen type, or folded into setup."}},
+  reported:{kind:"Stage", title:"Reported", why:"The culture is read and a result posts, typically a day or more after collection. In real hospital records this is the second and last timestamp a specimen ever gets — collection, then this, with everything in between unrecorded.",
+    fields:{Record:"Result event", Actor:"Technologist", "Scan exists":"Yes", "Tracer uses it for":"Nothing, by default: the decision it could have informed was made hours earlier. It is one of the three candidates for where the stability clock stops, which is the project's open clinical question, and the clock is configuration so the answer can move it without touching model code."}},
+
+  pipeline:{kind:"Component", title:"Event pipeline", status:"not started", why:"Reads scans in timestamp order under a replay clock, validates them against the event schema, appends them to the store and hands them to the twin. One ordered entry point means the live path and the training path run identical code and cannot drift apart.",
+    fields:{Inputs:"Scan events from the simulator", Outputs:"Validated events to the store and the twin", "Where it will live":"src/pipeline/ingest.py"}},
+  twin:{kind:"Component", title:"Specimen digital twin", status:"not started", why:"Holds the current state of every specimen in flight, and owns the tick scheduler that re-scores all of them every five simulated minutes. This is the component that answers the central problem: a missing specimen produces no event, so the system cannot wait to be told.",
+    fields:{Inputs:"Validated events, plus a timer", Outputs:"Current state and features for each in-flight specimen", "Why a timer":"Event-driven systems cannot detect absence. Nothing arrives when a specimen is lost.", "Where it will live":"src/pipeline/twin.py"}},
+  mining:{kind:"Component", title:"Interval fitting", status:"not started", why:"Fits how long a specimen normally takes from where it is now to the end of its clock, per type, collecting unit, hour block and priority — plus how often one stalls and arrives very late, and how often one never arrives at all. Because the risk model is parametric, this is not preparation for the model: these fitted numbers are the model's parameters.",
+    fields:{Inputs:"The event log. Never the simulator's truth log", Outputs:"Residual-time distributions per stratum and state, a pooled stalled component, and a never-completes fraction", Technique:"Lognormal, gamma or Weibull selected per stratum by AIC, with backoff when a stratum is thin. The rare components are pooled globally rather than fitted per stratum, because late arrivals are too sparse to stratify", "Where it will live":"src/models/dwell.py"}},
+  risk:{kind:"Component", title:"Risk model", status:"not started", why:"Estimates the probability that this specimen misses its window, given where it is, how long it has been there, and the fact that it has not completed. Conditioning on not-having-arrived is what makes risk climb by itself as silence continues — the quantity being predicted is the tail of a waiting-time distribution, and three fitted parameters represent that tail directly rather than having to learn it from the rare class.",
+    fields:{Inputs:"Current state, time spent in it, time left in the window, and the fitted parameters for this stratum", Outputs:"A probability, calibrated by construction, plus predicted arrival quantiles — 'expected by 03:05, 90% by 03:40' is more useful to hand someone than a number", Technique:"Analytic mixture survival with a defective component. A gradient-boosted landmark model runs as a pre-registered challenger in Week 7; if it cannot beat this by five minutes of lead time at equal alert volume, that outcome is a reportable finding about the problem", Benchmark:"A stratified-quantile rule a laboratory could write in SQL this afternoon", "Where it will live":"src/models/risk.py"}},
+  location:{kind:"Component", title:"Location posterior", status:"not started", why:"Maintains a belief about where the specimen actually is, including lost, using explicit state durations so that 'this should have finished four minutes ago' is representable. That statement is the whole signal. It turns an alert from something is wrong into a place to look. It runs on simulated specimens only, and not by preference: no public dataset records where a specimen was mid-transit, so a simulator is the only place a claim about position can be checked against truth.",
+    fields:{Inputs:"Elapsed time, scans when they happen, fitted leg durations", Outputs:"A distribution over workflow positions, including lost", Technique:"Hidden semi-Markov forward filter on a one-minute grid; absence of a scan is the ordinary input, not a special case", "Known weakness":"Nothing observes the inside of the transit interval, so the split into sub-legs is assumed rather than learned. A deliberately misspecified arm reports what that assumption costs.", "Where it will live":"src/models/location.py"}},
+  triage:{kind:"Component", title:"Alert triage", status:"not started", why:"Decides whether anything reaches a person. Ranks by expected harm rather than probability, holds the threshold to a fixed alert budget per shift, suppresses duplicates, routes to a role, and closes itself when the specimen arrives. Alert fatigue is the dominant failure mode of hospital alerting, so volume control is a component and not a setting.",
+    fields:{Inputs:"Risk, urgency tier, location posterior", Outputs:"At most one open alert per specimen, addressed to a role", "Operating point":"Chosen to maximise lead time subject to an alert budget — assumed here, and one of the questions for Karissa", "Where it will live":"src/pipeline/triage.py"}}
+};
+
+const drawer = $("drawer");
+let openKey = null;
+function openDrawer(key){
+  const d = DETAIL[key]; if (!d) return;
+  openKey = key;
+  $("drawerKind").textContent = d.kind;
+  $("drawerTitle").textContent = d.title;
+  $("drawerWhy").textContent = d.why;
+  const dl = $("drawerFields"); dl.textContent = "";
+  if (d.status){
+    const wrap = document.createElement("div"); wrap.className = "field";
+    const dt = document.createElement("dt"); dt.textContent = "Build status";
+    const dd = document.createElement("dd");
+    const span = document.createElement("span"); span.className = "badge"; span.textContent = d.status;
+    dd.appendChild(span); wrap.append(dt, dd); dl.appendChild(wrap);
+  }
+  for (const [k,v] of Object.entries(d.fields)){
+    const wrap = document.createElement("div"); wrap.className = "field";
+    const dt = document.createElement("dt"); dt.textContent = k;
+    const dd = document.createElement("dd"); dd.textContent = v;
+    wrap.append(dt, dd); dl.appendChild(wrap);
+  }
+  drawer.classList.add("open");
+  drawer.setAttribute("aria-hidden", "false");
+  document.querySelectorAll("[data-key]").forEach(b =>
+    b.setAttribute("aria-pressed", String(b.dataset.key === key)));
+  $("drawerClose").focus();
+}
+function closeDrawer(){
+  openKey = null;
+  drawer.classList.remove("open");
+  drawer.setAttribute("aria-hidden", "true");
+  document.querySelectorAll("[data-key]").forEach(b => b.setAttribute("aria-pressed", "false"));
+}
+document.querySelectorAll("[data-key]").forEach(b => {
+  b.setAttribute("aria-pressed", "false");
+  b.addEventListener("click", () => openKey === b.dataset.key ? closeDrawer() : openDrawer(b.dataset.key));
+});
+$("drawerClose").addEventListener("click", closeDrawer);
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeDrawer(); });
+document.addEventListener("click", e => {
+  if (openKey && !drawer.contains(e.target) && !e.target.closest("[data-key]")) closeDrawer();
+});
+
+/* ════════════════════════════════════════════════════════════
+   6. Edges between components, measured from the laid-out DOM
+   ════════════════════════════════════════════════════════════ */
+const EDGES = [
+  ["n-pipeline","n-twin",false], ["n-pipeline","n-mining",true],
+  ["n-twin","n-risk",false], ["n-twin","n-location",false],
+  ["n-mining","n-risk",true], ["n-mining","n-location",true],
+  ["n-risk","n-triage",false], ["n-location","n-triage",false]
+];
+function drawEdges(){
+  const svg = $("edges"), box = $("graph").getBoundingClientRect();
+  svg.textContent = "";
+  svg.setAttribute("viewBox", `0 0 ${box.width} ${box.height}`);
+  for (const [a,b,dashed] of EDGES){
+    const ra = $(a).getBoundingClientRect(), rb = $(b).getBoundingClientRect();
+    const x1 = ra.right - box.left, y1 = ra.top - box.top + ra.height/2;
+    const x2 = rb.left - box.left,  y2 = rb.top - box.top + rb.height/2;
+    const dx = Math.max((x2 - x1) * 0.5, 14);
+    svg.appendChild(el("path", {
+      d:`M${x1} ${y1} C ${x1+dx} ${y1}, ${x2-dx} ${y2}, ${x2} ${y2}`,
+      fill:"none", stroke: dashed ? "#5B4E9E" : "#2E7C8A",
+      "stroke-width":1, "stroke-dasharray": dashed ? "3 4" : "none"
+    }));
+    svg.appendChild(el("circle", {cx:x2-3, cy:y2, r:2, fill: dashed ? "#5B4E9E" : "#2E7C8A"}));
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   7. Start
+   ════════════════════════════════════════════════════════════ */
+$("alertAt").textContent = ALERT_T != null ? hhmm(ALERT_T) : "—";
+$("alertLead").textContent = ALERT_T != null ? (PARAM.windowMin - ALERT_T) + " minutes" : "—";
+drawPlot();
+render();
+drawEdges();
+window.addEventListener("resize", () => { drawPlot(); render(); drawEdges(); });
+if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) setPlaying(true);
+</script>
+</body>
+</html>
