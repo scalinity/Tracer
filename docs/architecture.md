@@ -660,8 +660,7 @@ settled.
 ## 11. Where Karissa's knowledge changes this
 
 Written from the spec alone, before any workflow detail was gathered. These are the points where an answer
-changes the design rather than decorating it. The four that reach her as questions are in
-`notes/questions-for-karissa.txt`.
+changes the design rather than decorating it.
 
 | # | Open point | What changes |
 |---|---|---|
