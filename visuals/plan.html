@@ -746,7 +746,7 @@ const TASKS = [
 
 {id:"M3", tr:"model", day:[11,5], who:{D:2}, t:"Risk model and parameter recovery", needs:["M2"],
  why:"Parity with the JavaScript proves the demo and the pipeline are the same model. Recovery proves the fitting works.",
- steps:["Implement the closed form from `docs/architecture.md` section 5.2: the chance a specimen misses its window given that it is still silent after tau minutes.","Run it and the JavaScript in `visuals/architecture.html` on the same 50 random states. They must agree to 1e-6.","Parameter recovery: compare the fitted values with the generator's planted values. They should agree within sampling error."],
+ steps:["Implement the closed form from `docs/architecture.md` section 5.2: the chance a specimen misses its window given that it is still silent after tau minutes.","Run it and the JavaScript in `visuals/architecture.html` on the same 50 random states. They must agree to 1e-6, which needs the same one-minute midpoint sum for the in-lab step; an exact integral may not agree that closely.","Parameter recovery: compare the fitted values with the generator's planted values. They should agree within sampling error."],
  done:"The parity and recovery tests pass and the recovery plot is saved in `results/`.", earns:["P1","T3"]},
 
 {id:"M4", tr:"model", day:[11,6], who:{D:2}, t:"Baseline and evaluation", needs:["M3"],
