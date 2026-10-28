@@ -117,7 +117,7 @@ Pipeline, evaluation, live board & \status{late}{Not started} & The \texttt{src/
   population. We therefore chose to generate our own synthetic dataset. The cost is that every timing
   parameter is an assumption, so we label each one and stress-test it.
 \item \textbf{The label depends on a clinical judgment.} A specimen is late only relative to a stability window
-  and the event that stops the clock. Only Karissa can supply and cite those, so her policy table gates the
+  and the event that stops the clock. Only Karissa can supply and cite those, so the policy table gates the
   target variable. The clock rule lives in configuration, so a change costs a re-run, not a rewrite.
 \item \textbf{A model can only explain what its state space contains.} Our first location model blamed silence on
   ``lost'' (0.64 lost against 0.35 at the tube station) until we added an explicit ``stalled at station''
