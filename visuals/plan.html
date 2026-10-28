@@ -1,0 +1,1614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tracer Presentation Plan</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: a sticky rail beside one reading column. The opening view is a single timeline from Oct 28 to Nov 18.
+   Colour grammar is the system map's: cyan is observed (done), violet is inferred (still to do), amber is a gate, red is the presentation. */
+:root{
+  color-scheme: dark;
+  --canvas:#0C1417; --panel:#111C20; --raised:#16242A;
+  --hair:#22343A; --hair-soft:#1A2A2F;
+  --ink:#E4EDEF; --ink-dim:#A8BEC4; --ink-mute:#7A939A;
+  --observed:#63C4D3; --observed-deep:#2E7C8A;
+  --infer:#9D8DF1; --infer-deep:#5B4E9E;
+  --warn:#E3A33C; --alarm:#D05A4A; --ok:#69B08A;
+  --obs-wash:rgba(99,196,211,.10); --inf-wash:rgba(157,141,241,.13);
+  --warn-wash:rgba(227,163,60,.10); --alarm-wash:rgba(208,90,74,.11);
+  --weekend:rgba(255,255,255,.028);
+  --focus:#63C4D3;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI","Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    color-scheme: light;
+    --canvas:#F4F7F6; --panel:#FFFFFF; --raised:#ECF2F0;
+    --hair:#CFDAD7; --hair-soft:#E2EAE8;
+    --ink:#14201D; --ink-dim:#3D4D49; --ink-mute:#5B6C68;
+    --observed:#0F6E7C; --observed-deep:#58A7B3;
+    --infer:#5543BF; --infer-deep:#A89BEB;
+    --warn:#8F5A06; --alarm:#B0402B; --ok:#2B7048;
+    --obs-wash:rgba(15,110,124,.09); --inf-wash:rgba(85,67,191,.09);
+    --warn-wash:rgba(143,90,6,.10); --alarm-wash:rgba(176,64,43,.09);
+    --weekend:rgba(0,0,0,.035);
+    --focus:#0F6E7C;
+  }
+}
+:root[data-theme="light"]{
+  color-scheme: light;
+  --canvas:#F4F7F6; --panel:#FFFFFF; --raised:#ECF2F0;
+  --hair:#CFDAD7; --hair-soft:#E2EAE8;
+  --ink:#14201D; --ink-dim:#3D4D49; --ink-mute:#5B6C68;
+  --observed:#0F6E7C; --observed-deep:#58A7B3;
+  --infer:#5543BF; --infer-deep:#A89BEB;
+  --warn:#8F5A06; --alarm:#B0402B; --ok:#2B7048;
+  --obs-wash:rgba(15,110,124,.09); --inf-wash:rgba(85,67,191,.09);
+  --warn-wash:rgba(143,90,6,.10); --alarm-wash:rgba(176,64,43,.09);
+  --weekend:rgba(0,0,0,.035);
+  --focus:#0F6E7C;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{
+  margin:0;background:var(--canvas);color:var(--ink);
+  font:15px/1.55 var(--sans);-webkit-font-smoothing:antialiased;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:60;background:var(--canvas)}
+h1,h2,h3,h4,p,ul,ol,dl,dd,figure,fieldset,legend{margin:0;padding:0}
+ul,ol{list-style:none}
+fieldset{border:0;min-width:0}
+button,input,select,textarea{font:inherit;color:inherit}
+button{background:none;border:0;padding:0;cursor:pointer}
+a{color:var(--observed);text-decoration:underline;text-decoration-color:var(--observed-deep);text-underline-offset:3px}
+a:hover{text-decoration-color:var(--observed)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:2px}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.num,.mono{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+code{font-family:var(--mono);font-size:.88em;background:var(--raised);border:1px solid var(--hair-soft);border-radius:2px;padding:.04em .34em;cursor:copy;overflow-wrap:anywhere}
+b,strong{font-weight:600}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+
+/* ───────── shell and rail ───────── */
+.shell{
+  display:grid;grid-template-columns:216px minmax(0,1fr);column-gap:clamp(28px,4.4vw,60px);
+  max-width:1260px;margin:0 auto;padding-block:26px 96px;
+}
+.rail{
+  position:sticky;top:calc(env(safe-area-inset-top,0px) + 22px);align-self:start;
+  display:grid;gap:24px;max-height:calc(100vh - 44px);overflow:auto;padding-right:6px;
+}
+.wordmark{font-family:var(--serif);font-size:32px;line-height:1;font-style:italic;color:var(--observed)}
+.brand-sub{font-family:var(--serif);font-size:15px;color:var(--ink-dim);margin-top:7px}
+.persona{display:grid;gap:2px}
+.persona label{
+  position:relative;display:flex;align-items:center;padding:6px 0 6px 13px;
+  border-left:2px solid var(--hair);color:var(--ink-mute);font-size:14px;cursor:pointer;
+}
+.persona label:has(input:checked){border-left-color:var(--observed);color:var(--ink)}
+.persona label:has(input:focus-visible){outline:2px solid var(--focus);outline-offset:1px}
+.persona input{position:absolute;opacity:0;pointer-events:none}
+.nav{display:grid;gap:1px}
+.nav a{
+  color:var(--ink-mute);text-decoration:none;font-size:14px;padding:5px 0;
+  border-bottom:1px solid transparent;transition:color .15s;
+}
+.nav a:hover{color:var(--ink)}
+.vitals{display:grid;gap:9px;border-top:1px solid var(--hair);padding-top:16px}
+.vitals div{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:12.5px}
+.vitals dt{color:var(--ink-mute)}
+.vitals dd{margin:0;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;text-align:right}
+.vitals .bad{color:var(--warn)}
+.vitals .good{color:var(--observed)}
+.theme{align-self:start;font-size:12.5px;color:var(--ink-mute);border-bottom:1px solid var(--hair);padding-bottom:2px}
+.theme:hover{color:var(--ink)}
+.status-line{font-size:12px;color:var(--ink-mute);line-height:1.45}
+.status-line b{font-weight:400;color:var(--ink-dim)}
+
+main{min-width:0}
+section{scroll-margin-top:26px;margin-bottom:84px}
+.head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:8px}
+.head h2{font-family:var(--serif);font-weight:400;font-size:27px;line-height:1.2;text-wrap:balance}
+.head .note{font-size:13px;color:var(--ink-mute)}
+.prose{font-family:var(--serif);font-size:16.5px;line-height:1.72;color:var(--ink-dim);max-width:66ch}
+.prose + .prose{margin-top:12px}
+.prose b{color:var(--ink)}
+.sub{font-family:var(--serif);font-weight:400;font-size:20px;line-height:1.3;margin:38px 0 8px}
+.small{font-size:13px;color:var(--ink-mute);line-height:1.5}
+.scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* ───────── hero ───────── */
+.hero h1{
+  font-family:var(--serif);font-weight:400;font-size:clamp(33px,4.6vw,54px);line-height:1.07;
+  letter-spacing:-.012em;max-width:19ch;text-wrap:balance;
+}
+.hero .lede{margin-top:16px;font-family:var(--serif);font-size:17.5px;line-height:1.65;color:var(--ink-dim);max-width:60ch}
+.hero .lede b{color:var(--ink);font-weight:400}
+.strip{margin-top:30px;border:1px solid var(--hair);border-radius:3px;background:var(--panel);padding:12px 12px 8px}
+.strip svg{display:block;width:100%;min-width:780px;height:auto}
+.strip .legend{display:flex;flex-wrap:wrap;gap:6px 22px;padding:8px 6px 4px;font-size:12px;color:var(--ink-mute)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:-1px;box-sizing:border-box}
+.legend .l-done{background:var(--observed)}
+.legend .l-open{border:1.6px solid var(--infer)}
+.legend .l-late{border:1.8px solid var(--warn)}
+.legend .l-gate{background:var(--warn);border-radius:1px;transform:rotate(45deg) scale(.82)}
+.legend .l-pres{width:2px;height:12px;border-radius:0;background:var(--alarm);margin-right:8px}
+.legend .l-band{width:20px;height:6px;border-radius:0;background:var(--infer);opacity:.55;vertical-align:1px}
+
+/* strip svg parts */
+.ax{font:11px var(--mono);fill:var(--ink-mute)}
+.ax-strong{font:11px var(--mono);fill:var(--ink-dim)}
+.lane-label{font:13px var(--sans);fill:var(--ink-dim)}
+.wk{fill:var(--weekend)}
+.gl{stroke:var(--hair-soft);stroke-width:1}
+.dot{cursor:pointer}
+.dot circle{transition:r .12s}
+.dot:hover circle,.dot:focus-visible circle{r:7}
+.dot:focus-visible{outline:none}
+.dot:focus-visible circle{stroke:var(--ink);stroke-width:2}
+.d-done{fill:var(--observed);stroke:var(--panel);stroke-width:1.5}
+.d-open{fill:var(--panel);stroke:var(--infer);stroke-width:1.7}
+.d-late{fill:var(--panel);stroke:var(--warn);stroke-width:2}
+.d-cut{fill:none;stroke:var(--ink-mute);stroke-width:1;stroke-dasharray:2 2}
+.gate-d{fill:var(--warn)}
+.gate-t{font:600 11px var(--sans);fill:var(--warn)}
+.gate-s{font:10.5px var(--mono);fill:var(--ink-mute)}
+.line-now{stroke:var(--observed);stroke-width:1.5}
+.line-pres{stroke:var(--alarm);stroke-width:2}
+.pres-t{font:600 11.5px var(--sans);fill:var(--alarm)}
+.now-t{font:600 11px var(--sans);fill:var(--observed)}
+.band{fill:var(--infer);opacity:.52}
+.band-wide{fill:var(--infer);opacity:.2}
+.band.over{fill:var(--warn);opacity:.62}
+.band-wide.over{fill:var(--warn);opacity:.22}
+.band.way-over{fill:var(--alarm);opacity:.7}
+.band-wide.way-over{fill:var(--alarm);opacity:.25}
+.band-t{font:11px var(--mono);fill:var(--ink-dim)}
+@keyframes draw{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+.intro .band,.intro .band-wide{animation:draw 1s ease-out both}
+.gate-line{stroke:var(--warn);stroke-width:1;opacity:.3;stroke-dasharray:2 3}
+
+/* verdict + what-if */
+.verdict{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:30px clamp(28px,4vw,52px);margin-top:28px;align-items:start}
+.verdict-text p{font-family:var(--serif);font-size:18px;line-height:1.62;color:var(--ink-dim);max-width:58ch}
+.verdict-text p + p{margin-top:12px}
+.verdict-text b{color:var(--ink);font-weight:600}
+.verdict-text .warn{color:var(--warn)}
+.verdict-text .good{color:var(--observed)}
+.nextup{margin-top:18px;display:grid;gap:6px;font-size:14px}
+.nextup button{text-align:left;color:var(--ink-dim);padding:4px 0;border-bottom:1px solid var(--hair-soft);width:100%}
+.nextup button:hover{color:var(--ink);border-bottom-color:var(--observed-deep)}
+.nextup b{font-weight:500;color:var(--ink)}
+.whatif{border-left:1px solid var(--hair);padding-left:clamp(20px,3vw,34px);display:grid;gap:22px}
+.whatif h3{font-family:var(--serif);font-weight:400;font-size:18px;margin-bottom:10px}
+.cap-grid{display:grid;grid-template-columns:auto 1fr 1fr;gap:10px 16px;align-items:center;font-size:13px}
+.cap-grid .colhead{color:var(--ink-mute);font-size:12px}
+.cap-grid .who{color:var(--ink)}
+.rng{display:grid;grid-template-columns:minmax(70px,1fr) 44px;gap:8px;align-items:center}
+.rng output{font-family:var(--mono);font-size:12.5px;text-align:right;color:var(--ink)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:22px;background:none;cursor:pointer;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:1px;background:var(--ink-mute)}
+input[type=range]::-moz-range-track{height:1px;background:var(--ink-mute)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--ink);border:0;margin-top:-6px}
+input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--ink);border:0}
+.cuts{display:grid;gap:2px}
+.cut{display:grid;grid-template-columns:20px minmax(0,1fr);gap:10px;padding:7px 0;border-bottom:1px solid var(--hair-soft);cursor:pointer;font-size:13.5px;line-height:1.4}
+.cut input{margin:2px 0 0;accent-color:var(--infer)}
+.cut small{display:block;color:var(--ink-mute);font-size:12px;margin-top:2px}
+.cut .save{font-family:var(--mono);color:var(--infer);font-size:12px}
+
+/* gates */
+.gates{width:100%;border-collapse:collapse;margin-top:34px;min-width:760px;font-size:13.5px}
+.gates th{font-weight:400;text-align:left;color:var(--ink-mute);font-size:12px;padding:0 14px 8px 0;border-bottom:1px solid var(--hair)}
+.gates td{padding:12px 14px 12px 0;border-bottom:1px solid var(--hair-soft);vertical-align:top}
+.gates .g-name{font-family:var(--serif);font-size:16.5px;white-space:nowrap}
+.gates .g-name small{display:block;font:12px var(--mono);color:var(--ink-mute);margin-top:2px}
+.gates .g-need{color:var(--ink-dim);max-width:34ch;font-size:13px;line-height:1.45}
+.gates .ld{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+.gates .ld .bar{display:block;height:4px;background:var(--hair);margin-top:6px;position:relative;width:120px}
+.gates .ld .bar i{position:absolute;left:0;top:0;bottom:0;background:var(--infer)}
+.gates .ld .bar i.over{background:var(--warn)}
+.gates .tick{color:var(--observed)}
+.gates .short{color:var(--warn)}
+
+/* ───────── ledger ───────── */
+.tools{display:flex;flex-wrap:wrap;gap:10px 26px;align-items:center;margin:18px 0 6px;font-size:13.5px}
+.seg2{display:inline-flex;border:1px solid var(--hair);border-radius:2px}
+.seg2 button{padding:6px 14px;color:var(--ink-mute);font-size:13px}
+.seg2 button[aria-pressed="true"]{background:var(--raised);color:var(--ink)}
+.seg2 button + button{border-left:1px solid var(--hair)}
+.chk{display:inline-flex;align-items:center;gap:8px;cursor:pointer;color:var(--ink-dim)}
+.chk input{accent-color:var(--observed);margin:0}
+.btn{border:1px solid var(--hair);border-radius:2px;padding:6px 12px;font-size:13px;color:var(--ink-dim);background:var(--panel)}
+.btn:hover{border-color:var(--observed-deep);color:var(--ink)}
+.copybox{display:block;width:100%;margin-top:10px;min-height:110px;background:var(--panel);border:1px solid var(--hair);border-radius:2px;padding:10px;font:12.5px/1.5 var(--mono);color:var(--ink-dim)}
+.banner{margin:14px 0 0;padding:10px 14px;border-left:2px solid var(--warn);background:var(--warn-wash);font-size:13.5px;color:var(--ink-dim)}
+.banner[hidden]{display:none}
+
+.day{margin-top:30px}
+.day-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;border-top:1px solid var(--hair);padding-top:14px}
+.day-head h3{font-family:var(--serif);font-weight:400;font-size:20px}
+.day-head .today{font:12px var(--mono);color:var(--observed)}
+.day-head .gate-flag{font-size:13px;color:var(--warn)}
+.day-head .load{margin-left:auto;font:12px var(--mono);color:var(--ink-mute);display:flex;gap:16px;flex-wrap:wrap}
+.day-head .load .over{color:var(--warn)}
+.day-copy{font-size:12px;color:var(--ink-mute);border-bottom:1px solid var(--hair-soft)}
+.day-copy:hover{color:var(--ink)}
+.track-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;border-top:1px solid var(--hair);padding-top:14px;margin-top:30px}
+.track-head h3{font-family:var(--serif);font-weight:400;font-size:20px}
+.track-head .prog{margin-left:auto;font:12px var(--mono);color:var(--ink-mute)}
+.track-bar{height:3px;background:var(--hair);margin-top:8px;position:relative}
+.track-bar i{position:absolute;left:0;top:0;bottom:0;background:var(--observed)}
+
+.task{border-bottom:1px solid var(--hair-soft)}
+.task > summary{
+  list-style:none;display:grid;grid-template-columns:28px minmax(0,1fr) 22px;gap:10px;align-items:center;
+  padding:11px 0;cursor:pointer;
+}
+.task > summary::-webkit-details-marker{display:none}
+.task > summary::marker{content:""}
+.cb{position:relative;width:22px;height:22px;margin-top:0}
+.cb input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;width:100%;height:100%}
+.cb span{display:block;width:20px;height:20px;border:1.5px solid var(--infer);border-radius:50%;margin:1px;transition:background .12s,border-color .12s}
+.cb input:focus-visible + span{outline:2px solid var(--focus);outline-offset:2px}
+.cb input:checked + span{background:var(--observed);border-color:var(--observed)}
+.cb input:checked + span::after{content:"";display:block;width:5px;height:10px;border:solid var(--canvas);border-width:0 2px 2px 0;transform:translate(6px,2px) rotate(45deg)}
+.cb input:disabled{cursor:not-allowed}
+.cb.late span{border-color:var(--warn)}
+.t-main{min-width:0}
+.t-title{font-size:15.5px;font-weight:500;line-height:1.35}
+.t-meta{display:flex;flex-wrap:wrap;gap:2px 16px;margin-top:3px;font-size:12.5px;color:var(--ink-mute)}
+.t-meta .api{color:var(--infer)}
+.t-meta .gate{color:var(--warn)}
+.t-meta .late{color:var(--warn)}
+.t-meta .doneat{color:var(--observed)}
+.chev{width:22px;height:22px;position:relative;color:var(--ink-mute)}
+.chev::before{content:"";position:absolute;left:7px;top:6px;width:7px;height:7px;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:rotate(45deg);transition:transform .15s}
+.task[open] .chev::before{transform:rotate(-135deg);top:9px}
+.task.is-done .t-title{color:var(--ink-mute);font-weight:400}
+.task.is-cut .t-title{text-decoration:line-through;color:var(--ink-mute)}
+.task.is-flash{animation:flash 1.6s ease-out}
+@keyframes flash{from{background:var(--obs-wash)}to{background:transparent}}
+.t-body{padding:2px 0 20px 38px;display:grid;gap:14px;max-width:74ch}
+.t-body h4{font-family:var(--serif);font-weight:400;font-size:15px;color:var(--ink);margin-bottom:5px}
+.t-body ol{counter-reset:s;display:grid;gap:7px}
+.t-body ol li{counter-increment:s;position:relative;padding-left:26px;font-size:14px;line-height:1.55;color:var(--ink-dim)}
+.t-body ol li::before{content:counter(s);position:absolute;left:0;top:0;font:12px/1.9 var(--mono);color:var(--ink-mute)}
+.t-body p{font-size:14px;line-height:1.55;color:var(--ink-dim)}
+.t-body .est{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;font-size:13px;color:var(--ink-mute)}
+.t-body .est label{display:inline-flex;align-items:center;gap:8px}
+.t-body .est input[type=number]{width:64px;background:var(--panel);border:1px solid var(--hair);border-radius:2px;padding:4px 6px;font:13px var(--mono);color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;color:var(--ink-mute);border:1px solid var(--hair);border-radius:2px;padding:2px 8px;line-height:1.5}
+.chip.on{color:var(--observed);border-color:var(--observed-deep)}
+.chipbtn{cursor:pointer}
+.chipbtn:hover{border-color:var(--observed-deep);color:var(--ink)}
+.done-group{margin-top:30px;border-top:1px solid var(--hair);padding-top:14px}
+.done-group summary{cursor:pointer;font-family:var(--serif);font-size:18px;list-style:none}
+.done-group summary::-webkit-details-marker{display:none}
+.done-group ul{margin-top:10px;display:grid;gap:8px;font-size:14px;color:var(--ink-dim)}
+.done-group li{display:grid;grid-template-columns:20px minmax(0,1fr);gap:10px}
+.done-group li::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--observed);margin:6px 0 0 4px}
+.done-group li small{display:block;color:var(--ink-mute);font-size:12.5px}
+
+/* ───────── tables used by api, rubric, risks ───────── */
+table.t{width:100%;border-collapse:collapse;font-size:13.5px}
+table.t th{font-weight:400;text-align:left;color:var(--ink-mute);font-size:12px;padding:0 14px 8px 0;border-bottom:1px solid var(--hair);white-space:nowrap}
+table.t td{padding:11px 14px 11px 0;border-bottom:1px solid var(--hair-soft);vertical-align:top;color:var(--ink-dim);line-height:1.45}
+table.t td.r,table.t th.r{text-align:right}
+table.t td b{color:var(--ink);font-weight:500}
+table.t tr.group td{padding-top:20px;border-bottom:1px solid var(--hair);color:var(--ink);font-family:var(--serif);font-size:16px}
+table.t tr.total td{border-top:1px solid var(--hair);color:var(--ink);font-weight:500}
+.jobs{min-width:960px}
+.jobs select,.jobs input[type=number]{background:var(--panel);border:1px solid var(--hair);border-radius:2px;padding:4px 6px;font:13px var(--mono);color:var(--ink)}
+.jobs input[type=number]{width:78px;text-align:right}
+.jobs select{max-width:120px}
+.jobs .opt{font-size:12px;color:var(--ink-mute)}
+.cost{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--infer)}
+.cost.spent{color:var(--observed)}
+.meter{margin-top:22px;display:grid;gap:12px;max-width:640px}
+.meter-row{display:grid;grid-template-columns:150px minmax(0,1fr) 92px;gap:12px;align-items:center;font-size:13px;color:var(--ink-dim)}
+.meter-row .track{height:6px;background:var(--hair);position:relative}
+.meter-row .track i{position:absolute;left:0;top:0;bottom:0}
+.meter-row .track .est{background:var(--infer)}
+.meter-row .track .act{background:var(--observed)}
+.meter-row .track .worst{background:var(--warn)}
+.meter-row output{font-family:var(--mono);font-size:12.5px;text-align:right;color:var(--ink)}
+.capfield{display:flex;flex-wrap:wrap;gap:8px 24px;margin-top:14px;font-size:13px;color:var(--ink-dim)}
+.capfield label{display:inline-flex;align-items:center;gap:8px}
+.capfield input{width:84px;background:var(--panel);border:1px solid var(--hair);border-radius:2px;padding:4px 6px;font:13px var(--mono);color:var(--ink);text-align:right}
+.rules{display:grid;gap:8px;margin-top:10px;max-width:72ch}
+.rules li{position:relative;padding-left:20px;font-size:14px;line-height:1.55;color:var(--ink-dim)}
+.rules li::before{content:"";position:absolute;left:2px;top:.62em;width:8px;height:1px;background:var(--infer)}
+.recipes{display:grid;gap:10px;margin-top:12px}
+.recipe{border:1px solid var(--hair);border-radius:3px;background:var(--panel)}
+.recipe > summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:12px 14px;font-size:14.5px}
+.recipe > summary::-webkit-details-marker{display:none}
+.recipe > summary small{color:var(--ink-mute);font-size:12.5px}
+.recipe[open] > summary{border-bottom:1px solid var(--hair)}
+.recipe .rb{padding:12px 14px 14px;display:grid;gap:10px}
+.recipe pre{margin:0;padding:12px;background:var(--raised);border:1px solid var(--hair-soft);border-radius:2px;font:12.5px/1.55 var(--mono);color:var(--ink-dim);white-space:pre-wrap;overflow-wrap:anywhere}
+.recipe p{font-size:14px;color:var(--ink-dim);line-height:1.55}
+
+/* ───────── demo ───────── */
+.slot{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;margin:16px 0 14px;font-size:13.5px;color:var(--ink-dim)}
+.show{display:flex;gap:2px;margin-top:6px;min-height:78px}
+.beat{flex:var(--w) 1 76px;min-width:0;text-align:left;padding:10px 10px 12px;background:var(--panel);border:1px solid var(--hair);border-top:2px solid var(--infer);border-radius:2px;display:flex;flex-direction:column;gap:3px;overflow:hidden}
+.beat:hover{border-color:var(--observed-deep)}
+.beat[aria-pressed="true"]{background:var(--raised);border-top-color:var(--observed);border-color:var(--observed-deep)}
+.beat .bt{font-size:13px;line-height:1.25;color:var(--ink)}
+.beat .bm{font:12px var(--mono);color:var(--ink-mute)}
+.beat.qa{border-top-color:var(--alarm)}
+.beat-detail{margin-top:16px;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:22px 40px;padding:18px 0;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair)}
+.beat-detail h3{font-family:var(--serif);font-weight:400;font-size:20px;margin-bottom:6px}
+.beat-detail dl{display:grid;gap:10px;font-size:14px}
+.beat-detail dt{font-size:12px;color:var(--ink-mute)}
+.beat-detail dd{margin:2px 0 0;color:var(--ink-dim);line-height:1.5}
+.cols2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:26px 48px;margin-top:10px}
+.cols3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px 36px;margin-top:14px}
+.cols2 h3,.cols3 h3{font-family:var(--serif);font-weight:400;font-size:18px;margin-bottom:6px}
+.cols2 p,.cols3 p,.cols2 li{font-size:14px;line-height:1.6;color:var(--ink-dim)}
+.cols2 ul{display:grid;gap:6px}
+.cols2 li{position:relative;padding-left:18px}
+.cols2 li::before{content:"";position:absolute;left:2px;top:.68em;width:8px;height:1px;background:var(--ink-mute)}
+
+/* 3d */
+.frame{margin-top:16px;border:1px solid var(--hair);border-radius:3px;background:var(--canvas);overflow:hidden}
+.frame iframe{display:block;width:100%;aspect-ratio:16/9;border:0;background:var(--canvas)}
+.frame-note{display:flex;flex-wrap:wrap;gap:6px 22px;justify-content:space-between;padding:10px 12px;border-top:1px solid var(--hair);font-size:12.5px;color:var(--ink-mute)}
+
+/* risks etc */
+.qlist{display:grid;gap:0;margin-top:10px}
+.q{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 24px;padding:12px 0;border-bottom:1px solid var(--hair-soft)}
+.q p{font-size:14.5px;line-height:1.5;color:var(--ink-dim)}
+.q p b{color:var(--ink);font-weight:500}
+.q .who{font:12.5px var(--mono);color:var(--ink-mute);white-space:nowrap}
+.after{display:grid;gap:0;margin-top:10px}
+.after li{display:grid;grid-template-columns:96px minmax(0,1fr);gap:16px;padding:10px 0;border-bottom:1px solid var(--hair-soft);font-size:14px;color:var(--ink-dim)}
+.after .when{font:12.5px var(--mono);color:var(--ink-mute);padding-top:2px}
+footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-height:1.6;color:var(--ink-mute);max-width:78ch}
+
+/* ───────── narrow screens ───────── */
+@media (max-width:1040px){
+  .shell{grid-template-columns:minmax(0,1fr);padding-top:0}
+  .rail{
+    position:sticky;top:env(safe-area-inset-top,0px);z-index:50;max-height:none;overflow:visible;
+    display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;padding:10px 0;margin-bottom:22px;
+    background:var(--canvas);border-bottom:1px solid var(--hair);
+  }
+  .brand-sub,.vitals,.status-line{display:none}
+  .wordmark{font-size:24px}
+  .persona{display:flex;gap:0}
+  .persona label{border-left:0;border-bottom:2px solid var(--hair);padding:4px 10px}
+  .persona label:has(input:checked){border-bottom-color:var(--observed)}
+  .nav{display:flex;gap:16px;overflow-x:auto;white-space:nowrap;flex:1 1 100%;order:3;padding-bottom:2px}
+  .theme{margin-left:auto}
+  section{margin-bottom:64px}
+}
+@media (max-width:860px){
+  .verdict{grid-template-columns:minmax(0,1fr)}
+  .whatif{border-left:0;padding-left:0;border-top:1px solid var(--hair);padding-top:22px}
+  .beat-detail{grid-template-columns:minmax(0,1fr)}
+  .cols2,.cols3{grid-template-columns:minmax(0,1fr)}
+  .show{flex-direction:column}
+  .beat{flex:none;flex-direction:row;justify-content:space-between;align-items:baseline;border-top:1px solid var(--hair);border-left:2px solid var(--infer)}
+  .beat[aria-pressed="true"]{border-left-color:var(--observed)}
+  .beat.qa{border-left-color:var(--alarm)}
+  .day-head .load{margin-left:0;width:100%}
+}
+@media (max-width:560px){
+  .t-body{padding-left:0}
+  .cap-grid{grid-template-columns:auto 1fr}
+  .cap-grid .colhead:nth-child(3){display:none}
+  .cap-grid .rng.we{grid-column:2}
+  .meter-row{grid-template-columns:minmax(0,1fr) 92px}
+  .meter-row .track{grid-column:1 / -1;order:3}
+  .after li{grid-template-columns:minmax(0,1fr)}
+  .after .when{padding-top:0}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <aside class="rail" id="rail">
+    <div class="brand">
+      <div class="wordmark">Tracer</div>
+      <p class="brand-sub">Road to November 18</p>
+    </div>
+    <fieldset class="persona" id="persona">
+      <legend class="vh">Show tasks for</legend>
+      <label><input type="radio" name="persona" value="all" checked><span>Everyone</span></label>
+      <label><input type="radio" name="persona" value="D"><span>Daniel</span></label>
+      <label><input type="radio" name="persona" value="K"><span>Karissa</span></label>
+    </fieldset>
+    <nav class="nav" aria-label="Sections">
+      <a href="#now">Where we are</a>
+      <a href="#plan">The plan</a>
+      <a href="#api">Claude API</a>
+      <a href="#demo">The demo</a>
+      <a href="#three">3D view</a>
+      <a href="#rubric">Points</a>
+      <a href="#risks">Risks</a>
+    </nav>
+    <dl class="vitals" id="vitals"></dl>
+    <p class="status-line" id="storeLine"></p>
+    <button class="theme" id="themeBtn" type="button">Switch theme</button>
+  </aside>
+
+  <main id="main">
+
+    <!-- ───────── where we are ───────── -->
+    <section id="now" class="hero">
+      <h1 id="h1">Twenty-one days until Tracer is on the screen.</h1>
+      <p class="lede" id="lede">Every task left before the November 18 presentation, who does it, how long it takes and what Claude will cost. Tick things off and the schedule check recalculates. Set the hours you can really give and the page tells you which gate is at risk.</p>
+
+      <div class="strip">
+        <div class="scroll-x"><svg id="stripSvg" viewBox="0 0 1000 292" role="img" aria-label="Timeline from October 28 to November 18 showing each task, the gates and the projected finish"></svg></div>
+        <div class="legend" aria-hidden="true">
+          <span><i class="l-done"></i>Done</span>
+          <span><i class="l-open"></i>Still to do</span>
+          <span><i class="l-late"></i>Planned day has passed</span>
+          <span><i class="l-gate"></i>Gate</span>
+          <span><i class="l-band"></i>When the hours run out at your capacity</span>
+          <span><i class="l-pres"></i>Presentation</span>
+        </div>
+      </div>
+
+      <div class="verdict">
+        <div>
+          <div class="verdict-text" id="verdict"></div>
+          <div class="nextup" id="nextup"></div>
+        </div>
+        <div class="whatif">
+          <div>
+            <h3>Hours you can give</h3>
+            <div class="cap-grid">
+              <span class="colhead"></span><span class="colhead">Weekdays</span><span class="colhead">Weekends</span>
+              <span class="who">Daniel</span>
+              <div class="rng"><input type="range" id="cDwd" min="0.5" max="8" step="0.5" value="3" aria-label="Daniel hours per weekday"><output id="oDwd">3 h</output></div>
+              <div class="rng we"><input type="range" id="cDwe" min="0" max="12" step="0.5" value="5" aria-label="Daniel hours per weekend day"><output id="oDwe">5 h</output></div>
+              <span class="who">Karissa</span>
+              <div class="rng"><input type="range" id="cKwd" min="0" max="4" step="0.25" value="0.5" aria-label="Karissa hours per weekday"><output id="oKwd">0.5 h</output></div>
+              <div class="rng we"><input type="range" id="cKwe" min="0" max="8" step="0.25" value="1.5" aria-label="Karissa hours per weekend day"><output id="oKwe">1.5 h</output></div>
+            </div>
+          </div>
+          <div>
+            <h3>If we are short, cut</h3>
+            <div class="cuts" id="cuts"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="scroll-x"><table class="gates" id="gates"></table></div>
+    </section>
+
+    <!-- ───────── the plan ───────── -->
+    <section id="plan">
+      <div class="head"><h2>The plan</h2><span class="note" id="planNote"></span></div>
+      <p class="prose">Each task has a day, an owner and an hour estimate. Open one for the exact steps and the test that says it is done. The estimates assume Claude Code writes the first draft and Daniel reads, runs and corrects it. Click an hour figure inside a task to change it.</p>
+      <div class="banner" id="roBanner" hidden>You can read this plan but not change it. Ask Daniel to share it with you as an editor so your ticks are saved for both of you.</div>
+      <div class="tools">
+        <div class="seg2" role="group" aria-label="Group tasks by">
+          <button type="button" id="vDay" aria-pressed="true">By day</button>
+          <button type="button" id="vTrack" aria-pressed="false">By track</button>
+        </div>
+        <label class="chk"><input type="checkbox" id="showDone" checked><span>Show finished tasks</span></label>
+        <button class="btn" type="button" id="copyAll">Copy my open tasks</button>
+        <span class="small" id="planCount"></span>
+      </div>
+      <div id="copyHost"></div>
+      <div id="ledger"></div>
+      <div id="doneAlready"></div>
+    </section>
+
+    <!-- ───────── claude api ───────── -->
+    <section id="api">
+      <div class="head"><h2>What Claude generates, and what it costs</h2></div>
+      <p class="prose">Claude writes the event trail for every synthetic specimen, a few showcase scenarios, and a search brief for every alert in the demo. Everything else, including fitting the models, is ordinary Python. The demo itself makes no live calls and holds no key: every Claude output is generated once, checked, and saved as a file.</p>
+      <p class="prose">The numbers below are estimates from token counts we have not measured yet. The 200-specimen pilot gives the real figures. Change a model, a count or the batch setting and the totals follow.</p>
+      <div class="scroll-x" style="margin-top:20px"><table class="t jobs" id="jobs"></table></div>
+      <div class="capfield">
+        <label>Console spend limit <input type="number" id="capUsd" min="1" step="1" value="25" aria-label="Spend limit in dollars"> $</label>
+        <label>Credit balance <input type="number" id="creditUsd" min="0" step="1" placeholder="from Console" aria-label="Credit balance in dollars"> $</label>
+      </div>
+      <div class="meter" id="meter"></div>
+      <h3 class="sub">How we keep the spend small</h3>
+      <ul class="rules">
+        <li><b>Pilot before scale.</b> 200 specimens cost about nine cents. The full run starts only after Karissa passes the pilot.</li>
+        <li><b>Count first.</b> The script calls <code>count_tokens</code> (free) before every job and stops if the estimate is over the job's budget.</li>
+        <li><b>Batch anything not interactive.</b> The Batch API is half price. The full dataset and all search briefs go through it.</li>
+        <li><b>Use the small model for bulk.</b> Haiku 5.5 writes the trails. Sonnet 5.5 writes the few pieces Karissa and the class will read closely. Opus is not needed.</li>
+        <li><b>Keep the shared instructions first.</b> The rules, stage list and schema sit at the front of every request so the cached prefix is reused.</li>
+        <li><b>Low effort, no spare thinking.</b> Set effort to low for trails. Thinking tokens are billed as output.</li>
+        <li><b>Structured output.</b> A schema means replies parse, so retries stay rare. Two retries per specimen at most, then drop it.</li>
+        <li><b>Log every call</b> to <code>data/claude/usage.jsonl</code> and type the real spend into the table above.</li>
+        <li><b>Hard stop.</b> A spend limit in the Console, and a key that lives only in <code>.env</code>. It never goes into the repo, a message or the demo page.</li>
+      </ul>
+      <h3 class="sub">Recipes to copy</h3>
+      <p class="small">Click a recipe to open it, then click the text to copy it. These are starting points to adjust after the pilot.</p>
+      <div class="recipes" id="recipes"></div>
+      <p class="small" style="margin-top:14px">Prices are per million tokens as listed by Anthropic on October 6, 2026: Haiku 5.5 $0.10 in and $0.50 out, Sonnet 5.5 $2 and $10, Opus 5.5 $4 and $20. Batch is half. Cached reads are a tenth of the input price (Haiku's is assumed, not listed). Check the Console before each run.</p>
+    </section>
+
+    <!-- ───────── demo ───────── -->
+    <section id="demo">
+      <div class="head"><h2>The demo on November 18</h2></div>
+      <p class="prose">The course grades the talk on a clear story, a reason for each design choice, a correct picture of how the system works, and class engagement, which carries the most points. The run of show gives each of those a place. Pick the slot length to see the minutes.</p>
+      <div class="slot">
+        <span>Slot length</span>
+        <div class="seg2" role="group" aria-label="Slot length in minutes" id="slotSeg"></div>
+        <span class="small">The length is not confirmed. It is one of the questions for the instructor.</span>
+      </div>
+      <div class="show" id="show"></div>
+      <div class="beat-detail" id="beatDetail"></div>
+
+      <h3 class="sub">Beat Tracer, the class activity</h3>
+      <div class="cols2">
+        <div>
+          <p>Everyone opens the demo link on a phone. A ward feed shows six specimens leaving collection. One goes silent. Tap the specimen you think is lost and press Call it. The sooner you call it correctly, the more warning you gave. A wrong call uses up one of your three alerts for the round.</p>
+          <p style="margin-top:10px">After three rounds the page shows your median warning next to Tracer's on the same rounds. The point lands without a lecture: silence carries information, and a fixed threshold trades warning against false alarms.</p>
+        </div>
+        <ul>
+          <li>The rounds come from the held-out test runs in the real bundle, never invented.</li>
+          <li><code>?seed=18</code> in the link gives the whole room the same rounds, so people can compare answers out loud.</li>
+          <li>It runs in the browser with no server. Scores stay on the phone.</li>
+          <li>One round takes under a minute. Three rounds fit in the two to three minutes the run of show allows.</li>
+          <li>On a slow room, the presenter plays one round on the projector and asks for a show of hands.</li>
+        </ul>
+      </div>
+
+      <h3 class="sub">What the demo page contains</h3>
+      <div class="cols2">
+        <ul>
+          <li>The problem in sixty seconds, written by Karissa, with a glossary.</li>
+          <li>A live board ranked by expected harm, with the simple rule's verdict next to the model's.</li>
+          <li>A specimen timeline with a scrubber: risk, likely location, expected arrival, the window marker labelled with the event that stops the clock, and the moment the alert fires.</li>
+          <li>A threshold slider that shows warning time against alerts per shift for Tracer and the baseline.</li>
+        </ul>
+        <ul>
+          <li>Beat Tracer, as above.</li>
+          <li>A button on each specimen that opens the 3D view in that specimen's situation.</li>
+          <li>A short section on why the design is what it is: the survival model, the synthetic data, and warning time as the measure.</li>
+          <li>An honest limits section: the failures Tracer cannot see, and what real validation would need.</li>
+        </ul>
+      </div>
+
+      <h3 class="sub">If something fails in the room</h3>
+      <div class="scroll-x"><table class="t" style="min-width:640px">
+        <tr><th>What goes wrong</th><th>What we do</th></tr>
+        <tr><td>No network or the link will not load</td><td>Open the offline copy of <code>docs/demo/</code> from disk. It needs no server.</td></tr>
+        <tr><td>The projector or laptop fails</td><td>Play the five-minute screen recording and run Beat Tracer from a phone.</td></tr>
+        <tr><td>The 3D view is blank on a device</td><td>The page shows the 2D timeline instead; the link <code>?lite=1</code> forces it.</td></tr>
+        <tr><td>A question we cannot answer</td><td>Say what we do know, say that it is an open question, and write it down. Question 10 of the check-in already names the main unknowns.</td></tr>
+      </table></div>
+    </section>
+
+    <!-- ───────── 3d ───────── -->
+    <section id="three">
+      <div class="head"><h2>Seeing the silence in 3D</h2></div>
+      <p class="prose">A pneumatic tube bench built from the same model as the board. The carrier is the truth. Hide it, and what is left is what the lab sees, which is nothing, and what Tracer infers, drawn as light along the tube. It is the opening image of the talk and the answer to "what does absence of data look like".</p>
+      <div class="frame">
+        <iframe id="exhibit" title="Tracer 3D exhibit" loading="lazy" allow="fullscreen" src="exhibit-3d/dist/index.html?embed=1"></iframe>
+        <div class="frame-note">
+          <span>Press H for the compact view, T to hide the truth, L for the guided lesson.</span>
+          <a href="exhibit-3d/dist/index.html" target="_blank" rel="noopener">Open it in its own tab</a>
+        </div>
+      </div>
+      <div class="cols3">
+        <div><h3>Truth</h3><p>The physical run and the carrier, placed where the specimen really is. Nothing in the lab sees this.</p></div>
+        <div><h3>What the lab sees</h3><p>Only scans. After the collection scan the tube run is dark until a receipt scan arrives, which is the gap the project exists for.</p></div>
+        <div><h3>What Tracer infers</h3><p>Risk of missing the window and the probability of each place the specimen could be, recomputed every minute from silence alone.</p></div>
+      </div>
+      <p class="small" style="margin-top:16px">Every parameter in it is an assumption, and it says so on its help sheet. The fitted values from the pipeline replace them through one JSON file, without code changes.</p>
+    </section>
+
+    <!-- ───────── rubric ───────── -->
+    <section id="rubric">
+      <div class="head"><h2>Where the points are</h2><span class="note" id="rubNote"></span></div>
+      <p class="prose">The course guidelines score the project out of 100. Each line below lists the tasks that earn it, so nothing is left to chance. A tick means the task is done. The weekly milestones are worth the most and are the easiest to lose by skipping one.</p>
+      <div class="scroll-x" style="margin-top:18px"><table class="t" id="rubTable" style="min-width:760px"></table></div>
+    </section>
+
+    <!-- ───────── risks ───────── -->
+    <section id="risks">
+      <div class="head"><h2>What could go wrong</h2></div>
+      <div class="scroll-x"><table class="t" id="riskTable" style="min-width:760px"></table></div>
+      <h3 class="sub">Questions that are not ours to answer</h3>
+      <div class="qlist" id="questions"></div>
+      <h3 class="sub">After November 18</h3>
+      <ul class="after" id="after"></ul>
+      <footer style="margin-top:56px">
+        <p>Hour estimates are ours and can be edited in each task. Prices are Anthropic's list prices as of October 6, 2026. Weekly draft dates come from the course guidelines, which call them tentative, so check Canvas. Every number in the cost table is an estimate until the pilot reports real usage. The page stores ticks, spend and cuts in the shared store when it can reach one, and on this device otherwise.</p>
+      </footer>
+    </section>
+
+  </main>
+</div>
+<noscript><p style="padding:24px;color:var(--ink)">This page needs JavaScript to show the plan.</p></noscript>
+<script id="core">
+"use strict";
+/* ════════════════════════════════════════════════════════════════════
+   Core: plan data and the arithmetic on it. No DOM in this block, so it
+   can be run on its own. Dates are local midnight in 2026.
+   ════════════════════════════════════════════════════════════════════ */
+const D0 = (m, d) => new Date(2026, m - 1, d);
+const START = D0(10, 28), FREEZE = D0(11, 16), PRESENT = D0(11, 18);
+const addDays = (dt, n) => new Date(dt.getFullYear(), dt.getMonth(), dt.getDate() + n);
+const dayIdx = dt => Math.round((new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()) - START) / 86400000);
+const isWeekend = dt => dt.getDay() === 0 || dt.getDay() === 6;
+const taskDay = t => D0(t.day[0], t.day[1]);
+
+const TRACKS = {data: "Data", model: "Models", demo: "Demo", story: "Talk", write: "Course work"};
+const PEOPLE = {D: "Daniel", K: "Karissa"};
+
+/* who: hours per person. earns: rubric lines the task helps win. needs: tasks that must be done first. */
+const TASKS = [
+{id:"W1", tr:"write", day:[10,28], who:{D:0.25}, t:"Submit Milestone 4 on Canvas",
+ why:"It is due today and Canvas allows unlimited attempts, so submit now and refine later.",
+ steps:["Open Canvas, Milestone 4: Project Check-In.","Paste the numbered answers from `docs/submissions/Milestone 4 - Project Check-In.md` into the text box. The PDF in Downloads is the formatted copy; attach it if the page offers an upload.","Submit, then open the submission and check that all ten answers appear in order."],
+ done:"Canvas shows the submission with ten numbered answers.", earns:["M1"]},
+
+{id:"W2", tr:"write", day:[10,28], who:{D:0.25}, t:"Read the feedback on Milestones 2 and 3",
+ why:"Response to instructor feedback is 10 of the 100 points, and the next submission is where it shows.",
+ steps:["Open Canvas, Grades, and read each comment on Milestones 2 and 3.","Write one line per comment saying what changed because of it.","Put those lines in the next milestone, under the answer they belong to."],
+ done:"A list of comments, each with the change that answers it.", earns:["M3"]},
+
+{id:"S1", tr:"data", day:[10,29], who:{D:1}, t:"Set up Claude API access with a hard cap",
+ why:"Nothing else in the data track can run until this works, and the cap protects the credits.",
+ steps:["Open the Anthropic Console, Billing. Read the promotional credit balance and its expiry date. The expiry must be after November 18. If it is earlier, tell Karissa today and switch to the fallback in the risks section.","Settings, Limits: set a monthly spend limit of $25.","Create a workspace named tracer and an API key named tracer-gen. Save the key in `.env` as `ANTHROPIC_API_KEY=...`. Never paste it into a chat, the repo or the demo page.","Run `pip install anthropic python-dotenv`.","Smoke test: `python -c \"import anthropic; r=anthropic.Anthropic().messages.create(model='claude-haiku-5-5', max_tokens=50, messages=[{'role':'user','content':'Say ok'}]); print(r.stop_reason, r.usage)\"`"],
+ done:"The call prints a stop reason and a usage line, and the Console shows the $25 limit.", earns:[]},
+
+{id:"S2", tr:"data", day:[10,29], who:{D:1.5}, t:"Scaffold the project for building",
+ why:"One clean layout now saves every later task from deciding where things go.",
+ steps:["Create `requirements.txt` with `anthropic`, `numpy`, `scipy`, `polars`, `duckdb`, `pyyaml`, `pytest` and `python-dotenv`.","Create `config/`, `tests/`, and the packages `src/generator/`, `src/pipeline/`, `src/models/`, `src/api/`, each with an `__init__.py`.","Add `.env` to `.gitignore` and add `.env.example` containing only the variable name.","Run `pytest`. It should report zero tests and exit cleanly.","Commit this as one change."],
+ done:"`pytest` runs, and `git check-ignore .env` prints `.env`.", earns:["P4"]},
+
+{id:"K1", tr:"data", day:[10,29], who:{D:0.5, K:1}, t:"Thirty-minute call: the policy first pass", api:"J0",
+ why:"Everything downstream waits on five answers. Rough answers are fine. A citation can come later.",
+ steps:["Where does the clock stop: receipt, set up on media, plated, or result? Milestone 2 says plating. Confirm or correct it.","For the five specimen types (urine, body fluid, bronchoalveolar lavage, culture swab, tissue) and the tests ordered on each, including anaerobic culture: how long is the stability window, and how must the specimen travel?","Between receipt and set-up, does a specimen wait somewhere, and for about how long?","Where do specimens really go missing or sit too long: before leaving the unit, in the tube, at the receiving end? Give rough times for each leg.","How many alerts in a shift would still feel useful, and who acts on each kind of failure?","Daniel types the answers into `config/breach_policy.yaml` during the call and marks every value `source: assumed (v0)`. Optional: run the starter-ranges recipe first and bring its table, so the call corrects numbers instead of inventing them."],
+ done:"Five answers written down and five rows in the policy file.", earns:["M2","P2"]},
+
+{id:"D1", tr:"data", day:[10,30], who:{D:3}, t:"Write the three configuration files", needs:["K1"],
+ why:"The clock rule, the workflow and every assumed parameter live in configuration, so a change from Karissa costs a re-run and not a rewrite.",
+ steps:["`config/breach_policy.yaml`: one row per specimen type and test with `clock_start: collected`, `clock_stop: plated`, `window_min`, `urgency_tier` and `source`.","`config/workflow_graph.yaml`: the stages (ordered, collected, dispatched, in_tube, at_station, stalled_at_station, received, accessioned, plated, lost) and which of them produce a scan.","`config/config.yaml`: every generator parameter (arrivals by hour, specimen mix, route split, leg medians and spreads, fault rates), each with a comment that says it is an assumption.","Write `src/generator/config.py` to load all three. It must fail loudly if a policy names a stage that is not in the graph.","Write one test that feeds it a bad policy and expects that failure."],
+ done:"`pytest` passes, including the bad-policy test.", earns:["P2","P3"]},
+
+{id:"D2", tr:"data", day:[10,30], who:{D:2.5}, t:"Brief sampler, part 1: arrivals, mix and faults", needs:["D1"],
+ why:"A seeded sampler decides what happens to each specimen, so the truth is ours and the dataset can be reproduced.",
+ steps:["`src/generator/briefs.py`: take a seed and a run number, and draw collection times from the hourly rate profile with a weekend factor.","Draw each specimen's type, tests, unit, priority and route.","Draw one planted fault per specimen from the fault table (mostly none): lost in tube, stalled at station, misrouted, not dispatched, never collected, content failure.","Return plain dictionaries."],
+ done:"The same seed gives byte-identical output (compare a hash), and the fault mix is within normal sampling error of the config.", earns:["P1"]},
+
+{id:"D3", tr:"data", day:[10,31], who:{D:2}, t:"Brief sampler, part 2: the timing skeleton", needs:["D2"],
+ why:"The skeleton fixes every timestamp before Claude writes a word, which keeps the statistics under our control.",
+ steps:["For each brief, draw the leg durations (dispatch wait, tube transit, station dwell, accession wait, plating wait) from the medians and spreads in the config.","Apply the planted fault: a stall adds 30 to 180 minutes at the station, a loss removes the receipt.","Write the targets into the brief: the minute each stage ends.","Test that the same seed gives the same targets."],
+ done:"200 briefs print as a table and every row is consistent: stage times add up and losses have no receipt.", earns:[]},
+
+{id:"D4", tr:"data", day:[10,31], who:{D:1.5}, t:"Write the trail prompt and output schema", api:"J1", needs:["S1","D3"],
+ why:"The prompt turns a brief into an event trail and a hidden true path. The schema makes every reply parse.",
+ steps:["Create `src/generator/prompt.py` with the instructions and schema from the first recipe in the Claude API section.","Request structured output with `output_config.format` so every reply is valid JSON.","Put the stable text (rules, stage list, schema) first and the single brief last, so the cached prefix is reused.","Before any call, run `count_tokens` and print the estimate. Abort if the job would cost more than its budget."],
+ done:"One brief goes in and a valid trail comes out. The second call's usage shows cached tokens.", earns:["P3"]},
+
+{id:"D5", tr:"data", day:[10,31], who:{D:2}, t:"Write the validator", needs:["D4"],
+ why:"The validator is what lets us trust cheap, fast generation. Without it we are only hoping.",
+ steps:["Write `src/generator/validate.py` with the nine checks in the validator recipe.","Write one broken example per check and a test that each one is caught for the right reason.","On a failure, retry once with the error text added to the brief. On a second failure, drop the specimen and log it."],
+ done:"Nine tests pass. A good trail passes and each broken trail fails.", earns:["P1"]},
+
+{id:"D6", tr:"data", day:[11,1], who:{D:1}, t:"Run the 200-specimen pilot", api:"J1", needs:["D5"],
+ why:"A pilot costs about ten cents and tells us everything the full run would, before it costs more.",
+ steps:["`python -m src.generator.run --seed 0 --runs 1 --n 200 --out data/claude/pilot`","Read the printed pass rate and cost. Stop and fix if the pass rate is under 90 percent.","`python -m src.generator.show --n 20` prints twenty trails in plain language for Karissa."],
+ done:"At least 95 percent pass the validator, the actual cost is in `data/claude/usage.jsonl`, and the twenty-trail sheet exists.", earns:[]},
+
+{id:"K2", tr:"data", day:[11,2], who:{K:1}, t:"Review twenty pilot timelines", needs:["D6"],
+ why:"You are the only one who can say whether these look like a real laboratory. This is the gate before any more money is spent.",
+ steps:["Open the sheet of twenty specimen timelines Daniel sends.","For each, mark Plausible or Not plausible. If not, write one phrase, for example 'receipt too soon after dispatch'.","Count them. At least 17 of 20 plausible is a pass."],
+ done:"The sheet is returned with a mark on all twenty.", earns:["P2"]},
+
+{id:"D7", tr:"data", day:[11,2], who:{D:1}, t:"Fix what the review found", api:"J1b", needs:["K2"],
+ why:"Group the notes by cause so one change fixes many trails.",
+ steps:["Group Karissa's notes by cause. Change the prompt, the validator or the config, whichever owns that cause.","If fewer than 17 were plausible, rerun the pilot (about ten cents) and send a fresh sheet of ten."],
+ done:"The pass rate and the plausibility count both meet the bar.", earns:[]},
+
+{id:"D8", tr:"data", day:[11,2], who:{D:1}, t:"Start the full run", api:"J2", needs:["D7"],
+ why:"The Batch API is half price and takes minutes to a few hours, so start it early in the day.",
+ steps:["`python -m src.generator.run --seed 1 --runs 30 --n 400 --batch --dry-run` prints the token count and the estimated cost. Continue only if it is under $5.","Run it again without `--dry-run`. The script saves the batch ids so you can resume.","Do not start it late at night. Check it in the morning."],
+ done:"Batch ids are saved and the status reads in progress.", earns:[]},
+
+{id:"D9", tr:"data", day:[11,3], who:{D:1.5}, t:"Collect, validate and freeze the dataset", needs:["D8"],
+ why:"A frozen, hashed file is what makes the project reproducible. The generator may never be run again after this.",
+ steps:["`python -m src.generator.collect --batch-ids data/claude/batches.json`","Validate every trail and keep those that pass. Write `datasets/tracer-synthetic-v1.jsonl.gz` and `datasets/manifest.json` (model id, prompt hash, seeds, counts, pass rate, cost, date).","If the compressed file is over 25 MB, publish it as a GitHub release asset and commit only the manifest and a checksum.","Commit."],
+ done:"At least 11,000 specimens accepted, the manifest committed, and the cost recorded.", earns:["M2","P4","D4"]},
+
+{id:"W3", tr:"write", day:[11,4], who:{D:1}, t:"Draft of Results, if still due",
+ why:"The guidelines list a Results draft on November 4. Check Canvas for the exact prompt.",
+ steps:["Check Canvas to see whether it is still assigned and what it asks for.","Write what exists: the dataset numbers from the manifest (count, pass rate, cost) and the evaluation plan.","Say plainly that model results arrive on November 8."],
+ done:"Submitted, with every claim traceable to a file in the repo.", earns:["M1","M2"]},
+
+{id:"M1", tr:"model", day:[11,4], who:{D:3}, t:"Load the data and split the runs", needs:["D9"],
+ why:"The truth log must never reach a model. A test makes that a rule and not a habit.",
+ steps:["Load the frozen dataset into DuckDB or Parquet under `data/store/`.","Split the 30 runs: 24 for fitting and 6 held out for testing, chosen by run number and never by specimen.","Keep the truth log in its own table that only `src/pipeline/evaluate.py` may read.","Write a test that imports every module under `src/models/` and fails if any touches the truth table."],
+ done:"Row counts match the manifest and the truth-isolation test passes.", earns:["P1","P3"]},
+
+{id:"M2", tr:"model", day:[11,5], who:{D:3}, t:"Fit the transit-time distributions", needs:["M1"],
+ why:"These fitted numbers are the model. Everything the board shows comes from them.",
+ steps:["For each group (specimen type, six-hour block, priority) fit a lognormal for normal transit, a longer lognormal for stalled specimens, and the share that never arrive. Use maximum likelihood in SciPy.","Groups under 30 specimens fall back to their parent group (drop the hour block first).","Write `interval_params.json` with the policy hash inside."],
+ done:"Parameters print for every group and a rerun gives identical numbers.", earns:[]},
+
+{id:"M3", tr:"model", day:[11,5], who:{D:2}, t:"Risk model and parameter recovery", needs:["M2"],
+ why:"Parity with the JavaScript proves the demo and the pipeline are the same model. Recovery proves the fitting works.",
+ steps:["Implement the closed form from `docs/architecture.md` section 5.2: the chance a specimen misses its window given that it is still silent after tau minutes.","Run it and the JavaScript in `visuals/architecture.html` on the same 50 random states. They must agree to 1e-6.","Parameter recovery: compare the fitted values with the generator's planted values. They should agree within sampling error."],
+ done:"The parity and recovery tests pass and the recovery plot is saved in `results/`.", earns:["P1","T3"]},
+
+{id:"M4", tr:"model", day:[11,6], who:{D:2}, t:"Baseline and evaluation", needs:["M3"],
+ why:"A model is only worth showing next to the simple rule it has to beat.",
+ steps:["Baseline: alert when time since collection passes the group's 90th percentile.","On the 6 held-out runs, report median warning time (alert to window close) among caught breaches, the share caught at 6 alerts per shift, alerts per 8-hour shift, and a calibration curve.","`python -m src.pipeline.evaluate` prints one table: baseline against risk model."],
+ done:"The table prints and the numbers regenerate from the seed.", earns:["P1","F3"]},
+
+{id:"M5", tr:"model", day:[11,6], who:{D:2}, t:"Alert triage and the operating point", needs:["M4"],
+ why:"Alert volume is what decides whether anyone would use this. The threshold is chosen by that, not by accuracy.",
+ steps:["Expected harm is the chance of missing the window times the urgency weight from the policy.","Pick the threshold with the longest median warning while staying under 6 alerts per shift. Save it.","One open alert per specimen, routed to a role, closed when the receipt scan arrives."],
+ done:"An alert list for the test runs, one row per alert, with time, likely location and warning minutes.", earns:["P2"]},
+
+{id:"M6", tr:"model", day:[11,7], who:{D:1.5}, t:"Run the comparison and tag the first prototype", needs:["M5"],
+ why:"The course scores improvement between the midterm and final prototypes. This snapshot is the midterm.",
+ steps:["Run the evaluation end to end from a clean checkout.","Save `results/mvp-nov8.json` and tag the commit `v0.1-mvp`.","Keep that file untouched. The December 2 results must be compared against it."],
+ done:"The tag is pushed and the results file is committed.", earns:["M2","P1","P5"]},
+
+{id:"K3", tr:"data", day:[11,7], who:{K:1.5}, t:"Cited policy table", needs:["K1"],
+ why:"The windows become published facts instead of assumptions, which is the strongest thing the project can say about its labels.",
+ steps:["For each row in `config/breach_policy.yaml`, find the sentence in the IDSA and ASM guide that gives the window, and paste the section or page as the citation.","Confirm where the clock stops and who decides a specimen is too late.","Confirm the alert budget and who is alerted for each failure type."],
+ done:"Every row has a citation, or says plainly 'not found, assumed'.", earns:["P2"]},
+
+{id:"M7", tr:"model", day:[11,8], who:{D:1.5}, t:"Does the risk model beat the simple rule?", needs:["M6"],
+ why:"If it does not, that is the result, and the architecture says to report it that way.",
+ steps:["Write one paragraph in `results/README.md` with the headline numbers and what they mean.","The bar set in advance: at least 5 more minutes of median warning at the same alerts per shift. If the model misses it, say so.","Send the paragraph to Karissa."],
+ done:"The paragraph exists and quotes the numbers in `results/mvp-nov8.json`.", earns:["F3","T2","T3"]},
+
+{id:"W6", tr:"write", day:[11,8], who:{D:1}, t:"Bring the design documents up to date",
+ why:"Today `docs/architecture.md` still says a simulator is the event source, and it lists a different five specimen types than Milestone 3.",
+ steps:["Update `docs/architecture.md` sections 1.1, 6 and 12, and `README.md`, to describe the Claude-generated dataset.","Make the five specimen types match the Milestone 3 list.","Update the local `CLAUDE.md` and `AGENTS.md` status."],
+ done:"No document in the repo still says the simulator is the event source.", earns:["F2"]},
+
+{id:"M8", tr:"model", day:[11,9], who:{D:2}, t:"Location estimate, part 1: port the filter", needs:["M2"],
+ why:"The board needs to say where to look, not only that something is wrong.",
+ steps:["Port `locationSeries` from `visuals/architecture.html` to NumPy in `src/models/location.py`, taking leg durations from `interval_params.json`.","Test it against the JavaScript on the default parameters."],
+ done:"The posterior sums to 1 at every minute and matches the JavaScript.", earns:[]},
+
+{id:"M8b", tr:"model", day:[11,10], who:{D:2}, t:"Location estimate, part 2: score it", needs:["M8"],
+ why:"Accuracy against the hidden truth is the result that makes the location claim honest.",
+ steps:["Compare the most likely location with the truth segments at 15, 30, 60 and 90 minutes of silence. Report top-1 and top-3 accuracy.","Plot the probability of lost against how often specimens were really lost."],
+ done:"A table and a plot are saved in `results/`.", earns:["F3"]},
+
+{id:"M9", tr:"model", day:[11,10], who:{D:3}, t:"Search brief: template and Claude", api:"J4", needs:["M5"],
+ why:"The fourth module. Comparing it with a plain template is how we show the language model adds something.",
+ steps:["Write the fixed-template brief: where to look first, why, minutes left.","Write the Claude prompt from the search-brief recipe and test it on 5 alerts.","Generate for every alert in the demo bundle (about 300) in one Batch call and save the briefs with the alert ids.","Keep both versions so Karissa can compare them blind."],
+ done:"Every demo alert has a template brief and a Claude brief on file.", earns:["D3"]},
+
+{id:"D11", tr:"demo", day:[11,11], who:{D:2}, t:"Bundle exporter, part 1", needs:["M5","M8"],
+ why:"The demo shows real model output because it reads a file the pipeline wrote.",
+ steps:["`python -m src.api.export --run test --out docs/demo/bundle.json`: for each specimen write its events, risk every 5 minutes, location probabilities every 5 minutes, the alert moment, and the truth segments.","Include the fitted parameters and the policy with its hash."],
+ done:"The file exists and a quick script loads it.", earns:["D3"]},
+
+{id:"K4", tr:"model", day:[11,11], who:{K:1.5}, t:"Rate twenty search briefs, blind", needs:["M9"],
+ why:"This turns a design claim into a number we can put in the Results.",
+ steps:["Daniel sends 20 alerts, each with two briefs labeled A and B in random order.","For each brief give 1 to 5 for 'tells me where to look' and mark any sentence that is unsafe or wrong.","Return the sheet. Daniel unblinds it and averages the scores."],
+ done:"The sheet is returned and Daniel has the two averages.", earns:["D3","F3"]},
+
+{id:"W4", tr:"write", day:[11,11], who:{D:1}, t:"Draft of Discussion, if still due",
+ why:"The guidelines list a Discussion draft on November 11. Check Canvas.",
+ steps:["Check Canvas to see whether it is still assigned.","Use `docs/architecture.md` section 13 (the design notes) as the source material."],
+ done:"Submitted.", earns:["M1"]},
+
+{id:"D12", tr:"demo", day:[11,12], who:{D:2}, t:"Bundle exporter, part 2: metrics and schema", needs:["D11"],
+ why:"Precomputing the threshold grid means the slider in the demo needs no model run.",
+ steps:["Add the global metrics: median warning time and alerts per shift for the baseline and the risk model across a grid of 20 thresholds.","Write `docs/demo/bundle.schema.json` and a test that the bundle validates against it.","Pick 10 candidate showcase specimens: a clear catch, stalled then found, never sent, a false alarm, a content failure Tracer cannot see, a borderline case."],
+ done:"The schema test passes and the 10 candidates are listed.", earns:["D3"]},
+
+{id:"P2", tr:"demo", day:[11,12], who:{D:3}, t:"Demo page, part 1: the board", needs:["D11"],
+ why:"The board is the first thing the class sees that is real model output.",
+ steps:["Create `docs/demo/index.html`: one file, vanilla JavaScript, no build step.","Sections so far: the problem in sixty seconds (placeholder until Karissa's text arrives) and the live board ranked by expected harm, with the simple rule's verdict beside the model's.","Load `bundle.json` with `fetch` and show a plain error message in the page if it fails.","Check it on a phone."],
+ done:"The board shows ranked specimens from the real bundle.", earns:["D1","D3"]},
+
+{id:"K5", tr:"story", day:[11,12], who:{K:1.5}, t:"Write the clinical background",
+ why:"The rubric asks that the problem and its significance are clearly explained. Only a clinician can do this honestly.",
+ steps:["Five short paragraphs for a mixed audience: why timing matters for a culture; what a missing specimen costs the patient and the lab; how a specimen travels today; what a receiving tech does when one is missing; what Tracer changes.","A glossary of eight terms, for example accessioning, plating, stability window, pneumatic tube, recollection, lead time.","Plain language. No sentence a first-year student could not follow."],
+ done:"The text is in the shared folder, under 450 words plus the glossary.", earns:["D2","T1"]},
+
+{id:"P3", tr:"demo", day:[11,13], who:{D:3}, t:"Demo page, part 2: the specimen timeline", needs:["P2","D12"],
+ why:"This is the moment of the demo: drag the clock and watch silence turn into an alert.",
+ steps:["Click a board row to open its timeline: events with the silent gap drawn as a gap, the risk curve, location bars, expected arrival, the window marker labelled with the event that stops the clock, and the alert moment.","A scrubber moves time. Risk is recomputed in the browser from the parameters in the bundle.","Parity test: browser risk equals the Python risk to 1e-6 on 50 states."],
+ done:"You can scrub a real specimen and the alert fires at the same minute Python reports.", earns:["D3","D5","T3"]},
+
+{id:"G3", tr:"demo", day:[11,13], who:{D:1}, t:"Showcase scenarios", api:"J3", needs:["D12"],
+ why:"Ten stories chosen from real test runs give the talk something to point at.",
+ steps:["Take the 10 candidates. For each, ask Claude (Sonnet 5.5) with the showcase recipe for a plain-language story, a one-line takeaway and the question the audience should ask.","Store them in the bundle under `heroes`."],
+ done:"Ten scenarios in the bundle, each with story, takeaway and question.", earns:["D3"]},
+
+{id:"K6", tr:"story", day:[11,14], who:{K:0.5}, t:"Check the showcase scenarios", needs:["G3"],
+ why:"A wrong clinical sentence on the projector costs more than an hour of polish saves.",
+ steps:["Read the ten stories. Mark any sentence that is clinically wrong or misleading.","Return the marks to Daniel."],
+ done:"Ten stories marked and returned.", earns:[]},
+
+{id:"P4", tr:"demo", day:[11,14], who:{D:3}, t:"Demo page, part 3: the threshold control", needs:["P3"],
+ why:"This is where the class changes a setting and sees the trade-off, which is what the rubric means by exploration.",
+ steps:["A slider for the alert threshold with two live numbers for Tracer and for the baseline: median warning time and alerts per shift, read from the precomputed grid.","A second control for the stability window (60 to 240 minutes) that recomputes risk in the browser.","One sentence under the chart that rewrites itself, for example 'At this setting Tracer warns 61 minutes ahead, 5.2 times a shift.'"],
+ done:"Moving either control changes the numbers and the sentence.", earns:["D5","T2"]},
+
+{id:"P5", tr:"demo", day:[11,14], who:{D:3}, t:"Beat Tracer, the class activity", needs:["P3"],
+ why:"Class engagement and answering questions is the largest single line in the presentation score.",
+ steps:["Read the Beat Tracer notes in the demo section. Rounds come from the held-out runs in the bundle.","Six specimens leave collection, one goes silent. A tap on Call it records the minute. A wrong call uses one of three alerts.","`?seed=18` gives everyone the same rounds.","The end screen shows the player's median warning next to Tracer's on the same rounds.","Playtest with three people. A full game must take under three minutes."],
+ done:"Three people finish a game in under three minutes and understand the point without help.", earns:["D5","T4"]},
+
+{id:"P6", tr:"demo", day:[11,15], who:{D:2}, t:"Link the 3D view to each specimen", needs:["P3"],
+ why:"The 3D bench is the opening image. Linking it means every specimen in the demo can be seen as a specimen in a tube.",
+ steps:["Copy `visuals/exhibit-3d/dist/` to `docs/demo/exhibit/`.","On each timeline add View in 3D, which opens the exhibit with `?fate=stalls&silence=55` taken from the specimen.","If the browser cannot run the 3D view, show the 2D timeline instead. `?lite=1` forces that path."],
+ done:"The button opens the 3D view in the same situation as the timeline.", earns:["D5"]},
+
+{id:"P7", tr:"demo", day:[11,15], who:{D:2}, t:"Publish on GitHub Pages and test on devices", needs:["P4","P5"],
+ why:"The rubric asks that the demo is accessible to every student. Only a real phone test shows that.",
+ steps:["Repo settings, Pages, deploy from branch `main`, folder `/docs`. Open the address on your phone.","Make a QR code for the address and save it as `docs/demo/qr.png`.","Test on iPhone Safari, Android Chrome, and laptop Chrome, Safari and Firefox. Write down what fails.","Check that the page needs no key and calls no API."],
+ done:"The public address opens the demo on three different devices.", earns:["D1","D4","P4"]},
+
+{id:"K7", tr:"story", day:[11,15], who:{K:1.5}, t:"Practice the clinical questions",
+ why:"Answering questions well is the surest way to show the class we understand the system.",
+ steps:["Write the ten questions a mixed class is most likely to ask, for example: what if the scanner misses a scan, why not alert everything at 30 minutes, what would a tech actually do. Give each a two-sentence answer.","Write five questions you will ask the audience.","Send both lists to Daniel."],
+ done:"Ten answered questions and five audience questions, sent.", earns:["T3","T4"]},
+
+{id:"T1", tr:"story", day:[11,15], who:{D:1, K:1}, t:"Write the talk",
+ why:"Karissa's beats are about the people and the lab. Daniel's are about the system.",
+ steps:["Use the run of show in the demo section. Decide who says each beat.","Write the sentences you will say into the notes of each beat.","Cut anything that does not serve the story, the reasons for the design, or the class activity."],
+ done:"Each beat has an owner and its sentences.", earns:["T1","T2"]},
+
+{id:"T2", tr:"story", day:[11,16], who:{D:1.5, K:1.5}, t:"Dress rehearsal one", needs:["T1","P7"],
+ why:"The first full run always finds the problems. Better on the 16th than in the room.",
+ steps:["Run the whole talk against a timer, with the demo open on the laptop you will present from. Record the screen.","Write down every stumble and every moment the room would be lost.","Karissa plays the skeptical student."],
+ done:"A recording, a list of problems, and a time.", earns:["T4"]},
+
+{id:"P8", tr:"demo", day:[11,16], who:{D:1.5}, t:"Fix the worst five and freeze at 6 PM", needs:["T2"],
+ why:"A freeze protects a working demo from a late change.",
+ steps:["Fix the five worst items from the rehearsal.","At 6 PM tag `v0.2-demo-freeze`. After that, only bug fixes."],
+ done:"The tag exists and the public address still works.", earns:["D1"]},
+
+{id:"T3", tr:"story", day:[11,17], who:{D:1, K:1}, t:"Rehearsal two and backups", needs:["P8"],
+ why:"A backup is only a backup if it has been opened once.",
+ steps:["Run the talk once more, shorter.","Save an offline copy of `docs/demo/` on the laptop and open it from disk.","Record a five-minute screen capture as a backup.","Put the QR code on the last screen.","Test the phone hotspot."],
+ done:"The offline copy opens, the recording plays, and the QR code scans.", earns:["D1","T4"]},
+
+{id:"W5", tr:"write", day:[11,17], who:{D:0.75, K:1.5}, t:"Draft of the Responsible Deployment Plan, if still due",
+ why:"The guidelines list this draft on November 18. Check Canvas.",
+ steps:["Check Canvas for the prompt.","Cover who sees an alert, what happens when it is wrong, what the system cannot see (content failures), privacy (no patient data in this prototype), and how a lab would validate it on its own data."],
+ done:"Submitted.", earns:["M1","F4"]},
+
+{id:"T4", tr:"story", day:[11,18], who:{D:0.5, K:0.5}, t:"Presentation day",
+ why:"The checklist is short so nothing on it gets skipped.",
+ steps:["Arrive early. Test the projector with the demo open and the sound off.","Open the link on a phone and check that the QR code scans from the back of the room.","Have the offline copy and the recording ready.","Afterward, write down every question the class asked."],
+ done:"Presented, and the questions are written down.", earns:["T4"]}
+];
+
+/* work after the presentation: shown as a dated list, never part of the schedule check */
+const AFTER = [
+ {id:"A1", when:"Nov 19 to 21", t:"Collect feedback from the class and the instructor and list the fixes.", earns:[]},
+ {id:"A2", when:"Nov 22 and 23", t:"Sensitivity runs: vary the arrival profile and specimen mix across a plausible range and report the effect on alerts per shift and warning time. If time allows, run the gradient-boosted challenger under its pre-registered decision rule.", earns:["F3"]},
+ {id:"A3", when:"Nov 25", t:"AI Teaming Log draft: how Claude Code and the Claude API were used, what worked, what to avoid.", earns:["M1"]},
+ {id:"A4", when:"Nov 28 to 30", t:"Camera-ready: a clean-clone test (a fresh checkout reproduces the manifest check, the fit, the evaluation and the demo), the README, and demo polish.", earns:["P4","F1"]},
+ {id:"A5", when:"Dec 1", t:"Final results snapshot, tagged, with a table that shows the improvement over the November 8 prototype.", earns:["P5"]},
+ {id:"A6", when:"Dec 2", t:"Final prototype and interactive demo on GitHub. Last presentation day.", earns:["M1","P4","D4"]},
+ {id:"A7", when:"Dec 3 to 8", t:"Write the final report: Abstract, Introduction, Methods, Results, Discussion, Responsible Deployment Plan, AI Teaming Log and contributions. Four to six pages, 11 point, single spaced, 1 inch margins.", earns:["F1","F2","F4","F5"]},
+ {id:"A8", when:"Dec 9", t:"Submit the final report on Canvas.", earns:["M1","F1"]}
+];
+
+const DONE_ALREADY = [
+ {t:"Problem statement, architecture and roadmap", s:"Milestones 1 to 3, submitted."},
+ {t:"The evidence that no public dataset records the interval", s:"MIMIC-IV demo check: 1,336 specimens, a median of 80.1 hours between their only two timestamps."},
+ {t:"System map with the risk model and location filter running", s:"`visuals/architecture.html`, on assumed parameters."},
+ {t:"Milestone 4 written", s:"A four-page LaTeX PDF and a paste-ready Markdown copy, on GitHub, in the shared Drive folder and in Downloads. Submitting it on Canvas is the first task below."}
+];
+
+const GATES = [
+ {id:"A", name:"Gate A", title:"The data is real", day:[11,3], need:"Policy first pass in, a 200-specimen pilot that Karissa passes, and the full dataset frozen with its manifest.", tasks:["K1","D1","D6","K2","D9"]},
+ {id:"B", name:"Gate B", title:"The headline number", day:[11,8], need:"Risk model against the simple rule on held-out runs, tagged as the first prototype, and the cited policy table.", tasks:["M1","M2","M3","M4","M5","M6","M7","K3"]},
+ {id:"C", name:"Gate C", title:"End to end", day:[11,13], need:"Location estimate, search briefs and the exported bundle, shown in a demo page with a real timeline.", tasks:["M8","M8b","M9","K4","D11","D12","P2","P3"]},
+ {id:"F", name:"Freeze", title:"Demo complete", day:[11,16], need:"Everything on GitHub Pages and rehearsed once. After 6 PM only bug fixes.", tasks:["P4","P5","P6","P7","K5","K7","T1","T2","P8","G3","K6"]},
+ {id:"P", name:"Present", title:"November 18", day:[11,18], need:"Second rehearsal, backups, and the day-of checklist.", tasks:["T3","W5","T4"]}
+];
+
+/* what-if cuts, in the order to take them */
+const CUTS = [
+ {id:"C1", label:"Skip linking the 3D view to each specimen", note:"The standalone 3D bench stays in the talk.", saves:{P6:{D:2}}},
+ {id:"C2", label:"Choose showcase specimens by hand, with no Claude-written stories", note:"Keeps the scenarios and drops one Claude job.", saves:{G3:{D:1}, K6:{K:0.5}}},
+ {id:"C3", label:"Beat Tracer with three rounds and no replay", note:"Still fills the time the run of show gives it.", saves:{P5:{D:1.5}}},
+ {id:"C4", label:"Score the location estimate by overall top-1 only", note:"Drops the by-minute breakdown.", saves:{M8b:{D:1}}},
+ {id:"C5", label:"Move the cited policy table to after the presentation", note:"The windows stay labeled as assumptions.", saves:{K3:{K:1.5}}},
+ {id:"C6", label:"Ship the template search brief only", note:"Loses the language-model module and its comparison. Last resort.", saves:{M9:{D:2}, K4:{K:1.5}}}
+];
+
+/* ───────── Claude jobs and prices (USD per million tokens, Anthropic list, October 6, 2026) ───────── */
+const PRICE = {
+  haiku:  {name:"Haiku 5.5",  in:0.10, out:0.50, cache:0.01},
+  sonnet: {name:"Sonnet 5.5", in:2,    out:10,   cache:0.20},
+  opus:   {name:"Opus 5.5",   in:4,    out:20,   cache:0.20}
+};
+const OUT_ALLOWANCE = 1.15;
+const JOBS = [
+ {id:"J0", name:"Starter ranges", what:"One request that proposes ranges for transit times and failure rates, each with a reason, for Karissa to correct.", model:"sonnet", n:1, inTok:2500, cacheTok:0, outTok:2500, batch:false, when:"Oct 29", opt:true, task:"K1"},
+ {id:"J1", name:"Pilot trails", what:"Event trail and true path for 200 specimens.", model:"haiku", n:200, inTok:350, cacheTok:3000, outTok:750, batch:false, when:"Nov 1", task:"D6"},
+ {id:"J1b", name:"Pilot rerun, in reserve", what:"A second pilot if the first misses the bar.", model:"haiku", n:200, inTok:350, cacheTok:3000, outTok:750, batch:false, when:"Nov 2", opt:true, task:"D7"},
+ {id:"J2", name:"Full dataset", what:"12,000 specimens in 30 seeded runs, through the Batch API.", model:"haiku", n:12000, inTok:350, cacheTok:3000, outTok:750, batch:true, when:"Nov 2", task:"D8"},
+ {id:"J4", name:"Search briefs", what:"A 60-word brief for every alert in the demo bundle, about 300.", model:"sonnet", n:300, inTok:900, cacheTok:0, outTok:120, batch:true, when:"Nov 10", task:"M9"},
+ {id:"J3", name:"Showcase scenarios", what:"Story, takeaway and audience question for 10 chosen specimens.", model:"sonnet", n:10, inTok:1500, cacheTok:0, outTok:2500, batch:false, when:"Nov 13", task:"G3"},
+ {id:"J5", name:"Plausibility screen", what:"A second reader that flags the trails Karissa should look at first.", model:"haiku", n:1000, inTok:1200, cacheTok:0, outTok:150, batch:true, when:"Nov 2", opt:true}
+];
+function jobCost(j){
+  const p = PRICE[j.model];
+  const per = (j.inTok * p.in + j.cacheTok * p.cache + j.outTok * OUT_ALLOWANCE * p.out) / 1e6;
+  return j.n * per * (j.batch ? 0.5 : 1);
+}
+
+/* ───────── rubric lines (points from the course guidelines) ───────── */
+const RUBRIC = [
+ {cat:"Weekly milestones, 60 points", rows:[
+  {id:"M1", t:"Completion and on-time submission", pts:40},
+  {id:"M2", t:"Milestone completion shows clear progress", pts:10},
+  {id:"M3", t:"Response to instructor feedback", pts:10}]},
+ {cat:"Final AI prototype, 10 points", rows:[
+  {id:"P1", t:"Works as expected and without errors", pts:2},
+  {id:"P2", t:"Functionality is clearly designed to address the specific problem", pts:2},
+  {id:"P3", t:"Appropriate complexity", pts:2},
+  {id:"P4", t:"All user-created code and files for the prototype are on GitHub", pts:2},
+  {id:"P5", t:"Clear improvement between midterm and final prototypes", pts:2}]},
+ {cat:"Final interactive demo, 10 points", rows:[
+  {id:"D1", t:"Runs without error and is accessible by all students", pts:2},
+  {id:"D2", t:"Background and significance of the problem are clearly explained", pts:2},
+  {id:"D3", t:"Uses the team's real AI prototype in an appropriate context, with examples", pts:2},
+  {id:"D4", t:"All user-created code and files for the demo are on GitHub", pts:2},
+  {id:"D5", t:"Encourages user exploration, such as trying different inputs or settings", pts:2}]},
+ {cat:"In-class presentation, 10 points", rows:[
+  {id:"T1", t:"Clear narrative that is understandable to mixed audiences", pts:2},
+  {id:"T2", t:"Rationale for the AI system design is clearly explained", pts:2},
+  {id:"T3", t:"Correct understanding of how the system works", pts:2},
+  {id:"T4", t:"Class engagement and response to questions", pts:4}]},
+ {cat:"Final report, 10 points", rows:[
+  {id:"F1", t:"Complete, organized, readable and accessible", pts:2},
+  {id:"F2", t:"Appropriately revised from milestone draft versions", pts:2},
+  {id:"F3", t:"Appropriate evaluation metrics and correct interpretation of results", pts:2},
+  {id:"F4", t:"Realistic assessment of limitations and drawbacks", pts:2},
+  {id:"F5", t:"Identification of opportunities and logical next steps", pts:2}]}
+];
+
+/* ───────── run of show (weights, not minutes: the slot length scales them) ───────── */
+const BEATS = [
+ {id:"hook", t:"The silent tube", w:0.5, who:"Karissa", screen:"The 3D bench with the truth hidden. A tube leaves the unit and nothing happens.", say:"A tube leaves the ward. Nothing beeps and nothing is logged. How long until you would worry? Show of hands: fifteen minutes, an hour?", earns:["T1","T4"]},
+ {id:"problem", t:"Why it matters", w:1, who:"Karissa", screen:"The problem panel from the demo page.", say:"What a lab does today when a specimen goes missing, why a recollection hurts the patient, and why the stability window makes time the enemy.", earns:["T1","D2"]},
+ {id:"gap", t:"The missing data", w:0.75, who:"Daniel", screen:"One panel: two timestamps with 80.1 hours between them.", say:"The only public microbiology data we found stamps a specimen twice and nothing in between. That is why we generated our own data, and why every number we show is an assumption we can vary.", earns:["T2","T3"]},
+ {id:"how", t:"How Tracer works", w:1.5, who:"Daniel", screen:"The 3D bench, truth hidden, then shown.", say:"Silence is evidence. Tracer asks how unusual the silence is, where the specimen probably is, and whether an alert would still leave time to act.", earns:["T3","T2"]},
+ {id:"board", t:"Board and timeline", w:2, who:"Daniel", screen:"The live board, then one specimen timeline with the scrubber.", say:"Pick a specimen. Drag the clock. Watch the risk climb, the likely place move to the tube station, and the alert fire with an hour to spare.", earns:["T3","D5"]},
+ {id:"game", t:"Beat Tracer", w:2.5, who:"Both", screen:"The class activity on every phone and on the projector.", say:"Open the link. Three rounds. Tap the specimen you think is lost. Then compare your warning time with Tracer's.", earns:["T4","D5"]},
+ {id:"why", t:"Why this design", w:1, who:"Daniel", screen:"The threshold slider, warning time against alerts per shift.", say:"We chose a simple survival model a clinician can inspect over a black box, and we judge it by minutes of warning at a tolerable number of alerts, not by accuracy.", earns:["T2"]},
+ {id:"limits", t:"Limits and next steps", w:1, who:"Karissa", screen:"The limits panel.", say:"Tracer cannot see mislabeled or wrongly packed specimens. All the data here is synthetic. The next step is a test on a real laboratory log that has receipt timestamps.", earns:["T2","T1"]},
+ {id:"qa", t:"Questions", w:2, who:"Both", screen:"Back to the 3D bench, so the room has something to look at.", say:"Use the prepared answers. Say what we do not know.", earns:["T4"], qa:true}
+];
+
+const RISKS = [
+ {r:"The generated trails are not realistic enough", watch:"Karissa marks fewer than 17 of 20 pilot timelines plausible, or the validator passes under 90 percent.", act:"Tighten the briefs and the prompt and rerun the pilot (about ten cents). If it still fails, render the trails from the briefs in code and let Claude write only the notes. The briefs already hold every timestamp, so this fallback costs nothing and cannot fail."},
+ {r:"The policy table arrives late", watch:"The first call has not happened by October 30.", act:"Run on the assumed windows, marked assumed in every output. Citations can follow because the clock rule is configuration."},
+ {r:"The risk model does not beat the simple rule", watch:"The Gate B comparison.", act:"Report it as the result, show both in the demo, and tell the story as a simple rule being good enough, with the evidence. The architecture already commits to this."},
+ {r:"We run out of hours", watch:"The schedule check at the top shows a gate short by more than two hours.", act:"Take the cuts in the order listed, starting with the 3D link-up. Never cut the board, the timeline or the rehearsals."},
+ {r:"The credits expire or the API is down", watch:"Balance and expiry checked on October 29. Batch status on November 2.", act:"Every Claude output is saved as a file once generated, so the demo is unaffected. For missing data use the code fallback above."},
+ {r:"The demo fails on class devices", watch:"The device tests on November 15.", act:"The 2D timeline is the default path and 3D is the extra. `?lite=1` forces 2D."},
+ {r:"Karissa is unavailable on the day or for a rehearsal", watch:"Calendars confirmed by November 8.", act:"The text for Karissa's beats is written ahead and the first rehearsal is recorded, so Daniel can cover those beats from notes."},
+ {r:"The instructor does not accept a static page as the demo", watch:"The answer to the November 4 question.", act:"Export the same logic as a Marimo app that runs in the browser, or host on Streamlit Community Cloud. Two to four hours."},
+ {r:"The design documents contradict the plan", watch:"The architecture still says a simulator is the event source and lists a different five specimen types.", act:"Task W6 on November 8 brings them in line."}
+];
+
+const QUESTIONS = [
+ {q:"Is a static GitHub Pages page an acceptable publicly accessible interactive web application?", who:"Instructor", by:"Nov 4"},
+ {q:"How long is each presentation slot?", who:"Instructor", by:"Nov 4"},
+ {q:"Are the weekly draft milestones (Results Nov 4, Discussion Nov 11, Responsible Deployment Plan Nov 18) still due, now that Milestone 4 replaced the Methods draft?", who:"Instructor", by:"Nov 1"},
+ {q:"How much provenance does the report need for AI-generated synthetic data?", who:"Instructor", by:"Nov 11"},
+ {q:"Do the promotional credits last past November 18, and what is the exact balance?", who:"Daniel", by:"Oct 29"},
+ {q:"Is there instructor feedback on Milestones 2 and 3 that the next submission should answer?", who:"Daniel", by:"Oct 28"},
+ {q:"Which five specimen types? Milestone 3 lists urine, body fluid, lavage, culture swab and tissue. Section 6.1 of the architecture still lists CSF, two urines, a wound swab and sputum.", who:"Karissa", by:"Oct 29"},
+ {q:"Where does the clock stop? Milestone 2 says plating. Confirm it, with the citation.", who:"Karissa", by:"Nov 8"},
+ {q:"How many alerts per shift would a laboratory tolerate, and who acts on each kind of failure?", who:"Karissa", by:"Nov 8"}
+];
+
+/* ───────── recipes: copy-ready text for the Claude jobs ───────── */
+const RECIPES = [
+ {title:"Trail writer: instructions", sub:"Used in D4, run in D6 and D8", parts:[
+  {p:"The stable text. Put it first in every request so the cache is reused."},
+  {pre:"You write the record of one synthetic specimen for a clinical microbiology research simulator. No real patient or institution is involved. Do not include names, ages, room numbers or anything that could identify a person.\n\nYou receive one brief as JSON. Every value under \"fixed\" and \"targets\" is binding.\n\nWrite two logs and keep them apart.\n\n1. observed_events: only what a scanner or a person records. Allowed activities: ordered, collected, received, accessioned, plated, rejected. Never record a scan for a hidden stage (dispatch, tube, station). A specimen that never arrives has no received event.\n\n2. truth_segments: where the specimen really was, from collected_at to the end, with no gaps and no overlaps. Allowed states: at_unit, in_tube, at_station, stalled_at_station, misrouted, hand_carry, at_receiving_bench, accessioned, plated, lost. Each segment's length must match the targets within 2 minutes. A lost specimen ends in an open-ended lost segment.\n\nTimestamps are ISO 8601, local time, to the second. Use only the locations listed in the brief. Notes are optional, at most two, at most 12 words each, plain and lab-realistic (for example \"tube arrived with cap loose\").\n\nReturn only JSON that matches the schema."}]},
+ {title:"Trail writer: one brief and the output schema", sub:"The per-specimen part and the structured-output schema", parts:[
+  {p:"One brief, as the sampler writes it. Every timing target is already fixed, so Claude supplies texture and consistency, not statistics."},
+  {pre:"{\n  \"specimen_id\": \"SP-r07-000123\",\n  \"fixed\": {\"type\": \"urine_unpreserved\", \"tests\": [\"culture\"], \"unit\": \"ed\", \"priority\": \"routine\", \"route\": \"tube\", \"collected_at\": \"2026-03-04T02:14:00\"},\n  \"planted_fault\": \"stalled_at_station\",\n  \"targets\": {\"dispatch_wait_min\": 7, \"tube_transit_min\": 4, \"station_dwell_min\": 10, \"stalled_min\": 46, \"receipt_after_min\": 68, \"accession_wait_min\": 9, \"plate_wait_min\": 11},\n  \"locations\": [\"ed_bay_04\", \"tube_station_ed\", \"tube_station_lab\", \"lab_receiving\", \"lab_bench_2\"]\n}"},
+  {p:"The output schema, for `output_config.format`."},
+  {pre:"{\n  \"type\": \"object\", \"additionalProperties\": false,\n  \"required\": [\"specimen_id\", \"observed_events\", \"truth_segments\", \"outcome\"],\n  \"properties\": {\n    \"specimen_id\": {\"type\": \"string\"},\n    \"observed_events\": {\"type\": \"array\", \"items\": {\"type\": \"object\", \"additionalProperties\": false,\n      \"required\": [\"activity\", \"timestamp\", \"location\", \"actor_role\"],\n      \"properties\": {\"activity\": {\"enum\": [\"ordered\", \"collected\", \"received\", \"accessioned\", \"plated\", \"rejected\"]},\n        \"timestamp\": {\"type\": \"string\"}, \"location\": {\"type\": \"string\"},\n        \"actor_role\": {\"enum\": [\"nurse\", \"phlebotomist\", \"courier\", \"processor\", \"technologist\", \"system\"]},\n        \"note\": {\"type\": \"string\"}}}},\n    \"truth_segments\": {\"type\": \"array\", \"items\": {\"type\": \"object\", \"additionalProperties\": false,\n      \"required\": [\"state\", \"start\", \"end\", \"location\"],\n      \"properties\": {\"state\": {\"type\": \"string\"}, \"start\": {\"type\": \"string\"}, \"end\": {\"type\": [\"string\", \"null\"]}, \"location\": {\"type\": \"string\"}}}},\n    \"outcome\": {\"type\": \"object\", \"additionalProperties\": false, \"required\": [\"received\", \"plated\", \"fault\"],\n      \"properties\": {\"received\": {\"type\": \"boolean\"}, \"plated\": {\"type\": \"boolean\"}, \"fault\": {\"type\": \"string\"}}}\n  }\n}"}]},
+ {title:"Validator: the nine checks", sub:"Used in D5", parts:[
+  {pre:"1. The reply parses, matches the schema, and specimen_id equals the brief's.\n2. observed_events are in time order, each activity at most once, and ordered or collected comes first.\n3. No observed event for a hidden stage. A lost or never-sent specimen has no received event.\n4. truth_segments start at collected_at, join end to start with no gap or overlap, and use only allowed states.\n5. Each segment's length is within 2 minutes of its target.\n6. The planted fault matches the outcome and the segment states (a stall has a stalled_at_station segment, a loss ends in lost).\n7. The receipt time in observed_events equals the end of the last transit segment, within 1 minute.\n8. Locations come from the brief's list. At most two notes, each at most 12 words.\n9. No personal names and no date-of-birth patterns (a short regular expression and a word list)."}]},
+ {title:"Search brief", sub:"Used in M9", parts:[
+  {pre:"You write a search brief for a laboratory receiving technologist. The input is JSON: specimen type, minutes since the last scan, risk of missing the stability window, the most likely locations with probabilities, the expected arrival time, and minutes left before the window closes.\n\nWrite at most 60 words of plain text in three parts, in this order: where to look first, why that place, how many minutes are left.\n\nUse only the numbers in the input. Do not claim certainty. Do not give medical advice."}]},
+ {title:"Showcase scenario", sub:"Used in G3", parts:[
+  {pre:"You write the story of one real simulated specimen for a mixed audience of students and clinicians. The input is its timeline, what Tracer did, and the true path. Return JSON with three fields: story (at most 90 words, past tense, no names), takeaway (one sentence), and question (one question the audience should ask). Use only facts in the input."}]},
+ {title:"Starter ranges", sub:"Optional, used in K1", parts:[
+  {pre:"List plausible ranges for pneumatic tube specimen transport in a general hospital laboratory: wait before dispatch, tube transit, dwell at the receiving station, wait between receipt and set-up, and how often specimens stall, are misrouted or are lost. For each give a median in minutes, a spread, a one-sentence reason, and what would change your mind. A clinical scientist will correct these. Label every value as an assumption. Do not present any figure as measured data."}]}
+];
+
+/* ───────── arithmetic ───────── */
+const baseHours = (t, p, hoursMap) => {
+  const k = t.id + ":" + p;
+  return hoursMap && hoursMap[k] != null ? hoursMap[k] : ((t.who && t.who[p]) || 0);
+};
+const cutSaved = (t, p, cuts) => {
+  let s = 0;
+  for (const c of CUTS) if (cuts && cuts[c.id] && c.saves[t.id] && c.saves[t.id][p]) s += c.saves[t.id][p];
+  return s;
+};
+const effHours = (t, p, S) => Math.max(0, baseHours(t, p, S.hours) - cutSaved(t, p, S.cuts));
+const taskDone = (S, id) => !!(S.done && S.done[id] && S.done[id].v);
+const capOn = (dt, p, cap) => (isWeekend(dt) ? cap[p].we : cap[p].wd);
+
+/* Earliest-deadline-first check. For each gate: hours of work due by that date against the hours the person
+   can give from today through that date. A task whose day has passed counts as due today. */
+function schedule(S, today){
+  const t0 = today < START ? START : today;
+  const out = {};
+  for (const p of ["D", "K"]) {
+    const items = [];
+    for (const t of TASKS) {
+      if (taskDone(S, t.id)) continue;
+      const h = effHours(t, p, S);
+      if (h <= 0) continue;
+      const due = taskDay(t);
+      items.push({id: t.id, due: due < t0 ? t0 : due, h});
+    }
+    const total = items.reduce((s, i) => s + i.h, 0);
+    const capUpTo = end => { let c = 0; for (let dt = t0; dt <= end; dt = addDays(dt, 1)) c += capOn(dt, p, S.cap); return c; };
+    const gates = GATES.map(g => {
+      const end = D0(g.day[0], g.day[1]);
+      const past = end < t0;
+      const need = past ? 0 : items.reduce((s, i) => (i.due <= end ? s + i.h : s), 0);
+      const cap = past ? 0 : capUpTo(end);
+      return {id: g.id, end, past, need, cap, slack: cap - need};
+    });
+    const finish = mult => {
+      const R = total * mult;
+      if (R <= 1e-9) return t0;
+      let c = 0;
+      for (let i = 0; i < 120; i++) {
+        const dt = addDays(t0, i);
+        c += capOn(dt, p, S.cap);
+        if (c >= R - 1e-9) return dt;
+      }
+      return null;
+    };
+    out[p] = {total, gates, items, finish: {opt: finish(0.8), exp: finish(1), pess: finish(1.4)}};
+  }
+  return out;
+}
+
+const taskGate = id => { const g = GATES.find(x => x.tasks.includes(id)); return g ? g.id : null; };
+const beatMinutes = total => {
+  const sum = BEATS.reduce((s, b) => s + b.w, 0);
+  return BEATS.map(b => b.w / sum * total);
+};
+</script>
+<script id="app">
+(function(){
+"use strict";
+const $ = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = s => esc(s).replace(/`([^`]+)`/g, (m, c) => '<code title="Click to copy">' + c + "</code>");
+const num = (n, d) => { const k = Math.pow(10, d == null ? 2 : d); return String(Math.round(n * k) / k); };
+const fmtH = h => num(h, 2);
+const usd = x => "$" + x.toFixed(2);
+const dshort = dt => (dt ? dt.toLocaleDateString("en-US", {month: "short", day: "numeric"}) : "never");
+const dwk = dt => dt.toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric"});
+const dlong = dt => dt.toLocaleDateString("en-US", {weekday: "long", month: "long", day: "numeric"});
+const isoDay = dt => dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0");
+const WORDS = ["Zero","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen","Twenty","Twenty-one"];
+const RUB = {}; RUBRIC.forEach(c => c.rows.forEach(r => { RUB[r.id] = r; }));
+const TASK = {}; TASKS.forEach(t => { TASK[t.id] = t; });
+
+/* ───────── state ───────── */
+const PKEY = "tracer-plan-prefs-v1", SKEY = "tracer-plan-shared-v1";
+const P = {persona: "all", view: "day", showDone: true, cap: {D: {wd: 3, we: 5}, K: {wd: 0.5, we: 1.5}}, hours: {}, open: {}, theme: null, slot: 15, beat: "board", capUsd: 25, credit: "", jobs: {}};
+const SH = {done: {}, spend: {}, cuts: {}};
+const Store = {mode: "device", ref: null, readOnly: false, chain: Promise.resolve()};
+const S = () => ({done: SH.done, cuts: SH.cuts, hours: P.hours, cap: P.cap});
+
+function loadPrefs(){ try { const j = JSON.parse(localStorage.getItem(PKEY) || "null"); if (j) Object.assign(P, j); } catch (e) {} }
+function savePrefs(){ try { localStorage.setItem(PKEY, JSON.stringify(P)); } catch (e) {} }
+function loadDevice(){ try { const j = JSON.parse(localStorage.getItem(SKEY) || "null"); if (j) { SH.done = j.done || {}; SH.spend = j.spend || {}; SH.cuts = j.cuts || {}; } } catch (e) {} }
+function saveDevice(){ try { localStorage.setItem(SKEY, JSON.stringify(SH)); } catch (e) {} }
+
+function realToday(){
+  const q = new URLSearchParams(location.search).get("today");
+  if (q && /^\d{4}-\d{2}-\d{2}$/.test(q)) { const a = q.split("-").map(Number); return new Date(a[0], a[1] - 1, a[2]); }
+  const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate());
+}
+const TODAY = realToday();
+const T0 = TODAY < START ? START : TODAY;
+
+/* a change to shared state: apply it here at once, then write it where it is kept */
+function commit(patch){
+  for (const k in patch) { SH[k] = SH[k] || {}; for (const id in patch[k]) SH[k][id] = patch[k][id]; }
+  if (Store.mode === "shared" && Store.ref) {
+    Store.chain = Store.chain.then(() => Store.ref.update(patch)).catch(err => {
+      if (err && err.code === "invalid_argument") { Store.readOnly = true; renderAll(); }
+    });
+  } else saveDevice();
+}
+function setDone(id, v){ commit({done: {[id]: {v: !!v, at: new Date().toISOString()}}}); }
+
+/* ───────── small helpers ───────── */
+function setHtml(el, html){ if (el && el.__h !== html) { el.innerHTML = html; el.__h = html; } }
+const visible = t => P.persona === "all" || (t.who[P.persona] || 0) > 0;
+const shown = t => visible(t) && (P.showDone || !taskDone(S(), t.id));
+const byDay = (a, b) => taskDay(a) - taskDay(b) || TASKS.indexOf(a) - TASKS.indexOf(b);
+const jobView = j => Object.assign({}, j, P.jobs[j.id] || {});
+const jobCostFor = j => jobCost(jobView(j));
+const personsOf = t => ["D", "K"].filter(p => (t.who[p] || 0) > 0);
+function cutSavedNow(c){
+  let s = 0; const st = S();
+  for (const id in c.saves) if (!taskDone(st, id)) for (const p in c.saves[id]) s += c.saves[id][p];
+  return s;
+}
+const cutsSavedTotal = () => CUTS.reduce((s, c) => (SH.cuts[c.id] ? s + cutSavedNow(c) : s), 0);
+const spentTotal = () => Object.keys(SH.spend).reduce((s, k) => s + (Number(SH.spend[k]) || 0), 0);
+
+/* ───────── rail ───────── */
+function renderRail(sch){
+  const fz = GATES.findIndex(g => g.id === "F");
+  const row = (label, val, cls) => `<div><dt>${label}</dt><dd class="${cls || ""}">${val}</dd></div>`;
+  const slackOf = p => { const g = sch[p].gates[fz]; return g.past ? "past" : (g.slack >= 0 ? "+" : "−") + fmtH(Math.abs(g.slack)) + " h"; };
+  const bad = p => !sch[p].gates[fz].past && sch[p].gates[fz].slack < -0.001;
+  const left = Math.round((PRESENT - T0) / 86400000);
+  const done = TASKS.filter(t => taskDone(S(), t.id)).length;
+  setHtml($("#vitals"),
+    row("Days left", Math.max(0, left)) +
+    row("Daniel to freeze", slackOf("D"), bad("D") ? "bad" : "good") +
+    row("Karissa to freeze", slackOf("K"), bad("K") ? "bad" : "good") +
+    row("Tasks done", done + " of " + TASKS.length) +
+    row("Claude spend", usd(spentTotal()) + " of $" + num(P.capUsd, 0)));
+  const line = Store.readOnly ? "You can read this plan but not change it."
+    : Store.mode === "shared" ? "Ticks, spend and cuts are <b>saved for both of you</b>."
+    : "Ticks, spend and cuts are <b>saved on this device only</b>.";
+  setHtml($("#storeLine"), line);
+  $("#roBanner").hidden = !Store.readOnly;
+}
+
+/* ───────── the opening timeline ───────── */
+function stripSvg(sch){
+  const VW = 1000, padL = 92, padR = 34, step = (VW - padL - padR) / 21;
+  const X = i => padL + i * step;
+  const LY = {G: 46, D: 114, K: 188}, BY = {D: 144, K: 218};
+  const st = S(), todayI = dayIdx(T0), inRange = todayI >= 0 && todayI <= 21;
+  let s = "";
+  for (let i = 0; i <= 21; i++) {
+    const dt = addDays(START, i);
+    if (isWeekend(dt)) s += `<rect class="wk" x="${X(i) - step / 2}" y="16" width="${step}" height="222"/>`;
+    s += `<text class="ax" x="${X(i)}" y="250" text-anchor="middle">${"SMTWTFS"[dt.getDay()]}</text>`;
+    s += `<text class="${i === todayI ? "ax-strong" : "ax"}" x="${X(i)}" y="264" text-anchor="middle">${dt.getDate()}</text>`;
+  }
+  s += `<text class="ax-strong" x="${X(0) - 22}" y="278" text-anchor="start">Oct</text><text class="ax-strong" x="${X(4) - 14}" y="278" text-anchor="start">Nov</text>`;
+  [["Gates", LY.G], ["Daniel", LY.D], ["Karissa", LY.K]].forEach(a => { s += `<text class="lane-label" x="${padL - 16}" y="${a[1] + 4}" text-anchor="end">${a[0]}</text>`; });
+  [LY.D, LY.K].forEach(y => { s += `<line class="gl" x1="${padL - 6}" x2="${VW - padR + 6}" y1="${y}" y2="${y}"/>`; });
+  GATES.forEach(g => {
+    const i = dayIdx(D0(g.day[0], g.day[1])), x = X(i);
+    if (g.id === "P") {
+      s += `<line class="line-pres" x1="${x}" x2="${x}" y1="16" y2="238"/>`;
+      s += `<text class="pres-t" x="${x - 7}" y="${LY.G - 14}" text-anchor="end">Present</text><text class="gate-s" x="${x - 7}" y="${LY.G + 24}" text-anchor="end">Nov 18</text>`;
+    } else {
+      s += `<line class="gate-line" x1="${x}" x2="${x}" y1="${LY.G + 8}" y2="238"/>`;
+      s += `<path class="gate-d" d="M${x} ${LY.G - 7}L${x + 7} ${LY.G}L${x} ${LY.G + 7}L${x - 7} ${LY.G}Z"/>`;
+      s += `<text class="gate-t" x="${x}" y="${LY.G - 14}" text-anchor="middle">${esc(g.name)}</text>`;
+      s += `<text class="gate-s" x="${x}" y="${LY.G + 24}" text-anchor="middle">${dshort(D0(g.day[0], g.day[1]))}</text>`;
+    }
+  });
+  if (inRange) { const x = X(todayI); s += `<line class="line-now" x1="${x}" x2="${x}" y1="16" y2="238"/><text class="now-t" x="${x}" y="10" text-anchor="middle">Today</text>`; }
+  /* when each person's hours run out at the capacity set above */
+  ["D", "K"].forEach(p => {
+    const r = sch[p], y = BY[p];
+    if (r.total <= 0.0001) { s += `<text class="band-t" x="${padL}" y="${y + 7}">Nothing left to do</text>`; return; }
+    if (todayI > 21) return;
+    const f = r.finish, iE = f.exp ? dayIdx(f.exp) : null, iP = f.pess ? dayIdx(f.pess) : null;
+    const x0 = X(Math.max(todayI, 0)), cl = i => (i == null || i > 21 ? X(21) + 22 : X(i));
+    const x1 = Math.max(x0 + 4, cl(iE)), x2 = Math.max(x1, cl(iP));
+    const cls = iE == null || iE > 21 ? "way-over" : iE > 19 ? "over" : "";
+    s += `<rect class="band-wide ${cls}" x="${x1}" y="${y}" width="${Math.max(0, x2 - x1)}" height="7"/>`;
+    s += `<rect class="band ${cls}" x="${x0}" y="${y}" width="${x1 - x0}" height="7"/>`;
+    const lab = "hours run out " + (iE == null ? "after Dec 9" : dshort(f.exp));
+    s += `<text class="band-t" x="${Math.min(x1 + 8, VW - padR - 90)}" y="${y + 15}">${esc(lab)}</text>`;
+  });
+  const stacks = {};
+  TASKS.forEach(t => { const di = dayIdx(taskDay(t)); personsOf(t).forEach(p => { (stacks[p + di] = stacks[p + di] || []).push({t, p, di}); }); });
+  Object.keys(stacks).forEach(key => {
+    const arr = stacks[key];
+    arr.forEach((it, k) => {
+      const t = it.t, p = it.p, x = X(it.di), y = LY[p] + (k - (arr.length - 1) / 2) * 13;
+      const done = taskDone(st, t.id), late = !done && taskDay(t) < T0, cut = effHours(t, p, st) <= 0;
+      const cls = cut ? "d-cut" : done ? "d-done" : late ? "d-late" : "d-open";
+      const dim = P.persona !== "all" && P.persona !== p ? ' style="opacity:.28"' : "";
+      s += `<g class="dot" tabindex="0" role="link" data-jump="${t.id}"${dim} aria-label="${esc(t.t)}, ${PEOPLE[p]}, ${dshort(taskDay(t))}${done ? ", done" : ""}"><title>${esc(t.t)} (${PEOPLE[p]}, ${fmtH(baseHours(t, p, P.hours))} h, ${dshort(taskDay(t))})</title><circle class="${cls}" cx="${x}" cy="${y}" r="5.5"/></g>`;
+    });
+  });
+  return s;
+}
+
+/* ───────── the verdict, in plain sentences ───────── */
+function verdictHtml(sch){
+  const st = S(), D = sch.D, K = sch.K, out = [];
+  if (D.total <= 0.0001) out.push("<p><b>Daniel has no work left.</b></p>");
+  else {
+    const f = D.finish.exp;
+    const rel = !f ? "well after the presentation" : f <= FREEZE ? "in time for the freeze on Nov 16" : f <= PRESENT ? "after the freeze and before the presentation" : "after the presentation";
+    out.push(`<p>Daniel has <b>${fmtH(D.total)} hours</b> of work left. At the hours you set, that work runs out on <b>${f ? dshort(f) : "a date after December"}</b>, ${rel}. If every estimate runs 40 percent low, it runs out on ${D.finish.pess ? dshort(D.finish.pess) : "a date after December"}.</p>`);
+  }
+  const risky = [];
+  ["D", "K"].forEach(p => sch[p].gates.forEach((g, i) => { if (!g.past && g.slack < -0.001) risky.push({p, i, g}); }));
+  if (risky.length) {
+    risky.sort((a, b) => a.g.end - b.g.end || a.i - b.i);
+    const r = risky[0], G = GATES[r.i];
+    out.push(`<p><b class="warn">${esc(G.name)} on ${dshort(r.g.end)} is the first date at risk.</b> ${PEOPLE[r.p]} needs ${fmtH(r.g.need)} hours by then and has ${fmtH(r.g.cap)}. Cut something on the right or find ${fmtH(-r.g.slack)} more hours.</p>`);
+  } else {
+    let tight = null;
+    ["D", "K"].forEach(p => sch[p].gates.forEach((g, i) => { if (!g.past && (!tight || g.slack < tight.g.slack)) tight = {p, i, g}; }));
+    if (tight) out.push(`<p><b class="good">Every gate has room at these hours.</b> The tightest is ${esc(GATES[tight.i].name)} for ${PEOPLE[tight.p]}, with ${fmtH(tight.g.slack)} hours to spare.</p>`);
+  }
+  if (K.total <= 0.0001) out.push("<p><b>Karissa has no work left.</b></p>");
+  else {
+    const daysToGo = Math.max(1, Math.round((PRESENT - T0) / 86400000));
+    const mine = TASKS.filter(t => (t.who.K || 0) > 0 && !taskDone(st, t.id) && effHours(t, "K", st) > 0).sort(byDay);
+    const blocker = mine.find(t => TASKS.some(x => (x.needs || []).includes(t.id) && (x.who.D || 0) > 0 && !taskDone(st, x.id)));
+    const nx = blocker || mine[0];
+    out.push(`<p>Karissa has <b>${fmtH(K.total)} hours</b> left, about ${num(K.total / (daysToGo / 7), 1)} hours a week until the 18th. ${blocker ? `Daniel needs this from Karissa next: <b>${esc(nx.t)}</b>, ${dwk(taskDay(nx))}.` : nx ? `Karissa's next task is <b>${esc(nx.t)}</b>, ${dwk(taskDay(nx))}.` : ""}</p>`);
+  }
+  const saved = cutsSavedTotal();
+  if (saved > 0) out.push(`<p>Cuts in effect take out <b>${fmtH(saved)} hours</b>.</p>`);
+  return out.join("");
+}
+function nextUpHtml(){
+  const st = S();
+  return ["D", "K"].map(p => {
+    const t = TASKS.filter(x => (x.who[p] || 0) > 0 && !taskDone(st, x.id) && effHours(x, p, st) > 0).sort(byDay)[0];
+    if (!t) return "";
+    return `<button type="button" data-jump="${t.id}"><b>${PEOPLE[p]} next:</b> ${esc(t.t)}, ${dwk(taskDay(t))}, ${fmtH(effHours(t, p, st))} h</button>`;
+  }).join("");
+}
+function gatesHtml(sch){
+  const st = S();
+  let h = "<thead><tr><th>Gate</th><th>What has to be true</th><th>Daniel, hours due and available</th><th>Karissa, hours due and available</th><th>Must-haves done</th></tr></thead><tbody>";
+  GATES.forEach((g, i) => {
+    const end = D0(g.day[0], g.day[1]), done = g.tasks.filter(id => taskDone(st, id)).length;
+    const cell = p => {
+      const r = sch[p].gates[i];
+      if (r.past) return '<td class="ld">passed</td>';
+      const over = r.slack < -0.001, pct = r.cap > 0 ? Math.min(100, r.need / r.cap * 100) : (r.need > 0 ? 100 : 0);
+      return `<td class="ld">${fmtH(r.need)} of ${fmtH(r.cap)} h<span class="bar"><i class="${over ? "over" : ""}" style="width:${pct}%"></i></span><span class="${over ? "short" : "tick"}">${over ? "short by " + fmtH(-r.slack) + " h" : fmtH(r.slack) + " h to spare"}</span></td>`;
+    };
+    h += `<tr><td class="g-name">${esc(g.name)}: ${esc(g.title)}<small>${dshort(end)}</small></td><td class="g-need">${esc(g.need)}</td>${cell("D")}${cell("K")}<td class="ld">${done} of ${g.tasks.length}</td></tr>`;
+  });
+  return h + "</tbody>";
+}
+function cutsHtml(){
+  return CUTS.map(c => {
+    const on = !!SH.cuts[c.id], saved = cutSavedNow(c);
+    return `<label class="cut"><input type="checkbox" data-cut="${c.id}" ${on ? "checked" : ""} ${Store.readOnly || saved <= 0 ? "disabled" : ""}><span>${esc(c.label)} <span class="save">${saved > 0 ? "saves " + fmtH(saved) + " h" : "already done"}</span><small>${esc(c.note)}</small></span></label>`;
+  }).join("");
+}
+function renderHero(sch){
+  const left = Math.round((PRESENT - T0) / 86400000);
+  $("#h1").textContent = TODAY > PRESENT ? "Tracer was presented on November 18." : left <= 0 ? "Today Tracer is on the screen." : left === 1 ? "One day until Tracer is on the screen." : (WORDS[left] || String(left)) + " days until Tracer is on the screen.";
+  setHtml($("#stripSvg"), stripSvg(sch));
+  setHtml($("#verdict"), verdictHtml(sch));
+  setHtml($("#nextup"), nextUpHtml());
+  setHtml($("#gates"), gatesHtml(sch));
+  setHtml($("#cuts"), cutsHtml());
+}
+
+/* ───────── the plan ledger ───────── */
+function metaHtml(t, withDay){
+  const bits = [], st = S();
+  if (withDay) bits.push(`<span>${dwk(taskDay(t))}</span>`);
+  personsOf(t).forEach(p => {
+    if (P.persona !== "all" && P.persona !== p) return;
+    const base = baseHours(t, p, P.hours), eff = effHours(t, p, st);
+    bits.push(`<span>${PEOPLE[p]} ${eff < base ? fmtH(eff) + " of " + fmtH(base) : fmtH(base)} h</span>`);
+  });
+  const g = GATES.find(x => x.tasks.includes(t.id));
+  if (g) bits.push(`<span class="gate">${esc(g.name)}</span>`);
+  if (t.api) { const j = JOBS.find(x => x.id === t.api); if (j) { const c = jobCostFor(j); bits.push(`<span class="api">Claude ${c < 0.005 ? "under 1 cent" : "about " + usd(c)}</span>`); } }
+  const d = SH.done[t.id];
+  if (d && d.v) { const at = new Date(d.at); if (!isNaN(at)) bits.push(`<span class="doneat">Done ${dshort(at)}</span>`); }
+  else if (taskDay(t) < T0) bits.push(`<span class="late">Planned for ${dshort(taskDay(t))}</span>`);
+  return `<span class="t-meta">${bits.join("")}</span>`;
+}
+function bodyHtml(t){
+  const st = S();
+  let h = "";
+  if (t.why) h += `<p>${fmt(t.why)}</p>`;
+  h += `<div><h4>Steps</h4><ol>${t.steps.map(s => `<li>${fmt(s)}</li>`).join("")}</ol></div>`;
+  h += `<div><h4>Done when</h4><p>${fmt(t.done)}</p></div>`;
+  if (t.needs && t.needs.length) h += `<div><h4>Needs first</h4><div class="chips">${t.needs.map(id => `<button type="button" class="chip chipbtn ${taskDone(st, id) ? "on" : ""}" data-jump="${id}">${taskDone(st, id) ? "Done: " : ""}${esc(TASK[id].t)}</button>`).join("")}</div></div>`;
+  if (t.earns.length) h += `<div><h4>Points it helps win</h4><div class="chips">${t.earns.map(id => `<span class="chip">${esc(RUB[id].t)}, ${RUB[id].pts}</span>`).join("")}</div></div>`;
+  if (t.api) { const j = JOBS.find(x => x.id === t.api); if (j) h += `<p>This task runs Claude job ${esc(j.id)}, ${esc(j.name.toLowerCase())}. The estimate is in the Claude API section, and the prompt is in its recipes.</p>`; }
+  h += `<div class="est">Estimate:${personsOf(t).map(p => ` <label>${PEOPLE[p]} <input type="number" step="0.25" min="0" value="${baseHours(t, p, P.hours)}" data-hours="${t.id}:${p}" aria-label="${PEOPLE[p]} hours for ${esc(t.t)}"> h</label>`).join("")}</div>`;
+  return `<div class="t-body">${h}</div>`;
+}
+function taskHtml(t, withDay){
+  const st = S(), done = taskDone(st, t.id), late = !done && taskDay(t) < T0;
+  const total = personsOf(t).reduce((s, p) => s + effHours(t, p, st), 0);
+  const cut = total <= 0 && personsOf(t).some(p => cutSaved(t, p, SH.cuts) > 0);
+  return `<details class="task${done ? " is-done" : ""}${cut ? " is-cut" : ""}" id="t-${t.id}" data-id="${t.id}"${P.open[t.id] ? " open" : ""}><summary><span class="cb${late ? " late" : ""}"><input type="checkbox" data-cb="${t.id}" ${done ? "checked" : ""} ${Store.readOnly ? "disabled" : ""} aria-label="Mark done: ${esc(t.t)}"><span></span></span><span class="t-main"><span class="t-title">${esc(t.t)}</span>${metaHtml(t, withDay)}</span><span class="chev" aria-hidden="true"></span></summary>${bodyHtml(t)}</details>`;
+}
+function dayViewHtml(){
+  const st = S(), groups = {};
+  TASKS.filter(shown).forEach(t => { const k = isoDay(taskDay(t)); (groups[k] = groups[k] || []).push(t); });
+  return Object.keys(groups).sort().map(k => {
+    const dt = new Date(k + "T00:00:00"), list = groups[k].sort(byDay);
+    const gates = GATES.filter(g => isoDay(D0(g.day[0], g.day[1])) === k);
+    const loads = ["D", "K"].filter(p => P.persona === "all" || P.persona === p).map(p => {
+      const h = TASKS.filter(t => isoDay(taskDay(t)) === k && !taskDone(st, t.id)).reduce((s, t) => s + effHours(t, p, st), 0);
+      const c = capOn(dt, p, P.cap);
+      return h > 0 ? `<span class="${h > c + 0.001 ? "over" : ""}">${PEOPLE[p]} ${fmtH(h)} of ${fmtH(c)} h</span>` : "";
+    }).join("");
+    return `<div class="day"><div class="day-head"><h3>${dlong(dt)}</h3>${isoDay(T0) === k ? '<span class="today">Today</span>' : ""}${gates.map(g => `<span class="gate-flag">${esc(g.name)}: ${esc(g.title)}</span>`).join("")}<span class="load">${loads}<button type="button" class="day-copy" data-copyday="${k}">Copy this day</button></span></div>${list.map(t => taskHtml(t, false)).join("")}</div>`;
+  }).join("");
+}
+function trackViewHtml(){
+  const st = S();
+  return Object.keys(TRACKS).map(key => {
+    const all = TASKS.filter(t => t.tr === key && visible(t)), list = all.filter(shown).sort(byDay);
+    if (!all.length) return "";
+    const done = all.filter(t => taskDone(st, t.id)).length;
+    const hrs = all.filter(t => !taskDone(st, t.id)).reduce((s, t) => s + personsOf(t).filter(p => P.persona === "all" || P.persona === p).reduce((a, p) => a + effHours(t, p, st), 0), 0);
+    return `<div><div class="track-head"><h3>${esc(TRACKS[key])}</h3><span class="prog">${done} of ${all.length} done, ${fmtH(hrs)} h left</span></div><div class="track-bar"><i style="width:${done / all.length * 100}%"></i></div>${list.map(t => taskHtml(t, true)).join("")}</div>`;
+  }).join("");
+}
+function renderPlan(sch){
+  $("#vDay").setAttribute("aria-pressed", String(P.view === "day"));
+  $("#vTrack").setAttribute("aria-pressed", String(P.view === "track"));
+  setHtml($("#ledger"), P.view === "day" ? dayViewHtml() : trackViewHtml());
+  const st = S(), vis = TASKS.filter(visible), done = vis.filter(t => taskDone(st, t.id)).length;
+  const hrs = P.persona === "all" ? sch.D.total + sch.K.total : sch[P.persona].total;
+  $("#planCount").textContent = done + " of " + vis.length + " tasks done, " + fmtH(hrs) + " hours left";
+  $("#planNote").textContent = P.persona === "all" ? "Daniel and Karissa" : PEOPLE[P.persona] + " only";
+  if (!$("#doneAlready").__h) setHtml($("#doneAlready"), `<details class="done-group"><summary>Already done (${DONE_ALREADY.length})</summary><ul>${DONE_ALREADY.map(d => `<li><span>${fmt(d.t)}<small>${fmt(d.s)}</small></span></li>`).join("")}</ul></details>`);
+}
+function openTasksText(){
+  const st = S(), people = P.persona === "all" ? ["D", "K"] : [P.persona];
+  let out = "Tracer, open tasks as of " + dshort(T0) + "\n";
+  people.forEach(p => {
+    out += "\n" + PEOPLE[p] + "\n";
+    TASKS.filter(t => (t.who[p] || 0) > 0 && !taskDone(st, t.id) && effHours(t, p, st) > 0).sort(byDay)
+      .forEach(t => { out += dwk(taskDay(t)) + ": " + t.t + " (" + fmtH(effHours(t, p, st)) + " h)\n"; });
+  });
+  return out;
+}
+function dayText(k){
+  const st = S();
+  let out = dlong(new Date(k + "T00:00:00")) + "\n";
+  TASKS.filter(t => isoDay(taskDay(t)) === k && visible(t)).sort(byDay).forEach(t => {
+    out += (taskDone(st, t.id) ? "[done] " : "[ ] ") + t.t + " (" + personsOf(t).filter(p => P.persona === "all" || P.persona === p).map(p => PEOPLE[p] + " " + fmtH(effHours(t, p, st)) + " h").join(", ") + ")\n";
+  });
+  return out;
+}
+
+/* ───────── claude api ───────── */
+function renderApi(){
+  const rows = JOBS.map(j0 => {
+    const j = jobView(j0), cost = jobCost(j), spent = SH.spend[j.id];
+    return `<tr><td><b>${esc(j.name)}</b>${j.opt ? ' <span class="opt">optional</span>' : ""}<div class="opt">${esc(j.id)}, ${esc(j.when)}${j.task ? ", task " + esc(j.task) : ""}</div></td><td>${esc(j.what)}</td><td><select data-job="${j.id}" data-f="model" aria-label="Model for ${esc(j.name)}">${Object.keys(PRICE).map(k => `<option value="${k}" ${k === j.model ? "selected" : ""}>${PRICE[k].name}</option>`).join("")}</select></td><td class="r"><input type="number" min="0" step="1" value="${j.n}" data-job="${j.id}" data-f="n" aria-label="Requests for ${esc(j.name)}"></td><td><input type="checkbox" data-job="${j.id}" data-f="batch" ${j.batch ? "checked" : ""} aria-label="Use the Batch API for ${esc(j.name)}"></td><td class="r cost">${usd(cost)}</td><td class="r"><input type="number" min="0" step="0.01" placeholder="0.00" value="${spent != null && spent !== 0 ? spent : ""}" data-spend="${j.id}" aria-label="Actual spend for ${esc(j.name)}" ${Store.readOnly ? "disabled" : ""}></td></tr>`;
+  }).join("");
+  const core = JOBS.filter(j => !j.opt).reduce((s, j) => s + jobCostFor(j), 0);
+  const all = JOBS.reduce((s, j) => s + jobCostFor(j), 0), spent = spentTotal();
+  setHtml($("#jobs"), `<thead><tr><th>Job</th><th>What it makes</th><th>Model</th><th class="r">Requests</th><th>Batch</th><th class="r">Estimate</th><th class="r">Spent, $</th></tr></thead><tbody>${rows}<tr class="total"><td>Core jobs</td><td></td><td></td><td></td><td></td><td class="r cost">${usd(core)}</td><td></td></tr><tr class="total"><td>With the optional jobs</td><td></td><td></td><td></td><td></td><td class="r cost">${usd(all)}</td><td class="r cost spent">${usd(spent)}</td></tr></tbody>`);
+  const cap = Math.max(1, Number(P.capUsd) || 25), w = x => Math.min(100, x / cap * 100);
+  const credit = Number(P.credit);
+  setHtml($("#meter"), `<div class="meter-row"><span>Plan, core jobs</span><span class="track"><i class="est" style="width:${w(core)}%"></i></span><output>${usd(core)}</output></div><div class="meter-row"><span>Plan, all jobs</span><span class="track"><i class="est" style="width:${w(all)}%"></i></span><output>${usd(all)}</output></div><div class="meter-row"><span>Worst case, twice the plan</span><span class="track"><i class="worst" style="width:${w(all * 2)}%"></i></span><output>${usd(all * 2)}</output></div><div class="meter-row"><span>Spent so far</span><span class="track"><i class="act" style="width:${w(spent)}%"></i></span><output>${usd(spent)}</output></div><p class="small">Bars are drawn against the spend limit of ${usd(cap)}.${credit > 0 ? " After the whole plan, about " + usd(Math.max(0, credit - all)) + " of the " + usd(credit) + " credit would remain." : ""}</p>`);
+  setHtml($("#recipes"), RECIPES.map((r, i) => `<details class="recipe" data-rid="r${i}" ${P.open["r" + i] ? "open" : ""}><summary><span>${esc(r.title)}</span><small>${esc(r.sub)}</small></summary><div class="rb">${r.parts.map(p => p.p ? `<p>${fmt(p.p)}</p>` : `<div><button type="button" class="btn" data-copypre>Copy</button></div><pre>${esc(p.pre)}</pre>`).join("")}</div></details>`).join(""));
+}
+
+/* ───────── the demo ───────── */
+const mmss = m => { const s = Math.round(m * 60); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+function renderDemo(){
+  setHtml($("#slotSeg"), [10, 12, 15, 20].map(m => `<button type="button" data-slot="${m}" aria-pressed="${P.slot === m}">${m} min</button>`).join(""));
+  const mins = beatMinutes(P.slot);
+  setHtml($("#show"), BEATS.map((b, i) => `<button type="button" class="beat${b.qa ? " qa" : ""}" style="--w:${b.w}" data-beat="${b.id}" aria-pressed="${P.beat === b.id}"><span class="bt">${esc(b.t)}</span><span class="bm">${mmss(mins[i])}</span></button>`).join(""));
+  const b = BEATS.find(x => x.id === P.beat) || BEATS[0], i = BEATS.indexOf(b);
+  setHtml($("#beatDetail"), `<div><h3>${esc(b.t)}</h3><dl><div><dt>Who speaks</dt><dd>${esc(b.who)}</dd></div><div><dt>On screen</dt><dd>${esc(b.screen)}</dd></div><div><dt>Say, roughly</dt><dd>${esc(b.say)}</dd></div></dl></div><div><dl><div><dt>Time</dt><dd>${mmss(mins[i])} of ${P.slot} minutes</dd></div><div><dt>Points it serves</dt><dd>${b.earns.map(id => esc(RUB[id].t) + " (" + RUB[id].pts + ")").join("<br>")}</dd></div></dl></div>`);
+}
+
+/* ───────── points, risks, questions, after ───────── */
+function renderRubric(){
+  const st = S();
+  const earners = id => TASKS.filter(t => t.earns.includes(id)).concat(AFTER.filter(a => a.earns.includes(id)));
+  let full = 0, n = 0, h = '<thead><tr><th>Line</th><th class="r">Points</th><th>Tasks that earn it</th><th class="r">Done</th></tr></thead><tbody>';
+  RUBRIC.forEach(c => {
+    h += `<tr class="group"><td colspan="4">${esc(c.cat)}</td></tr>`;
+    c.rows.forEach(r => {
+      const list = earners(r.id), dn = list.filter(x => taskDone(st, x.id)).length;
+      n++; if (dn === list.length) full++;
+      h += `<tr><td><b>${esc(r.t)}</b></td><td class="r num">${r.pts}</td><td><div class="chips">${list.map(x => `<button type="button" class="chip chipbtn ${taskDone(st, x.id) ? "on" : ""}" data-jump="${x.id}" title="${esc(x.t)}">${x.id}</button>`).join("")}</div></td><td class="r num">${dn} of ${list.length}</td></tr>`;
+    });
+  });
+  setHtml($("#rubTable"), h + "</tbody>");
+  $("#rubNote").textContent = full + " of " + n + " lines have every task done";
+}
+function renderTail(){
+  setHtml($("#riskTable"), `<thead><tr><th>What could go wrong</th><th>What we watch</th><th>What we do</th></tr></thead><tbody>${RISKS.map(r => `<tr><td><b>${esc(r.r)}</b></td><td>${esc(r.watch)}</td><td>${fmt(r.act)}</td></tr>`).join("")}</tbody>`);
+  setHtml($("#questions"), QUESTIONS.map(q => `<div class="q"><p>${esc(q.q)}</p><span class="who">${esc(q.who)}, by ${esc(q.by)}</span></div>`).join(""));
+  const st = S();
+  setHtml($("#after"), AFTER.map(a => `<li id="a-${a.id}"><span class="when">${esc(a.when)}</span><label class="chk"><input type="checkbox" data-cb="${a.id}" ${taskDone(st, a.id) ? "checked" : ""} ${Store.readOnly ? "disabled" : ""}><span>${esc(a.t)}</span></label></li>`).join(""));
+}
+
+/* ───────── drawing everything ───────── */
+function focusKey(){
+  const a = document.activeElement;
+  if (!a || a === document.body || !a.dataset) return null;
+  for (const k of ["cb", "hours", "spend", "cut", "job"]) if (a.dataset[k] !== undefined) return {k, v: a.dataset[k], f: a.dataset.f};
+  return null;
+}
+function restoreFocus(key){
+  if (!key) return;
+  const sel = key.k === "job" ? `[data-job="${key.v}"][data-f="${key.f}"]` : `[data-${key.k}="${key.v}"]`;
+  const el = $(sel);
+  if (el && document.activeElement !== el) el.focus({preventScroll: true});
+}
+function renderAll(){
+  const key = focusKey();
+  try {
+    const sch = schedule(S(), T0);
+    renderRail(sch); renderHero(sch); renderPlan(sch); renderApi(); renderDemo(); renderRubric(); renderTail();
+  } catch (err) {
+    console.error(err);
+    const b = $("#roBanner"); b.hidden = false; b.textContent = "Something went wrong drawing this page: " + err.message;
+  }
+  restoreFocus(key);
+}
+function syncControls(){
+  $$('input[name="persona"]').forEach(r => { r.checked = r.value === P.persona; });
+  [["cDwd", "oDwd", "D", "wd"], ["cDwe", "oDwe", "D", "we"], ["cKwd", "oKwd", "K", "wd"], ["cKwe", "oKwe", "K", "we"]].forEach(a => {
+    $("#" + a[0]).value = P.cap[a[2]][a[3]]; $("#" + a[1]).textContent = fmtH(P.cap[a[2]][a[3]]) + " h";
+  });
+  $("#showDone").checked = P.showDone;
+  $("#capUsd").value = P.capUsd;
+  $("#creditUsd").value = P.credit;
+  const eff = document.documentElement.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+  $("#themeBtn").textContent = eff === "light" ? "Switch to the dark theme" : "Switch to the light theme";
+}
+function applyTheme(){ if (P.theme) document.documentElement.setAttribute("data-theme", P.theme); else document.documentElement.removeAttribute("data-theme"); }
+
+/* ───────── jumping, copying ───────── */
+function flash(el){ el.classList.remove("is-flash"); void el.offsetWidth; el.classList.add("is-flash"); setTimeout(() => el.classList.remove("is-flash"), 1700); }
+function jumpTo(id){
+  const t = TASK[id];
+  if (!t) { const el = $("#a-" + id); if (el) { el.scrollIntoView({block: "center", behavior: "smooth"}); flash(el); } return; }
+  if (!visible(t)) { P.persona = "all"; }
+  if (!shown(t)) { P.showDone = true; }
+  P.open[id] = true; syncControls(); savePrefs(); renderAll();
+  const el = $("#t-" + id);
+  if (el) { el.open = true; el.scrollIntoView({block: "center", behavior: "smooth"}); flash(el); }
+}
+function showCopyBox(text){
+  setHtml($("#copyHost"), `<p class="small" style="margin-top:12px">Your browser would not copy automatically. The text is selected below. Press Ctrl+C, or Cmd+C on a Mac.</p><textarea class="copybox" id="copyBox" readonly aria-label="Text to copy">${esc(text)}</textarea>`);
+  const b = $("#copyBox"); if (b) { b.focus(); b.select(); }
+}
+async function copyText(text, el, label){
+  try { await navigator.clipboard.writeText(text); setHtml($("#copyHost"), ""); if (el) { const o = el.__t || el.textContent; el.__t = o; if (el.tagName === "BUTTON") { el.textContent = "Copied"; setTimeout(() => { el.textContent = o; }, 1400); } else { el.style.outline = "1px solid var(--observed)"; setTimeout(() => { el.style.outline = ""; }, 900); } } }
+  catch (e) { showCopyBox(text); }
+}
+
+/* ───────── events ───────── */
+document.addEventListener("click", e => {
+  const j = e.target.closest("[data-jump]");
+  if (j) { e.preventDefault(); jumpTo(j.dataset.jump); return; }
+  const code = e.target.closest("code");
+  if (code) { copyText(code.textContent, code); return; }
+  const cp = e.target.closest("[data-copypre]");
+  if (cp) { const pre = cp.parentElement.nextElementSibling; if (pre) copyText(pre.textContent, cp); return; }
+  const sl = e.target.closest("[data-slot]");
+  if (sl) { P.slot = Number(sl.dataset.slot); savePrefs(); renderAll(); return; }
+  const bt = e.target.closest("[data-beat]");
+  if (bt) { P.beat = bt.dataset.beat; savePrefs(); renderAll(); return; }
+  const cd = e.target.closest("[data-copyday]");
+  if (cd) { copyText(dayText(cd.dataset.copyday), cd); return; }
+  if (e.target.closest("#vDay")) { P.view = "day"; savePrefs(); renderAll(); return; }
+  if (e.target.closest("#vTrack")) { P.view = "track"; savePrefs(); renderAll(); return; }
+  if (e.target.closest("#copyAll")) { copyText(openTasksText(), $("#copyAll")); return; }
+  if (e.target.closest("#themeBtn")) {
+    const cur = document.documentElement.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    P.theme = cur === "light" ? "dark" : "light"; applyTheme(); savePrefs(); syncControls();
+  }
+});
+document.addEventListener("keydown", e => {
+  const d = e.target.closest && e.target.closest(".dot");
+  if (d && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); jumpTo(d.dataset.jump); }
+});
+document.addEventListener("change", e => {
+  const t = e.target;
+  if (t.matches("[data-cb]")) { if (!Store.readOnly) setDone(t.dataset.cb, t.checked); renderAll(); return; }
+  if (t.matches("[data-cut]")) { commit({cuts: {[t.dataset.cut]: t.checked}}); renderAll(); return; }
+  if (t.matches("[data-hours]")) { const v = Math.max(0, Number(t.value) || 0); P.hours[t.dataset.hours] = v; savePrefs(); renderAll(); return; }
+  if (t.matches("[data-spend]")) { commit({spend: {[t.dataset.spend]: Math.max(0, Number(t.value) || 0)}}); renderAll(); return; }
+  if (t.matches("[data-job]")) {
+    const id = t.dataset.job, f = t.dataset.f; P.jobs[id] = P.jobs[id] || {};
+    P.jobs[id][f] = f === "n" ? Math.max(0, Number(t.value) || 0) : f === "batch" ? t.checked : t.value;
+    savePrefs(); renderAll(); return;
+  }
+  if (t.id === "capUsd") { P.capUsd = Math.max(1, Number(t.value) || 25); savePrefs(); renderAll(); return; }
+  if (t.id === "creditUsd") { P.credit = t.value === "" ? "" : Math.max(0, Number(t.value) || 0); savePrefs(); renderAll(); return; }
+  if (t.id === "showDone") { P.showDone = t.checked; savePrefs(); renderAll(); return; }
+  if (t.name === "persona") { P.persona = t.value; savePrefs(); renderAll(); }
+});
+document.addEventListener("input", e => {
+  const m = {cDwd: ["D", "wd", "oDwd"], cDwe: ["D", "we", "oDwe"], cKwd: ["K", "wd", "oKwd"], cKwe: ["K", "we", "oKwe"]}[e.target.id];
+  if (!m) return;
+  P.cap[m[0]][m[1]] = Number(e.target.value); $("#" + m[2]).textContent = fmtH(P.cap[m[0]][m[1]]) + " h";
+  savePrefs(); renderAll();
+});
+document.addEventListener("toggle", e => {
+  const d = e.target;
+  if (!d || !d.matches) return;
+  if (d.matches("details.task")) P.open[d.dataset.id] = d.open;
+  else if (d.matches("details.recipe")) P.open[d.dataset.rid] = d.open;
+  else return;
+  savePrefs();
+}, true);
+window.addEventListener("hashchange", () => { const m = location.hash.match(/^#t-([A-Za-z0-9]+)$/); if (m) jumpTo(m[1]); });
+
+/* ───────── the shared store ───────── */
+async function connectShared(){
+  try {
+    const c = window.claude;
+    if (!c || typeof c.use !== "function") return;
+    const db = await c.use("db");
+    if (!db) return;
+    const ref = db.doc("state/main");
+    const user = await c.use("user").catch(() => null);
+    if (user && typeof user.can === "function") { try { if ((await user.can("data.write")) === false) Store.readOnly = true; } catch (e) {} }
+    Store.chain = ref.get().then(s => { if (!s.exists) return ref.set({done: {}, spend: {}, cuts: {}}); }).catch(err => { if (err && err.code === "invalid_argument") Store.readOnly = true; });
+    Store.ref = ref;
+    ref.onSnapshot(snap => {
+      if (!snap.exists) return;
+      const d = snap.data() || {};
+      SH.done = d.done || {}; SH.spend = d.spend || {}; SH.cuts = d.cuts || {};
+      Store.mode = "shared"; renderAll();
+    }, () => { Store.mode = "device"; Store.ref = null; loadDevice(); renderAll(); });
+  } catch (e) { /* stay on this device */ }
+}
+
+/* ───────── start ───────── */
+loadPrefs(); loadDevice();
+const q = new URLSearchParams(location.search).get("persona");
+if (q === "karissa") P.persona = "K"; else if (q === "daniel") P.persona = "D";
+applyTheme(); syncControls();
+$("#stripSvg").classList.add("intro");
+renderAll();
+setTimeout(() => $("#stripSvg").classList.remove("intro"), 1500);
+connectShared();
+/* if this copy of the page has no exhibit files beside it, say so instead of showing an empty frame */
+if (location.protocol !== "file:" && window.fetch) {
+  fetch("exhibit-3d/dist/index.html", {method: "HEAD"}).then(r => {
+    if (r.status === 404) {
+      const f = $(".frame");
+      if (f) f.innerHTML = '<div class="frame-note" style="border-top:0;padding:28px 16px">The 3D bench is not in this copy of the page. It is built in <code>visuals/exhibit-3d</code> in the repository, and the published copy of this page includes it once the build passes its checks.</div>';
+    }
+  }).catch(() => {});
+}
+{ const m = location.hash.match(/^#t-([A-Za-z0-9]+)$/); if (m) setTimeout(() => jumpTo(m[1]), 60); }
+window.__plan = {P, SH, Store, T0, check: () => schedule(S(), T0), setDone, commit};
+})();
+</script>
+</body>
+</html>

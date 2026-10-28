@@ -8,6 +8,7 @@ notes/
 
 # Agent instructions and runtime state stay local.
 CLAUDE.md
+AGENTS.md
 .claude/
 .codex/
 
