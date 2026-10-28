@@ -1602,7 +1602,7 @@ if (location.protocol !== "file:" && window.fetch) {
   fetch("exhibit-3d/dist/index.html", {method: "HEAD"}).then(r => {
     if (r.status === 404) {
       const f = $(".frame");
-      if (f) f.innerHTML = '<div class="frame-note" style="border-top:0;padding:28px 16px">The 3D bench is not in this copy of the page. It is built in <code>visuals/exhibit-3d</code> in the repository, and the published copy of this page includes it once the build passes its checks.</div>';
+      if (f) f.innerHTML = '<p class="small" style="padding:28px 16px">The 3D bench is not in this copy of the page. It is built in <code>visuals/exhibit-3d</code> in the repository, and the published copy of this page includes it once the build passes its checks.</p>';
     }
   }).catch(() => {});
 }
