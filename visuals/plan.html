@@ -1271,7 +1271,7 @@ function verdictHtml(sch){
     const mine = TASKS.filter(t => (t.who.K || 0) > 0 && !taskDone(st, t.id) && effHours(t, "K", st) > 0).sort(byDay);
     const blocker = mine.find(t => TASKS.some(x => (x.needs || []).includes(t.id) && (x.who.D || 0) > 0 && !taskDone(st, x.id)));
     const nx = blocker || mine[0];
-    out.push(`<p>Karissa has <b>${fmtH(K.total)} hours</b> left, about ${num(K.total / (daysToGo / 7), 1)} hours a week until the 18th. ${blocker ? `Daniel needs this from Karissa next: <b>${esc(nx.t)}</b>, ${dwk(taskDay(nx))}.` : nx ? `Karissa's next task is <b>${esc(nx.t)}</b>, ${dwk(taskDay(nx))}.` : ""}</p>`);
+    out.push(`<p>Karissa has <b>${fmtH(K.total)} hours</b> left, about ${num(K.total / (daysToGo / 7), 1)} hours a week until the 18th. ${blocker ? `The next step on Karissa's side is <b>${esc(nx.t)}</b>, ${dwk(taskDay(nx))}. The data work builds on it.` : nx ? `Karissa's next task is <b>${esc(nx.t)}</b>, ${dwk(taskDay(nx))}.` : ""}</p>`);
   }
   const saved = cutsSavedTotal();
   if (saved > 0) out.push(`<p>Cuts in effect take out <b>${fmtH(saved)} hours</b>.</p>`);
