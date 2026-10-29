@@ -1,0 +1,47 @@
+/* HUD tokens (references/hud-spec.md §3). Per-exhibit object colors are added by mountHud()
+   from schema.semanticColors, e.g. --leaf, --root. */
+:root {
+  --font-ui: "Outfit", "Outfit Variable", Arial, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, Menlo, monospace;
+
+  --ink: #0b0f1a;            /* page background, veil, theme-color */
+  --text: #eef2fa;
+  --text-kicker: #dfe6f5;
+  --text-lede: #c7cee0;
+  --text-caption: #c3cadc;
+  --text-seg: #cfd6e8;
+  --text-tool: #dfe4f3;
+  --mute: #9ea8c2;           /* group labels */
+  --mute-stat: #8d97b3;      /* stat labels */
+  --mute-unit: #9aa4bf;
+  --mute-hint: #7d87a4;      /* key hints */
+  --mute-dialog: #8f98b3;
+
+  --glass: linear-gradient(150deg, #141a2ae8, #0d1220e3);  /* control card */
+  --chip: #0d1220c4;         /* stat tiles */
+  --caption-bg: #0d1220b0;
+  --float-bg: #0e1220b8;     /* bottom-right buttons */
+  --toast-bg: #0e1220dd;
+  --tip-bg: #0b1020e8;
+  --dialog-bg: #101526;
+  --tune-bg: #0e1220f5;
+
+  --seg-bg: #ffffff0c;
+  --tool-bg: #ffffff12;
+  --hover: #ffffff14;
+  --hover-strong: #ffffff24;
+  --on-bg: #eef4ff;
+  --on-text: #101626;
+  --track: #ffffff1f;
+  --tick: #ffffff38;
+
+  --cyan: #7fe3ff;
+  --amber: #ffb454;
+  --coral: #ff6b86;
+  --violet: #b99cff;
+  --green: #8fe8a8;
+
+  --shadow: 0 18px 50px -20px #000b;
+  --r-card: 16px; --r-stat: 10px; --r-caption: 12px; --r-seg: 11px;
+  --r-seg-btn: 9px; --r-tool: 10px; --r-float: 12px; --r-dialog: 20px;
+}

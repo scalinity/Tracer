@@ -1,0 +1,5 @@
+/* Embedded (?embed=1): the frame belongs to another page, so the maker plate goes; the kit's docked
+   layout takes over by itself when the frame is narrow (hud.css, max-width 900px). */
+.embed .br .credit { display: none; }
+/* The credit names the team: the pill holds it on one line. */
+.br .credit { max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

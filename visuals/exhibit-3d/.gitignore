@@ -1,0 +1,5 @@
+node_modules/
+qa/
+*.app/
+.claude/
+.DS_Store
