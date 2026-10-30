@@ -33,6 +33,7 @@ python -m src.pipeline.intervals          # fit the transit-time distributions -
 python -m src.pipeline.recovery           # does the fit recover what the generator planted?
 python -m src.pipeline.evaluate           # baselines against the risk model on the held-out runs, and the alert list
 python -m src.pipeline.location_eval      # score the location filter against the hidden truth
+python -m src.api.export --run test       # write docs/demo/bundle.json for the demo
 
 node visuals/plan.check.cjs               # the plan's data is consistent
 (cd visuals/exhibit-3d && npm install && npm test)   # the 3D exhibit's tests; `npm run dev` serves it
@@ -69,6 +70,7 @@ The system map opens directly from disk and needs no server: `open visuals/archi
 | `datasets/` | The frozen synthetic dataset and its manifest (model, hashes, seed, counts, cost) |
 | `src/` | `generator/` (briefs, prompt, validator, batch runs), `pipeline/` (store, fit, evaluate, triage), `models/` (risk, location), `api/` |
 | `tests/` | `pytest`: the policy and config loaders, the generator and its validator, the store, the fit, the models, the evaluation and the midterm snapshot |
+| `docs/demo/` | The demo's data: `bundle.json` (the held-out specimens with their risk, alerts and truth, and a grid of 20 operating points) and its `bundle.schema.json`; `python -m src.api.export` writes it |
 | `results/` | Fitted parameters, the evaluation, the alert list, the location scores, the recovery plot and the midterm snapshot `mvp-nov8.json` |
 | `notes/` | Working notes, questions, meeting capture; kept local, not in the repository |
 | `data/` | Claude output, the two-file store in `data/store/` and MIMIC extracts (gitignored) |

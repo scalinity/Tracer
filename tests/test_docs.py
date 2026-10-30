@@ -91,3 +91,14 @@ def test_the_worked_example_numbers_come_from_the_model():
     station, lost = post[60, 2] + post[60, 3], post[60, names.index("lost")]
     assert (round(station, 2), round(lost, 2)) == (0.64, 0.36)
     assert round(1 - 0.5 * (1 + math.erf(math.log(60 / 24) / 0.5 / 2 ** 0.5)), 2) == 0.03  # about three percent of normal transits
+
+
+def test_the_interfaces_section_describes_the_bundle_that_exists():
+    from src.api import export
+    text = section(ARCH, "## 7. Interfaces", "**The board needs four things")
+    size = export.DEFAULT_OUT.stat().st_size
+    import gzip
+    packed = len(gzip.compress(export.DEFAULT_OUT.read_bytes()))
+    assert "about 3.3 MB (480 KB compressed)" in text and abs(size / 1e6 - 3.3) < 0.25 and abs(packed / 1e3 - 480) < 60
+    assert "docs/demo/bundle.schema.json" in text and "python -m src.api.export" in text
+    assert "src.api.export" in README and "FastAPI" not in ARCH and "uvicorn" not in README
