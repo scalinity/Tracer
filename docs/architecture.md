@@ -614,6 +614,8 @@ only.
 | `grid` | 20 operating points: for the plan's baseline, the window-aware baseline and the risk model, the alerts per shift and the median warning, so the threshold slider needs no model run |
 | `showcase_candidates`, `heroes` | Ten specimens chosen by fixed rules, and the stories written for them |
 
+A second file, `docs/demo/briefs.json` (schema `docs/demo/briefs.schema.json`, written by `python -m src.api.search_briefs`), holds a search brief for each of the 806 alerts at the headline setting: one written by a fixed template from the alert's inputs and one by `claude-sonnet-5-5`, with a seeded blind key saying which is shown as A. The page loads it only when a specimen is opened.
+
 Each method's knob at each grid point is set on the fit runs from alert volume alone and applied unchanged to
 the held-out runs, as in §5.2.1 and `src/pipeline/evaluate.py`. The grid agrees with `results/evaluation.json`
 at 1, 2, 4 and 6 alerts per shift. Risk is written to the end of the demo's 240-minute horizon, and the

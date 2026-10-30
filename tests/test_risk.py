@@ -205,3 +205,31 @@ def test_main_writes_the_numbers_and_the_plot(tmp_path, monkeypatch, capsys):
     assert (tmp_path / "parameter-recovery.svg").exists()
     assert json.loads((tmp_path / "parameter-recovery.json").read_text())["survival_at"][0]["minutes"] == 30
     assert "never arrive: planted" in capsys.readouterr().out
+
+
+# ---- the expected arrival ----
+
+def test_the_expected_arrival_matches_numerical_integration():
+    mix = Mixture(((0.9, math.log(22), 0.45), (0.07, math.log(90), 0.5)), 0.03)
+
+    def share(t, x):
+        pdf = lambda u: sum(w * math.exp(-((math.log(u) - mu) ** 2) / (2 * s * s)) / (u * s * math.sqrt(2 * math.pi)) for w, mu, s in mix.components)
+        still = sum(w * (1 - risk.ln_cdf(t, mu, s)) for w, mu, s in mix.components)
+        return integrate.quad(pdf, t, x)[0] / still
+    for t in (10, 30, 60):
+        for q in (0.5, 0.9):
+            x = t + risk.arrival_quantile(t, mix, q)
+            assert share(t, x) == pytest.approx(q, abs=1e-7)
+
+
+def test_the_expected_wait_shrinks_while_normal_trips_arrive_then_grows_with_the_silence():
+    mix = Mixture(((0.88, math.log(24), 0.50), (0.08, math.log(70), 0.60)), 0.04)
+    waits = [risk.arrival_quantile(t, mix, 0.5) for t in (5, 20, 40, 60, 90)]
+    assert waits[1] < waits[0]  # a specimen silent at 20 minutes is nearly here
+    assert waits[2] < waits[3] < waits[4]  # past the normal trip, what is left is the slow tail
+    assert all(risk.arrival_quantile(t, mix, 0.9) > risk.arrival_quantile(t, mix, 0.5) for t in (5, 40, 90))
+
+
+def test_a_mixture_with_no_one_left_to_arrive_has_no_expected_arrival():
+    only_never = Mixture(((1e-300, 0.0, 0.1),), 1 - 1e-300)
+    assert risk.arrival_quantile(1000, only_never, 0.5) == math.inf

@@ -70,7 +70,7 @@ The system map opens directly from disk and needs no server: `open visuals/archi
 | `datasets/` | The frozen synthetic dataset and its manifest (model, hashes, seed, counts, cost) |
 | `src/` | `generator/` (briefs, prompt, validator, batch runs), `pipeline/` (store, fit, evaluate, triage), `models/` (risk, location), `api/` |
 | `tests/` | `pytest`: the policy and config loaders, the generator and its validator, the store, the fit, the models, the evaluation and the midterm snapshot |
-| `docs/demo/` | The demo's data: `bundle.json` (the held-out specimens with their risk, alerts and truth, and a grid of 20 operating points) and its `bundle.schema.json`; `python -m src.api.export` writes it |
+| `docs/demo/` | The demo's data: `bundle.json` (the held-out specimens with their risk, alerts and truth, and a grid of 20 operating points) and its `bundle.schema.json`, plus `briefs.json`, a template and a Claude search brief for each alert; `python -m src.api.export` and `python -m src.api.search_briefs` write them |
 | `results/` | Fitted parameters, the evaluation, the alert list, the location scores, the recovery plot and the midterm snapshot `mvp-nov8.json` |
 | `notes/` | Working notes, questions, meeting capture; kept local, not in the repository |
 | `data/` | Claude output, the two-file store in `data/store/` and MIMIC extracts (gitignored) |

@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Tracer demo search briefs",
+  "description": "A fixed-template search brief and a Claude search brief for every alert in docs/demo/bundle.json, with a seeded blind key for comparing them. Synthetic data with no clinical review. Written by src/api/search_briefs.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["notice", "model", "prompt_hash", "inputs_hash", "bundle_dataset_sha256", "job", "blind", "briefs"],
+  "properties": {
+    "notice": {"type": "string", "minLength": 1},
+    "model": {"type": "string"},
+    "prompt_hash": {"type": "string"},
+    "inputs_hash": {"type": "string"},
+    "bundle_dataset_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "job": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "batch_id", "alerts", "claude_accepted", "first_try", "retried", "fell_back", "batch_errors", "cost_usd"],
+      "properties": {
+        "id": {"const": "J4"}, "batch_id": {"type": "string"}, "alerts": {"type": "integer", "minimum": 1},
+        "claude_accepted": {"type": "integer", "minimum": 0}, "first_try": {"type": "integer", "minimum": 0},
+        "retried": {"type": "integer", "minimum": 0}, "fell_back": {"type": "integer", "minimum": 0},
+        "batch_errors": {"type": "integer", "minimum": 0}, "cost_usd": {"type": "number", "minimum": 0}
+      }
+    },
+    "blind": {
+      "type": "object", "additionalProperties": false, "required": ["seed", "meaning"],
+      "properties": {"seed": {"type": "integer"}, "meaning": {"type": "string"}}
+    },
+    "briefs": {
+      "type": "object", "minProperties": 1,
+      "propertyNames": {"pattern": "^SP-r[0-9]+-[0-9]+$"},
+      "additionalProperties": {
+        "type": "object", "additionalProperties": false, "required": ["inputs", "template", "claude", "blind_a"],
+        "properties": {
+          "inputs": {
+            "type": "object", "additionalProperties": false,
+            "required": ["role", "specimen_type", "minutes_since_last_scan", "risk_percent", "likely_places", "expected_arrival_minutes_from_now", "minutes_left"],
+            "properties": {
+              "role": {"type": "string"}, "specimen_type": {"type": "string"},
+              "minutes_since_last_scan": {"type": "integer", "minimum": 0}, "risk_percent": {"type": "integer", "minimum": 0, "maximum": 100},
+              "likely_places": {"type": "array", "minItems": 1, "maxItems": 3, "items": {
+                "type": "object", "additionalProperties": false, "required": ["place", "percent"],
+                "properties": {"place": {"type": "string"}, "percent": {"type": "integer", "minimum": 1, "maximum": 100}}}},
+              "expected_arrival_minutes_from_now": {"type": "object", "additionalProperties": false, "required": ["median", "latest_likely"],
+                                                    "properties": {"median": {"type": "integer", "minimum": 0}, "latest_likely": {"type": "integer", "minimum": 0}}},
+              "minutes_left": {"type": "integer"}
+            }
+          },
+          "template": {"type": "string", "minLength": 1},
+          "claude": {"type": ["string", "null"]},
+          "blind_a": {"enum": ["template", "claude"]}
+        }
+      }
+    }
+  }
+}
