@@ -1,46 +1,16 @@
 import json
 import re
-from types import SimpleNamespace
-
 import pytest
 
 from src.generator import briefs as briefs_mod
 from src.generator import config, prompt, run, show, validate
+from fakes import FakeClient
 from trails import render_trail
 
 
 @pytest.fixture(scope="module")
 def pool():
     return briefs_mod.make_briefs(0, 0, 600)
-
-
-class FakeClient:
-    """Answers each request with the correct trail, except for ids in `broken`, which get a bad one."""
-
-    def __init__(self, pool, broken=(), always_broken=()):
-        self.by_id = {b["specimen_id"]: b for b in pool}
-        self.broken, self.always_broken = set(broken), set(always_broken)
-        self.seen: dict[str, int] = {}
-        self.creates, self.counts = [], []
-        self.messages = SimpleNamespace(create=self.create, count_tokens=self.count_tokens)
-
-    def create(self, **kwargs):
-        self.creates.append(kwargs)
-        sent = json.loads(kwargs["messages"][0]["content"])
-        sid = sent["specimen_id"]
-        self.seen[sid] = self.seen.get(sid, 0) + 1
-        trail = render_trail(self.by_id[sid])
-        if sid in self.always_broken or (sid in self.broken and self.seen[sid] == 1):
-            trail["outcome"]["fault"] = "wrong"
-        return SimpleNamespace(
-            content=[SimpleNamespace(type="text", text=json.dumps(trail))], stop_reason="end_turn", _request_id="req",
-            usage=SimpleNamespace(input_tokens=300, output_tokens=600, cache_creation_input_tokens=0,
-                                  cache_read_input_tokens=4000))
-
-    def count_tokens(self, **kwargs):
-        self.counts.append(kwargs)
-        empty = json.loads(kwargs["messages"][0]["content"])["specimen_id"] == ""
-        return SimpleNamespace(input_tokens=4000 if empty else 4240)
 
 
 @pytest.fixture

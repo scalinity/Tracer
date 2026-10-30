@@ -4,7 +4,9 @@
     python -m src.generator.run --seed 0 --runs 1 --n 200 --out data/claude/pilot --budget-usd 0.25
 
 A dry run counts tokens, prints the estimate and stops. A real run needs --budget-usd and aborts
-before sending anything if the estimate is higher. Each accepted specimen is appended to
+before sending anything if the estimate is higher. With --batch each run goes to the Batch API as
+one batch at half price; the batch ids are saved to data/claude/batches.json, nothing is awaited,
+and src.generator.collect gathers the results. A rerun submits only the runs not yet in that file. Each accepted specimen is appended to
 <out>/run-NN.jsonl as {"brief", "trail"}, so a rerun skips what is already there. Dropped
 specimens go to data/claude/dropped.jsonl and every call to data/claude/usage.jsonl. The summary
 (counts, pass rates, real cost, hashes) is printed and saved to <out>/summary.json.
@@ -19,12 +21,15 @@ import argparse
 import json
 import sys
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 from pathlib import Path
 
 from . import briefs as briefs_mod
 from . import config, prompt, validate
 
 DEFAULT_WORKERS = 8
+BATCHES_PATH = prompt.ROOT / "data" / "claude" / "batches.json"
+CACHE_TTL_BATCH = "1h"  # a batch may wait up to an hour before it starts
 
 
 def run_path(out: Path, run: int) -> Path:
@@ -57,6 +62,47 @@ def generate_run(client, briefs: list[dict], path: Path, *, job: str, workers: i
             f.flush()
             counts["accepted"] += 1
     return counts
+
+
+def batch_context(job: str, seed: int, n: int, loaded: dict) -> dict:
+    """What a batch ledger must agree on: change any of it and the briefs or trails would differ."""
+    return {"job": job, "seed": seed, "n_per_run": n, "model": prompt.MODEL, "prompt_hash": prompt.prompt_hash(),
+            "policy_hash": loaded["policy_hash"], "config_hash": loaded["config_hash"]}
+
+
+def read_ledger(path: Path, context: dict) -> dict:
+    """The saved ledger, or a new one. Fails if the saved one was made with different settings."""
+    if not path.exists():
+        return {"context": context, "batches": {}}
+    ledger = json.loads(path.read_text(encoding="utf-8"))
+    differs = sorted(k for k in context if ledger["context"].get(k) != context[k])
+    if differs:
+        raise RuntimeError(f"{path} was made with different {', '.join(differs)}; move it aside to start again")
+    return ledger
+
+
+def write_ledger(path: Path, ledger: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(ledger, indent=2) + "\n", encoding="utf-8")
+    tmp.replace(path)
+
+
+def submit_batches(client, runs: list[list[dict]], path: Path, context: dict) -> dict:
+    """One batch per run, skipping runs already in the ledger. The ledger is rewritten after each submit."""
+    ledger = read_ledger(path, context)
+    for r, briefs in enumerate(runs):
+        if str(r) in ledger["batches"]:
+            print(f"run {r:02d}: already submitted as {ledger['batches'][str(r)]['id']}")
+            continue
+        batch = client.messages.batches.create(requests=[
+            {"custom_id": b["specimen_id"], "params": prompt.build_request(b, cache_ttl=CACHE_TTL_BATCH)}
+            for b in briefs])
+        ledger["batches"][str(r)] = {"id": batch.id, "specimens": len(briefs)}
+        ledger["created"] = datetime.now().astimezone().isoformat(timespec="seconds")
+        write_ledger(path, ledger)
+        print(f"run {r:02d}: submitted {len(briefs)} specimens as {batch.id}")
+    return ledger
 
 
 def usage_rows(log_path: Path, start: int, job: str) -> list[dict]:
@@ -106,6 +152,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--job", default="J1")
     ap.add_argument("--budget-usd", type=float)
     ap.add_argument("--workers", type=int, default=DEFAULT_WORKERS)
+    ap.add_argument("--batch", action="store_true", help="send each run to the Batch API at half price")
+    ap.add_argument("--batches", type=Path, default=BATCHES_PATH, help="where --batch saves the batch ids")
     ap.add_argument("--dry-run", action="store_true", help="count tokens, print the estimate and stop")
     args = ap.parse_args(argv)
     if not args.dry_run and args.budget_usd is None:
@@ -114,11 +162,17 @@ def main(argv: list[str] | None = None) -> int:
     loaded = config.load()
     runs = [briefs_mod.make_briefs(args.seed, r, args.n, loaded) for r in range(args.runs)]
     client = prompt.make_client()
-    estimate = prompt.estimate_job(prompt.token_counter(client), runs[0], n=args.n * args.runs)
+    estimate = prompt.estimate_job(prompt.token_counter(client), runs[0], n=args.n * args.runs, batch=args.batch)
     print(prompt.format_estimate(estimate))
     if args.budget_usd is not None:
         prompt.check_budget(estimate, args.budget_usd)
     if args.dry_run:
+        return 0
+
+    if args.batch:
+        submit_batches(client, runs, args.batches, batch_context(args.job, args.seed, args.n, loaded))
+        print(f"batch ids saved to {args.batches}; collect them with: python -m src.generator.collect "
+              f"--batch-ids {args.batches}")
         return 0
 
     log_start = prompt.USAGE_LOG.stat().st_size if prompt.USAGE_LOG.exists() else 0
