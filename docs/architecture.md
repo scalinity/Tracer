@@ -123,7 +123,7 @@ how realistic the trails are, and the manifest says so. Every result built on th
 | 6 | Challenger model | `src/models/challenger.py` | Landmarked gradient-boosted trees over the full feature set, evaluated against the primary in Week 7. | A pre-registered experiment, not a component of the running system. See §5.2. |
 | 7 | Location posterior | `src/models/location.py` | A probability distribution over where the specimen is right now, including "lost". | Turns "something is wrong" into "look at the tube station", which is what makes an alert actionable, and selects which role it routes to. |
 | 8 | Alert triage | `src/pipeline/triage.py` | Ranks by expected harm, applies the operating point, deduplicates, routes to a role, auto-resolves on completion. | Alert fatigue is the dominant failure mode of hospital alerting. Volume control is a component, not a parameter. |
-| 9 | API | `src/api/app.py` | FastAPI. Serves the board, the specimen timeline, the alert queue, and an SSE stream. Exports frozen scenario bundles in the same schema. | One contract for the live board and the static public demo, so Week 15 shows real model output without needing a hosted server. |
+| 9 | Bundle exporter | `src/api/export.py` | Exports the held-out runs as one JSON file with its schema: each specimen's events, risk and location probabilities every 5 minutes, alert moments and truth, plus the fitted parameters, the policy and a grid of 20 operating points. There is no server. | One file for the board, the timeline and the threshold slider, so the public demo shows real model output without a hosted service. |
 | 10 | System map / demo | `visuals/architecture.html` | Interactive map of this architecture with a worked example. Grows into the Week 15 Interactive Demo. | Required deliverable, and the thinking tool for the build. Its current honesty gaps are tracked in `visuals/README.md`. |
 
 There is no calibration component. One was specified and then removed: §1.1 records the check that killed
@@ -140,7 +140,6 @@ would not have worked" is a result worth being able to show.
 | **Polars** | pandas | The challenger's landmark expansion multiplies rows by roughly an order of magnitude; lazy evaluation and a sane memory profile matter there. |
 | **DuckDB** | Postgres, the official MIMIC build scripts | The event store, and the one-off feasibility check in `notebooks/`. No server and no load step: queries run straight against Parquet or compressed CSV. |
 | **NumPy, written directly** for the HSMM | `hmmlearn`, `pomegranate` | Neither supports explicit state durations with an absorbing loss state cleanly, and the forward recursion is about forty lines. |
-| **FastAPI + server-sent events** | WebSockets, Flask | The stream is one-directional. SSE is a few lines, reconnects on its own, and works from a static page. |
 | **Vanilla JS, single file** for the board | React, Streamlit | Opens from disk, hosts on GitHub Pages with no build step, and the course requires the demo be accessible to every student without them running anything. |
 
 ---
@@ -180,12 +179,12 @@ flowchart TB
     HARM --> TRIAGE["Alert triage<br/>operating point · dedup · routing"]
     TRIAGE --> ALERTS[("Alert store")]
 
-    TWIN --> API["FastAPI"]
-    ALERTS --> API
-    STORE --> API
-    API --> BOARD["Live board"]
-    API --> TIMELINE["Specimen timeline"]
-    API --> BUNDLE["Scenario bundle (JSON)<br/>-> public demo"]
+    TWIN --> EXPORT["Bundle exporter"]
+    ALERTS --> EXPORT
+    STORE --> EXPORT
+    EXPORT --> BUNDLE["bundle.json + schema<br/>static demo, no server"]
+    BUNDLE --> BOARD["Board"]
+    BUNDLE --> TIMELINE["Specimen timeline"]
 
     TRUTH -.->|"evaluation only"| EVAL["Evaluation harness<br/>lead time · calibration · top-k"]
     ALERTS -.-> EVAL
@@ -598,20 +597,29 @@ specimen does not congest the ones behind it.
 
 ## 7. Interfaces
 
-The API's job is to make the board and the timeline possible without either of them containing any logic.
-Same JSON whether it streams live or is read from a frozen file, so the public demo shows real model output.
+The demo is static: GitHub Pages, no server, no key and no live API call. Its one input is
+`docs/demo/bundle.json`, written by `python -m src.api.export --run test` and described by
+`docs/demo/bundle.schema.json`. A test validates the committed bundle against the schema and checks that it is
+the file the code regenerates. The file is about 3.3 MB (480 KB compressed) and holds the held-out specimens
+only.
 
-| Endpoint | Returns |
+| Key | Holds |
 |---|---|
-| `GET /api/board` | One row per outstanding specimen: `specimen_id`, `specimen_type`, `priority`, `collecting_unit`, `current_stage`, `last_event_at`, `minutes_since_last_event`, `window_closes_at`, `minutes_to_window_close`, `p_breach`, `p_breach_sparkline` (last 12 ticks), `expected_arrival_p50`, `expected_arrival_p90`, `expected_harm`, `most_likely_location`, `location_confidence`, `baseline_flagged`, `open_alert_id`. Sorted by `expected_harm` descending |
-| `GET /api/specimen/{id}` | The full twin, plus the ordered event list, plus `p_breach_history` and `location_posterior_history` as series, plus **the resolved breach policy**: `clock_start`, `clock_stop`, `window_min` and the policy's source note |
-| `GET /api/policy` | The active breach policy and its `policy_hash`, so a client can show which clock it is displaying and can detect a stale bundle |
-| `GET /api/alerts?status=open` | The alert queue, grouped by `routed_to_role` |
-| `POST /api/alerts/{id}/ack` | Acknowledge; records who and when for the alert-burden analysis |
-| `GET /api/stream` | SSE: `board_delta`, `alert_opened`, `alert_resolved`, one message per tick |
-| `GET /api/scenario/{id}` | A frozen bundle: every board snapshot, event, alert and the policy under which they were produced |
+| `source`, `notice` | The dataset's SHA-256, model, seed and counts, and the statement that the data is synthetic and had no clinical review |
+| `policy` | The policy table's rows with their windows, tiers and sources, and its `hash`, so a client can show which clock it is displaying and detect a stale bundle |
+| `model` | The fitted parameters, the pooled mixture and a normal-transit lognormal for each group, from which a browser recomputes the risk |
+| `triage` | The urgency weights, the routing roles and the headline alert budget, all assumed |
+| `specimens` | For each held-out specimen with a clock: its brief, scan events, risk and location probabilities every 5 minutes while silent, the alert minute of each method at the headline setting, and the truth (planted fault, breach label, true segments) |
+| `baselines` | The plan's baseline threshold for each group and the window-aware baseline's shares, at each grid point |
+| `grid` | 20 operating points: for the plan's baseline, the window-aware baseline and the risk model, the alerts per shift and the median warning, so the threshold slider needs no model run |
+| `showcase_candidates`, `heroes` | Ten specimens chosen by fixed rules, and the stories written for them |
 
-**The board needs four things the backend must therefore provide**: ranking by expected harm rather than by
+Each method's knob at each grid point is set on the fit runs from alert volume alone and applied unchanged to
+the held-out runs, as in §5.2.1 and `src/pipeline/evaluate.py`. The grid agrees with `results/evaluation.json`
+at 1, 2, 4 and 6 alerts per shift. Risk is written to the end of the demo's 240-minute horizon, and the
+location probabilities stop there.
+
+**The board needs four things the bundle must therefore provide**: ranking by expected harm rather than by
 time, so the eye lands on the right specimen first; the score *history*, not just the current value, because
 a rising score reads differently from a high flat one; the baseline's verdict alongside the model's, so the
 comparison that is the point of the project is visible on screen and not only in a table in the report; and

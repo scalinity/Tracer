@@ -122,6 +122,12 @@ def truth_places(split: str) -> dict[str, list[tuple[float, float | None, str]]]
     return out
 
 
+def load_test_specs(start: str, stop: str) -> tuple[list[Spec], dict]:
+    """The held-out specimens with their breach labels and planted faults, for the demo bundle
+    (src/api/export.py), which never opens the truth file itself."""
+    return load_specs(store.open_observed(), store.open_truth(), start, stop, "test")
+
+
 def baseline_quantiles(fit_rows) -> dict[str, np.ndarray]:
     """Sorted collection-to-receipt times for every group and parent that has at least the minimum members."""
     out = {}

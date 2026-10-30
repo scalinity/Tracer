@@ -235,6 +235,13 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** nothing failed. The paragraph is long because the caveats are part of the claim; Daniel to confirm he wants it that way.
 - **Assumed:** the paragraph states the bar on median warning over all breaches (a miss counts as zero), the same measure the snapshot records. It leads with the default weights 3, 2, 1 because they are the plan's decision, and gives the equal-weights figure in the same sentence.
 
+### Oct 30 · D11 and D12 · Export the demo bundle with its metrics and schema (this pull request)
+
+- **Agent:** wrote `src/api/export.py`, which turns the held-out runs into `docs/demo/bundle.json`: each specimen's events, risk and location probabilities, the alert moment of three methods, and the truth, plus the fitted parameters, the policy, the urgency weights, and a grid of 20 operating points for the plan's baseline, a window-aware baseline and the risk model. Wrote the JSON Schema and 37 tests, and moved the architecture document's interface section from a planned server to the bundle that exists.
+- **Daniel:** the plan cards set the contents (events, risk and location every 5 minutes, the alert moment, the truth, the parameters and the policy hash, a grid of 20 thresholds, a schema and 10 candidates), and his run order asked for the grid to cover both baselines and the model.
+- **Went wrong:** the first test run failed on one specimen about 1e-12 from its alert threshold, because the risk had been rounded to 10 decimals and the rounding crossed the line. Risk is now stored at full precision. The first showcase picks had day-long windows the timeline and the 3D view cannot show, and one "clear catch" was only an alert at minute 5, so the rules now prefer short windows and require some silence first.
+- **Assumed:** the grid is by alert budget (0.5 to 14 per shift), because that is the fair comparison between methods and each knob is set the way the evaluation sets it. The bundle holds all six held-out runs and stops the risk and places at 240 minutes (the risk runs on to the strictest alert if that comes later). Showcase candidates are chosen by fixed rules, not by hand, and `heroes` is empty until G3. The bundle is 3.3 MB, about 480 KB over the wire, which is fine for a phone and was not checked on one.
+
 ## The Claude API jobs
 
 All jobs call `claude-haiku-5-5` at low effort with thinking off. The reply must match a JSON schema, so replies parse and retries stay rare. Bulk jobs run through the Batch API at half price, and every call is logged to `data/claude/usage.jsonl` (kept local). The order for each job is a token count, a pilot, then the batch, and a job's estimate must be under the plan's gate before it starts.

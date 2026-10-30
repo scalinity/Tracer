@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Tracer demo bundle",
+  "description": "The model output the static demo reads: held-out specimens with their events, risk, location probabilities, alerts and truth, the fitted parameters, the policy, and a grid of 20 operating points. Synthetic data with no clinical review. Written by src/api/export.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["bundle_version", "notice", "source", "tick_min", "shift_min", "horizon_min", "good_warning_min", "place_order",
+               "policy", "model", "triage", "baselines", "grid", "headline_index", "specimens", "showcase_candidates", "heroes"],
+  "properties": {
+    "bundle_version": {"const": 1},
+    "notice": {"type": "string", "minLength": 1},
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["dataset", "sha256", "model", "prompt_hash", "seed", "split", "runs", "specimens", "never_collected_set_aside", "breaches", "shifts", "clinical_review"],
+      "properties": {
+        "dataset": {"type": "string"}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "model": {"type": "string"},
+        "prompt_hash": {"type": "string"}, "seed": {"type": "integer"}, "split": {"const": "test"}, "runs": {"type": "string"},
+        "specimens": {"type": "integer", "minimum": 1}, "never_collected_set_aside": {"type": "integer", "minimum": 0},
+        "breaches": {"type": "integer", "minimum": 0}, "shifts": {"type": "integer", "minimum": 1}, "clinical_review": {"type": "string"}
+      }
+    },
+    "tick_min": {"type": "integer", "minimum": 1},
+    "shift_min": {"type": "integer", "minimum": 1},
+    "horizon_min": {"type": "integer", "minimum": 1},
+    "good_warning_min": {"type": "integer", "minimum": 1},
+    "place_order": {"type": "array", "items": {"type": "string"}, "minItems": 7, "maxItems": 7, "uniqueItems": true},
+    "policy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["hash", "clock_start", "clock_stop", "multi_test_rule", "policies"],
+      "properties": {
+        "hash": {"type": "string"}, "clock_start": {"type": "string"}, "clock_stop": {"type": "string"}, "multi_test_rule": {"type": "string"},
+        "policies": {"type": "object", "minProperties": 1, "additionalProperties": {"$ref": "#/$defs/policy_row"}}
+      }
+    },
+    "model": {
+      "type": "object", "additionalProperties": false,
+      "required": ["policy_hash", "source_sha256", "fit_runs", "pooled", "groups", "risk"],
+      "properties": {
+        "policy_hash": {"type": "string"}, "source_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "fit_runs": {"type": "string"},
+        "pooled": {
+          "type": "object", "additionalProperties": false,
+          "required": ["mu", "sigma", "stalled_mu", "stalled_sigma", "w_stalled", "p_never", "weights", "n_started", "n_arrived", "n_never"],
+          "properties": {
+            "mu": {"type": "number"}, "sigma": {"type": "number", "exclusiveMinimum": 0},
+            "stalled_mu": {"type": "number"}, "stalled_sigma": {"type": "number", "exclusiveMinimum": 0},
+            "w_stalled": {"$ref": "#/$defs/probability"}, "p_never": {"$ref": "#/$defs/probability"},
+            "weights": {"type": "object", "additionalProperties": false, "required": ["normal", "stalled", "never"],
+                        "properties": {"normal": {"$ref": "#/$defs/probability"}, "stalled": {"$ref": "#/$defs/probability"}, "never": {"$ref": "#/$defs/probability"}}},
+            "n_started": {"type": "integer"}, "n_arrived": {"type": "integer"}, "n_never": {"type": "integer"}
+          }
+        },
+        "groups": {"type": "object", "minProperties": 1, "additionalProperties": {
+          "type": "object", "additionalProperties": false, "required": ["mu", "sigma"],
+          "properties": {"mu": {"type": "number"}, "sigma": {"type": "number", "exclusiveMinimum": 0}}}},
+        "risk": {"type": "string"}
+      }
+    },
+    "triage": {
+      "type": "object", "additionalProperties": false, "required": ["weights", "routing", "source", "headline_budget_per_shift"],
+      "properties": {
+        "weights": {"type": "object", "additionalProperties": false, "required": ["1", "2", "3"],
+                    "properties": {"1": {"type": "number", "exclusiveMinimum": 0}, "2": {"type": "number", "exclusiveMinimum": 0}, "3": {"type": "number", "exclusiveMinimum": 0}}},
+        "routing": {"type": "object", "additionalProperties": false, "required": ["tube", "hand_carry", "still_at_unit"],
+                    "properties": {"tube": {"type": "string"}, "hand_carry": {"type": "string"}, "still_at_unit": {"type": "string"}}},
+        "source": {"type": "string"}, "headline_budget_per_shift": {"type": "number", "exclusiveMinimum": 0}
+      }
+    },
+    "baselines": {
+      "type": "object", "additionalProperties": false, "required": ["plan", "window"],
+      "properties": {
+        "plan": {"type": "object", "additionalProperties": false, "required": ["quantiles", "threshold_min_by_group"],
+                 "properties": {"quantiles": {"type": "array", "items": {"type": "number", "minimum": 0, "maximum": 1}, "minItems": 20, "maxItems": 20},
+                                "threshold_min_by_group": {"type": "object", "additionalProperties": {"type": "array", "items": {"type": "number"}, "minItems": 20, "maxItems": 20}}}},
+        "window": {"type": "object", "additionalProperties": false, "required": ["shares"],
+                   "properties": {"shares": {"type": "array", "items": {"type": "number", "minimum": 0, "maximum": 1}, "minItems": 20, "maxItems": 20}}}
+      }
+    },
+    "grid": {"type": "array", "minItems": 20, "maxItems": 20, "items": {"$ref": "#/$defs/grid_point"}},
+    "headline_index": {"type": "integer", "minimum": 0, "maximum": 19},
+    "specimens": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/specimen"}},
+    "showcase_candidates": {"type": "array", "maxItems": 10, "items": {"$ref": "#/$defs/candidate"}},
+    "heroes": {"type": "array", "items": {"$ref": "#/$defs/hero"}}
+  },
+  "$defs": {
+    "probability": {"type": "number", "minimum": 0, "maximum": 1},
+    "minutes_or_null": {"type": ["number", "null"]},
+    "policy_row": {
+      "type": "object", "additionalProperties": false,
+      "required": ["specimen_type", "test", "clock_start", "clock_stop", "window_min", "urgency_tier", "source", "assumed"],
+      "properties": {
+        "specimen_type": {"type": "string"}, "test": {"type": "string"}, "clock_start": {"type": "string"}, "clock_stop": {"type": "string"},
+        "window_min": {"type": "integer", "minimum": 1}, "urgency_tier": {"enum": [1, 2, 3]}, "source": {"type": ["string", "null"]}, "assumed": {"type": "boolean"}
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "required": ["alerts_per_shift", "breaches", "caught", "median_warning_min", "median_warning_all_breaches_min", "caught_with_good_warning", "false_alerts"],
+      "properties": {
+        "alerts_per_shift": {"type": "number", "minimum": 0}, "breaches": {"type": "integer", "minimum": 0}, "caught": {"type": "integer", "minimum": 0},
+        "median_warning_min": {"$ref": "#/$defs/minutes_or_null"}, "median_warning_all_breaches_min": {"$ref": "#/$defs/minutes_or_null"},
+        "caught_with_good_warning": {"$ref": "#/$defs/probability"}, "false_alerts": {"type": "integer", "minimum": 0}
+      }
+    },
+    "grid_point": {
+      "type": "object", "additionalProperties": false, "required": ["budget_per_shift", "model", "plan_baseline", "window_baseline"],
+      "properties": {
+        "budget_per_shift": {"type": "number", "exclusiveMinimum": 0},
+        "model": {"allOf": [{"$ref": "#/$defs/metrics"}, {"required": ["harm_threshold"], "properties": {"harm_threshold": {"type": "number", "minimum": 0}}}]},
+        "plan_baseline": {"allOf": [{"$ref": "#/$defs/metrics"}, {"required": ["quantile"], "properties": {"quantile": {"type": "number", "minimum": 0, "maximum": 1}}}]},
+        "window_baseline": {"allOf": [{"$ref": "#/$defs/metrics"}, {"required": ["share"], "properties": {"share": {"type": "number", "minimum": 0, "maximum": 1}}}]}
+      }
+    },
+    "event": {
+      "type": "object", "additionalProperties": false, "required": ["activity", "at_min", "location", "role", "note"],
+      "properties": {"activity": {"type": "string"}, "at_min": {"type": "number"}, "location": {"type": "string"}, "role": {"type": "string"}, "note": {"type": ["string", "null"]}}
+    },
+    "segment": {
+      "type": "array", "prefixItems": [{"type": "string"}, {"type": "number"}, {"type": ["number", "null"]}], "minItems": 3, "maxItems": 3
+    },
+    "specimen": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "run", "type", "group", "tier", "priority", "unit", "route", "policy_id", "window_min", "collected_at", "events", "received_min", "risk", "places", "alerts", "truth"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^SP-r[0-9]+-[0-9]+$"}, "run": {"type": "integer"}, "type": {"type": "string"}, "group": {"type": "string"},
+        "tier": {"enum": [1, 2, 3]}, "priority": {"enum": ["stat", "routine"]}, "unit": {"type": "string"}, "route": {"enum": ["tube", "hand_carry"]},
+        "policy_id": {"type": "string"}, "window_min": {"type": "integer", "minimum": 1},
+        "collected_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}$"},
+        "events": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/event"}},
+        "received_min": {"$ref": "#/$defs/minutes_or_null"},
+        "risk": {"type": "array", "items": {"$ref": "#/$defs/probability"}},
+        "places": {"type": "array", "items": {"type": "array", "items": {"$ref": "#/$defs/probability"}, "minItems": 7, "maxItems": 7}},
+        "alerts": {"type": "object", "additionalProperties": false, "required": ["model", "plan_baseline", "window_baseline"],
+                   "properties": {"model": {"type": ["integer", "null"]}, "plan_baseline": {"type": ["integer", "null"]}, "window_baseline": {"type": ["integer", "null"]}}},
+        "truth": {"type": "object", "additionalProperties": false, "required": ["fault", "breach", "segments"],
+                  "properties": {"fault": {"type": "string"}, "breach": {"type": "boolean"}, "segments": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/segment"}}}}
+      }
+    },
+    "candidate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "kind", "why", "type", "tier", "fault", "breach", "window_min", "receipt_min", "model_alert_min", "baseline_alert_min", "model_warning_min", "baseline_warning_min"],
+      "properties": {
+        "id": {"type": "string"},
+        "kind": {"enum": ["clear_catch", "stalled_then_found", "never_sent", "lost_in_tube", "misrouted_then_found", "false_alarm",
+                          "content_failure", "borderline", "baseline_ahead", "urgent_tier_catch"]},
+        "why": {"type": "string"}, "type": {"type": "string"}, "tier": {"enum": [1, 2, 3]}, "fault": {"type": "string"}, "breach": {"type": "boolean"},
+        "window_min": {"type": "integer"}, "receipt_min": {"$ref": "#/$defs/minutes_or_null"}, "model_alert_min": {"type": ["integer", "null"]},
+        "baseline_alert_min": {"type": ["integer", "null"]}, "model_warning_min": {"$ref": "#/$defs/minutes_or_null"}, "baseline_warning_min": {"$ref": "#/$defs/minutes_or_null"}
+      }
+    },
+    "hero": {
+      "type": "object", "additionalProperties": false, "required": ["id", "story", "takeaway", "question"],
+      "properties": {"id": {"type": "string"}, "story": {"type": "string", "minLength": 1}, "takeaway": {"type": "string", "minLength": 1}, "question": {"type": "string", "minLength": 1}}
+    }
+  }
+}

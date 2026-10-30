@@ -1,5 +1,6 @@
 anthropic>=2.3
 duckdb>=1.5
+jsonschema>=4
 numpy>=2.5
 polars>=2.1
 pytest>=8
