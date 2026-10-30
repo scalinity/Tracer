@@ -207,6 +207,13 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** the first draft of the snapshot counted all 96 groups as having taken a parent's fit instead of 21, found by reading the output before it was saved.
 - **Assumed:** the bar is judged on median warning over all breaches (a miss counts as zero), at the lower end of the 95% interval. The clean checkout reused the repo's existing Python environment instead of installing a new one. The tag sits on the merge commit that adds the file, whose code is the commit the evaluation ran on.
 
+### Oct 30 · S1 · Check the API key and the credits (this pull request)
+
+- **Agent:** checked what the repo and the key can show. A free token-count call returned 200, so the key works. `.env` holds only the one variable, and the Messages API gives no credit balance or expiry, so the agent recorded in the plan that neither can be confirmed from here, with the expiry Daniel gave (30 days, about Nov 29) beside it.
+- **Daniel:** told the agent the key expires in 30 days and that no Console limit is set, and asked on Oct 30 for S1 to be closed this way if the balance cannot be read. Daniel to confirm the balance and expiry in the Console.
+- **Went wrong:** the first check failed in the agent's own snippet (`load_dotenv()` needs an explicit path outside a file); no key was printed.
+- **Assumed:** the 30-day expiry runs from the day Daniel added the key (Oct 30), so about Nov 29. Daniel to confirm.
+
 ## The Claude API jobs
 
 All jobs call `claude-haiku-5-5` at low effort with thinking off. The reply must match a JSON schema, so replies parse and retries stay rare. Bulk jobs run through the Batch API at half price, and every call is logged to `data/claude/usage.jsonl` (kept local). The order for each job is a token count, a pilot, then the batch, and a job's estimate must be under the plan's gate before it starts.
