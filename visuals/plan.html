@@ -519,7 +519,7 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
       <p class="prose">The numbers below are estimates from token counts we have not measured yet. The 200-specimen pilot gives the real figures. Change a model, a count or the batch setting and the totals follow.</p>
       <div class="scroll-x" style="margin-top:20px"><table class="t jobs" id="jobs"></table></div>
       <div class="capfield">
-        <label>Console spend limit <input type="number" id="capUsd" min="1" step="1" value="25" aria-label="Spend limit in dollars"> $</label>
+        <label>Soft spend limit <input type="number" id="capUsd" min="1" step="1" value="50" aria-label="Soft spend limit in dollars"> $</label>
         <label>Credit balance <input type="number" id="creditUsd" min="0" step="1" placeholder="from Console" aria-label="Credit balance in dollars"> $</label>
       </div>
       <div class="meter" id="meter"></div>
@@ -671,8 +671,8 @@ const TASKS = [
 
 {id:"S1", tr:"data", day:[10,29], who:{D:1}, t:"Set up Claude API access with a hard cap",
  why:"Nothing else in the data track can run until this works, and the cap protects the credits.",
- steps:["Open the Anthropic Console, Billing. Read the promotional credit balance and its expiry date. The expiry must be after November 18. If it is earlier, tell Karissa today and switch to the fallback in the risks section.","Settings, Limits: set a monthly spend limit of $25.","Create a workspace named tracer and an API key named tracer-gen. Save the key in `.env` as `ANTHROPIC_API_KEY=...`. Never paste it into a chat, the repo or the demo page.","Run `pip install anthropic python-dotenv`.","Smoke test: `python -c \"import anthropic; r=anthropic.Anthropic().messages.create(model='claude-haiku-5-5', max_tokens=50, messages=[{'role':'user','content':'Say ok'}]); print(r.stop_reason, r.usage)\"`"],
- done:"The call prints a stop reason and a usage line, and the Console shows the $25 limit.", earns:[]},
+ steps:["Open the Anthropic Console, Billing. Read the promotional credit balance and its expiry date. The expiry must be after November 18. If it is earlier, tell Karissa today and switch to the fallback in the risks section.","No Console limit is set. The plan's soft limit is $50: stay under it, and go over only when a result needs it.","Create a workspace named tracer and an API key named tracer-gen. Save the key in `.env` as `ANTHROPIC_API_KEY=...`. Never paste it into a chat, the repo or the demo page.","Run `pip install anthropic python-dotenv`.","Smoke test: `python -c \"import anthropic; r=anthropic.Anthropic().messages.create(model='claude-haiku-5-5', max_tokens=50, messages=[{'role':'user','content':'Say ok'}]); print(r.stop_reason, r.usage)\"`"],
+ done:"The call prints a stop reason and a usage line, and the plan shows the $50 soft limit.", earns:[]},
 
 {id:"S2", tr:"data", day:[10,29], who:{D:0.5}, t:"Scaffold the project for building",
  why:"One clean layout now saves every later task from deciding where things go.",
@@ -699,9 +699,9 @@ const TASKS = [
  steps:["Done: each brief draws its leg durations (dispatch wait, tube transit, station dwell, hand carry, accession wait, plating wait) from the medians and 90th percentiles in the config. The clock stops at receipt, so the accession and plating waits only add realism.","Done: the planted fault is applied. A stall adds 30 to 180 minutes at the station, a misroute adds 20 to 120, and a loss or a specimen never sent has no receipt.","Done: the targets are written into the brief in the shape of the trail-writer recipe, plus `hand_carry_min` and `misrouted_min`. A target of null means the stage does not happen. The brief also carries a `label` with the window, the clock and the breach, read from the resolved policy.","Done: tests that the same seed gives the same targets and that the stage times add up."],
  done:"200 briefs print as a table and every row is consistent: stage times add up and losses have no receipt.", earns:[]},
 
-{id:"D4", tr:"data", day:[10,31], who:{D:0.25}, t:"Write the trail prompt and output schema", api:"J1", needs:["S1","D3"],
+{id:"D4", tr:"data", day:[10,31], who:{D:1.5}, t:"Write the trail prompt and output schema", api:"J1", needs:["S1","D3"],
  why:"The prompt turns a brief into an event trail and a hidden true path. The schema makes every reply parse.",
- steps:["Done: `src/generator/prompt.py` holds the instructions, fault rules, two worked examples and the schema from the first recipe in the Claude API section.","Done: structured output through `output_config.format`, on `claude-haiku-5-5` at low effort with thinking disabled.","Done: the stable text comes first and carries the cache breakpoint; the single brief, without its label, comes last.","Done: `python -m src.generator.prompt --n 200 --budget-usd 0.25` runs `count_tokens`, prints the estimate from the price table and aborts over budget. Every call is logged to `data/claude/usage.jsonl`. The offline tests cover assembly, the estimate, the gate, parsing and logging.","Not done, needs `.env`: send one brief and check that the reply is a valid trail, then send a second and check that its usage shows cached tokens."],
+ steps:["Done: `src/generator/prompt.py` holds the instructions, fault rules, two worked examples and the schema from the first recipe in the Claude API section.","Done: structured output through `output_config.format`, on `claude-haiku-5-5` at low effort with thinking disabled.","Done: the stable text comes first and carries the cache breakpoint; the single brief, without its label, comes last.","Done: `python -m src.generator.prompt --n 200 --budget-usd 0.25` runs `count_tokens`, prints the estimate from the price table and aborts over budget. Every call is logged to `data/claude/usage.jsonl`. The offline tests cover assembly, the estimate, the gate, parsing and logging.","Done: one brief returned a valid trail, and the second call read 3,953 cached tokens."],
  done:"One brief goes in and a valid trail comes out. The second call's usage shows cached tokens.", earns:["P3"]},
 
 {id:"D5", tr:"data", day:[10,31], who:{D:2}, t:"Write the validator", needs:["D4"],
@@ -711,7 +711,7 @@ const TASKS = [
 
 {id:"D6", tr:"data", day:[11,1], who:{D:1}, t:"Run the 200-specimen pilot", api:"J1", needs:["D5"],
  why:"A pilot costs about ten cents and tells us everything the full run would, before it costs more.",
- steps:["`python -m src.generator.run --seed 0 --runs 1 --n 200 --out data/claude/pilot`","Read the printed pass rate and cost. Stop and fix if the pass rate is under 90 percent.","`python -m src.generator.show --n 20` prints twenty trails in plain language for Karissa."],
+ steps:["Done: `python -m src.generator.run --seed 0 --runs 1 --n 200 --out data/claude/pilot --budget-usd 0.25`, after a `--dry-run` that estimated $0.10.","Done: 198 of 200 accepted (99.0 percent; 98.0 percent on the first attempt) at a real cost of $0.07.","Done: `python -m src.generator.show --n 20` writes `data/claude/pilot/review-sheet.md`, twenty timelines in plain language for Karissa. It has not been sent."],
  done:"At least 95 percent pass the validator, the actual cost is in `data/claude/usage.jsonl`, and the twenty-trail sheet exists.", earns:[]},
 
 {id:"K2", tr:"data", day:[11,2], who:{K:1}, t:"Review twenty pilot timelines", needs:["D6"],
@@ -1128,7 +1128,7 @@ const TASK = {}; TASKS.forEach(t => { TASK[t.id] = t; });
 
 /* ───────── state ───────── */
 const PKEY = "tracer-plan-prefs-v1", SKEY = "tracer-plan-shared-v1";
-const P = {persona: "all", view: "day", showDone: true, cap: {D: {wd: 3, we: 5}, K: {wd: 0.5, we: 1.5}}, hours: {}, open: {}, theme: null, slot: 15, beat: "board", capUsd: 25, credit: "", jobs: {}};
+const P = {persona: "all", view: "day", showDone: true, cap: {D: {wd: 3, we: 5}, K: {wd: 0.5, we: 1.5}}, hours: {}, open: {}, theme: null, slot: 15, beat: "board", capUsd: 50, credit: "", jobs: {}};
 const SH = {done: {}, spend: {}, cuts: {}};
 const Store = {mode: "device", ref: null, readOnly: false, chain: Promise.resolve()};
 const S = () => ({done: SH.done, cuts: SH.cuts, hours: P.hours, cap: P.cap});
@@ -1420,7 +1420,7 @@ function renderApi(){
   const core = JOBS.filter(j => !j.opt).reduce((s, j) => s + jobCostFor(j), 0);
   const all = JOBS.reduce((s, j) => s + jobCostFor(j), 0), spent = spentTotal();
   setHtml($("#jobs"), `<thead><tr><th>Job</th><th>What it makes</th><th>Model</th><th class="r">Requests</th><th>Batch</th><th class="r">Estimate</th><th class="r">Spent, $</th></tr></thead><tbody>${rows}<tr class="total"><td>Core jobs</td><td></td><td></td><td></td><td></td><td class="r cost">${usd(core)}</td><td></td></tr><tr class="total"><td>With the optional jobs</td><td></td><td></td><td></td><td></td><td class="r cost">${usd(all)}</td><td class="r cost spent">${usd(spent)}</td></tr></tbody>`);
-  const cap = Math.max(1, Number(P.capUsd) || 25), w = x => Math.min(100, x / cap * 100);
+  const cap = Math.max(1, Number(P.capUsd) || 50), w = x => Math.min(100, x / cap * 100);
   const credit = Number(P.credit);
   setHtml($("#meter"), `<div class="meter-row"><span>Plan, core jobs</span><span class="track"><i class="est" style="width:${w(core)}%"></i></span><output>${usd(core)}</output></div><div class="meter-row"><span>Plan, all jobs</span><span class="track"><i class="est" style="width:${w(all)}%"></i></span><output>${usd(all)}</output></div><div class="meter-row"><span>Worst case, twice the plan</span><span class="track"><i class="worst" style="width:${w(all * 2)}%"></i></span><output>${usd(all * 2)}</output></div><div class="meter-row"><span>Spent so far</span><span class="track"><i class="act" style="width:${w(spent)}%"></i></span><output>${usd(spent)}</output></div><p class="small">Bars are drawn against the spend limit of ${usd(cap)}.${credit > 0 ? " After the whole plan, about " + usd(Math.max(0, credit - all)) + " of the " + usd(credit) + " credit would remain." : ""}</p>`);
   setHtml($("#recipes"), RECIPES.map((r, i) => `<details class="recipe" data-rid="r${i}" ${P.open["r" + i] ? "open" : ""}><summary><span>${esc(r.title)}</span><small>${esc(r.sub)}</small></summary><div class="rb">${r.parts.map(p => p.p ? `<p>${fmt(p.p)}</p>` : `<div><button type="button" class="btn" data-copypre>Copy</button></div><pre>${esc(p.pre)}</pre>`).join("")}</div></details>`).join(""));
@@ -1553,7 +1553,7 @@ document.addEventListener("change", e => {
     P.jobs[id][f] = f === "n" ? Math.max(0, Number(t.value) || 0) : f === "batch" ? t.checked : t.value;
     savePrefs(); renderAll(); return;
   }
-  if (t.id === "capUsd") { P.capUsd = Math.max(1, Number(t.value) || 25); savePrefs(); renderAll(); return; }
+  if (t.id === "capUsd") { P.capUsd = Math.max(1, Number(t.value) || 50); savePrefs(); renderAll(); return; }
   if (t.id === "creditUsd") { P.credit = t.value === "" ? "" : Math.max(0, Number(t.value) || 0); savePrefs(); renderAll(); return; }
   if (t.id === "showDone") { P.showDone = t.checked; savePrefs(); renderAll(); return; }
   if (t.name === "persona") { P.persona = t.value; savePrefs(); renderAll(); }

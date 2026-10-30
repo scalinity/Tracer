@@ -19,6 +19,7 @@ Every call appends its usage to data/claude/usage.jsonl.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -224,6 +225,12 @@ def system_text() -> str:
     for brief, trail in zip(EXAMPLE_BRIEFS, EXAMPLE_TRAILS):
         parts.append(f"Example brief:\n{_dump(brief)}\n\nExample reply:\n{_dump(trail)}")
     return "\n\n".join(parts)
+
+
+def prompt_hash() -> str:
+    """Identifies the wording and schema a dataset was written with."""
+    text = system_text() + json.dumps(TRAIL_SCHEMA, sort_keys=True) + MODEL + EFFORT
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
 
 
 def model_brief(brief: dict) -> dict:
