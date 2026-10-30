@@ -308,6 +308,13 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** the approved draft said Tracer does not flag a delay "between receipt and plating", and the page test that keeps any plating wording off the page caught it, so the line now says "at the bench, after receipt", the architecture notes' own words. On the agent's Linux machine three regeneration tests (evaluation, bundle, location) differ from the committed files in the last digits of a few floats, on `main` as well as on this branch; the page tests and the plan check pass.
 - **Assumed:** the section names Karissa in the point on where the clock stops, as the page already credits her, and leaves out the search briefs to stay short. It quotes no number the results do not hold; the stalled-state story is the location estimate's from §13.1 of the architecture notes.
 
+### Oct 30 · Exhibit · Show the pause icon on the 3D exhibit's play button (this pull request)
+
+- **Agent:** found that the pause icon was two open lines while the play button only fills its icon and draws no stroke, so pressing play left the button blank. Redrew the pause icon as two filled bars, rebuilt the exhibit and copied the new `dist/` into `docs/demo/exhibit/`.
+- **Daniel:** spotted the blank button on the live exhibit and sent screenshots of it.
+- **Went wrong:** nothing in the fix. No browser could run in the agent's session, so the new icon was checked in the built bundle and by the type check and unit tests, not on screen.
+- **Assumed:** filled bars, rather than a stroke on the button, keep the play and pause icons drawn the same way.
+
 ## The Claude API jobs
 
 All jobs call `claude-haiku-5-5` at low effort with thinking off. The reply must match a JSON schema, so replies parse and retries stay rare. Bulk jobs run through the Batch API at half price, and every call is logged to `data/claude/usage.jsonl` (kept local). The order for each job is a token count, a pilot, then the batch, and a job's estimate must be under the plan's gate before it starts.

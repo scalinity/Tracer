@@ -26,7 +26,8 @@ const ICONS: Record<HudIcon, IconPart[]> = {
   'rotate-ccw': [['path', 'M4.5 12a7.5 7.5 0 1 0 2.2-5.3'], ['path', 'M4.5 4.5v4.2h4.2']],
   'rotate-cw': [['path', 'M19.5 12a7.5 7.5 0 1 1-2.2-5.3'], ['path', 'M19.5 4.5v4.2h-4.2']],
   play: [['path', 'M7.5 5.2v13.6L18.5 12z']],
-  pause: [['path', 'M8 5.5v13M16 5.5v13']],
+  // Two filled bars: the play button fills its icon and draws no stroke, so open lines would vanish.
+  pause: [['rect', 6.5, 5.2, 3.8, 13.6, 1], ['rect', 13.7, 5.2, 3.8, 13.6, 1]],
   close: [['path', 'M6.5 6.5l11 11M17.5 6.5l-11 11']],
   labels: [['path', 'M4 7.5h10.5l4 4.5-4 4.5H4z'], ['circle', 8, 12, 1.2]],
   hide: [['path', 'M3 12s3.2-6 9-6 9 6 9 6-3.2 6-9 6-9-6-9-6z'], ['circle', 12, 12, 2.6], ['path', 'M4 20 20 4']],
