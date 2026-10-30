@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- The Silent Specimen: an amber tube rising and running right, Tracer's cyan light pooled at its far end. -->
+  <rect width="32" height="32" rx="7" fill="#141a2a"/>
+  <path d="M7 26V12.5a4.5 4.5 0 0 1 4.5-4.5H25" fill="none" stroke="#ffb454" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="19.5" y="15" width="7" height="11" rx="2" fill="none" stroke="#ffb454" stroke-width="1.8"/>
+  <rect x="21.4" y="19.5" width="3.2" height="4.6" rx=".8" fill="#7fe3ff"/>
+</svg>

@@ -136,6 +136,11 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .tl-facts{margin-top:8px;max-width:76ch;font-size:14px;color:var(--ink-dim)}
 .close{min-height:44px;padding:0 14px;border:1px solid var(--hair);border-radius:3px;background:var(--raised);font-size:13.5px;color:var(--ink-dim)}
 .close:hover{border-color:var(--observed-deep);color:var(--ink)}
+#timeline-actions{max-width:330px}
+.tl-buttons{display:flex;gap:10px;flex-wrap:wrap}
+.view3d{display:inline-flex;align-items:center;border-color:var(--observed-deep);color:var(--ink);text-decoration:none}
+.view3d[hidden]{display:none}
+.tl-3d-note{margin-top:6px;font-size:12.5px;line-height:1.45;color:var(--ink-mute)}
 .tl-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;align-items:start;margin-top:18px}
 .chart{border:1px solid var(--hair);border-radius:3px;background:var(--panel);padding:10px 8px 6px}
 .chart svg{display:block;width:100%;height:auto}
@@ -210,6 +215,108 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .brief figcaption{font-size:12.5px;color:var(--ink-mute);margin-bottom:6px}
 .brief blockquote{font-family:var(--serif);font-size:16px;line-height:1.6;color:var(--ink)}
 
+/* ───────── the threshold control ───────── */
+.th-controls{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+.th-out{font-size:22px;min-width:5.6ch}
+.th-own{min-width:0;font-family:var(--sans)}
+.th-ends{display:flex;justify-content:space-between;margin:-4px 0 0;font-size:12px;color:var(--ink-mute)}
+.th-help{margin-top:6px;font-size:13px;color:var(--ink-dim)}
+.th-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;align-items:start;margin-top:18px}
+.th-chart{margin:0}
+.th-table{width:100%;border-collapse:collapse;font-size:14px}
+.th-table th,.th-table td{padding:10px 8px;border-bottom:1px solid var(--hair-soft);text-align:left;font-weight:400}
+.th-table thead th{font-size:12.5px;color:var(--ink-mute);border-bottom-color:var(--hair)}
+.th-table td.num{font-size:20px;color:var(--ink)}
+.th-sentence{margin-top:18px;max-width:62ch;font-family:var(--serif);font-size:19px;line-height:1.5;color:var(--ink)}
+.th-note{margin-top:10px;max-width:76ch;font-size:13.5px;color:var(--ink-dim)}
+.th-note b{color:var(--ink)}
+.th-note .shift{color:var(--warn)}
+.tr-line{fill:none;stroke-width:1.75;stroke-linejoin:round}
+.tr-m{stroke:var(--infer)}
+.tr-p{stroke:var(--ink-mute);stroke-dasharray:5 4}
+.tr-dot-m{fill:var(--infer)}
+.tr-dot-p{fill:var(--panel);stroke:var(--ink-mute);stroke-width:1.5}
+.tr-now{fill:none;stroke:var(--warn);stroke-width:2}
+.tr-guide{stroke:var(--warn);stroke-width:1;stroke-dasharray:2 3}
+
+/* ───────── the activity card ───────── */
+.activity{max-width:760px;padding:20px 22px 22px;border:1px solid var(--hair);border-left:3px solid var(--observed);border-radius:3px;background:var(--panel)}
+.activity h2{font-size:clamp(22px,3vw,26px);margin-bottom:4px}
+.act-lede{color:var(--ink-dim);font-size:14px}
+.act-steps{list-style:none;counter-reset:step;margin-top:14px}
+.act-steps li{counter-increment:step;position:relative;padding:0 0 12px 38px;color:var(--ink-dim);max-width:66ch}
+.act-steps li::before{content:counter(step);position:absolute;left:0;top:-1px;width:26px;height:26px;border:1px solid var(--observed-deep);border-radius:50%;
+  font:13px/24px var(--mono);text-align:center;color:var(--observed)}
+.act-steps a{color:var(--ink);font-weight:600;text-decoration:underline;text-decoration-color:var(--observed-deep);text-underline-offset:3px}
+.act-h{margin-top:6px;font-family:var(--serif);font-weight:400;font-size:18px}
+.act-qs{margin-top:8px;padding-left:18px;list-style:disc;color:var(--ink-dim);max-width:70ch}
+.act-qs li{margin-bottom:6px}
+.act-qs li::marker{color:var(--observed)}
+
+/* ───────── Beat Tracer ───────── */
+.game-seed{margin-top:10px;font-size:13.5px;color:var(--ink-dim);max-width:76ch}
+.game{margin-top:16px;border:1px solid var(--hair);border-radius:3px;background:var(--panel)}
+.game-bar{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 20px;padding:14px 16px;border-bottom:1px solid var(--hair-soft);background:var(--raised)}
+.game-round{font-family:var(--serif);font-size:18px}
+.game-clock{display:flex;align-items:baseline;gap:8px;font-size:13px;color:var(--ink-mute)}
+.game-clock .clock{min-width:2.5ch;text-align:right}
+.game-alerts{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-dim)}
+.pip{display:inline-block;width:11px;height:11px;border-radius:50%;border:1.5px solid var(--warn)}
+.pip.on{background:var(--warn)}
+.feed{margin:0}
+.feed li{border-bottom:1px solid var(--hair-soft)}
+.fs{display:block;width:100%;min-height:56px;padding:9px 16px 10px;text-align:left}
+.fs:hover:not(:disabled){background:var(--raised)}
+.fs[aria-pressed=true]{background:var(--raised);box-shadow:inset 3px 0 0 var(--warn)}
+.fs:disabled{cursor:default}
+.fs *{pointer-events:none} /* a tap lands on the row's button even while its text redraws */
+.fs-top{display:flex;justify-content:space-between;align-items:baseline;gap:4px 12px;flex-wrap:wrap}
+.fs-id{font-family:var(--mono);font-size:13.5px;color:var(--observed)}
+.fs-meta{display:block;margin-top:2px;font-size:12.5px;line-height:1.45;color:var(--ink-mute)}
+.fs-type{font-family:var(--serif);font-size:14.5px;color:var(--ink)}
+.fs-state{text-align:right;font-size:13px;white-space:nowrap}
+.fs-state .num{font-size:14.5px}
+.fs-silent{color:var(--infer);font-style:italic}
+.fs-in{color:var(--observed)}
+.fs-out{color:var(--ink-mute)}
+.fs-miss{color:var(--alarm)}
+.fs-pick{margin-left:8px;padding:0 5px;border:1px solid var(--warn);border-radius:2px;font-size:11.5px;font-style:normal;color:var(--warn)}
+.fs-track{display:block;position:relative;height:10px;margin-top:6px}
+.game-result .v{white-space:normal}
+.fs-track::before{content:"";position:absolute;left:0;right:0;top:4px;height:2px;background:var(--hair-soft)}
+.fs-quiet{position:absolute;left:0;top:1px;height:8px;background:repeating-linear-gradient(135deg,var(--infer) 0 1.3px,transparent 1.3px 5px);opacity:.75}
+.fs-scan{position:absolute;top:0;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:var(--observed)}
+.fs-win{position:absolute;top:-2px;width:2px;height:14px;margin-left:-1px;background:var(--alarm)}
+.fs-out .fs-quiet,.fs.ruled .fs-quiet{opacity:.3}
+.game-actions{display:flex;gap:12px;padding:14px 16px;flex-wrap:wrap}
+.game-go,.game-call{min-height:48px;padding:0 20px;border-radius:3px;font-size:15px}
+.game-go{border:1px solid var(--observed-deep);background:var(--obs-wash);color:var(--ink)}
+.game-go:hover{border-color:var(--observed)}
+.game-call{border:1px solid var(--warn);background:var(--warn-wash);color:var(--warn);font-weight:600}
+.game-call:disabled{opacity:.4;cursor:default}
+.game-go[hidden],.game-call[hidden]{display:none}
+.game-status{padding:0 16px 14px;font-size:14px;color:var(--ink-dim);min-height:1.55em}
+.game-result{padding:14px 16px 16px;border-top:1px solid var(--hair-soft);font-size:14px;color:var(--ink-dim)}
+.game-result p+p{margin-top:6px}
+.game-result b{color:var(--ink)}
+.game-end{margin-top:16px;padding:18px 16px 20px;border:1px solid var(--hair);border-radius:3px;background:var(--panel)}
+.end-h{font-family:var(--serif);font-weight:400;font-size:22px}
+.end-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px;max-width:520px}
+.end-pair div{padding:12px 14px;border:1px solid var(--hair-soft);border-radius:3px;background:var(--raised)}
+.end-pair dt{font-size:13px;color:var(--ink-mute)}
+.end-pair dd{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:30px;line-height:1.2;color:var(--ink)}
+.end-pair .you dd{color:var(--warn)}
+.end-pair .tracer dd{color:var(--infer)}
+.end-pair small{display:block;font-family:var(--sans);font-size:12px;color:var(--ink-mute)}
+.end-point{margin-top:16px;max-width:62ch;font-family:var(--serif);font-size:19px;line-height:1.5;color:var(--ink)}
+.end-rounds{margin-top:12px;font-size:13.5px;color:var(--ink-dim)}
+.end-rounds li{padding:2px 0}
+.end-again{margin-top:14px;display:flex;gap:12px;flex-wrap:wrap}
+.end-again button{min-height:44px;padding:0 16px;border:1px solid var(--hair);border-radius:3px;background:var(--raised);font-size:14px;color:var(--ink-dim)}
+.end-again button:hover{border-color:var(--observed-deep);color:var(--ink)}
+.game-fine{margin-top:14px;max-width:76ch;font-size:12.5px;color:var(--ink-mute)}
+.game-fine b{color:var(--ink-dim)}
+
 /* ───────── later tasks and limits ───────── */
 .later{margin:0 0 14px;padding:10px 0;border-top:1px dashed var(--hair-soft);font-size:13px;color:var(--ink-mute)}
 .later + section:not(.later){margin-top:44px}
@@ -221,10 +328,11 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 footer{padding-top:20px;border-top:1px solid var(--hair);font-size:12.5px;color:var(--ink-mute)}
 
 @media (max-width:900px){
-  .tl-grid{grid-template-columns:1fr}
+  .tl-grid,.th-grid{grid-template-columns:1fr}
 }
 @media (max-width:760px){
-  .controls{grid-template-columns:1fr}
+  .controls,.th-controls{grid-template-columns:1fr}
+  .th-sentence{font-size:17.5px}
   .clock-row{flex-wrap:wrap}
   .clock-row .clock{flex:1 0 100%;margin-bottom:2px}
   .key{grid-template-columns:1fr}
@@ -264,6 +372,25 @@ footer{padding-top:20px;border-top:1px solid var(--hair);font-size:12.5px;color:
 </header>
 
 <main id="main">
+
+<section id="activity" class="activity" aria-labelledby="activity-h">
+  <h2 id="activity-h">In class: about ten minutes</h2>
+  <p class="act-lede">Work through these in order on your phone, then talk them over.</p>
+  <ol class="act-steps">
+    <li><a href="#board">Follow one specimen.</a> Tap a row on the board to open its timeline, then move the
+      scrubber. Watch the risk climb while no scan comes, and see who the alert goes to. About four minutes.</li>
+    <li><a href="#threshold">Move the threshold.</a> Slide it both ways and watch warning and alerts per shift
+      move together, for Tracer and for the plan's rule. About two minutes.</li>
+    <li><a href="#beat">Play Beat Tracer.</a> Three short rounds: call the specimen in trouble before its window
+      closes, and compare your warning with Tracer's. Under three minutes.</li>
+  </ol>
+  <h3 class="act-h">Then discuss</h3>
+  <ul class="act-qs">
+    <li>In the game, what told you a specimen was in trouble, and when did you know enough to call it?</li>
+    <li>A lower threshold warns sooner and raises more false alarms. Who in a hospital should answer those
+      alarms, and how many a shift would they accept?</li>
+  </ul>
+</section>
 
 <section id="problem" aria-labelledby="problem-h">
   <h2 id="problem-h">The problem in sixty seconds</h2>
@@ -335,7 +462,11 @@ footer{padding-top:20px;border-top:1px solid var(--hair);font-size:12.5px;color:
       <p class="tl-facts" id="tl-facts"></p>
     </div>
     <div id="timeline-actions">
-      <button type="button" class="close" id="tl-close">Close timeline</button>
+      <div class="tl-buttons">
+        <a class="close view3d" id="tl-3d" href="exhibit/index.html" target="_blank" rel="noopener" hidden>View in 3D</a>
+        <button type="button" class="close" id="tl-close">Close timeline</button>
+      </div>
+      <p class="tl-3d-note" id="tl-3d-note"></p>
     </div>
   </div>
   <div class="tl-grid">
@@ -384,8 +515,75 @@ footer{padding-top:20px;border-top:1px solid var(--hair);font-size:12.5px;color:
   </div>
 </section>
 
-<section id="threshold" class="later" aria-label="Threshold control"><p>Threshold control: to come.</p></section>
-<section id="beat" class="later" aria-label="Beat Tracer"><p>Beat Tracer, the class activity: to come.</p></section>
+<section id="threshold" aria-labelledby="threshold-h" hidden>
+  <h2 id="threshold-h">Set the threshold</h2>
+  <p class="lede">An alert threshold is a trade. Set it low and Tracer warns early, and alerts on many specimens that
+    would have arrived anyway; set it high and it alerts less, and later. The plan's rule makes the same trade with a
+    time limit. Move the threshold to see both methods on the held-out runs. The board and the timeline above follow
+    it.</p>
+  <div class="controls th-controls">
+    <div class="field">
+      <label for="th-point">Alert threshold</label>
+      <div class="clock-row">
+        <output class="clock th-out" id="th-point-out" for="th-point"></output>
+        <input type="range" id="th-point" min="0" max="19" step="1" value="0">
+      </div>
+      <p class="th-ends"><span>fewer alerts</span><span>more alerts</span></p>
+      <p class="th-help" id="th-point-help"></p>
+    </div>
+    <div class="field">
+      <label for="th-win">Stability window</label>
+      <div class="clock-row">
+        <output class="clock th-out" id="th-win-out" for="th-win"></output>
+        <input type="range" id="th-win" min="60" max="240" step="5" value="120">
+        <button type="button" class="step th-own" id="th-own">Own windows</button>
+      </div>
+      <p class="th-help" id="th-win-help"></p>
+    </div>
+  </div>
+  <div class="th-grid">
+    <figure class="chart th-chart" id="th-chart">
+      <svg id="th-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="th-svg-label"><title id="th-svg-label">Warning against alerts per shift</title></svg>
+    </figure>
+    <table class="th-table">
+      <caption class="vh">The two methods at this setting</caption>
+      <thead><tr><th scope="col"><span class="vh">Method</span></th><th scope="col">Median warning</th><th scope="col">Alerts per shift</th></tr></thead>
+      <tbody>
+        <tr><th scope="row"><span class="v v-t on">Tracer</span></th><td class="num" id="th-m-warn"></td><td class="num" id="th-m-rate"></td></tr>
+        <tr><th scope="row"><span class="v v-p on">Plan's rule</span></th><td class="num" id="th-p-warn"></td><td class="num" id="th-p-rate"></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="th-sentence" id="th-sentence" aria-live="polite"></p>
+  <p class="th-note" id="th-note"></p>
+</section>
+<section id="beat" aria-labelledby="beat-h" hidden>
+  <h2 id="beat-h">Beat Tracer</h2>
+  <p class="lede">Six specimens leave collection. One of them will miss its stability window; the other five arrive
+    in time, though some take a while. Watch for receipt scans, tap the specimen you think is in trouble and press
+    Call it. The sooner you call the right one, the more warning you give. Each round has three alerts, and a wrong
+    call uses one. Tracer plays the same rounds with the alerts it raised at the board's headline setting.</p>
+  <p class="game-seed" id="game-seed"></p>
+  <div class="game" id="game">
+    <div class="game-bar">
+      <p class="game-round" id="game-round"></p>
+      <p class="game-clock"><output class="clock" id="game-clock">0</output><span> min since they left</span></p>
+      <p class="game-alerts" id="game-alerts"></p>
+    </div>
+    <ul class="feed" id="game-feed" aria-label="The six specimens"></ul>
+    <div class="game-actions">
+      <button type="button" class="game-go" id="game-go">Start round 1</button>
+      <button type="button" class="game-call" id="game-call" disabled>Call it</button>
+    </div>
+    <p class="game-status" id="game-status" aria-live="polite"></p>
+    <div class="game-result" id="game-result" hidden></div>
+  </div>
+  <div class="game-end" id="game-end" hidden></div>
+  <p class="game-fine">Rounds come from the held-out runs in the bundle: each round's six specimens were collected
+    near the same time in one run and are shown as if they left together, each against its own window. Rounds use each
+    specimen's own window and Tracer's stored alerts, whatever the controls above are set to. Scores never leave
+    this page. <b>Synthetic data, no clinical review.</b></p>
+</section>
 <section id="why" class="later" aria-label="Why it is built this way"><p>Why it is built this way: to come.</p></section>
 
 <section id="limits" aria-labelledby="limits-h">
@@ -558,13 +756,14 @@ var TracerCore = (function () {
 
   /* The specimens that are collected and not yet received at `now` (minutes, as civilMinutes). Each spec
      carries _c, its collection minute. A specimen whose window closed carryMin or more minutes ago leaves the
-     ranking for the `older` list. */
-  function outstanding(specs, now, carryMin) {
+     ranking for the `older` list. windowOf(spec), when given, is the window in force (the page's window
+     control); without it each specimen keeps its own. */
+  function outstanding(specs, now, carryMin, windowOf) {
     var live = [], older = [];
     for (var i = 0; i < specs.length; i++) {
       var s = specs[i], t = now - s._c;
       if (t < 0 || (s.received_min != null && t >= s.received_min)) continue;
-      var closedFor = t - s.window_min;
+      var closedFor = t - (windowOf ? windowOf(s) : s.window_min);
       (closedFor >= carryMin ? older : live).push({ spec: s, t: t, closed: closedFor >= 0 });
     }
     return { live: live, older: older };
@@ -610,10 +809,204 @@ var TracerCore = (function () {
     return order[best] === "at_unit" ? routing.still_at_unit : routing[route];
   }
 
+  /* ---------- the threshold control (plan task P4) ---------- */
+
+  /* The window in force for every specimen: its own (windowMin null) or one window for all. Each spec gets
+     _window and fresh _ticks, and its cached risk series is dropped, since both depend on the window. */
+  function applyWindow(specs, windowMin, tickMin) {
+    for (var i = 0; i < specs.length; i++) {
+      var s = specs[i];
+      s._window = windowMin == null ? s.window_min : windowMin;
+      s._ticks = ticksFor(s._window, s.received_min, tickMin);
+      s._series = null;
+    }
+  }
+
+  /* A missed window, read from the receipt scan as src/pipeline/evaluate.py derives it: no receipt scan, or
+     one after the window closed. */
+  function isMiss(receivedMin, windowMin) { return receivedMin == null || receivedMin > windowMin; }
+
+  /* The median as numpy computes it: the mean of the two middle values when the count is even. */
+  function median(xs) {
+    if (!xs.length) return null;
+    var v = xs.slice().sort(function (a, b) { return a - b; }), h = v.length >> 1;
+    return v.length % 2 ? v[h] : (v[h - 1] + v[h]) / 2;
+  }
+
+  /* One method's results over a set of specimens (src/pipeline/evaluate.py score): alerts[i] is the alert
+     minute for specs[i] or null. Warning is the window minus the alert minute; an alert at or after the close
+     catches nothing, and the median over all missed windows counts a miss as zero. */
+  function scoreAlerts(specs, alerts, windowOf, shifts) {
+    var fired = 0, breaches = 0, warnings = [], falseAlerts = 0;
+    for (var i = 0; i < specs.length; i++) {
+      var s = specs[i], W = windowOf(s), a = alerts[i], miss = isMiss(s.received_min, W);
+      if (a != null) { fired++; if (!miss) falseAlerts++; }
+      if (miss) { breaches++; if (a != null && W - a > 0) warnings.push(W - a); }
+    }
+    var everyone = warnings.slice();
+    while (everyone.length < breaches) everyone.push(0);
+    return { alerts: fired, alerts_per_shift: fired / shifts, breaches: breaches, caught: warnings.length,
+             median_warning_min: median(warnings), median_warning_all_breaches_min: median(everyone),
+             false_alerts: falseAlerts };
+  }
+
+  /* Both methods at every operating point, recomputed from the specimens. ctx: points (how many), shifts,
+     windowOf(s), ticksOf(s), seriesOf(s), weightOf(s), theta(i) (Tracer's harm threshold at point i) and
+     planThreshold(s, i) (the plan's rule's minutes at point i). */
+  function operatingGrid(specs, ctx) {
+    var out = [];
+    for (var i = 0; i < ctx.points; i++) {
+      var th = ctx.theta(i), m = new Array(specs.length), p = new Array(specs.length);
+      for (var j = 0; j < specs.length; j++) {
+        var s = specs[j], ticks = ctx.ticksOf(s);
+        m[j] = modelAlert(ctx.seriesOf(s), ticks, ctx.weightOf(s), th);
+        p[j] = planAlert(ticks, ctx.planThreshold(s, i));
+      }
+      out.push({ model: scoreAlerts(specs, m, ctx.windowOf, ctx.shifts), plan: scoreAlerts(specs, p, ctx.windowOf, ctx.shifts) });
+    }
+    return out;
+  }
+
+  /* Minutes as the threshold sentence prints them: whole minutes, or one decimal for a median that falls
+     between two. */
+  function fmtWarn(v) { return v == null ? "no" : Math.abs(v - Math.round(v)) < 1e-9 ? String(Math.round(v)) : v.toFixed(1); }
+
+  /* The sentence under the threshold chart. model and plan carry median_warning_all_breaches_min and
+     alerts_per_shift; windowMin is the one window set for every specimen, or null for their own. */
+  function thresholdSentence(model, plan, windowMin) {
+    function part(who, m) {
+      return who + " warns " + fmtWarn(m.median_warning_all_breaches_min) + " min ahead and alerts " +
+        m.alerts_per_shift.toFixed(1) + " times a shift";
+    }
+    return (windowMin == null ? "At this setting " : "At this setting, with every window set to " + windowMin + " min, ") +
+      part("Tracer", model) + "; " + part("the plan's rule", plan) + ".";
+  }
+
+  /* ---------- Beat Tracer (plan task P5) ---------- */
+
+  /* mulberry32, a 32-bit seeded generator (Tommy Ettinger's public-domain design): integer arithmetic only, so a
+     seed gives the same numbers in every browser. Returns a function giving floats in [0, 1). */
+  function mulberry32(seed) {
+    var a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  /* A seed from the address: whole digits from 0 to 4294967295, else null. */
+  function parseSeed(raw) {
+    if (raw == null || !/^\d{1,10}$/.test(raw)) return null;
+    var n = +raw;
+    return n <= 4294967295 ? n : null;
+  }
+
+  /* The game's rounds, drawn with mulberry32(seed) from the held-out specimens and nothing else: each round is
+     one specimen that missed a window of at most maxWindow (120) minutes (no receipt scan by the close), and five
+     that arrived in time, drawn from the `pool` (8) specimens of the same run collected nearest it and within
+     maxGap (240) minutes of it, each with a window of at most companionWindow (240) minutes. A miss without five
+     such companions is never drawn. Rounds come from different runs. Reads only id, run, collected_at,
+     window_min and received_min. Returns [{run, miss, window, ids}] with the six ids in the order shown. */
+  function gameRounds(specs, seed, opts) {
+    opts = opts || {};
+    var n = opts.rounds || 3, size = opts.size || 6, maxW = opts.maxWindow || 120, compW = opts.companionWindow || 240,
+        pool = opts.pool || 8, maxGap = opts.maxGap || 240, rng = mulberry32(seed), i, j, k;
+    var sorted = specs.slice().sort(function (a, b) { return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; });
+    var rows = sorted.map(function (s) {
+      return { id: s.id, run: s.run, c: civilMinutes(s.collected_at), w: s.window_min, miss: isMiss(s.received_min, s.window_min) };
+    });
+    // each eligible miss with its companions: on time, same run, collected within maxGap minutes, nearest first
+    var misses = [];
+    rows.forEach(function (x) {
+      if (!x.miss || x.w > maxW) return;
+      var near = rows.filter(function (r) { return r.run === x.run && r.id !== x.id && !r.miss && r.w <= compW && Math.abs(r.c - x.c) <= maxGap; })
+        .sort(function (a, b) { return Math.abs(a.c - x.c) - Math.abs(b.c - x.c) || (a.id < b.id ? -1 : 1); })
+        .slice(0, pool);
+      if (near.length >= size - 1) misses.push({ x: x, near: near });
+    });
+    var runs = {}, out = [];
+    misses.forEach(function (m) { runs[m.x.run] = true; });
+    var distinct = Object.keys(runs).length;
+    for (var guard = 0; out.length < n && misses.length && guard < 10000; guard++) {
+      var pick = misses[Math.floor(rng() * misses.length)], x = pick.x, near = pick.near.slice();
+      if (out.some(function (r) { return r.miss === x.id || (r.run === x.run && out.length < distinct); })) continue;
+      for (i = 0; i < size - 1; i++) { j = i + Math.floor(rng() * (near.length - i)); k = near[i]; near[i] = near[j]; near[j] = k; }
+      var six = [x].concat(near.slice(0, size - 1));
+      for (i = six.length - 1; i > 0; i--) { j = Math.floor(rng() * (i + 1)); k = six[i]; six[i] = six[j]; six[j] = k; }
+      out.push({ run: x.run, miss: x.id, window: x.w, ids: six.map(function (r) { return r.id; }) });
+    }
+    return out;
+  }
+
+  /* A player's round. calls are [{id, minute}] in the order made; a round has `alerts` of them (three). A call on
+     the missing specimen before its window closes ends the round with the window minus that minute of warning; a
+     call on any other uses an alert; a round with no correct call scores zero, as the headline median counts a
+     miss as zero. */
+  function scoreRound(round, calls, alerts) {
+    var budget = alerts == null ? 3 : alerts, wrong = 0;
+    for (var i = 0; i < calls.length && wrong < budget; i++) {
+      var c = calls[i];
+      if (c.minute >= round.window) break;
+      if (c.id === round.miss) return { warning: round.window - c.minute, wrong: wrong, called: true, at: c.minute };
+      wrong++;
+    }
+    return { warning: 0, wrong: wrong, called: false, at: null };
+  }
+
+  /* Tracer's play on the same round: its stored alert on the missing specimen, as warning (none, or one at or
+     after the close, is zero), and how many of the other five it alerted on although they arrived in time. */
+  function tracerRound(round, alertOf) {
+    var a = alertOf(round.miss), others = 0;
+    round.ids.forEach(function (id) { if (id !== round.miss && alertOf(id) != null) others++; });
+    return { at: a, warning: a != null && round.window - a > 0 ? round.window - a : 0, falseAlerts: others };
+  }
+
+  /* ---------- the 3D view (plan task P6) ---------- */
+  /* The 3D bench (docs/demo/exhibit/, visuals/exhibit-3d) scripts four fates: arrives (receipt scan at 24 min),
+     stalls (receipt scan at 68 min), lost and unsent (no receipt scan). */
+  var BENCH_RECEIPT = { arrives: 24, stalls: 68 };
+
+  /* The bench's fate chosen only from the scans a visitor has seen by `minute`, for use before the truth is
+     shown: still silent, stalls while its scripted receipt is still to come, else lost, which never scans;
+     received, arrives for a receipt before 68 min, else stalls. */
+  function observedFate(minute, receivedMin) {
+    if (receivedMin == null || minute < receivedMin) return minute < BENCH_RECEIPT.stalls ? "stalls" : "lost";
+    return receivedMin < BENCH_RECEIPT.stalls ? "arrives" : "stalls";
+  }
+
+  /* The bench's fate nearest a specimen's true path, for use once the truth is shown: lost in the tube is lost,
+     never sent is unsent, a stall or a misroute (late, then found) stalls, and a trip with no transport fault
+     arrives when its receipt came in time and stalls when it came late. */
+  function trueFate(fault, receivedMin, windowMin) {
+    if (fault === "lost_in_tube") return "lost";
+    if (fault === "not_dispatched") return "unsent";
+    if (fault === "stalled_at_station" || fault === "misrouted") return "stalls";
+    if (receivedMin == null) return "lost";
+    return receivedMin <= windowMin ? "arrives" : "stalls";
+  }
+
+  /* The bench's address query. o: fate, silence (minutes), window (minutes), alert (risk), truth (boolean). A
+     value outside what the bench accepts (silence 0 to 130, window 60 to 240, alert 0.1 to 0.9) is left out
+     rather than clamped, as the bench itself ignores it. */
+  function exhibitQuery(o) {
+    var q = ["fate=" + o.fate];
+    if (o.silence != null && o.silence >= 0 && o.silence <= 130) q.push("silence=" + Math.round(o.silence));
+    if (o.window != null && o.window >= 60 && o.window <= 240) q.push("window=" + Math.round(o.window));
+    if (o.alert != null && o.alert >= 0.1 && o.alert <= 0.9) q.push("alert=" + (Math.round(o.alert * 100) / 100));
+    q.push("truth=" + (o.truth ? 1 : 0));
+    return "?" + q.join("&");
+  }
+
   return { erfc: erfc, Phi: Phi, survival: survival, mixture: mixture, risk: risk, riskSeries: riskSeries,
            arrivalQuantile: arrivalQuantile, ticksFor: ticksFor, harm: harm, modelAlert: modelAlert,
            planAlert: planAlert, rankByHarm: rankByHarm, civilMinutes: civilMinutes, outstanding: outstanding,
-           boardRows: boardRows, mergePlaces: mergePlaces, roleFor: roleFor };
+           boardRows: boardRows, mergePlaces: mergePlaces, roleFor: roleFor,
+           applyWindow: applyWindow, isMiss: isMiss, median: median, scoreAlerts: scoreAlerts,
+           operatingGrid: operatingGrid, fmtWarn: fmtWarn, thresholdSentence: thresholdSentence,
+           mulberry32: mulberry32, parseSeed: parseSeed, gameRounds: gameRounds, scoreRound: scoreRound,
+           tracerRound: tracerRound, observedFate: observedFate, trueFate: trueFate, exhibitQuery: exhibitQuery };
 })();
 </script>
 
@@ -654,7 +1047,8 @@ var TracerCore = (function () {
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   var B = null, byId = {}, byRun = {}, days = [], mixes = {};
-  var state = { day: 0, minute: DEFAULT_MINUTE, point: 0, open: null, positions: [], scrub: 0, truth: false };
+  // window: null while every specimen keeps its own stability window, else the minutes the window control sets
+  var state = { day: 0, minute: DEFAULT_MINUTE, point: 0, open: null, positions: [], scrub: 0, truth: false, window: null };
   var briefs = { data: null, error: null, loading: false };
   var curveCache = { key: null, pts: null };
 
@@ -691,7 +1085,9 @@ var TracerCore = (function () {
 
   /* ---------- the model, through the core ---------- */
   function mixOf(s) { return mixes[s.group] || (mixes[s.group] = C.mixture(B.model, s.group)); }
-  function seriesOf(s) { return s._series || (s._series = C.riskSeries(s._ticks, mixOf(s), s.window_min)); }
+  /* The window in force: the specimen's own, or the one the window control sets for every specimen. */
+  function windowOf(s) { return s._window; }
+  function seriesOf(s) { return s._series || (s._series = C.riskSeries(s._ticks, mixOf(s), windowOf(s))); }
   function weightOf(s) { return B.triage.weights[String(s.tier)]; }
   function threshold() { return B.grid[state.point].model.harm_threshold; }
   function planThresholdOf(s) { return B.baselines.plan.threshold_min_by_group[s.group][state.point]; }
@@ -734,12 +1130,14 @@ var TracerCore = (function () {
     var seen = {};
     B.specimens.forEach(function (s) {
       s._c = C.civilMinutes(s.collected_at);
-      s._ticks = C.ticksFor(s.window_min, s.received_min, B.tick_min);
       byId[s.id] = s;
       (byRun[s.run] = byRun[s.run] || []).push(s);
       var date = s.collected_at.slice(0, 10);
       if (!seen[date]) { seen[date] = true; days.push({ date: date, run: s.run, start: C.civilMinutes(date) }); }
     });
+    C.applyWindow(B.specimens, null, B.tick_min);
+    var wins = B.specimens.map(function (s) { return s.window_min; });
+    winRange = [Math.min.apply(null, wins), Math.max.apply(null, wins)];
     days.sort(function (a, b) { return a.start - b.start; });
     state.day = Math.max(0, days.findIndex(function (d) { return d.date === DEFAULT_DAY; }));
 
@@ -753,8 +1151,12 @@ var TracerCore = (function () {
     $("controls").hidden = false;
     $("board-wrap").hidden = false;
     $("key").hidden = false;
+    $("th-point").max = String(B.grid.length - 1);
+    $("threshold").hidden = false;
     wire();
     renderBoard();
+    renderThreshold();
+    initGame();
     fromHash(true);
   }
 
@@ -817,7 +1219,7 @@ var TracerCore = (function () {
     $("clock-back").disabled = state.minute <= 0;
     $("clock-fwd").disabled = state.minute >= 1440 - B.tick_min;
 
-    var out = C.outstanding(byRun[day.run], now, B.shift_min);
+    var out = C.outstanding(byRun[day.run], now, B.shift_min, windowOf);
     var rows = C.boardRows(out.live, ctx());
     $("board-body").innerHTML = rows.map(rowHtml).join("");
     var when = hhmm(state.minute) + " on " + dayLabel(day.date);
@@ -863,7 +1265,7 @@ var TracerCore = (function () {
     if (r.tick == null) place = '<span class="muted">just collected</span>';
     else if (!row) place = '<span class="muted">past the ' + n(B.horizon_min + " min") + " horizon</span>";
     else { var mp = C.mergePlaces(row, B.place_order); place = esc(placeWords(mp, mp.best)); }
-    left = r.closed ? '<span class="closed-word">window closed</span>' : n(mins(s.window_min - r.t));
+    left = r.closed ? '<span class="closed-word">window closed</span>' : n(mins(windowOf(s) - r.t));
     role = r.model != null ? esc(roleOf(s, r.model)) : '<span class="muted">no alert</span>';
     var silent = r.tick == null && r.t < 1 ? "under 1 min" : mins(r.t);
     return '<tr role="row" data-id="' + esc(s.id) + '"' + (open ? ' class="is-open"' : "") + ">" +
@@ -938,7 +1340,10 @@ var TracerCore = (function () {
     $("tl-title").innerHTML = '<span class="num">' + esc(s.id) + "</span>" + esc(shortType(s.type));
     $("tl-facts").innerHTML = "Collected at " + n(hhmm(s._c)) + " on " + esc(dayLabel(s.collected_at.slice(0, 10))) +
       " (run " + s.run + "), " + esc(UNIT[s.unit] || s.unit) + ", " + esc(s.priority) + ", sent " + esc(ROUTE[s.route] || s.route) +
-      ". Tier " + s.tier + ", weight " + n(weightOf(s)) + ". Stability window " + n(mins(s.window_min)) + " (" + source + ").";
+      ". Tier " + s.tier + ", weight " + n(weightOf(s)) + ". " + (state.window == null
+        ? "Stability window " + n(mins(s.window_min)) + " (" + source + ")."
+        : "Stability window set to " + n(mins(state.window)) + " by the window control; its own is " + n(mins(s.window_min)) +
+          " (" + source + ").");
     // the clock runs from collection to receipt, so scans after the receipt scan are not listed
     var ev = s.events.filter(function (e) { return s.received_min == null || e.at_min <= s.received_min; })
       .sort(function (x, y) { return x.at_min - y.at_min; });
@@ -982,7 +1387,7 @@ var TracerCore = (function () {
     $("tl-back").disabled = state.scrub <= 0;
     $("tl-fwd").disabled = state.scrub >= state.positions.length - 1;
     var outcome = s.received_min != null && m >= s.received_min;
-    var r = outcome || m === 0 ? null : C.risk(m, mixOf(s), s.window_min);
+    var r = outcome || m === 0 ? null : C.risk(m, mixOf(s), windowOf(s));
     var at = outcome ? "receipt scan, " + mins(m) + " after collection"
       : m === 0 ? "collection scan" : mins(m) + " after collection";
     scrub.setAttribute("aria-valuetext", at + (r != null ? ", risk " + pct(r) : ""));
@@ -991,10 +1396,56 @@ var TracerCore = (function () {
       (r != null ? ": risk " + n(pct(r)) + "." : ".");
     drawChart();
     renderReadout(s, m, outcome, r);
+    renderLink3d(s, m);
+  }
+
+  /* ---------- the 3D view (P6) ---------- */
+  /* The link opens the 3D bench in a new tab, so this page keeps its place, its controls and the game. Before
+     the truth is shown the bench's fate comes only from the scans shown here and its truth stays hidden; after,
+     it is the bench's nearest fate to the specimen's true path. ?lite=1, or a browser with neither WebGPU nor
+     WebGL 2, leaves the 2D timeline as the only view. */
+  var LITE = /[?&]lite=1(?:&|#|$)/.test(location.search), gfx = null;
+  function canRun3d() {
+    if (gfx === null) {
+      gfx = false;
+      if (navigator.gpu) gfx = true;
+      else if (window.WebGL2RenderingContext) {
+        try {
+          var ctx = document.createElement("canvas").getContext("webgl2");
+          gfx = !!ctx;
+          var lose = ctx && ctx.getExtension("WEBGL_lose_context");
+          if (lose) lose.loseContext();
+        } catch (e) { gfx = false; }
+      }
+    }
+    return gfx;
+  }
+
+  function renderLink3d(s, m) {
+    var link = $("tl-3d"), note = $("tl-3d-note");
+    if (LITE || !canRun3d()) {
+      link.hidden = true;
+      link.removeAttribute("href");
+      note.textContent = LITE
+        ? "The 3D view is off at this address (lite=1), so the timeline is the view of this specimen."
+        : "This browser cannot run the 3D view (it needs WebGPU or WebGL 2), so the timeline is the view of this specimen.";
+      return;
+    }
+    var W = windowOf(s), fate = state.truth ? C.trueFate(s.truth.fault, s.received_min, s.window_min) : C.observedFate(m, s.received_min);
+    var query = C.exhibitQuery({ fate: fate, silence: m, window: W, alert: threshold() / weightOf(s), truth: state.truth });
+    link.href = "exhibit/index.html" + query;
+    link.hidden = false;
+    link.setAttribute("aria-describedby", "tl-3d-note");
+    note.textContent = "Opens the 3D bench in a new tab" + (m <= 130 ? " at " + mins(m) + " after collection" : "") +
+      (W >= 60 && W <= 240 ? " with this window" : " with the bench's own 120 min window") +
+      "; close that tab to come back here. The bench runs its own assumed parameters, so its risk differs from this " +
+      "page's. " + (state.truth
+        ? "The truth is shown there as the bench's nearest scripted fate (" + fate + ")."
+        : "Its truth stays hidden, and its scripted receipts come at 24 or 68 min.");
   }
 
   function renderReadout(s, m, outcome, r) {
-    var W = s.window_min, mix = mixOf(s);
+    var W = windowOf(s), mix = mixOf(s);
     $("ro-when").innerHTML = (outcome ? "At the receipt scan, " : m === 0 ? "At the collection scan, " : "At ") +
       n(mins(m)) + " after collection (" + n(hhmm(s._c + m)) + ")";
     var oc = $("ro-outcome"), stats = $("ro-stats");
@@ -1065,19 +1516,19 @@ var TracerCore = (function () {
   }
 
   function chartEnd(s, a, p, m) {
-    var base = s.received_min != null ? s.received_min : Math.min(s.window_min, B.horizon_min);
+    var W = windowOf(s), base = s.received_min != null ? s.received_min : Math.min(W, B.horizon_min);
     base = Math.max(base, a || 0, p || 0, m, 30);
-    if (s.window_min <= base * 1.5) base = Math.max(base, s.window_min);
+    if (W <= base * 1.5) base = Math.max(base, W);
     return base * 1.06;
   }
 
   function curve(s, end) {
-    var key = s.id + "|" + end;
+    var W = windowOf(s), key = s.id + "|" + end + "|" + W;
     if (curveCache.key === key) return curveCache.pts;
     var mix = mixOf(s), stop = s.received_min != null ? Math.min(s.received_min, end) : end, pts = [];
     for (var i = 0; i <= 400; i++) {
       var t = stop * i / 400;
-      pts.push([t, C.risk(t, mix, s.window_min)]);
+      pts.push([t, C.risk(t, mix, W)]);
     }
     curveCache = { key: key, pts: pts };
     return pts;
@@ -1087,7 +1538,7 @@ var TracerCore = (function () {
     var s = byId[state.open], svg = $("tl-svg"), m = state.positions[state.scrub];
     var w = Math.max(280, Math.floor($("tl-chart").clientWidth - 16)), narrow = w < 560;
     var a = modelAlertOf(s), p = planAlertOf(s), weight = weightOf(s), alertRisk = threshold() / weight;
-    var W = s.window_min, rec = s.received_min, mix = mixOf(s), end = chartEnd(s, a, p, m);
+    var W = windowOf(s), rec = s.received_min, mix = mixOf(s), end = chartEnd(s, a, p, m);
     var top = 46, plotH = narrow ? 150 : 200, L = 42, R = 14, x0 = L, x1 = w - R;
     function X(t) { return x0 + Math.min(t, end) / end * (x1 - x0); }
     function Y(v) { return top + (1 - v) * plotH; }
@@ -1131,9 +1582,25 @@ var TracerCore = (function () {
     }
 
     // Tracer's alert line for this specimen's tier: expected harm reaches the threshold
+    // Its label goes where the risk curve is not: the first of right-above, right-below, left-above and
+    // left-below whose box no point of the curve enters, in full words and then in short ones.
     if (alertRisk <= 1) {
-      svg.appendChild(el("line", { x1: x0, x2: x1, y1: Y(alertRisk), y2: Y(alertRisk), "class": "aline" }));
-      svg.appendChild(text(x1, Y(alertRisk) - 6, "lbl t-warn halo", "Tracer's alert line, tier " + s.tier + ": " + pct(alertRisk), "end"));
+      // the right-hand spots end short of the window's line when it is drawn
+      var ay0 = Y(alertRisk), cpts = curve(s, end), pick = null, xr = W <= end ? X(W) - 6 : x1;
+      ["Tracer's alert line, tier " + s.tier + ": " + pct(alertRisk), "alert line, tier " + s.tier + ": " + pct(alertRisk)].some(function (aStr) {
+        var aW = aStr.length * 6.3;
+        return [[xr - aW, ay0 - 6, xr, "end"], [xr - aW, ay0 + 15, xr, "end"], [x0 + 6, ay0 - 6, x0 + 6, "start"],
+                [x0 + 6, ay0 + 15, x0 + 6, "start"]].some(function (sp) {
+          var bx0 = sp[0] - 3, bx1 = sp[0] + aW + 3, by0 = sp[1] - 12, by1 = sp[1] + 4;
+          if (by1 > axisY - 11 || by0 < top - 2 || bx0 < x0 || bx1 > x1 + 4) return false;
+          var hit = cpts.some(function (q) { var qx = X(q[0]), qy = Y(q[1]); return qx >= bx0 && qx <= bx1 && qy >= by0 && qy <= by1; });
+          if (!hit) pick = [sp[2], sp[1], aStr, sp[3]];
+          return !hit;
+        });
+      });
+      if (!pick) { var shortStr = "alert line, tier " + s.tier + ": " + pct(alertRisk); pick = [x1, ay0 - 6, shortStr, "end"]; }
+      svg.appendChild(el("line", { x1: x0, x2: x1, y1: ay0, y2: ay0, "class": "aline" }));
+      svg.appendChild(text(pick[0], pick[1], "lbl t-warn halo", pick[2], pick[3]));
     }
 
     // the risk curve, recomputed here, and the part the clock has passed
@@ -1212,7 +1679,8 @@ var TracerCore = (function () {
   /* ---------- the search briefs, loaded when a specimen with an alert is opened ---------- */
   function loadBriefs(s) {
     var box = $("tl-briefs");
-    var has = s.alerts.model != null && state.point === B.headline_index;
+    // the briefs were written for the stored alerts: the headline threshold at each specimen's own window
+    var has = s.alerts.model != null && state.point === B.headline_index && state.window == null;
     box.hidden = !has;
     if (!has) return;
     if (briefs.data) { showBrief(s); return; }
@@ -1248,6 +1716,344 @@ var TracerCore = (function () {
     $("brief-claude").textContent = entry.claude;
     $("brief-claude-cap").textContent = "Claude, written by " + briefs.data.model;
     $("brief-pair").hidden = false;
+  }
+
+  /* ---------- the threshold control (P4) ---------- */
+  /* At each specimen's own window the two methods' numbers are the bundle's grid, as the evaluation computed
+     them. With one window set for every specimen the grid no longer describes the setting, so the page
+     recomputes both methods at all 20 points from the receipt scans, at the same thresholds, and says so.
+     tests/test_demo_page.py holds the recomputation to the grid at the own windows. */
+  var gridCache = { window: undefined, rows: null }, winRange = [0, 0];
+  function gridRows() {
+    if (state.window == null) {
+      return B.grid.map(function (g) { return { model: g.model, plan: g.plan_baseline }; });
+    }
+    if (gridCache.window !== state.window) {
+      gridCache = { window: state.window, rows: C.operatingGrid(B.specimens, {
+        points: B.grid.length, shifts: B.source.shifts, windowOf: windowOf, seriesOf: seriesOf, weightOf: weightOf,
+        ticksOf: function (s) { return s._ticks; },
+        theta: function (i) { return B.grid[i].model.harm_threshold; },
+        planThreshold: function (s, i) { return B.baselines.plan.threshold_min_by_group[s.group][i]; } }) };
+    }
+    return gridCache.rows;
+  }
+
+  function warnText(v) { return v == null ? "none" : C.fmtWarn(v) + " min"; }
+
+  function renderThreshold() {
+    var i = state.point, g = B.grid[i], rows = gridRows(), row = rows[i], own = state.window == null;
+    var slider = $("th-point");
+    slider.value = String(i);
+    $("th-point-out").textContent = g.model.harm_threshold.toFixed(3);
+    slider.setAttribute("aria-valuetext", "harm threshold " + g.model.harm_threshold.toFixed(3) + ", set for " + g.budget_per_shift + " alerts per shift");
+    $("th-point-help").innerHTML = "Expected harm at which Tracer alerts. Both methods were set on the fit runs to " +
+      n(g.budget_per_shift) + (g.budget_per_shift === 1 ? " alert" : " alerts") + " per " + n(B.shift_min / 60) + "-hour shift" +
+      (i === B.headline_index ? ", the setting the board's headline uses." : ".");
+    $("th-win-out").textContent = own ? "own" : state.window + " min";
+    $("th-win").setAttribute("aria-valuetext", own ? "each specimen's own window" : state.window + " minutes for every specimen");
+    $("th-own").disabled = own;
+    $("th-win-help").innerHTML = own
+      ? "Each specimen keeps its own window, from " + n(mins(winRange[0])) + " to " + n(mins(winRange[1])) +
+        ". Move the slider to give every specimen one window from " + n("60 min") + " to " + n("240 min") + "; risk is recomputed in this page."
+      : "Every specimen's window is " + n(state.window + " min") + ". Risk, both alert rules and which specimens miss their windows are recomputed in this page.";
+    $("th-m-warn").textContent = warnText(row.model.median_warning_all_breaches_min);
+    $("th-p-warn").textContent = warnText(row.plan.median_warning_all_breaches_min);
+    $("th-m-rate").textContent = row.model.alerts_per_shift.toFixed(2);
+    $("th-p-rate").textContent = row.plan.alerts_per_shift.toFixed(2);
+    $("th-sentence").textContent = C.thresholdSentence(row.model, row.plan, state.window);
+    $("th-note").innerHTML = "<b>Synthetic data, no clinical review.</b> Warning is the median over all " +
+      n(int(row.model.breaches)) + " missed windows in the held-out runs, a miss counted as zero. " +
+      (own
+        ? "These numbers are the evaluation's own, read from the bundle."
+        : '<span class="shift">Recomputed in this page for a ' + esc(state.window) + "-minute window: the thresholds were set at each " +
+          "specimen's own window, so alerts per shift drift from the budget of " + esc(g.budget_per_shift) + ".</span>");
+    drawTradeoff(rows);
+  }
+
+  function drawTradeoff(rows) {
+    var svg = $("th-svg"), i = state.point;
+    var w = Math.max(280, Math.floor($("th-chart").clientWidth - 16)), narrow = w < 560;
+    var top = narrow ? 50 : 34, plotH = narrow ? 160 : 200, L = 42, R = 16, x0 = L, x1 = w - R, H = top + plotH + 40;
+    var maxX = 0, maxY = 0;
+    rows.forEach(function (r) {
+      maxX = Math.max(maxX, r.model.alerts_per_shift, r.plan.alerts_per_shift);
+      maxY = Math.max(maxY, r.model.median_warning_all_breaches_min || 0, r.plan.median_warning_all_breaches_min || 0);
+    });
+    maxX = Math.ceil(maxX / 2) * 2 || 2;
+    var yStep = niceStep(maxY || 10, 4);
+    maxY = Math.max(yStep, Math.ceil((maxY || 1) / yStep) * yStep);
+    function X(v) { return x0 + v / maxX * (x1 - x0); }
+    function Y(v) { return top + (1 - (v || 0) / maxY) * plotH; }
+    function text(x, y, cls, str, anchor) {
+      return el("text", { x: x.toFixed(1), y: y.toFixed(1), "class": cls, "text-anchor": anchor || "start" }, str);
+    }
+    svg.setAttribute("viewBox", "0 0 " + w + " " + H);
+    svg.setAttribute("width", String(w));
+    svg.setAttribute("height", String(H));
+    Array.prototype.slice.call(svg.childNodes).forEach(function (c) { if (c.id !== "th-svg-label") svg.removeChild(c); });
+    for (var v = 0; v <= maxY; v += yStep) {
+      svg.appendChild(el("line", { x1: x0, x2: x1, y1: Y(v), y2: Y(v), "class": "gridline" }));
+      svg.appendChild(text(x0 - 7, Y(v) + 4, "ax", String(v), "end"));
+    }
+    svg.appendChild(text(x0 - 7, 13, "ax", "median warning, min", "start"));
+    var xStep = maxX <= 8 ? 1 : 2;
+    if (narrow && maxX > 8) xStep = 4;
+    for (var u = 0; u <= maxX; u += xStep) svg.appendChild(text(X(u), top + plotH + 16, "ax", String(u), u === 0 ? "start" : "middle"));
+    svg.appendChild(text(x1, top + plotH + 32, "ax", "alerts per shift", "end"));
+    [["plan", "tr-p", "tr-dot-p"], ["model", "tr-m", "tr-dot-m"]].forEach(function (k) {
+      var d = "";
+      rows.forEach(function (r, j) { d += (j ? "L" : "M") + X(r[k[0]].alerts_per_shift).toFixed(1) + " " + Y(r[k[0]].median_warning_all_breaches_min).toFixed(1); });
+      svg.appendChild(el("path", { d: d, "class": "tr-line " + k[1] }));
+      rows.forEach(function (r) {
+        var cx = X(r[k[0]].alerts_per_shift), cy = Y(r[k[0]].median_warning_all_breaches_min);
+        svg.appendChild(k[0] === "model" ? el("circle", { cx: cx, cy: cy, r: 3, "class": k[2] })
+          : el("rect", { x: cx - 3, y: cy - 3, width: 6, height: 6, transform: "rotate(45 " + cx + " " + cy + ")", "class": k[2] }));
+      });
+    });
+    var cur = rows[i], mx = X(cur.model.alerts_per_shift), my = Y(cur.model.median_warning_all_breaches_min);
+    var px = X(cur.plan.alerts_per_shift), py = Y(cur.plan.median_warning_all_breaches_min);
+    svg.appendChild(el("line", { x1: mx, x2: mx, y1: my, y2: top + plotH, "class": "tr-guide" }));
+    svg.appendChild(el("circle", { cx: mx, cy: my, r: 8, "class": "tr-now" }));
+    svg.appendChild(el("circle", { cx: px, cy: py, r: 8, "class": "tr-now" }));
+    // the key, top right: the marks of the timeline's chart, and the ring for this setting
+    var kx = x1, ky = narrow ? 31 : 13;
+    [["plan's rule", "t-dim", "p"], ["Tracer", "t-inf", "m"], ["this setting", "t-warn", "now"]].forEach(function (k) {
+      var tw = k[0].length * 6.3;
+      svg.appendChild(text(kx, ky, "lbl " + k[1], k[0], "end"));
+      var cx = kx - tw - 9, cy = ky - 4;
+      if (k[2] === "m") svg.appendChild(el("circle", { cx: cx, cy: cy, r: 3, "class": "tr-dot-m" }));
+      else if (k[2] === "p") svg.appendChild(el("rect", { x: cx - 3, y: cy - 3, width: 6, height: 6, transform: "rotate(45 " + cx + " " + cy + ")", "class": "tr-dot-p" }));
+      else svg.appendChild(el("circle", { cx: cx, cy: cy, r: 5, "class": "tr-now" }));
+      kx = cx - 18;
+    });
+    $("th-svg-label").textContent = "Median warning against alerts per shift for Tracer and the plan's rule at all " + rows.length +
+      " thresholds. At this one, Tracer: " + warnText(cur.model.median_warning_all_breaches_min) + ", " +
+      cur.model.alerts_per_shift.toFixed(2) + " alerts per shift; the plan's rule: " + warnText(cur.plan.median_warning_all_breaches_min) +
+      ", " + cur.plan.alerts_per_shift.toFixed(2) + ".";
+  }
+
+  /* One stability window for every specimen (minutes), or null for their own. Ticks and risk are recomputed,
+     the board redraws, and an open timeline reopens at the nearest minute. */
+  function setWindow(w) {
+    state.window = w == null ? null : Math.max(60, Math.min(240, Math.round(w / 5) * 5));
+    C.applyWindow(B.specimens, state.window, B.tick_min);
+    curveCache = { key: null, pts: null };
+    renderBoard();
+    if (state.open) {
+      var minute = state.positions[state.scrub];
+      openSpecimen(state.open, { minute: minute });
+    }
+    renderThreshold();
+  }
+
+  /* ---------- Beat Tracer (P5) ---------- */
+  /* Simulated time runs at 3 minutes a second, the 3D bench's normal speed, so a 60-minute window lasts 20 s and
+     a 120-minute one 40 s. Rounds come from C.gameRounds; the cues are what the board shows before the truth
+     toggle (type, unit, route, priority, window, minutes silent, the receipt scan), and Tracer's alert is shown
+     only once the round is over. */
+  var GAME_SPEED = 3, GAME_ALERTS = 3;
+  var game = { seed: null, fromAddress: false, rounds: [], i: 0, phase: "ready", t: 0, start: 0, calls: [],
+    ruled: {}, selected: null, results: [], rows: {}, scale: 120 };
+
+  function newGame(seed, fromAddress) {
+    game.seed = seed;
+    game.fromAddress = fromAddress;
+    game.rounds = C.gameRounds(B.specimens, seed);
+    game.i = 0;
+    game.results = [];
+    $("game-end").hidden = true;
+    $("game").hidden = false;
+    var addr = location.origin + location.pathname + "?seed=" + seed + "#beat";
+    $("game-seed").innerHTML = fromAddress
+      ? "Rounds from seed " + n(seed) + ", set in the address: everyone who opens this address plays the same three rounds."
+      : "Rounds from seed " + n(seed) + ", chosen at random. To give a room the same rounds, share the address " +
+        "<code>" + esc(addr) + "</code>.";
+    prepareRound();
+  }
+
+  function randomSeed() {
+    var a = new Uint32Array(1);
+    window.crypto.getRandomValues(a);
+    return a[0] % 100000;
+  }
+
+  function prepareRound() {
+    var r = game.rounds[game.i];
+    game.phase = "ready";
+    game.t = 0;
+    game.calls = [];
+    game.ruled = {};
+    game.selected = null;
+    game.scale = Math.max.apply(null, r.ids.map(function (id) { return byId[id].window_min; }));
+    $("game-round").textContent = "Round " + (game.i + 1) + " of " + game.rounds.length;
+    $("game-result").hidden = true;
+    $("game-result").innerHTML = "";
+    $("game-status").textContent = "Press Start to send the six specimens on their way.";
+    $("game-feed").innerHTML = r.ids.map(function (id) {
+      var s = byId[id];
+      var type = shortType(s.type);
+      return '<li><button type="button" class="fs" data-id="' + esc(id) + '" aria-pressed="false" disabled>' +
+        '<span class="fs-top"><span class="fs-id">' + esc(id) + '</span><span class="fs-state"></span></span>' +
+        '<span class="fs-meta"><span class="fs-type">' + esc(type.charAt(0).toUpperCase() + type.slice(1)) + "</span>, " +
+        esc(UNIT[s.unit] || s.unit) + ", " + esc(ROUTE[s.route] || s.route) + ", " + esc(s.priority) +
+        '. Window <span class="num">' + esc(mins(s.window_min)) + "</span>.</span>" +
+        '<span class="fs-track" aria-hidden="true"><span class="fs-quiet"></span><span class="fs-scan" hidden></span>' +
+        '<span class="fs-win" style="left:' + (100 * s.window_min / game.scale).toFixed(2) + '%"></span></span></button></li>';
+    }).join("");
+    game.rows = {};
+    Array.prototype.forEach.call($("game-feed").querySelectorAll(".fs"), function (b) { game.rows[b.getAttribute("data-id")] = b; });
+    $("game-go").hidden = false;
+    $("game-go").textContent = "Start round " + (game.i + 1);
+    $("game-call").hidden = false;
+    renderGame();
+  }
+
+  function arrived(s, t) { return s.received_min != null && t >= s.received_min; }
+
+  function renderGame() {
+    var r = game.rounds[game.i], t = game.t, minute = Math.floor(t), over = game.phase === "result";
+    $("game-clock").textContent = String(minute);
+    var wrong = C.scoreRound(r, game.calls, GAME_ALERTS).wrong, left = GAME_ALERTS - wrong;
+    $("game-alerts").innerHTML = '<span class="vh">' + left + " of " + GAME_ALERTS + " alerts left</span>" +
+      [0, 1, 2].map(function (k) { return '<span class="pip' + (k < left ? " on" : "") + '" aria-hidden="true"></span>'; }).join("") +
+      '<span aria-hidden="true">' + left + (left === 1 ? " alert" : " alerts") + " left</span>";
+    r.ids.forEach(function (id) {
+      var s = byId[id], b = game.rows[id], st = b.querySelector(".fs-state"), cls, html;
+      var got = arrived(s, t), quietTo = got ? s.received_min : t;
+      if (over && id === r.miss) { cls = "fs-miss"; html = "missed its window"; }
+      else if (got) { cls = "fs-in"; html = "receipt scan at " + n(mins(s.received_min)); }
+      else if (game.ruled[id] != null) { cls = "fs-out"; html = "not this one: it arrives in time"; }
+      else { cls = "fs-silent"; html = "silent " + n(mins(minute)); }
+      if (game.selected === id && !over) html += '<span class="fs-pick">selected</span>';
+      if (st._html !== html) { st._html = html; st.className = "fs-state " + cls; st.innerHTML = html; }
+      b.classList.toggle("ruled", game.ruled[id] != null);
+      b.querySelector(".fs-quiet").style.width = (100 * Math.min(quietTo, game.scale) / game.scale).toFixed(2) + "%";
+      var scan = b.querySelector(".fs-scan");
+      scan.hidden = !got;
+      if (got) scan.style.left = (100 * Math.min(s.received_min, game.scale) / game.scale).toFixed(2) + "%";
+      var callable = game.phase === "running" && !got && game.ruled[id] == null;
+      b.disabled = !callable;
+      if (!callable && game.selected === id) game.selected = null;
+      b.setAttribute("aria-pressed", String(game.selected === id));
+    });
+    $("game-call").disabled = !(game.phase === "running" && game.selected);
+  }
+
+  function startRound() {
+    game.phase = "running";
+    game.start = performance.now();
+    $("game-go").hidden = true;
+    $("game-status").textContent = "They are on their way. Tap a specimen, then Call it.";
+    renderGame();
+    var first = $("game-feed").querySelector(".fs:not(:disabled)");
+    if (first) first.focus();
+    requestAnimationFrame(tick);
+  }
+
+  function tick(now) {
+    if (game.phase !== "running") return;
+    var r = game.rounds[game.i], before = game.t;
+    game.t = Math.min(r.window, (now - game.start) / 1000 * GAME_SPEED);
+    var news = r.ids.filter(function (id) { var s = byId[id]; return !arrived(s, before) && arrived(s, game.t); });
+    if (news.length) $("game-status").textContent = news.map(function (id) { return id + " was scanned in the laboratory."; }).join(" ");
+    if (game.t >= r.window) { endRound(); return; }
+    renderGame();
+    requestAnimationFrame(tick);
+  }
+
+  function callIt() {
+    if (game.phase !== "running" || !game.selected) return;
+    var r = game.rounds[game.i], id = game.selected, minute = Math.floor(game.t);
+    game.calls.push({ id: id, minute: minute });
+    var sc = C.scoreRound(r, game.calls, GAME_ALERTS);
+    if (sc.called) { endRound(); return; }
+    game.ruled[id] = minute;
+    game.selected = null;
+    if (sc.wrong >= GAME_ALERTS) { endRound(); return; }
+    $("game-status").textContent = id + " is not the one: it arrives in time. That used one alert.";
+    renderGame();
+  }
+
+  function endRound() {
+    var r = game.rounds[game.i], you = C.scoreRound(r, game.calls, GAME_ALERTS);
+    var tr = C.tracerRound(r, function (id) { return byId[id].alerts.model; }), s = byId[r.miss];
+    game.phase = "result";
+    game.results.push({ miss: r.miss, you: you, tracer: tr });
+    renderGame();
+    var lines = [];
+    lines.push(you.called
+      ? "<p><b>You called " + esc(r.miss) + " at " + n(mins(you.at)) + ": " + n(mins(you.warning)) + " of warning.</b></p>"
+      : "<p><b>" + (you.wrong >= GAME_ALERTS ? "Your three alerts went on specimens that arrived in time"
+        : "You did not call " + esc(r.miss) + " before its window closed at " + n(mins(r.window))) + ": no warning.</b></p>");
+    lines.push("<p>" + (tr.warning > 0
+      ? '<span class="v v-t on">Tracer alerted on ' + esc(r.miss) + " at " + n(mins(tr.at)) + ": " + n(mins(tr.warning)) + " of warning.</span>"
+      : '<span class="v v-t off">Tracer did not alert on ' + esc(r.miss) + " before its window closed: no warning.</span>") +
+      " It also alerted on " + n(tr.falseAlerts) + " of the other five, which arrived in time" +
+      (you.wrong ? "; you used " + n(you.wrong) + (you.wrong === 1 ? " alert" : " alerts") + " on them." : ".") + "</p>");
+    lines.push("<p>" + esc(r.miss) + " had no receipt scan when its " + esc(mins(r.window)) + " window closed" +
+      (s.received_min != null ? "; its receipt scan came at " + n(mins(s.received_min)) + "." : ", and none ever came.") + "</p>");
+    $("game-result").innerHTML = lines.join("");
+    $("game-result").hidden = false;
+    $("game-status").textContent = "Round " + (game.i + 1) + " is over.";
+    var last = game.i === game.rounds.length - 1;
+    $("game-go").textContent = last ? "See how you did" : "Start round " + (game.i + 2);
+    $("game-go").hidden = false;
+    $("game-call").hidden = true;
+    $("game-go").focus();
+  }
+
+  function nextRound() {
+    if (game.phase === "ready") { startRound(); return; }
+    if (game.phase !== "result") return;
+    if (game.i < game.rounds.length - 1) { game.i++; prepareRound(); startRound(); return; }
+    showEnd();
+  }
+
+  function showEnd() {
+    game.phase = "end";
+    var yours = game.results.map(function (x) { return x.you.warning; }), his = game.results.map(function (x) { return x.tracer.warning; });
+    var wrong = game.results.reduce(function (a, x) { return a + x.you.wrong; }, 0);
+    var fa = game.results.reduce(function (a, x) { return a + x.tracer.falseAlerts; }, 0);
+    var mine = C.median(yours), tracer = C.median(his);
+    $("game").hidden = true;
+    var end = $("game-end");
+    end.innerHTML = '<h3 class="end-h" tabindex="-1" id="end-h">Your median warning and Tracer\'s, on the same three rounds</h3>' +
+      '<dl class="end-pair"><div class="you"><dt>You</dt><dd>' + esc(C.fmtWarn(mine)) + " min<small>" + wrong +
+      (wrong === 1 ? " wrong call" : " wrong calls") + "</small></dd></div>" +
+      '<div class="tracer"><dt>Tracer</dt><dd>' + esc(C.fmtWarn(tracer)) + " min<small>" + fa +
+      (fa === 1 ? " alert" : " alerts") + " on specimens that arrived in time</small></dd></div></dl>" +
+      '<p class="end-point">Silence carries information: the longer a specimen goes without a scan, the likelier it is ' +
+      "the one in trouble. A fixed threshold trades warning against false alarms: call sooner and you warn more, and " +
+      "alert on more specimens that were fine.</p>" +
+      '<ol class="end-rounds">' + game.results.map(function (x, k) {
+        return "<li>Round " + (k + 1) + ", " + esc(x.miss) + ": you " + n(mins(x.you.warning)) + ", Tracer " + n(mins(x.tracer.warning)) + ".</li>";
+      }).join("") + "</ol>" +
+      '<div class="end-again"><button type="button" id="game-replay">Play these rounds again</button>' +
+      '<button type="button" id="game-new">Play new rounds</button></div>';
+    end.hidden = false;
+    $("game-status").textContent = "";
+    $("end-h").focus();
+  }
+
+  function initGame() {
+    var q = /[?&]seed=([^&#]*)/.exec(location.search), seed = q ? C.parseSeed(decodeURIComponent(q[1])) : null;
+    $("beat").hidden = false;
+    $("game-go").addEventListener("click", nextRound);
+    $("game-call").addEventListener("click", callIt);
+    $("game-feed").addEventListener("click", function (e) {
+      var b = e.target.closest(".fs");
+      if (!b || b.disabled || game.phase !== "running") return;
+      var id = b.getAttribute("data-id");
+      game.selected = game.selected === id ? null : id;
+      renderGame();
+    });
+    $("game-end").addEventListener("click", function (e) {
+      if (e.target.id === "game-replay") newGame(game.seed, game.fromAddress);
+      else if (e.target.id === "game-new") newGame(randomSeed(), false);
+      else return;
+      $("game-go").focus();
+    });
+    newGame(seed == null ? randomSeed() : seed, seed != null);
   }
 
   /* ---------- events ---------- */
@@ -1296,27 +2102,48 @@ var TracerCore = (function () {
       renderHead(s);
       renderMoment();
     });
+    $("th-point").addEventListener("input", function () { setPoint(+this.value); });
+    var winPending = false;
+    $("th-win").addEventListener("input", function () {
+      if (winPending) return;
+      winPending = true;
+      requestAnimationFrame(function () { winPending = false; setWindow(+$("th-win").value); });
+    });
+    $("th-own").addEventListener("click", function () { setWindow(null); $("th-win").focus(); });
     window.addEventListener("hashchange", function () { fromHash(false); });
     var pending = false;
     window.addEventListener("resize", function () {
-      if (pending || !state.open) return;
+      if (pending) return;
       pending = true;
-      requestAnimationFrame(function () { pending = false; if (state.open) drawChart(); });
+      requestAnimationFrame(function () {
+        pending = false;
+        if (state.open) drawChart();
+        drawTradeoff(gridRows());
+      });
     });
   }
 
-  /* For later tasks: the bundle, the core, the state, and the two ways in. setPoint(i) moves both methods to
-     grid point i (the threshold control); openSpecimen(id) opens a timeline. */
+  function setPoint(i) {
+    state.point = Math.max(0, Math.min(B.grid.length - 1, i));
+    renderBoard();
+    if (state.open) { renderMoment(); loadBriefs(byId[state.open]); }
+    renderThreshold();
+  }
+
+  /* For later tasks and tests: the bundle, the core, the state, and the ways in. setPoint(i) moves both
+     methods to grid point i (the threshold control); setWindow(minutes or null) sets one stability window for
+     every specimen or restores their own; openSpecimen(id) opens a timeline. */
   window.TracerDemo = {
     core: C,
     state: state,
     bundle: function () { return B; },
     renderBoard: renderBoard,
     openSpecimen: function (id) { return openSpecimen(id, { focus: true }); },
-    setPoint: function (i) {
-      state.point = i;
-      renderBoard();
-      if (state.open) { renderMoment(); loadBriefs(byId[state.open]); }
+    setPoint: setPoint,
+    setWindow: setWindow,
+    // Beat Tracer's seed, rounds and results so far, for tests; the rounds name the missing specimens
+    game: function () {
+      return { seed: game.seed, rounds: game.rounds, round: game.i, phase: game.phase, results: game.results.slice() };
     }
   };
 
