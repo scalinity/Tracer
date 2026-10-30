@@ -27,8 +27,8 @@ git clone -q "$REPO" "$DIR/repo" || exit 1
 cd "$DIR/repo" || exit 1
 git log --oneline -1
 
-step "install ($($PYTHON --version))"
-$PYTHON -m venv .venv && .venv/bin/pip install -q -r requirements.txt || exit 1
+step "install ($("$PYTHON" --version))"
+"$PYTHON" -m venv .venv && .venv/bin/pip install -q -r requirements.txt || exit 1
 .venv/bin/pip list 2>/dev/null | grep -i -E "^(duckdb|numpy|polars|scipy) "
 
 for module in "src.pipeline.store" "src.pipeline.intervals" "src.pipeline.recovery" "src.pipeline.evaluate" \
