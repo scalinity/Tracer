@@ -519,8 +519,8 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
       </div>
       <div id="copyHost"></div>
       <details class="runorder" open>
-        <summary>Run order from October 30: hands-off</summary>
-        <p class="small">Claude Code works down this list without waiting for the planned days or for Daniel. When the repo, the plan or the course guidelines can settle a call, it makes the call, labels it as an assumption in the pull request and the AI Teaming Log, and keeps going. The one hard stop is the spend guard: no Claude job over $2 and no more than $10 in all without Daniel's word. Steps that need Daniel's own hands are parked on his checklist below and never stop the run. Done so far: M5, M6, M7, M8, M8b, S1, V1, W6, W8, D11, D12, M9, G3, A2, P2, P3, P4, P5, P6, P7 and the clean-clone test from A4. The aim is the end-to-end gate by November 6 and the demo complete by November 10, so the last week goes to the talk.</p>
+        <summary>Run order from October 30: hands-off, now complete</summary>
+        <p class="small">Claude Code works down this list without waiting for the planned days or for Daniel. When the repo, the plan or the course guidelines can settle a call, it makes the call, labels it as an assumption in the pull request and the AI Teaming Log, and keeps going. The one hard stop is the spend guard: no Claude job over $2 and no more than $10 in all without Daniel's word. Steps that need Daniel's own hands are parked on his checklist below and never stop the run. Every step below is done and merged, in pull requests 23 to 36: M5, M6, M7, M8, M8b, S1, V1, W6, W8, D11, D12, M9, G3, A2, P2, P3, P4, P5, P6, P7 and the clean-clone test from A4. The demo is live on GitHub Pages at https://scalinity.github.io/Tracer/demo/, built from <code>main</code>, and 575 tests pass on a clean clone. The end-to-end gate and the demo landed on October 30, well ahead of November 6 and 10, so the time left goes to the talk.</p>
         <ol>
           <li><b>W8</b> start the AI Teaming Log, backfilled from the merged pull requests.</li>
           <li><b>M6</b> run the evaluation from a clean checkout, save <code>results/mvp-nov8.json</code> and tag <code>v0.1-mvp</code>. Later checkpoints are tagged the same way, without asking.</li>
@@ -537,6 +537,7 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
           <li>Then pull ahead the work after November 18 that needs no one: the sensitivity runs (A2) and the clean-clone test (A4).</li>
         </ol>
         <p class="small">Daniel's checklist, parked so nothing waits on it: tick W1 and W2 when they are done, open the published demo (https://scalinity.github.io/Tracer/demo/) on his phones, play Beat Tracer with three people (P5's playtest), check the footer on the demo page that names both authors, and the talk and rehearsals (T1 to T4). Karissa's tasks stay as they are; nothing new is asked of her.</p>
+        <p class="small">Still open on the demo page: the "Why it is built this way" section is a one-line placeholder and no task in this plan owns it yet, and the problem in sixty seconds waits on Karissa's text (K5). Findings for the limits beat and the report: some window settings favor the plan's rule (at 125 minutes for every specimen and 5.5 alerts per shift Tracer warns 85 minutes ahead and the rule 95), and Tracer's lead over the window-aware rule holds only at the original arrival volume (A2).</p>
       </details>
       <div id="ledger"></div>
       <div id="doneAlready"></div>
@@ -546,7 +547,7 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
     <section id="api">
       <div class="head"><h2>What Claude generates, and what it costs</h2></div>
       <p class="prose">Claude writes the event trail for every synthetic specimen, a few showcase scenarios, and a search brief for every alert in the demo. Everything else, including fitting the models, is ordinary Python. The demo itself makes no live calls and holds no key: every Claude output is generated once, checked, and saved as a file.</p>
-      <p class="prose">The pilots and the full run have reported real usage, about $2.37 so far, entered under Spent. The jobs still to run are estimates. Change a model, a count or the batch setting and the totals follow.</p>
+      <p class="prose">Every core job has run, and its real usage is entered under Spent: about $3.53 in all, well under the $10 guard. Only the optional jobs are still estimates. Change a model, a count or the batch setting and the totals follow.</p>
       <div class="scroll-x" style="margin-top:20px"><table class="t jobs" id="jobs"></table></div>
       <div class="capfield">
         <label>Soft spend limit <input type="number" id="capUsd" min="1" step="1" value="50" aria-label="Soft spend limit in dollars"> $</label>
@@ -614,6 +615,7 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
           <li>An honest limits section: the failures Tracer cannot see, and what real validation would need.</li>
         </ul>
       </div>
+      <p class="small" style="margin-top:14px">Where it stands on October 30: the board, the timeline, the threshold control, Beat Tracer with its activity card, the 3D link and the limits section are built and live at https://scalinity.github.io/Tracer/demo/. Two parts are placeholders: the problem in sixty seconds, until Karissa's text arrives, and why it is built this way, which no task owns yet.</p>
 
       <h3 class="sub">If something fails in the room</h3>
       <div class="scroll-x"><table class="t" style="min-width:640px">
@@ -660,7 +662,7 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
       <h3 class="sub">After November 18</h3>
       <ul class="after" id="after"></ul>
       <footer style="margin-top:56px">
-        <p>Updated October 30, after the data and model run: the dataset is frozen at 11,967 synthetic specimens with no clinical review, M1 to M6, M8 and M8b are done, the first prototype is tagged v0.1-mvp, and on held-out runs the risk model leads the plan's simple rule by 10 to 15 minutes of median warning at 4 and 6 alerts per shift (20 to 25 at 6 with the default urgency weights). A rule that alerts at a fixed share of the stability window closes most of that gap: at equal weights the model ties it at 4 and 6. The plan now follows Ben's revised guidelines (in the repo under <code>docs/course/</code>): no weekly drafts remain, the talk is about 15 minutes with a hands-on demo of about 10, and the final report is 2 to 4 pages, due December 9. The run order under The plan lists what comes next. Hour estimates are ours and can be edited in each task. Prices are Anthropic's list prices as of October 6, 2026. The page stores ticks, spend and cuts in the shared store when it can reach one, and on this device otherwise.</p>
+        <p>Updated October 30, after the hands-off build finished: every step of the run order is merged (pull requests 23 to 36). The dataset is frozen at 11,967 synthetic specimens with no clinical review, the first prototype is tagged <code>v0.1-mvp</code> with <code>results/mvp-nov8.json</code>, and the demo is live on GitHub Pages from <code>main</code>. On held-out runs the risk model leads the plan's simple rule by 10 to 15 minutes of median warning at 4 and 6 alerts per shift (20 to 25 at 6 with the default urgency weights). A rule that alerts at a fixed share of the stability window closes most of that gap: at equal weights the model ties it at 4 and 6, and the lead holds only at the original arrival volume. A fresh clone regenerates every committed result byte for byte, with 575 tests passing. Claude spend is about $3.53. What is left before November 18 is Daniel's checklist, Karissa's tasks and the talk. The plan follows Ben's revised guidelines (in the repo under <code>docs/course/</code>): the talk is about 15 minutes with a hands-on demo of about 10, and the final report is 2 to 4 pages, due December 9. Hour estimates are ours and can be edited in each task. Prices are Anthropic's list prices as of October 6, 2026. The page stores ticks, spend and cuts in the shared store when it can reach one, and on this device otherwise.</p>
       </footer>
     </section>
 
@@ -1039,13 +1041,14 @@ const RISKS = [
  {r:"The generated trails are not realistic enough", watch:"No clinical review was done, so the validator, the code audit and parameter recovery are the checks. The manifest and every Results text say so.", act:"Tighten the briefs and the prompt and rerun the pilot (about ten cents). If it still fails, render the trails from the briefs in code and let Claude write only the notes. The briefs already hold every timestamp, so this fallback costs nothing and cannot fail."},
  {r:"Ten policy rows are still assumptions", watch:"The 10 rows marked `assumed: true` in `config/breach_policy.yaml`.", act:"Every output that uses them says so, and the limits beat names them. A citation found later goes into `config/policy_sources.csv` and costs a recompile, not a code change."},
  {r:"The hands-on part runs long, or phones cannot load the page", watch:"Rehearsal one (T2), against a timer, with three phones on the room's network.", act:"Keep the activity card to three steps, drop the replay (cut C3), and have the presenter drive one round on the projector."},
- {r:"The risk model does not beat the simple rule", watch:"The Gate B comparison.", act:"Report it as the result, show both in the demo, and tell the story as a simple rule being good enough, with the evidence. The architecture already commits to this."},
+ {r:"The risk model does not beat the simple rule", watch:"The Gate B comparison, now done: it clears the bar over the plan's rule, and at equal weights it ties the window-aware rule at 4 and 6 alerts per shift.", act:"Report it as the result, show both in the demo, and tell the story as a simple rule being good enough, with the evidence. The architecture already commits to this."},
+ {r:"Tracer's lead depends on the setting", watch:"The demo's window control and the sensitivity runs (A2). At 125 minutes for every specimen and 5.5 alerts per shift the plan's rule warns 95 minutes ahead and Tracer 85. At twice the arrival volume Tracer's median warning falls from 55 to 35 minutes and its lead over the window-aware rule goes away.", act:"The demo shows these settings as they are. Name both in the limits beat and in the report's limits, so nobody in the room finds them first."},
  {r:"We run out of hours", watch:"The schedule check at the top shows a gate short by more than two hours.", act:"Take the cuts in the order listed, starting with the 3D link-up. Never cut the board, the timeline or the rehearsals."},
  {r:"The credits expire or the API is down", watch:"Balance and expiry checked on October 29. Batch status on November 2.", act:"Every Claude output is saved as a file once generated, so the demo is unaffected. For missing data use the code fallback above."},
- {r:"The demo fails on class devices", watch:"The device tests on November 15.", act:"The 2D timeline is the default path and 3D is the extra. `?lite=1` forces 2D."},
+ {r:"The demo fails on class devices", watch:"Headless Chromium, Firefox and WebKit pass at phone and laptop widths. A real phone, a screen reader and a three-person game have not been run yet (Daniel's checklist).", act:"The 2D timeline is the default path and 3D is the extra. `?lite=1` forces 2D."},
  {r:"Karissa is unavailable on the day or for a rehearsal", watch:"Calendars confirmed by November 8.", act:"The text for Karissa's beats is written ahead and the first rehearsal is recorded, so Daniel can cover those beats from notes."},
  {r:"The instructor does not accept a static page as the demo", watch:"The answer to the November 4 question.", act:"Export the same logic as a Marimo app that runs in the browser, or host on Streamlit Community Cloud. Two to four hours."},
- {r:"The design documents contradict the plan", watch:"The architecture's section 1.1 still says a simulator is the event source.", act:"Task W6 on November 8 brings it in line."}
+ {r:"The design documents contradict the plan", watch:"A test now holds the architecture's counts, windows and fault rates to the code and the manifest.", act:"Done in W6 on October 30. A later change that breaks the match fails that test."}
 ];
 
 const QUESTIONS = [
