@@ -34,6 +34,7 @@ python -m src.pipeline.recovery           # does the fit recover what the genera
 python -m src.pipeline.evaluate           # baselines against the risk model on the held-out runs, and the alert list
 python -m src.pipeline.location_eval      # score the location filter against the hidden truth
 python -m src.api.export --run test       # write docs/demo/bundle.json for the demo
+python -m src.pipeline.sensitivity      # reweight the held-out runs for other volumes, hours and mixes
 
 node visuals/plan.check.cjs               # the plan's data is consistent
 (cd visuals/exhibit-3d && npm install && npm test)   # the 3D exhibit's tests; `npm run dev` serves it
