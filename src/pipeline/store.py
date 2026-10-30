@@ -117,6 +117,11 @@ def build(dataset: Path = DATASET_PATH, manifest_path: Path = MANIFEST_PATH, sto
     return {name: df.height for name, df in frames.items()}
 
 
+def source_sha256(manifest_path: Path = MANIFEST_PATH) -> str:
+    """The SHA-256 of the file the store was built from, for artifacts that carry their source."""
+    return json.loads(manifest_path.read_text(encoding="utf-8"))["sha256"]
+
+
 def open_observed(store_dir: Path = STORE_DIR) -> duckdb.DuckDBPyConnection:
     return duckdb.connect(str(store_dir / OBSERVED_NAME), read_only=True)
 

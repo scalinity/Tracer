@@ -746,7 +746,7 @@ const TASKS = [
 
 {id:"M2", tr:"model", day:[11,5], who:{D:3}, t:"Fit the transit-time distributions", needs:["M1"],
  why:"These fitted numbers are the model. Everything the board shows comes from them.",
- steps:["For each group (specimen type, six-hour block, priority) fit a lognormal for normal transit, a longer lognormal for stalled specimens, and the share that never arrive. Use maximum likelihood in SciPy.","Groups under 30 specimens fall back to their parent group (drop the hour block first).","Write `interval_params.json` with the policy hash inside."],
+ steps:["Done: `python -m src.pipeline.intervals` fits a lognormal for normal transit to each of the 96 groups (specimen type, six-hour block, priority) by maximum likelihood in SciPy, on the 24 fit runs only. The longer lognormal for stalled specimens, its weight and the share that never arrive are fitted once over all specimens, as `docs/architecture.md` section 5.1 says, because per group they are a handful of events.","Done: a group under 30 received specimens falls back to its parent: drop the hour block, then the priority, then the specimen type. 21 of the 96 groups fell back.","Done: `results/interval_params.json` carries the policy hash and the source file's SHA-256, and a rerun gives identical numbers."],
  done:"Parameters print for every group and a rerun gives identical numbers.", earns:[]},
 
 {id:"M3", tr:"model", day:[11,5], who:{D:2}, t:"Risk model and parameter recovery", needs:["M2"],

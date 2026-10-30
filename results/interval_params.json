@@ -1,0 +1,796 @@
+{
+  "version": 1,
+  "interval": "collected to received, in minutes",
+  "clock_start": "collected",
+  "clock_stop": "received",
+  "policy_hash": "9594d7c019363261",
+  "source_sha256": "3cd25064e77828805ad20f31693f74fe27ee9ee08f42fb54b76d6061e31f9c64",
+  "fit_runs": "0 to 23",
+  "min_group_size": 30,
+  "pooled": {
+    "mu": 3.057459,
+    "sigma": 0.504763,
+    "stalled_mu": 4.492707,
+    "stalled_sigma": 0.465061,
+    "w_stalled": 0.054059,
+    "p_never": 0.016292,
+    "weights": {
+      "normal": 0.93053,
+      "stalled": 0.053179,
+      "never": 0.016292
+    },
+    "n_started": 9514,
+    "n_arrived": 9359,
+    "n_never": 155
+  },
+  "groups": {
+    "BAL, refrigerated | 00-05 | routine": {
+      "n": 27,
+      "fitted_from": "BAL, refrigerated | any hour | routine",
+      "mu": 3.062197,
+      "sigma": 0.512246,
+      "median_min": 21.374472,
+      "p90_min": 41.209403
+    },
+    "BAL, refrigerated | 00-05 | stat": {
+      "n": 13,
+      "fitted_from": "BAL, refrigerated | any hour | stat",
+      "mu": 3.083691,
+      "sigma": 0.493334,
+      "median_min": 21.838862,
+      "p90_min": 41.096524
+    },
+    "BAL, refrigerated | 06-11 | routine": {
+      "n": 107,
+      "fitted_from": "BAL, refrigerated | 06-11 | routine",
+      "mu": 3.068874,
+      "sigma": 0.492158,
+      "median_min": 21.51765,
+      "p90_min": 40.431084
+    },
+    "BAL, refrigerated | 06-11 | stat": {
+      "n": 53,
+      "fitted_from": "BAL, refrigerated | 06-11 | stat",
+      "mu": 3.085755,
+      "sigma": 0.476771,
+      "median_min": 21.883979,
+      "p90_min": 40.316551
+    },
+    "BAL, refrigerated | 12-17 | routine": {
+      "n": 84,
+      "fitted_from": "BAL, refrigerated | 12-17 | routine",
+      "mu": 3.063898,
+      "sigma": 0.576196,
+      "median_min": 21.410846,
+      "p90_min": 44.805151
+    },
+    "BAL, refrigerated | 12-17 | stat": {
+      "n": 38,
+      "fitted_from": "BAL, refrigerated | 12-17 | stat",
+      "mu": 3.151195,
+      "sigma": 0.431572,
+      "median_min": 23.363958,
+      "p90_min": 40.620659
+    },
+    "BAL, refrigerated | 18-23 | routine": {
+      "n": 36,
+      "fitted_from": "BAL, refrigerated | 18-23 | routine",
+      "mu": 3.011394,
+      "sigma": 0.373826,
+      "median_min": 20.315707,
+      "p90_min": 32.801404
+    },
+    "BAL, refrigerated | 18-23 | stat": {
+      "n": 25,
+      "fitted_from": "BAL, refrigerated | any hour | stat",
+      "mu": 3.083691,
+      "sigma": 0.493334,
+      "median_min": 21.838862,
+      "p90_min": 41.096524
+    },
+    "BAL, room temp | 00-05 | routine": {
+      "n": 31,
+      "fitted_from": "BAL, room temp | 00-05 | routine",
+      "mu": 3.077558,
+      "sigma": 0.330651,
+      "median_min": 21.70534,
+      "p90_min": 33.158688
+    },
+    "BAL, room temp | 00-05 | stat": {
+      "n": 25,
+      "fitted_from": "BAL, room temp | any hour | stat",
+      "mu": 3.061085,
+      "sigma": 0.483203,
+      "median_min": 21.350715,
+      "p90_min": 39.659673
+    },
+    "BAL, room temp | 06-11 | routine": {
+      "n": 142,
+      "fitted_from": "BAL, room temp | 06-11 | routine",
+      "mu": 3.043915,
+      "sigma": 0.524895,
+      "median_min": 20.987238,
+      "p90_min": 41.124101
+    },
+    "BAL, room temp | 06-11 | stat": {
+      "n": 82,
+      "fitted_from": "BAL, room temp | 06-11 | stat",
+      "mu": 3.074753,
+      "sigma": 0.465989,
+      "median_min": 21.644525,
+      "p90_min": 39.328175
+    },
+    "BAL, room temp | 12-17 | routine": {
+      "n": 97,
+      "fitted_from": "BAL, room temp | 12-17 | routine",
+      "mu": 3.021782,
+      "sigma": 0.482087,
+      "median_min": 20.527837,
+      "p90_min": 38.076647
+    },
+    "BAL, room temp | 12-17 | stat": {
+      "n": 53,
+      "fitted_from": "BAL, room temp | 12-17 | stat",
+      "mu": 3.089773,
+      "sigma": 0.479887,
+      "median_min": 21.97209,
+      "p90_min": 40.640817
+    },
+    "BAL, room temp | 18-23 | routine": {
+      "n": 59,
+      "fitted_from": "BAL, room temp | 18-23 | routine",
+      "mu": 3.080823,
+      "sigma": 0.563889,
+      "median_min": 21.776319,
+      "p90_min": 44.856856
+    },
+    "BAL, room temp | 18-23 | stat": {
+      "n": 38,
+      "fitted_from": "BAL, room temp | 18-23 | stat",
+      "mu": 3.066537,
+      "sigma": 0.551345,
+      "median_min": 21.467432,
+      "p90_min": 43.515382
+    },
+    "body fluid, blood culture bottle (peritoneal, pleural) | 00-05 | routine": {
+      "n": 19,
+      "fitted_from": "body fluid, blood culture bottle (peritoneal, pleural) | any hour | routine",
+      "mu": 3.021814,
+      "sigma": 0.488031,
+      "median_min": 20.528498,
+      "p90_min": 38.369061
+    },
+    "body fluid, blood culture bottle (peritoneal, pleural) | 00-05 | stat": {
+      "n": 8,
+      "fitted_from": "body fluid, blood culture bottle (peritoneal, pleural) | any hour | stat",
+      "mu": 3.029356,
+      "sigma": 0.472748,
+      "median_min": 20.683898,
+      "p90_min": 37.909677
+    },
+    "body fluid, blood culture bottle (peritoneal, pleural) | 06-11 | routine": {
+      "n": 63,
+      "fitted_from": "body fluid, blood culture bottle (peritoneal, pleural) | 06-11 | routine",
+      "mu": 3.072336,
+      "sigma": 0.465316,
+      "median_min": 21.592277,
+      "p90_min": 39.199445
+    },
+    "body fluid, blood culture bottle (peritoneal, pleural) | 06-11 | stat": {
+      "n": 28,
+      "fitted_from": "body fluid, blood culture bottle (peritoneal, pleural) | any hour | stat",
+      "mu": 3.029356,
+      "sigma": 0.472748,
+      "median_min": 20.683898,
+      "p90_min": 37.909677
+    },
+    "body fluid, blood culture bottle (peritoneal, pleural) | 12-17 | routine": {
+      "n": 50,
+      "fitted_from": "body fluid, blood culture bottle (peritoneal, pleural) | 12-17 | routine",
+      "mu": 3.021059,
+      "sigma": 0.491773,
+      "median_min": 20.513006,
+      "p90_min": 38.524405
+    },
+    "body fluid, blood culture bottle (peritoneal, pleural) | 12-17 | stat": {
+      "n": 15,
+      "fitted_from": "body fluid, blood culture bottle (peritoneal, pleural) | any hour | stat",
+      "mu": 3.029356,
+      "sigma": 0.472748,
+      "median_min": 20.683898,
+      "p90_min": 37.909677
+    },
+    "body fluid, blood culture bottle (peritoneal, pleural) | 18-23 | routine": {
+      "n": 26,
+      "fitted_from": "body fluid, blood culture bottle (peritoneal, pleural) | any hour | routine",
+      "mu": 3.021814,
+      "sigma": 0.488031,
+      "median_min": 20.528498,
+      "p90_min": 38.369061
+    },
+    "body fluid, blood culture bottle (peritoneal, pleural) | 18-23 | stat": {
+      "n": 13,
+      "fitted_from": "body fluid, blood culture bottle (peritoneal, pleural) | any hour | stat",
+      "mu": 3.029356,
+      "sigma": 0.472748,
+      "median_min": 20.683898,
+      "p90_min": 37.909677
+    },
+    "body fluid, sterile container, refrigerated | 00-05 | routine": {
+      "n": 17,
+      "fitted_from": "body fluid, sterile container, refrigerated | any hour | routine",
+      "mu": 3.056509,
+      "sigma": 0.508639,
+      "median_min": 21.253243,
+      "p90_min": 40.78674
+    },
+    "body fluid, sterile container, refrigerated | 00-05 | stat": {
+      "n": 20,
+      "fitted_from": "body fluid, sterile container, refrigerated | any hour | stat",
+      "mu": 3.003672,
+      "sigma": 0.487949,
+      "median_min": 20.159422,
+      "p90_min": 37.675239
+    },
+    "body fluid, sterile container, refrigerated | 06-11 | routine": {
+      "n": 80,
+      "fitted_from": "body fluid, sterile container, refrigerated | 06-11 | routine",
+      "mu": 3.102777,
+      "sigma": 0.476526,
+      "median_min": 22.259688,
+      "p90_min": 40.995801
+    },
+    "body fluid, sterile container, refrigerated | 06-11 | stat": {
+      "n": 57,
+      "fitted_from": "body fluid, sterile container, refrigerated | 06-11 | stat",
+      "mu": 3.022942,
+      "sigma": 0.462158,
+      "median_min": 20.551656,
+      "p90_min": 37.159539
+    },
+    "body fluid, sterile container, refrigerated | 12-17 | routine": {
+      "n": 66,
+      "fitted_from": "body fluid, sterile container, refrigerated | 12-17 | routine",
+      "mu": 3.11355,
+      "sigma": 0.525416,
+      "median_min": 22.500787,
+      "p90_min": 44.119341
+    },
+    "body fluid, sterile container, refrigerated | 12-17 | stat": {
+      "n": 47,
+      "fitted_from": "body fluid, sterile container, refrigerated | 12-17 | stat",
+      "mu": 2.953367,
+      "sigma": 0.487982,
+      "median_min": 19.170394,
+      "p90_min": 35.828415
+    },
+    "body fluid, sterile container, refrigerated | 18-23 | routine": {
+      "n": 46,
+      "fitted_from": "body fluid, sterile container, refrigerated | 18-23 | routine",
+      "mu": 2.915879,
+      "sigma": 0.48726,
+      "median_min": 18.465044,
+      "p90_min": 34.478228
+    },
+    "body fluid, sterile container, refrigerated | 18-23 | stat": {
+      "n": 26,
+      "fitted_from": "body fluid, sterile container, refrigerated | any hour | stat",
+      "mu": 3.003672,
+      "sigma": 0.487949,
+      "median_min": 20.159422,
+      "p90_min": 37.675239
+    },
+    "body fluid, sterile container, room temp (pleural, peritoneal, synovial, pericardial) | 00-05 | routine": {
+      "n": 31,
+      "fitted_from": "body fluid, sterile container, room temp (pleural, peritoneal, synovial, pericardial) | 00-05 | routine",
+      "mu": 3.128812,
+      "sigma": 0.428702,
+      "median_min": 22.846832,
+      "p90_min": 39.575731
+    },
+    "body fluid, sterile container, room temp (pleural, peritoneal, synovial, pericardial) | 00-05 | stat": {
+      "n": 22,
+      "fitted_from": "body fluid, sterile container, room temp (pleural, peritoneal, synovial, pericardial) | any hour | stat",
+      "mu": 3.071915,
+      "sigma": 0.466297,
+      "median_min": 21.583185,
+      "p90_min": 39.232193
+    },
+    "body fluid, sterile container, room temp (pleural, peritoneal, synovial, pericardial) | 06-11 | routine": {
+      "n": 169,
+      "fitted_from": "body fluid, sterile container, room temp (pleural, peritoneal, synovial, pericardial) | 06-11 | routine",
+      "mu": 3.071993,
+      "sigma": 0.520317,
+      "median_min": 21.584882,
+      "p90_min": 42.047755
+    },
+    "body fluid, sterile container, room temp (pleural, peritoneal, synovial, pericardial) | 06-11 | stat": {
+      "n": 82,
+      "fitted_from": "body fluid, sterile container, room temp (pleural, peritoneal, synovial, pericardial) | 06-11 | stat",
+      "mu": 2.989178,
+      "sigma": 0.468747,
+      "median_min": 19.869344,
+      "p90_min": 36.230514
+    },
+    "body fluid, sterile container, room temp (pleural, peritoneal, synovial, pericardial) | 12-17 | routine": {
+      "n": 105,
+      "fitted_from": "body fluid, sterile container, room temp (pleural, peritoneal, synovial, pericardial) | 12-17 | routine",
+      "mu": 2.944207,
+      "sigma": 0.519477,
+      "median_min": 18.995588,
+      "p90_min": 36.963952
+    },
+    "body fluid, sterile container, room temp (pleural, peritoneal, synovial, pericardial) | 12-17 | stat": {
+      "n": 70,
+      "fitted_from": "body fluid, sterile container, room temp (pleural, peritoneal, synovial, pericardial) | 12-17 | stat",
+      "mu": 3.170438,
+      "sigma": 0.393456,
+      "median_min": 23.817924,
+      "p90_min": 39.435753
+    },
+    "body fluid, sterile container, room temp (pleural, peritoneal, synovial, pericardial) | 18-23 | routine": {
+      "n": 64,
+      "fitted_from": "body fluid, sterile container, room temp (pleural, peritoneal, synovial, pericardial) | 18-23 | routine",
+      "mu": 3.10408,
+      "sigma": 0.454961,
+      "median_min": 22.288697,
+      "p90_min": 39.930305
+    },
+    "body fluid, sterile container, room temp (pleural, peritoneal, synovial, pericardial) | 18-23 | stat": {
+      "n": 34,
+      "fitted_from": "body fluid, sterile container, room temp (pleural, peritoneal, synovial, pericardial) | 18-23 | stat",
+      "mu": 3.063015,
+      "sigma": 0.439565,
+      "median_min": 21.391966,
+      "p90_min": 37.575085
+    },
+    "culture swab (BBL, Stuart's) | 00-05 | routine": {
+      "n": 126,
+      "fitted_from": "culture swab (BBL, Stuart's) | 00-05 | routine",
+      "mu": 3.041122,
+      "sigma": 0.45632,
+      "median_min": 20.928714,
+      "p90_min": 37.559261
+    },
+    "culture swab (BBL, Stuart's) | 00-05 | stat": {
+      "n": 67,
+      "fitted_from": "culture swab (BBL, Stuart's) | 00-05 | stat",
+      "mu": 3.111388,
+      "sigma": 0.490209,
+      "median_min": 22.452184,
+      "p90_min": 42.081834
+    },
+    "culture swab (BBL, Stuart's) | 06-11 | routine": {
+      "n": 385,
+      "fitted_from": "culture swab (BBL, Stuart's) | 06-11 | routine",
+      "mu": 3.04489,
+      "sigma": 0.456958,
+      "median_min": 21.007721,
+      "p90_min": 37.731877
+    },
+    "culture swab (BBL, Stuart's) | 06-11 | stat": {
+      "n": 230,
+      "fitted_from": "culture swab (BBL, Stuart's) | 06-11 | stat",
+      "mu": 3.03074,
+      "sigma": 0.50542,
+      "median_min": 20.71255,
+      "p90_min": 39.585453
+    },
+    "culture swab (BBL, Stuart's) | 12-17 | routine": {
+      "n": 281,
+      "fitted_from": "culture swab (BBL, Stuart's) | 12-17 | routine",
+      "mu": 3.024943,
+      "sigma": 0.511056,
+      "median_min": 20.592831,
+      "p90_min": 39.641916
+    },
+    "culture swab (BBL, Stuart's) | 12-17 | stat": {
+      "n": 154,
+      "fitted_from": "culture swab (BBL, Stuart's) | 12-17 | stat",
+      "mu": 3.047792,
+      "sigma": 0.497005,
+      "median_min": 21.068773,
+      "p90_min": 39.834325
+    },
+    "culture swab (BBL, Stuart's) | 18-23 | routine": {
+      "n": 187,
+      "fitted_from": "culture swab (BBL, Stuart's) | 18-23 | routine",
+      "mu": 3.054022,
+      "sigma": 0.500352,
+      "median_min": 21.200432,
+      "p90_min": 40.255597
+    },
+    "culture swab (BBL, Stuart's) | 18-23 | stat": {
+      "n": 86,
+      "fitted_from": "culture swab (BBL, Stuart's) | 18-23 | stat",
+      "mu": 3.080548,
+      "sigma": 0.500689,
+      "median_min": 21.77033,
+      "p90_min": 41.355567
+    },
+    "eSwab | 00-05 | routine": {
+      "n": 83,
+      "fitted_from": "eSwab | 00-05 | routine",
+      "mu": 3.070976,
+      "sigma": 0.557837,
+      "median_min": 21.562932,
+      "p90_min": 44.074125
+    },
+    "eSwab | 00-05 | stat": {
+      "n": 51,
+      "fitted_from": "eSwab | 00-05 | stat",
+      "mu": 3.082413,
+      "sigma": 0.520829,
+      "median_min": 21.810978,
+      "p90_min": 42.516081
+    },
+    "eSwab | 06-11 | routine": {
+      "n": 328,
+      "fitted_from": "eSwab | 06-11 | routine",
+      "mu": 3.033195,
+      "sigma": 0.500982,
+      "median_min": 20.763463,
+      "p90_min": 39.457687
+    },
+    "eSwab | 06-11 | stat": {
+      "n": 163,
+      "fitted_from": "eSwab | 06-11 | stat",
+      "mu": 3.020935,
+      "sigma": 0.518469,
+      "median_min": 20.510467,
+      "p90_min": 39.860268
+    },
+    "eSwab | 12-17 | routine": {
+      "n": 213,
+      "fitted_from": "eSwab | 12-17 | routine",
+      "mu": 3.124399,
+      "sigma": 0.558071,
+      "median_min": 22.74622,
+      "p90_min": 46.50665
+    },
+    "eSwab | 12-17 | stat": {
+      "n": 119,
+      "fitted_from": "eSwab | 12-17 | stat",
+      "mu": 3.041747,
+      "sigma": 0.49331,
+      "median_min": 20.941806,
+      "p90_min": 39.407241
+    },
+    "eSwab | 18-23 | routine": {
+      "n": 150,
+      "fitted_from": "eSwab | 18-23 | routine",
+      "mu": 2.958574,
+      "sigma": 0.466074,
+      "median_min": 19.270465,
+      "p90_min": 35.01832
+    },
+    "eSwab | 18-23 | stat": {
+      "n": 75,
+      "fitted_from": "eSwab | 18-23 | stat",
+      "mu": 2.992297,
+      "sigma": 0.473353,
+      "median_min": 19.931411,
+      "p90_min": 36.558845
+    },
+    "pleural fluid, anaerobic transport vial | 00-05 | routine": {
+      "n": 10,
+      "fitted_from": "pleural fluid, anaerobic transport vial | any hour | routine",
+      "mu": 3.049242,
+      "sigma": 0.4604,
+      "median_min": 21.099339,
+      "p90_min": 38.063958
+    },
+    "pleural fluid, anaerobic transport vial | 00-05 | stat": {
+      "n": 6,
+      "fitted_from": "pleural fluid, anaerobic transport vial | any hour | stat",
+      "mu": 2.989463,
+      "sigma": 0.489198,
+      "median_min": 19.875014,
+      "p90_min": 37.203239
+    },
+    "pleural fluid, anaerobic transport vial | 06-11 | routine": {
+      "n": 57,
+      "fitted_from": "pleural fluid, anaerobic transport vial | 06-11 | routine",
+      "mu": 3.031579,
+      "sigma": 0.471941,
+      "median_min": 20.729941,
+      "p90_min": 37.95478
+    },
+    "pleural fluid, anaerobic transport vial | 06-11 | stat": {
+      "n": 28,
+      "fitted_from": "pleural fluid, anaerobic transport vial | any hour | stat",
+      "mu": 2.989463,
+      "sigma": 0.489198,
+      "median_min": 19.875014,
+      "p90_min": 37.203239
+    },
+    "pleural fluid, anaerobic transport vial | 12-17 | routine": {
+      "n": 39,
+      "fitted_from": "pleural fluid, anaerobic transport vial | 12-17 | routine",
+      "mu": 3.143617,
+      "sigma": 0.474053,
+      "median_min": 23.187587,
+      "p90_min": 42.56958
+    },
+    "pleural fluid, anaerobic transport vial | 12-17 | stat": {
+      "n": 27,
+      "fitted_from": "pleural fluid, anaerobic transport vial | any hour | stat",
+      "mu": 2.989463,
+      "sigma": 0.489198,
+      "median_min": 19.875014,
+      "p90_min": 37.203239
+    },
+    "pleural fluid, anaerobic transport vial | 18-23 | routine": {
+      "n": 19,
+      "fitted_from": "pleural fluid, anaerobic transport vial | any hour | routine",
+      "mu": 3.049242,
+      "sigma": 0.4604,
+      "median_min": 21.099339,
+      "p90_min": 38.063958
+    },
+    "pleural fluid, anaerobic transport vial | 18-23 | stat": {
+      "n": 6,
+      "fitted_from": "pleural fluid, anaerobic transport vial | any hour | stat",
+      "mu": 2.989463,
+      "sigma": 0.489198,
+      "median_min": 19.875014,
+      "p90_min": 37.203239
+    },
+    "tissue | 00-05 | routine": {
+      "n": 50,
+      "fitted_from": "tissue | 00-05 | routine",
+      "mu": 3.069151,
+      "sigma": 0.558335,
+      "median_min": 21.523615,
+      "p90_min": 44.021861
+    },
+    "tissue | 00-05 | stat": {
+      "n": 20,
+      "fitted_from": "tissue | any hour | stat",
+      "mu": 2.998092,
+      "sigma": 0.482971,
+      "median_min": 20.047246,
+      "p90_min": 37.227367
+    },
+    "tissue | 06-11 | routine": {
+      "n": 194,
+      "fitted_from": "tissue | 06-11 | routine",
+      "mu": 3.061914,
+      "sigma": 0.535968,
+      "median_min": 21.368425,
+      "p90_min": 42.469461
+    },
+    "tissue | 06-11 | stat": {
+      "n": 103,
+      "fitted_from": "tissue | 06-11 | stat",
+      "mu": 3.024797,
+      "sigma": 0.498081,
+      "median_min": 20.589834,
+      "p90_min": 38.982566
+    },
+    "tissue | 12-17 | routine": {
+      "n": 137,
+      "fitted_from": "tissue | 12-17 | routine",
+      "mu": 3.067735,
+      "sigma": 0.494793,
+      "median_min": 21.493163,
+      "p90_min": 40.521708
+    },
+    "tissue | 12-17 | stat": {
+      "n": 67,
+      "fitted_from": "tissue | 12-17 | stat",
+      "mu": 2.958258,
+      "sigma": 0.472782,
+      "median_min": 19.26439,
+      "p90_min": 35.309548
+    },
+    "tissue | 18-23 | routine": {
+      "n": 78,
+      "fitted_from": "tissue | 18-23 | routine",
+      "mu": 2.970299,
+      "sigma": 0.474056,
+      "median_min": 19.497742,
+      "p90_min": 35.795653
+    },
+    "tissue | 18-23 | stat": {
+      "n": 49,
+      "fitted_from": "tissue | 18-23 | stat",
+      "mu": 3.081309,
+      "sigma": 0.468198,
+      "median_min": 21.786902,
+      "p90_min": 39.699135
+    },
+    "urine, boric acid | 00-05 | routine": {
+      "n": 56,
+      "fitted_from": "urine, boric acid | 00-05 | routine",
+      "mu": 3.127243,
+      "sigma": 0.346809,
+      "median_min": 22.811013,
+      "p90_min": 35.576924
+    },
+    "urine, boric acid | 00-05 | stat": {
+      "n": 33,
+      "fitted_from": "urine, boric acid | 00-05 | stat",
+      "mu": 3.098201,
+      "sigma": 0.583417,
+      "median_min": 22.158047,
+      "p90_min": 46.799834
+    },
+    "urine, boric acid | 06-11 | routine": {
+      "n": 199,
+      "fitted_from": "urine, boric acid | 06-11 | routine",
+      "mu": 3.084503,
+      "sigma": 0.514674,
+      "median_min": 21.856594,
+      "p90_min": 42.270272
+    },
+    "urine, boric acid | 06-11 | stat": {
+      "n": 116,
+      "fitted_from": "urine, boric acid | 06-11 | stat",
+      "mu": 3.100365,
+      "sigma": 0.525342,
+      "median_min": 22.206053,
+      "p90_min": 43.537309
+    },
+    "urine, boric acid | 12-17 | routine": {
+      "n": 130,
+      "fitted_from": "urine, boric acid | 12-17 | routine",
+      "mu": 3.122448,
+      "sigma": 0.560216,
+      "median_min": 22.701887,
+      "p90_min": 46.543827
+    },
+    "urine, boric acid | 12-17 | stat": {
+      "n": 74,
+      "fitted_from": "urine, boric acid | 12-17 | stat",
+      "mu": 3.069528,
+      "sigma": 0.542399,
+      "median_min": 21.531743,
+      "p90_min": 43.148185
+    },
+    "urine, boric acid | 18-23 | routine": {
+      "n": 90,
+      "fitted_from": "urine, boric acid | 18-23 | routine",
+      "mu": 3.071022,
+      "sigma": 0.4224,
+      "median_min": 21.563936,
+      "p90_min": 37.052996
+    },
+    "urine, boric acid | 18-23 | stat": {
+      "n": 42,
+      "fitted_from": "urine, boric acid | 18-23 | stat",
+      "mu": 3.054866,
+      "sigma": 0.521701,
+      "median_min": 21.218336,
+      "p90_min": 41.40709
+    },
+    "urine, unpreserved, refrigerated | 00-05 | routine": {
+      "n": 58,
+      "fitted_from": "urine, unpreserved, refrigerated | 00-05 | routine",
+      "mu": 3.05298,
+      "sigma": 0.395977,
+      "median_min": 21.178363,
+      "p90_min": 35.178833
+    },
+    "urine, unpreserved, refrigerated | 00-05 | stat": {
+      "n": 33,
+      "fitted_from": "urine, unpreserved, refrigerated | 00-05 | stat",
+      "mu": 3.158976,
+      "sigma": 0.50114,
+      "median_min": 23.54647,
+      "p90_min": 44.755413
+    },
+    "urine, unpreserved, refrigerated | 06-11 | routine": {
+      "n": 237,
+      "fitted_from": "urine, unpreserved, refrigerated | 06-11 | routine",
+      "mu": 3.101449,
+      "sigma": 0.557258,
+      "median_min": 22.230147,
+      "p90_min": 45.404161
+    },
+    "urine, unpreserved, refrigerated | 06-11 | stat": {
+      "n": 151,
+      "fitted_from": "urine, unpreserved, refrigerated | 06-11 | stat",
+      "mu": 3.032448,
+      "sigma": 0.495489,
+      "median_min": 20.747972,
+      "p90_min": 39.151669
+    },
+    "urine, unpreserved, refrigerated | 12-17 | routine": {
+      "n": 182,
+      "fitted_from": "urine, unpreserved, refrigerated | 12-17 | routine",
+      "mu": 3.011593,
+      "sigma": 0.493323,
+      "median_min": 20.319751,
+      "p90_min": 38.237319
+    },
+    "urine, unpreserved, refrigerated | 12-17 | stat": {
+      "n": 110,
+      "fitted_from": "urine, unpreserved, refrigerated | 12-17 | stat",
+      "mu": 3.11446,
+      "sigma": 0.561535,
+      "median_min": 22.521274,
+      "p90_min": 46.251603
+    },
+    "urine, unpreserved, refrigerated | 18-23 | routine": {
+      "n": 120,
+      "fitted_from": "urine, unpreserved, refrigerated | 18-23 | routine",
+      "mu": 3.082248,
+      "sigma": 0.507912,
+      "median_min": 21.807362,
+      "p90_min": 41.811126
+    },
+    "urine, unpreserved, refrigerated | 18-23 | stat": {
+      "n": 53,
+      "fitted_from": "urine, unpreserved, refrigerated | 18-23 | stat",
+      "mu": 3.101626,
+      "sigma": 0.525378,
+      "median_min": 22.23407,
+      "p90_min": 43.594214
+    },
+    "urine, unpreserved, room temp | 00-05 | routine": {
+      "n": 139,
+      "fitted_from": "urine, unpreserved, room temp | 00-05 | routine",
+      "mu": 3.073136,
+      "sigma": 0.526409,
+      "median_min": 21.609554,
+      "p90_min": 42.425765
+    },
+    "urine, unpreserved, room temp | 00-05 | stat": {
+      "n": 84,
+      "fitted_from": "urine, unpreserved, room temp | 00-05 | stat",
+      "mu": 3.174981,
+      "sigma": 0.447552,
+      "median_min": 23.926359,
+      "p90_min": 42.459119
+    },
+    "urine, unpreserved, room temp | 06-11 | routine": {
+      "n": 558,
+      "fitted_from": "urine, unpreserved, room temp | 06-11 | routine",
+      "mu": 3.078529,
+      "sigma": 0.486275,
+      "median_min": 21.726415,
+      "p90_min": 40.51674
+    },
+    "urine, unpreserved, room temp | 06-11 | stat": {
+      "n": 298,
+      "fitted_from": "urine, unpreserved, room temp | 06-11 | stat",
+      "mu": 3.024015,
+      "sigma": 0.549825,
+      "median_min": 20.573723,
+      "p90_min": 41.622605
+    },
+    "urine, unpreserved, room temp | 12-17 | routine": {
+      "n": 369,
+      "fitted_from": "urine, unpreserved, room temp | 12-17 | routine",
+      "mu": 3.069936,
+      "sigma": 0.541957,
+      "median_min": 21.540529,
+      "p90_min": 43.141345
+    },
+    "urine, unpreserved, room temp | 12-17 | stat": {
+      "n": 225,
+      "fitted_from": "urine, unpreserved, room temp | 12-17 | stat",
+      "mu": 3.093991,
+      "sigma": 0.515369,
+      "median_min": 22.064968,
+      "p90_min": 42.71127
+    },
+    "urine, unpreserved, room temp | 18-23 | routine": {
+      "n": 226,
+      "fitted_from": "urine, unpreserved, room temp | 18-23 | routine",
+      "mu": 3.122524,
+      "sigma": 0.521141,
+      "median_min": 22.703615,
+      "p90_min": 44.273805
+    },
+    "urine, unpreserved, room temp | 18-23 | stat": {
+      "n": 120,
+      "fitted_from": "urine, unpreserved, room temp | 18-23 | stat",
+      "mu": 3.069054,
+      "sigma": 0.461134,
+      "median_min": 21.521531,
+      "p90_min": 38.862145
+    }
+  }
+}
