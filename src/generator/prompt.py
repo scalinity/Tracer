@@ -94,7 +94,9 @@ Write two logs and keep them apart.
 
 2. truth_segments: where the specimen really was, from collected_at to the end, with no gaps and no overlaps. Allowed states: at_unit, in_tube, at_station, stalled_at_station, misrouted, hand_carry, at_receiving_bench, accessioned, plated, lost, not_collected. Each segment's length must match the targets within 2 minutes. A lost specimen ends in an open-ended lost segment.
 
-Timestamps are ISO 8601, local time, to the second. Use only the locations listed in the brief. Notes are optional, at most two, at most 12 words each, plain and lab-realistic (for example "tube arrived with cap loose").
+Timestamps are ISO 8601, local time, to the second. Use only the locations listed in the brief.
+
+Notes are optional, at most two, at most 12 words each, plain and lab-realistic (for example "tube arrived with cap loose"). A note records only what the person at that scan could see at that moment: the label, the container, the cap, the amount. It never says where the specimen had been, what held it up or why it was late, because the observed log must not reveal the true path. Do not restate the specimen type, tests, priority or route. Most scans have no note, and most specimens have none at all. The one exception is a rejection, whose note gives the reason.
 
 Return only JSON that matches the schema.\
 """
@@ -164,7 +166,7 @@ EXAMPLE_TRAILS = (
             {"activity": "collected", "timestamp": "2026-03-04T02:14:00", "location": "ed_collection",
              "actor_role": "nurse", "note": "label printed at the bedside"},
             {"activity": "received", "timestamp": "2026-03-04T03:21:00", "location": "lab_receiving",
-             "actor_role": "technologist", "note": "carrier found sitting in the station"},
+             "actor_role": "technologist"},
             {"activity": "accessioned", "timestamp": "2026-03-04T03:30:00", "location": "lab_receiving",
              "actor_role": "technologist"},
             {"activity": "plated", "timestamp": "2026-03-04T03:41:00", "location": "lab_bench_1",
@@ -191,7 +193,7 @@ EXAMPLE_TRAILS = (
         "specimen_id": "SP-r00-000002",
         "observed_events": [
             {"activity": "collected", "timestamp": "2026-03-05T23:50:00", "location": "icu_collection",
-             "actor_role": "nurse", "note": "sent as an urgent tube"},
+             "actor_role": "nurse"},
         ],
         "truth_segments": [
             {"state": "at_unit", "start": "2026-03-05T23:50:00", "end": "2026-03-06T00:02:00",

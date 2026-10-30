@@ -318,6 +318,29 @@ def test_check_8_twelve_words_is_fine(stall, good):
     assert failed(stall, good) == set()
 
 
+@pytest.mark.parametrize("note", [
+    "carrier found sitting in the station", "tube came back from pharmacy station", "tube found stalled at lab station",
+    "specimen was delayed in transit", "stuck in the tube", "was lost and then re-sent", "sent to the wrong station",
+    "rerouted after a long wait"])
+def test_check_8_a_note_may_not_reveal_the_hidden_path(stall, good, note):
+    good["observed_events"][1]["note"] = note
+    assert failed(stall, good) == {8}
+    assert "hidden path" in messages(stall, good, 8)
+
+
+@pytest.mark.parametrize("note", ["specimen leaking at the lid", "label slightly torn", "cap loose on arrival",
+                                  "underfilled tube", "wrong label on the container", "amount looks small"])
+def test_check_8_ordinary_handling_notes_pass(stall, good, note):
+    good["observed_events"][1]["note"] = note
+    assert failed(stall, good) == set()
+
+
+def test_check_8_the_prompts_examples_do_not_teach_leaking():
+    for trail in prompt.EXAMPLE_TRAILS:
+        for e in trail["observed_events"]:
+            assert not validate.HIDDEN_PATH_WORDS.search(e.get("note", "")), e
+
+
 # ---- check 9: no personal names or dates of birth ----
 
 @pytest.mark.parametrize("note, text", [
