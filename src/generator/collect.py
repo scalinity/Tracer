@@ -36,6 +36,7 @@ OUT_DIR = prompt.ROOT / "data" / "claude" / "full"
 DATASET_PATH = prompt.ROOT / "datasets" / "tracer-synthetic-v1.jsonl.gz"
 MANIFEST_PATH = prompt.ROOT / "datasets" / "manifest.json"
 POLL_SECONDS = 60
+LONG_STAGE_MIN = 120
 MIN_ACCEPTED = 11000  # plan task D9
 LARGE_FILE_BYTES = 25 * 1024 * 1024  # AGENTS.md: larger goes up as a release asset
 CLINICAL_REVIEW = "not done: plan task K2, Karissa's review of twenty pilot timelines, was skipped"
@@ -140,6 +141,9 @@ def build_manifest(ledger: dict, requested: list[dict], records: list[dict], dro
         calls.setdefault(r["specimen_id"], []).append(r)
     accepted_ids = {rec["brief"]["specimen_id"] for rec in records}
     first_pass = sum(1 for sid in accepted_ids if len(calls.get(sid, [])) == 1 and calls[sid][0]["batch"])
+    longest = lambda b: max([v for v in b["targets"].values() if v is not None] or [0])
+    long_requested = sum(longest(b) >= LONG_STAGE_MIN for b in requested)
+    long_accepted = sum(longest(rec["brief"]) >= LONG_STAGE_MIN for rec in records)
     req_fault = Counter(b["planted_fault"] for b in requested)
     acc_fault = Counter(rec["brief"]["planted_fault"] for rec in records)
     return {
@@ -163,7 +167,12 @@ def build_manifest(ledger: dict, requested: list[dict], records: list[dict], dro
         "cost_usd": round(sum(r["cost_usd"] for r in rows), 4),
         "requested_by_fault": dict(sorted(req_fault.items())),
         "accepted_by_fault": dict(sorted(acc_fault.items())),
+        "breach_requested": sum(b["label"]["breach"] for b in requested),
         "breach_accepted": sum(rec["brief"]["label"]["breach"] for rec in records),
+        "stage_ge_120_min": {"requested": long_requested, "accepted": long_accepted},
+        "drop_note": "Dropped specimens are not a random slice. The model resists writing very long waits, so "
+                     "specimens with a stage of 120 minutes or more, stalls and misroutes are dropped more often "
+                     "than the rest; compare requested_by_fault with accepted_by_fault and stage_ge_120_min.",
         "clinical_review": CLINICAL_REVIEW,
     }
 

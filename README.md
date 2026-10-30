@@ -45,6 +45,7 @@ The system map opens directly from disk and needs no server: `open visuals/archi
 | `docs/course/` | Course guidelines and blank templates, unmodified; kept local, not in the repository |
 | `visuals/architecture.html` | Interactive system map; seed of the Week 15 demo |
 | `config/` | Karissa's policy table as exported (`policy_table.csv`), sources we added (`policy_sources.csv`), the compiled `breach_policy.yaml`, the workflow graph and the generator parameters (`config.yaml`) |
+| `datasets/` | The frozen synthetic dataset and its manifest (model, hashes, seed, counts, cost) |
 | `src/` | `generator/`, `simulator/`, `pipeline/`, `models/`, `api/` |
 | `tests/` | `pytest`; the policy and config loaders and their fail-loudly checks |
 | `notes/` | Working notes, questions, meeting capture; kept local, not in the repository |

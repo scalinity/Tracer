@@ -1,0 +1,46 @@
+{
+  "dataset": "tracer-synthetic-v1.jsonl.gz",
+  "format": "gzip, one JSON object per line: {brief, trail}; brief.label and trail.truth_segments are the truth side",
+  "sha256": "3cd25064e77828805ad20f31693f74fe27ee9ee08f42fb54b76d6061e31f9c64",
+  "bytes": 1330005,
+  "created": "2026-10-30T05:36:32-04:00",
+  "model": "claude-haiku-5-5",
+  "prompt_hash": "f330cff4c9eb144d",
+  "policy_hash": "9594d7c019363261",
+  "config_hash": "05f6486af5432f5f",
+  "seed": 1,
+  "runs": 30,
+  "n_per_run": 400,
+  "requested": 12000,
+  "accepted": 11967,
+  "dropped": 33,
+  "accepted_rate": 0.9972,
+  "first_attempt_rate": 0.9936,
+  "cost_usd": 2.1612,
+  "requested_by_fault": {
+    "content_failure": 218,
+    "lost_in_tube": 74,
+    "misrouted": 96,
+    "never_collected": 75,
+    "none": 11147,
+    "not_dispatched": 128,
+    "stalled_at_station": 262
+  },
+  "accepted_by_fault": {
+    "content_failure": 218,
+    "lost_in_tube": 74,
+    "misrouted": 92,
+    "never_collected": 75,
+    "none": 11126,
+    "not_dispatched": 128,
+    "stalled_at_station": 254
+  },
+  "breach_requested": 522,
+  "breach_accepted": 516,
+  "stage_ge_120_min": {
+    "requested": 356,
+    "accepted": 335
+  },
+  "drop_note": "Dropped specimens are not a random slice. The model resists writing very long waits, so specimens with a stage of 120 minutes or more, stalls and misroutes are dropped more often than the rest; compare requested_by_fault with accepted_by_fault and stage_ge_120_min.",
+  "clinical_review": "not done: plan task K2, Karissa's review of twenty pilot timelines, was skipped"
+}
