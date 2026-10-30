@@ -702,7 +702,7 @@ const TASKS = [
 
 {id:"W8", tr:"write", day:[10,31], who:{D:0.5}, t:"Start the AI Teaming Log",
  why:"The guidelines ask each team to document and reflect on how AI agents contributed, in the AI Teaming Log, and the report must say how AI assisted. Writing it as the work happens is cheaper and more honest than rebuilding it in December.",
- steps:["Claude Code creates `docs/ai-teaming-log.md` and backfills it from the merged pull requests and the commit history: one dated entry per piece of work, saying what the agent did, what Daniel checked or changed, and what went wrong.","Add a section on the Claude API jobs: which model, what it wrote, what it cost, and how the validator caught bad output.","From now on, each pull request adds its own entry before it merges.","Daniel reads it once and corrects anything that misstates his part."],
+ steps:["Done: `docs/ai-teaming-log.md` is created and backfilled from the 22 merged pull requests, the commit history and the manifest. Each entry says what the agent did, what Daniel checked or changed, what went wrong and which calls were assumptions. Where the history does not show Daniel's part, the entry says Daniel to confirm.","Done: a section on the Claude API jobs: the model, what each job wrote, what it cost (about $2.37 in all) and what the validator caught, including the leak it missed.","Done: from now on each pull request adds its own entry before it merges.","Open: Daniel reads it once and corrects anything that misstates his part. This blocks nothing."],
  done:"The log covers every merged pull request so far, and the next pull request adds its own entry.", earns:["F1"]},
 
 {id:"S1", tr:"data", day:[10,29], who:{D:1}, t:"Set up Claude API access with a hard cap",
