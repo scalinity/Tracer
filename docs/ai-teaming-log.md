@@ -294,6 +294,13 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Assumed:** a fresh clone installs the newest versions that `requirements.txt` allows, so the test is only as good as that day's releases and should be rerun before the freeze and the final prototype. The key-value test skips without `.env`, as intended. The README and demo polish parts of A4 are not done.
 - **Found:** with the fixes, every committed result, the demo bundle and the QR code regenerate byte for byte on a clean clone, and 575 tests pass.
 
+### Oct 30 · Plan · Bring the plan up to date after the hands-off build (this pull request)
+
+- **Agent:** checked the plan against what landed on `main` (pull requests 23 to 36, the `v0.1-mvp` tag, `results/`, the demo page and this log), marked the run order complete, added the open placeholders on the demo page and the two findings for the limits beat, and updated the spend, the risks and the footer. Republished the shared plan page with the exhibit's rebuilt `dist/` from V1.
+- **Daniel:** asked for the plan to show the state the build reached.
+- **Went wrong:** nothing. The public demo address could not be reached from the agent's session, so the live-site claims rest on the P7 checks recorded above.
+- **Assumed:** "Why it is built this way" is left without an owner, as the build found it, rather than given a task.
+
 ## The Claude API jobs
 
 All jobs call `claude-haiku-5-5` at low effort with thinking off. The reply must match a JSON schema, so replies parse and retries stay rare. Bulk jobs run through the Batch API at half price, and every call is logged to `data/claude/usage.jsonl` (kept local). The order for each job is a token count, a pilot, then the batch, and a job's estimate must be under the plan's gate before it starts.
