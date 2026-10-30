@@ -63,6 +63,12 @@ anderson taylor moore jackson martin lee thompson  harris sanchez clark ramirez 
 carter roberts patel
 """.split())
 
+# Words that give away the hidden path. The observed log is what a person or scanner records, so a
+# note may not say where a specimen had been or what held it up.
+HIDDEN_PATH_WORDS = re.compile(
+    r"\b(?:station|stalled|stuck|delay\w*|lost|misrout\w*|rerout\w*|re-?sent|pharmacy|sitting|sat|carrier"
+    r"|came back|wrong (?:station|tube|place|route))\b", re.IGNORECASE)
+
 TS_FORMAT_HELP = "an ISO 8601 local time such as 2026-03-04T02:14:00"
 
 
@@ -275,6 +281,8 @@ def check_locations_and_notes(brief: dict, trail: dict) -> list[str]:
         errors.append(f"{len(notes)} notes; at most {MAX_NOTES}")
     errors += [f"a note has {len(n.split())} words; at most {MAX_NOTE_WORDS}" for n in notes
                if len(n.split()) > MAX_NOTE_WORDS]
+    errors += [f"note {n!r} mentions the hidden path ({HIDDEN_PATH_WORDS.search(n).group()!r}); "
+               "a note records only what the person at that scan could see" for n in notes if HIDDEN_PATH_WORDS.search(n)]
     return errors
 
 

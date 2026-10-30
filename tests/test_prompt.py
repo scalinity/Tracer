@@ -81,6 +81,13 @@ def test_system_text_is_deterministic_and_long_enough_to_cache():
     assert len(prompt.system_text()) / 4 > 600  # the cache minimum is 512 tokens on this model
 
 
+def test_the_rules_say_what_a_note_may_contain():
+    text = prompt.system_text()
+    assert "must not reveal the true path" in text
+    assert "Do not restate the specimen type, tests, priority or route" in text
+    assert "Most scans have no note" in text
+
+
 def test_system_text_carries_the_recipe_rules():
     text = prompt.system_text()
     for phrase in ("Never record a scan for a hidden stage", "within 2 minutes", "at most two, at most 12 words",
