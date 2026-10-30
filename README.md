@@ -41,6 +41,7 @@ python -m src.pipeline.sensitivity      # reweight the held-out runs for other v
 
 node visuals/plan.check.cjs               # the plan's data is consistent
 (cd visuals/exhibit-3d && npm install && npm test)   # the 3D exhibit's tests; `npm run dev` serves it
+scripts/clean_clone.sh                    # all of this from a fresh clone, failing on a test or a changed output (about 5 minutes)
 ```
 
 Generating a dataset needs `ANTHROPIC_API_KEY` in `.env` and spends money. The first command prints a table
