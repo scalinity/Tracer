@@ -8,7 +8,8 @@ headline operating point, and the truth (planted fault, breach label, true segme
 everything the browser needs to recompute and compare: the fitted parameters, the policy and its hash, the
 urgency weights, and the plan's baseline thresholds. A grid of 20 operating points gives, for the plan's
 baseline, a window-aware baseline and the risk model, the alerts per shift and the median warning, so the
-demo's threshold slider needs no model run. Ten showcase candidates are picked by fixed rules.
+demo's threshold slider needs no model run. Ten showcase candidates are picked by fixed rules, and the stories written for them (src/api/heroes.py)
+are merged in when they were written for that very list.
 
 Each method's knob at each grid point is set on the fit runs, from alert volume alone, as in
 src/pipeline/evaluate.py, and applied unchanged to the held-out runs. A method alerts a specimen at most once,
@@ -23,6 +24,7 @@ Writes docs/demo/bundle.json.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -35,6 +37,7 @@ from src.pipeline import evaluate, intervals, store, triage
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT = ROOT / "docs" / "demo" / "bundle.json"
+HEROES_PATH = ROOT / "docs" / "demo" / "heroes.json"
 BUNDLE_VERSION = 1
 HORIZON_MIN = 240
 GRID_BUDGETS = (0.5, 0.75, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 7, 8, 9, 10, 11, 12, 14)
@@ -148,6 +151,24 @@ def showcase(specs, alerts: dict, risk_at: dict) -> list[dict]:
     return picked
 
 
+def candidates_hash(candidates: list[dict]) -> str:
+    """Which candidate list a set of stories was written for."""
+    return hashlib.sha256(json.dumps([[c["id"], c["kind"]] for c in candidates]).encode()).hexdigest()[:16]
+
+
+def load_heroes(candidates: list[dict], path: Path | None = None) -> list[dict]:
+    """The stories in docs/demo/heroes.json, if they were written for this very candidate list. A story about
+    a specimen the rules no longer pick would be wrong, so a changed list leaves `heroes` empty."""
+    path = HEROES_PATH if path is None else path
+    if not path.exists():
+        return []
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    if doc["candidates_hash"] != candidates_hash(candidates):
+        print("warning: docs/demo/heroes.json was written for a different candidate list; heroes left empty", file=sys.stderr)
+        return []
+    return [{k: h[k] for k in ("id", "story", "takeaway", "question")} for h in doc["heroes"]]
+
+
 def policy_block(loaded: dict) -> dict:
     keep = ("specimen_type", "test", "clock_start", "clock_stop", "window_min", "urgency_tier", "source", "assumed")
     return {"hash": loaded["policy_hash"], "clock_start": next(iter(loaded["policy"]["policies"].values()))["clock_start"],
@@ -240,6 +261,7 @@ def build() -> dict:
                       "segments": [[state, round(a, 2), None if b is None else round(b, 2)]
                                    for a, b, state in truth[sid] if state in SEGMENT_STATES]}})
 
+    candidates = showcase(specs, alerts, risk_at)
     groups = sorted({s.group for s in specs})
     chain = {s.group: s.chain for s in specs}
     qs = [k["plan_baseline"] for k in knobs]
@@ -263,7 +285,7 @@ def build() -> dict:
             quantiles[next(n for n in chain[g] if n in quantiles)], q)) for q in qs] for g in groups}},
                       "window": {"shares": [k["window_baseline"] for k in knobs]}},
         "grid": grid, "headline_index": at,
-        "specimens": records, "showcase_candidates": showcase(specs, alerts, risk_at), "heroes": []}
+        "specimens": records, "showcase_candidates": candidates, "heroes": load_heroes(candidates)}
 
 
 def main(argv: list[str] | None = None) -> int:

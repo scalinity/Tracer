@@ -1,0 +1,85 @@
+{
+ "notice": "Synthetic data with no clinical review. The stories are written by claude-sonnet-5-5 from the facts of each specimen.",
+ "model": "claude-sonnet-5-5",
+ "prompt_hash": "bd17425cd55bd41a",
+ "candidates_hash": "80965c283bb217e9",
+ "bundle_dataset_sha256": "3cd25064e77828805ad20f31693f74fe27ee9ee08f42fb54b76d6061e31f9c64",
+ "job": {
+  "id": "J3",
+  "stories": 10,
+  "retries": 1,
+  "cost_usd": 0.0518
+ },
+ "heroes": [
+  {
+   "id": "SP-r25-000285",
+   "kind": "clear_catch",
+   "story": "A stat body fluid specimen was collected in the perioperative area and sent by pneumatic tube, with a 60-minute stability window. Tracer alerted at minute 15, giving 45 minutes of warning, while the plan's simple rule alerted at minute 30, 15 minutes later. The specimen was received at minute 105, 45 minutes after the window closed. In truth, it waited 90 minutes at the collecting unit, then spent 7 minutes in the tube and 8 minutes at the laboratory's tube station.",
+   "takeaway": "Earlier warning was available, but no one was at fault: the specimen simply took the time it took.",
+   "question": "At minute 15, Tracer's top guess was the laboratory's tube station and the collecting unit was second, so who should act first when the likely location is uncertain?"
+  },
+  {
+   "id": "SP-r27-000368",
+   "kind": "stalled_then_found",
+   "story": "A stat tissue specimen left the emergency department by pneumatic tube. It waited 29 minutes at the collecting unit, rode the tube for 14 minutes, then sat at the laboratory's tube station from minute 46 to minute 102, a stall of 56 minutes. Tracer alerted at minute 20, giving 100 minutes of warning against a 120-minute stability window, 5 minutes earlier than the plan's simple rule. At alert, Tracer put the specimen most likely at the laboratory's tube station (56 percent). It was received at minute 102, inside the window.",
+   "takeaway": "An early alert on a stalled specimen gave staff time to find it and receive it before the stability window closed.",
+   "question": "If the alert had come only after the specimen stalled, how much of the 120-minute window would have been left to act on?"
+  },
+  {
+   "id": "SP-r24-000036",
+   "kind": "never_sent",
+   "story": "A routine tissue specimen was collected in the intensive care unit at minute 0. The laboratory saw only that collection event, and nothing after it. In truth, the specimen sat at the collecting unit and was never sent by pneumatic tube. Tracer alerted at minute 20, giving 100 minutes of warning before the 120-minute stability window closed. At alert, Tracer put the specimen at the laboratory's tube station at 55 percent, and at the collecting unit at 26 percent. The simple rule alerted at minute 30.",
+   "takeaway": "Tracer flagged the missing specimen 10 minutes before the simple rule, but its leading guess about location was wrong, so an alert says something is off, not where.",
+   "question": "When an alert names the most likely location, what should staff do first to check the less likely places too?"
+  },
+  {
+   "id": "SP-r24-000336",
+   "kind": "lost_in_tube",
+   "story": "A routine tissue specimen was collected in the perioperative area at minute 0, and the laboratory saw nothing more. It waited at the collecting unit for 20 minutes, then went into the pneumatic tube and was lost there at minute 24. Tracer alerted at minute 20, with 6% risk, giving 100 minutes of warning before the 120-minute stability window closed. It placed the specimen at the laboratory's tube station (57%) or the collecting unit (24%). The simple rule alerted at minute 25.",
+   "takeaway": "Tracer flagged a tissue specimen lost in the tube 5 minutes before the simple rule, leaving 100 minutes to find it before it became unusable.",
+   "question": "With Tracer's top location guess at 57% and wrong in this case, how should a team search when the specimen was really lost in the tube system?"
+  },
+  {
+   "id": "SP-r25-000168",
+   "kind": "misrouted_then_found",
+   "story": "A stat body fluid specimen was collected in the intensive care unit and had a 60-minute stability window. It waited 16 minutes on the unit, rode the tube for 4 minutes, then went to the wrong tube station and sat there for 68 minutes. The laboratory received it at minute 91, 31 minutes after the window closed. Tracer alerted at minute 10, giving 50 minutes of warning, 20 minutes before the plan's simple rule alerted at minute 30.",
+   "takeaway": "An early risk alert gave staff 50 minutes to find a misrouted specimen, though the alert alone could not say it was at the wrong station.",
+   "question": "When an early alert fires, who is responsible for searching, and where should they look first given that the specimen's location is uncertain?"
+  },
+  {
+   "id": "SP-r24-000026",
+   "kind": "false_alarm",
+   "story": "A routine urine specimen, unpreserved and at room temperature, was collected in the emergency department with a 60-minute stability window. It waited 12 minutes on the unit, rode the tube for 9 minutes, then sat 8 minutes at the laboratory's tube station. At minute 25, Tracer alerted, putting risk at 18 percent and the tube station as the likeliest place at 59 percent. The specimen was received at minute 29, inside the window. The simple rule never alerted.",
+   "takeaway": "An alert on a specimen that arrives in time is not a failure, because it flagged real risk before the outcome was known.",
+   "question": "What alert rate and early-warning gain would we accept, knowing some alerts will turn out to be unnecessary?"
+  },
+  {
+   "id": "SP-r24-000241",
+   "kind": "content_failure",
+   "story": "A routine tissue specimen from the perioperative area was collected at minute 0. It waited 4 minutes at the collecting unit, rode the pneumatic tube for 2 minutes, then sat 3 minutes at the laboratory's tube station. It was received at minute 9, well inside the 120-minute stability window. At minute 12, accessioning rejected it because it was mislabeled or leaking. Tracer did not alert, and neither did the plan's simple rule. Timing was normal throughout.",
+   "takeaway": "Tracer watches where and when a specimen moves, so a problem with the specimen itself, like a bad label or a leak, is a limit of the tool, not a flaw.",
+   "question": "What checks besides transit timing could catch labeling or container problems before a specimen reaches the laboratory?"
+  },
+  {
+   "id": "SP-r28-000195",
+   "kind": "borderline",
+   "story": "A routine urine specimen, unpreserved and at room temperature, was collected in the emergency department with a 60-minute stability window. It waited 42 minutes at the collecting unit, rode the pneumatic tube for 9 minutes, then sat 9 minutes at the laboratory's tube station. The laboratory received it at minute 60, just inside the window. Tracer alerted at minute 20, giving 40 minutes of warning, 10 minutes earlier than the simple rule at minute 30. Nothing went wrong; it took the time it took.",
+   "takeaway": "Even with no fault, a specimen can finish right at the edge of its window, and earlier warning gives staff more time to act.",
+   "question": "If the alert at minute 20 had been acted on, which of the two main waiting points, the collecting unit or the laboratory's tube station, would be the better place to step in?"
+  },
+  {
+   "id": "SP-r24-000033",
+   "kind": "baseline_ahead",
+   "story": "A routine eSwab from the perioperative area was collected at minute 0 and sent by pneumatic tube. The laboratory never saw it arrive. The plan's simple rule alerted at minute 25, giving 2855 minutes of warning before the 2880-minute stability window closed. Tracer alerted 25 minutes later, at minute 50, with 2830 minutes of warning and a 16% risk. It placed the specimen most likely at the laboratory's tube station (57%). In truth it had waited at the collecting unit and was never sent.",
+   "takeaway": "A simple timing rule warned 25 minutes sooner than the risk model here, and both alerts left days of warning to find a specimen that was never sent.",
+   "question": "When two alerts disagree on location, as Tracer's tube-station guess did with the true unit-side delay, who checks the collecting unit first?"
+  },
+  {
+   "id": "SP-r26-000230",
+   "kind": "urgent_tier_catch",
+   "story": "A routine BAL specimen, room temperature, was collected in the emergency department and sent by pneumatic tube. It waited 8 minutes on the unit, rode the tube 3 minutes, then sat at the laboratory's tube station from minute 11 to minute 132. Tracer alerted at minute 20, giving 100 minutes of warning, 10 minutes earlier than the plan's simple rule at minute 30. The specimen arrived 132 minutes after collection, 12 minutes past its 120-minute stability window.",
+   "takeaway": "Tracer flagged the stalled tube station at minute 20, 10 minutes before the simple rule, but a warning only helps if someone acts on it.",
+   "question": "Who gets Tracer's alert, and what could they do in 100 minutes to get this specimen out of the tube station?"
+  }
+ ]
+}

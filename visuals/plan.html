@@ -520,7 +520,7 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
       <div id="copyHost"></div>
       <details class="runorder" open>
         <summary>Run order from October 30: hands-off</summary>
-        <p class="small">Claude Code works down this list without waiting for the planned days or for Daniel. When the repo, the plan or the course guidelines can settle a call, it makes the call, labels it as an assumption in the pull request and the AI Teaming Log, and keeps going. The one hard stop is the spend guard: no Claude job over $2 and no more than $10 in all without Daniel's word. Steps that need Daniel's own hands are parked on his checklist below and never stop the run. Done so far: M5, M6, M7, M8, M8b, S1, V1, W6, W8, D11, D12 and M9. The aim is the end-to-end gate by November 6 and the demo complete by November 10, so the last week goes to the talk.</p>
+        <p class="small">Claude Code works down this list without waiting for the planned days or for Daniel. When the repo, the plan or the course guidelines can settle a call, it makes the call, labels it as an assumption in the pull request and the AI Teaming Log, and keeps going. The one hard stop is the spend guard: no Claude job over $2 and no more than $10 in all without Daniel's word. Steps that need Daniel's own hands are parked on his checklist below and never stop the run. Done so far: M5, M6, M7, M8, M8b, S1, V1, W6, W8, D11, D12, M9 and G3. The aim is the end-to-end gate by November 6 and the demo complete by November 10, so the last week goes to the talk.</p>
         <ol>
           <li><b>W8</b> start the AI Teaming Log, backfilled from the merged pull requests.</li>
           <li><b>M6</b> run the evaluation from a clean checkout, save <code>results/mvp-nov8.json</code> and tag <code>v0.1-mvp</code>. Later checkpoints are tagged the same way, without asking.</li>
@@ -869,7 +869,7 @@ const TASKS = [
 
 {id:"G3", tr:"demo", day:[11,13], who:{D:1}, t:"Showcase scenarios", api:"J3", needs:["D12"],
  why:"Ten stories chosen from real test runs give the talk something to point at.",
- steps:["Take the 10 candidates. For each, ask Claude (Sonnet 5.5) with the showcase recipe for a plain-language story, a one-line takeaway and the question the audience should ask.","Store them in the bundle under `heroes`."],
+ steps:["Done: each of the 10 candidates in the bundle has a story of at most 90 words, a one-sentence takeaway and a question for the audience, written by `claude-sonnet-5-5` from the specimen's facts: the scans the laboratory saw up to receipt, what Tracer and the plan's rule did, and the true path.","Done: a validator holds each reply to the length limits, one question, no names, no medical advice, and only numbers from the facts or the difference of two of them. A failure is retried twice. The first runs stopped on harmless derived numbers (a duration, a difference), which cost about $0.14 of the $0.20 the job took in all, so durations are now in the facts and a difference is accepted.","Done: the stories are in `docs/demo/heroes.json` and merged into the bundle under `heroes` whenever they were written for the current candidate list. The set includes the honest cases: a content failure Tracer cannot see, a false alarm, and a case where the plan's rule warned earlier than the risk model."],
  done:"Ten scenarios in the bundle, each with story, takeaway and question.", earns:["D3"]},
 
 {id:"K6", tr:"story", day:[11,14], who:{K:0.5}, t:"Check the showcase scenarios", needs:["G3"],
@@ -982,7 +982,7 @@ const JOBS = [
  {id:"J1b", name:"Pilot rerun, in reserve", what:"A second pilot if the first misses the bar.", model:"haiku", n:200, inTok:350, cacheTok:3000, outTok:750, batch:false, when:"Nov 2", opt:true, task:"D7"},
  {id:"J2", name:"Full dataset", what:"12,000 specimens in 30 seeded runs, through the Batch API.", model:"haiku", n:12000, inTok:350, cacheTok:3000, outTok:750, batch:true, when:"Nov 2", task:"D8"},
  {id:"J4", name:"Search briefs", what:"A brief of at most 60 words for every alert in the demo bundle, 806 in all.", model:"sonnet", n:806, inTok:675, cacheTok:0, outTok:120, batch:true, when:"Oct 30", task:"M9"},
- {id:"J3", name:"Showcase scenarios", what:"Story, takeaway and audience question for 10 chosen specimens.", model:"sonnet", n:10, inTok:1500, cacheTok:0, outTok:2500, batch:false, when:"Nov 13", task:"G3"},
+ {id:"J3", name:"Showcase scenarios", what:"Story, takeaway and audience question for 10 chosen specimens.", model:"sonnet", n:10, inTok:1000, cacheTok:0, outTok:400, batch:false, when:"Oct 30", task:"G3"},
  {id:"J5", name:"Plausibility screen", what:"A second reader that flags the trails Karissa should look at first.", model:"haiku", n:1000, inTok:1200, cacheTok:0, outTok:150, batch:true, when:"Nov 2", opt:true}
 ];
 function jobCost(j){
