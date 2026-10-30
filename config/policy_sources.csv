@@ -1,0 +1,7 @@
+specimen_type,test,source_citation,note
+"urine, boric acid",culture,"BD Vacutainer Plus C&S Preservative Tube product page (bd.com): culture specimens preserved up to 48 h without refrigeration",
+"culture swab (BBL, Stuart's)",Gram stain,"Stuart Transport Medium instructions for use (Condalab, Cat. 1518): swab can be stored up to 24 h at room temperature","Generic Stuart's medium sheet, not BD's own BBL CultureSwab IFU"
+"culture swab (BBL, Stuart's)",bacterial culture,"Stuart Transport Medium instructions for use (Condalab, Cat. 1518): swab can be stored up to 24 h at room temperature","Generic Stuart's medium sheet, not BD's own BBL CultureSwab IFU"
+tissue,AFB culture,"IDSA/ASM 2024, Table 1 (AFB culture: tissue in sterile container, RT, 2 h)",
+"body fluid, sterile container, refrigerated",anaerobic culture,,"IDSA/ASM 2024 Table 1 sends anaerobic culture in an anaerobic container at RT with no refrigerated option; window stays assumed"
+"body fluid, blood culture bottle (peritoneal, pleural)",bottle culture (BacTec),,"IDSA/ASM 2024 Table 2 says inoculated vials go to the lab ASAP at RT and are never refrigerated, with no time limit; window stays assumed"

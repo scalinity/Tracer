@@ -190,11 +190,12 @@ becoming an oracle.
 ### One specimen, minute by minute
 
 The numbers below come from the working model in `visuals/architecture.html`, which implements §5.2 and
-§5.3 on assumed parameters. They illustrate the mechanism; they are not results.
+§5.3 on assumed parameters. They illustrate the mechanism; they are not results. (The page still models a
+urine whose clock stops at plating; `visuals/README.md` tracks that gap.)
 
 The simulator emits `collected` at 02:14. Ingestion validates it and hands it to the twin, which creates a
-state record, resolves the breach policy for `urine_unpreserved` — clock starts at `collected`, stops at
-`plated`, window 120 minutes — and sets `window_closes_at` to 04:14. At 02:15 the tick scheduler picks the
+state record, resolves the breach policy for `bal_room_temp__bacterial_culture` — clock starts at
+`collected`, stops at `received`, window 120 minutes — and sets `window_closes_at` to 04:14. At 02:15 the tick scheduler picks the
 specimen up for the first time. The fitted residual-time distribution for this stratum and state has a
 median of 46 minutes, so one minute elapsed is unremarkable. The risk model returns P(breach) = 0.07, close
 to the unconditional rate and not a signal. The location posterior puts essentially all its mass on
@@ -206,9 +207,9 @@ lost components, and the risk model returns 0.50 — without any event having ar
 posterior puts 0.68 on the destination tube station and 0.31 on lost, since a specimen that entered the
 tube and did not emerge is more likely parked at the far end than anywhere else. Expected harm crosses the
 operating point. Triage opens one alert of type `stalled_in_transit`, routed to the receiving technologist,
-naming the station, with 65 minutes remaining before the window closes. The receipt scan at 03:22 switches
-the specimen to the post-receipt residual distribution, collapsing the risk to 0.02 and auto-resolving the
-alert; the outcome is recorded for evaluation.
+naming the station, with 65 minutes remaining before the window closes. The receipt scan at 03:22 stops the
+clock 52 minutes inside the window: the specimen is resolved, its risk drops to zero and the alert
+auto-resolves; the outcome is recorded for evaluation.
 
 Note what generated the alert: a clock tick and an absence. Nothing in the record changed between 02:14 and
 03:09.
@@ -227,14 +228,16 @@ is. All three are configuration, per specimen type. Both event names are resolve
 graph's named states, so the policy cannot name a state that does not exist.
 
 ```yaml
-# config/breach_policy.yaml
-urine_unpreserved:
-  clock_start: collected      # a named state in the workflow graph
-  clock_stop:  plated         # ASSUMED — see §10. Not yet clinically validated.
-  window_min:  120            # ASSUMED — pending the policy table
-  urgency_tier: 3
-  stain_required: false
-  source: "placeholder; replace with the policy table row and its citation"
+# config/breach_policy.yaml (generated from the policy table; one entry shown, fields abridged)
+policies:
+  urine_unpreserved_room_temp__culture:
+    clock_start: collected      # a named state in config/workflow_graph.yaml
+    clock_stop: received        # the policy table's answer for every row; see §10
+    window_min: 60
+    urgency_tier: 3
+    stain_required: false
+    source: IDSA/ASM 2024, Urinary Tract Infections, Table 38 and section text
+    assumed: false
 ```
 
 **The guarantee.** No component hard-codes a stage name in a breach computation. The twin, the risk model,
@@ -276,7 +279,7 @@ than paper over it.
 |---|---|---|
 | `specimen_id` | `str` | |
 | `order_id` | `str` | |
-| `specimen_type` | `enum` | The five in §6.1 |
+| `specimen_type` | `enum` | One of the specimen variants in §6.1, as named in the policy table |
 | `priority` | `enum` | `stat · routine` |
 | `collecting_unit` | `str` | |
 | `planned_route` | `enum` | `tube · hand_carry`. Planned only; the actual route is hidden |
@@ -319,10 +322,13 @@ than paper over it.
 
 ### 4.5 Policy table — Karissa's deliverable, CSV, ingested as-is
 
-One row per specimen type: `specimen_type`, `clock_stop`, `window_min`, `transport_temperature`,
-`preservative`, `urgency_tier`, `stain_required`, `rejection_criteria`, `source_citation`, `verified_by`.
-It compiles directly into §4.1. This file generates the target variable; there is no supervised problem
-without it.
+One row per specimen type and test: `specimen_type`, `test`, `clock_stop`, `window_min`, `urgency_tier`,
+`transport_temperature`, `preservative`, `stain_required`, `rejection_criteria`, `source_citation`,
+`verified_by`. The sheet is exported verbatim to `config/policy_table.csv` and compiled into §4.1 by
+`python -m src.generator.compile_policy`. `config/policy_sources.csv` adds public sources we found for rows
+the sheet left unsourced, without ever overriding one it gives; a row with no public source stays
+`assumed: true`. When a specimen carries several tests, the shortest window governs. This file generates
+the target variable; there is no supervised problem without it.
 
 ---
 
@@ -338,8 +344,9 @@ it *is* the model's estimation step.
 **What is fitted.** For each stratum and each observable state the specimen can be sitting in, the
 distribution of **residual time from entering that state to the policy's `clock_stop` event**, plus the
 weight of two failure components. Concretely, for a specimen that has been collected but not received, the
-model needs the distribution of collection-to-setup among specimens that complete, the fraction that stall
-and complete very late, and the fraction that never complete at all.
+model needs the distribution of collection-to-receipt among specimens that complete, the fraction that stall
+and complete very late, and the fraction that never complete at all. Because the clock stops at receipt,
+a received specimen is resolved and needs no residual distribution of its own.
 
 | Component | Estimated how |
 |---|---|
@@ -495,23 +502,27 @@ Two outputs, written separately: the **observed log** (scan events, with a scan-
 **truth log** (one row per specimen per minute: true state, true location, injected fault). The truth log is
 read only by the evaluation harness.
 
-### 6.1 Specimen types — provisional
+### 6.1 Specimen types — from the policy table
 
-Five, chosen for contrast in stability window and urgency. **Every window below is an assumption to be
-replaced by Karissa's policy table with a published citation for each row. Do not report these numbers as
-sourced.**
+The five families from the roadmap, split by container and temperature because the window depends on
+both: 12 specimen variants and 44 specimen-and-test rows in `config/breach_policy.yaml`. Windows run from
+collection to receipt.
 
-| Type | Window (assumed) | Transport | Urgency | Stain | Note |
-|---|---|---|---|---|---|
-| CSF, bacterial culture | 60 min | Room temp, never refrigerated | 1 | Yes | IDSA/ASM 2018 says "immediately" and "do not refrigerate", which is qualitative; 60 min is our encoding of it |
-| Urine, unpreserved | 120 min | Room temp | 3 | No | The 2-hour rule is widely quoted and traces to CLSI GP16, which we have not read directly |
-| Urine, boric acid preserved | 1440 min | Room temp | 3 | No | Same fluid, different window. This pair is why the policy table has to be per-container, not per-fluid |
-| Wound/abscess swab, transport medium | 1440 min | Room temp | 2 | Yes | |
-| Lower respiratory (sputum) | 120 min | Room temp, or refrigerated to extend | 2 | Yes | |
+| Family | Variants | Windows | Urgency |
+|---|---|---|---|
+| Urine | unpreserved at room temp; unpreserved refrigerated; boric acid | 60 min; 1440 min; 2880 min | 3 |
+| Body fluid | sterile container at room temp; refrigerated; pleural anaerobic vial; blood culture bottle | 60; 1440; 4320; 1440 min | 2 |
+| Bronchoalveolar lavage | room temp; refrigerated | 120 min; 1440 min (respiratory panel 7200) | 1 |
+| Culture swab | Stuart's (BBL); eSwab | 1440 min; 2880 min | 3 |
+| Tissue | sterile anaerobic container at room temp | 120 min | 1 |
 
-Blood cultures are excluded from the prototype: they are loaded onto an instrument rather than plated, and
-time-to-positivity is measured from loading, so they need a different `clock_stop`. The policy mechanism in
-§4.1 would express that cleanly; the workflow branch is what makes it out of scope for a semester.
+34 rows cite IDSA/ASM 2024, a manufacturer's instructions, or a manufacturer's product page; 10 have no
+public source and are marked `assumed: true`. Report only the sourced windows as sourced. CSF and sputum,
+in the earlier provisional list, are not in the table and are out of the prototype.
+
+Body fluid sent in a blood culture bottle is in: blood cultures were excluded because they are loaded
+onto an instrument rather than plated, but with the clock stopping at receipt the loading step no longer
+defines the label. Blood cultures drawn from blood stay out, since the table does not cover them.
 
 ### 6.2 Exposed parameters
 
@@ -520,7 +531,7 @@ carries its source as a comment in the file, and every source is general laborat
 workflow knowledge. None is fitted to a dataset.
 
 `seed` · `duration_days` · `arrival_rate_by_hour[24]` · `weekend_factor` ·
-`specimen_mix[5]` · `stat_fraction` · `collecting_units[]` ·
+`specimen_mix` (over the §6.1 variants) · `stat_fraction` · `collecting_units[]` ·
 `route_probability{tube, hand_carry}` · `dispatch_wait{family, params, by_shift}` ·
 `tube_transit{family, params}` · `station_dwell{family, params}` · `hand_carry_transit{family, params}` ·
 `accession_staff_by_shift[3]` · `accession_service_time` · `plating_staff_by_shift[3]` ·
@@ -549,7 +560,8 @@ stalled specimen also occupies a station and congests everything behind it.
 
 The last four are **content** failures, not timing failures. They produce no early signal and Tracer is not
 expected to predict them; the simulator injects them so the log is realistic and so the report can state
-plainly which failure modes the system cannot see.
+plainly which failure modes the system cannot see. Under the receipt clock (§10), `not_accessioned` happens
+after the clock has stopped and cannot cause a breach.
 
 ---
 
@@ -637,23 +649,30 @@ FHIR server is built.
 
 ---
 
-## 10. The one question that determines the target variable
+## 10. Where the clock stops — settled: at receipt
 
-**Where the stability clock stops is this project's single highest-leverage open question, and it is a
-clinical judgement that neither member of the engineering side can make from a textbook.** The window could
-reasonably end when the laboratory receives the specimen, when it is set up on media, or when the result is
-reported, and the three are hours apart. Whichever it is defines the breach label; the breach label is the
-target variable; the target variable is what every fitted distribution, every trained artifact, every lead
-time and every alert-volume number in the project is computed against. If the answer changes in Week 11,
-every result produced before it is invalidated and has to be re-run — not adjusted, re-run.
+**This was the project's single highest-leverage question, and it is a clinical judgement that neither
+member of the engineering side could make from a textbook.** The window could reasonably end at receipt,
+at setup on media, at plating, or when the result is reported, and these are hours apart. Whichever it is
+defines the breach label, the target variable every fitted distribution, trained artifact, lead time and
+alert-volume number is computed against.
 
-The architecture is built to absorb that as cheaply as it can be absorbed. §4.1 makes `clock_stop`
-configuration rather than code, resolved against the workflow graph, so changing it is a one-line edit; and
-every artifact carries the `policy_hash` it was fitted under, so a stale model refuses to score rather than
-quietly answering a different question. What configuration cannot buy back is the time spent re-fitting and
-re-running, which is why this is the first question to Karissa and why the default —
-`clock_stop: plated` — is labelled an unvalidated assumption everywhere it appears rather than treated as
-settled.
+**Answer (October 2026):** every row of Karissa's policy table stops the clock at `received`, and her notes
+define the window as minutes from collection to lab receipt, the laboratory's standard measure. The
+earlier default, `clock_stop: plated`, is retired. What follows from it:
+
+- The breach label is settled by the receipt scan. A specimen breaches if it is not received by
+  collection plus its window, or never received at all.
+- The risk model needs only the collection-to-receipt residual (§5.1); a received specimen is resolved.
+- Accession and plating waits still appear in the event log for realism, but they no longer move the
+  label, so their parameters can stay rough.
+- `not_accessioned` (§6.3) cannot cause a breach. It stays in the simulator as a content failure.
+- The trade-off, from Karissa's notes: on high-volume days the gap from receipt to plating can grow, and
+  Tracer does not flag a delay at the bench. The report should say so.
+
+The mechanism is unchanged. §4.1 keeps `clock_stop` in configuration, resolved against the workflow graph,
+and every artifact carries the `policy_hash` it was fitted under, so if this answer ever moves, a stale
+model refuses to score rather than quietly answering a different question.
 
 ---
 
@@ -664,9 +683,9 @@ changes the design rather than decorating it.
 
 | # | Open point | What changes |
 |---|---|---|
-| 1 | **Where the clock stops, and who decides a specimen is too late.** | §10. The target variable, therefore everything. |
-| 2 | **The five specimen types and their windows**, with citations. | The policy table, the label, urgency weights, the simulator's specimen mix. §6.1 is provisional until this lands. |
-| 3 | **Whether a specimen waits anywhere between receipt and setup.** | The HSMM state list (§5.3) and the set of observable states the risk model fits residual times for (§5.1). If there is a real queue there, `not_accessioned` is a common failure rather than an edge case. |
+| 1 | **Where the clock stops, and who decides a specimen is too late.** | **Answered: at receipt** (§10). |
+| 2 | **The five specimen types and their windows**, with citations. | **Answered** by the policy table (§4.5, §6.1); 10 of 44 rows still have no public source. |
+| 3 | **Whether a specimen waits anywhere between receipt and setup.** | Lower stakes now that the clock stops at receipt: it shapes the realism of the event log and the HSMM state list (§5.3), not the label. |
 | 4 | **Rough transit times and where specimens actually stall.** | The sub-leg split in §5.3, which no dataset can identify, and the fault rates in §6.3. These are the parameters MIMIC-IV explicitly cannot constrain. |
 | 5 | **Who acts on each failure type.** | The routing table (§4.4). The charge-nurse / receiving-technologist / courier-coordinator split is plausible but unverified. |
 | 6 | **How many alerts per shift a laboratory would tolerate.** | The operating point (§5.2.1), therefore the headline lead-time number. |
@@ -685,7 +704,7 @@ Recorded so the final report is internally consistent.
 | Spec said | This says | Why |
 |---|---|---|
 | §8: MIMIC-IV primary data through PhysioNet credentialed access, simulator supporting | The simulator is the event source and **no MIMIC-IV data is used anywhere in the project**. Every parameter is assumed and marked as such | Two independent reasons, the second measured rather than argued. **Structure:** MIMIC-IV records only collection and final result, so the intermediate states the twin needs are unobserved there too; measured median collection-to-result is 80.1 hours, dominated by incubation. **Population:** the available extract is Beth Israel Deaconess critical care — 100 of 100 patients with an ICU stay, 38.3% blood culture, 8 CSF specimens, no container detail on urine, 19.6% of collections overnight. Tracer models a general laboratory serving outpatient collection. Calibrating against it would import an ICU's shape while claiming realism. Credentialed access fixes sample size and not population, so it was not pursued. §1.1, `docs/mimic-demo-findings.md`, and the design note in §13.2. |
-| §7.2: breach = collection-to-result exceeds window | Breach = `clock_start` to `clock_stop` exceeds window, both configurable, defaulting to collection-to-setup | Setup is where the viability clock stops, but this is a clinical judgement and not ours to fix in code. §4.1 and §10. |
+| §7.2: breach = collection-to-result exceeds window | Breach = `clock_start` to `clock_stop` exceeds window, both configurable, set to collection-to-receipt by the policy table | Where the viability clock stops is a clinical judgement, not ours to fix in code; Karissa's table answers it with receipt. §4.1 and §10. |
 | §7.3: time-to-event model, family unspecified | Analytic mixture-survival with a defective component, primary; gradient-boosted landmark model as a pre-registered challenger | The quantity is the tail of a waiting-time distribution, which three fitted parameters represent directly and a tree model has to learn from the rare class. §5.2. |
 | §7.7: location inference is a stretch goal | A specified component, built Weeks 9–11, after the MVP | It is the project's most distinctive idea and deserves specification, but it stays out of the Week 8 MVP so it cannot sink the prototype. |
 | §10: process discovery out of scope | Still out of scope, and the process-mining toolkit is dropped with it | The workflow is authored, so conformance is a short path validator and interval fitting is SciPy. A GPL-3.0 dependency for one figure is not worth its weight. |

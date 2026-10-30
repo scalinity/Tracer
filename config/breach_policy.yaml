@@ -3,8 +3,9 @@
 #
 # One policy per specimen type and test. A specimen with several tests is
 # governed by the shortest window among them (multi_test_rule).
-# assumed: true marks a row whose source_citation starts with "?" in the sheet:
-# no public source backs that window yet. Do not report it as sourced.
+# assumed: true marks a row with no public source behind its window yet. Do not
+# report it as sourced. source_origin says whether the source came from the
+# sheet or from config/policy_sources.csv.
 
 version: 1
 source_table: config/policy_table.csv
@@ -26,6 +27,7 @@ policies:
     - room temp over 4 hours
     - UA performed before culture aliquot taken
     source: IDSA/ASM 2024, Urinary Tract Infections, Table 38 and section text
+    source_origin: sheet
     verified_by: KK
     assumed: false
     stain_note: rarely
@@ -45,6 +47,7 @@ policies:
     - past window
     - UA performed before culture aliquot taken
     source: '? source not found (assumed); Table 38 recommends refrigeration but gives no time limit'
+    source_origin: sheet
     verified_by: null
     assumed: true
     stain_note: rarely
@@ -63,9 +66,11 @@ policies:
     - leaking
     - past window
     - underfilled tube
-    source: '? source not found (assumed)'
+    source: 'BD Vacutainer Plus C&S Preservative Tube product page (bd.com): culture specimens preserved
+      up to 48 h without refrigeration'
+    source_origin: policy_sources
     verified_by: null
-    assumed: true
+    assumed: false
     stain_note: rarely
   body_fluid_sterile_container_room_temp__gram_stain:
     specimen_type: body fluid, sterile container, room temp (pleural, peritoneal, synovial, pericardial)
@@ -82,6 +87,7 @@ policies:
     - past window
     - volume under 0.5 mL
     source: IDSA/ASM 2024, Table 27 (pleural) and Table 37 (peritoneal)
+    source_origin: sheet
     verified_by: KK
     assumed: false
     detail:
@@ -104,6 +110,7 @@ policies:
     - past window
     - volume under 0.5 mL
     source: IDSA/ASM 2024, Table 27 (pleural) and Table 37 (peritoneal)
+    source_origin: sheet
     verified_by: KK
     assumed: false
     detail:
@@ -126,6 +133,7 @@ policies:
     - past window
     - volume under 0.5 mL
     source: IDSA/ASM 2024, Table 27 (pleural) and Table 37 (peritoneal)
+    source_origin: sheet
     verified_by: KK
     assumed: false
     detail:
@@ -148,6 +156,7 @@ policies:
     - past window
     - volume under 0.5 mL
     source: '? source not found (assumed); Table 37 says refrigerate if over 1 h but gives no time limit'
+    source_origin: sheet
     verified_by: null
     assumed: true
   body_fluid_sterile_container_refrigerated__bacterial_culture:
@@ -165,6 +174,7 @@ policies:
     - past window
     - volume under 0.5 mL
     source: '? source not found (assumed); Table 37 says refrigerate if over 1 h but gives no time limit'
+    source_origin: sheet
     verified_by: null
     assumed: true
   body_fluid_sterile_container_refrigerated__anaerobic_culture:
@@ -182,8 +192,11 @@ policies:
     - past window
     - volume under 0.5 mL
     source: '? source not found (assumed); Table 37 says refrigerate if over 1 h but gives no time limit'
+    source_origin: sheet
     verified_by: null
     assumed: true
+    note: IDSA/ASM 2024 Table 1 sends anaerobic culture in an anaerobic container at RT with no refrigerated
+      option; window stays assumed
   pleural_fluid_anaerobic_transport_vial__anaerobic_culture:
     specimen_type: pleural fluid, anaerobic transport vial
     test: anaerobic culture
@@ -198,6 +211,7 @@ policies:
     - unlabeled
     - past window
     source: IDSA/ASM 2024, Table 27
+    source_origin: sheet
     verified_by: KK
     assumed: false
   body_fluid_blood_culture_bottle__bottle_culture:
@@ -214,11 +228,14 @@ policies:
     - unlabeled
     - past window
     source: '? source not found (assumed)'
+    source_origin: sheet
     verified_by: null
     assumed: true
     detail:
     - peritoneal
     - pleural
+    note: IDSA/ASM 2024 Table 2 says inoculated vials go to the lab ASAP at RT and are never refrigerated,
+      with no time limit; window stays assumed
   bal_room_temp__bacterial_culture:
     specimen_type: BAL, room temp
     test: bacterial culture
@@ -234,6 +251,7 @@ policies:
     - past window
     - volume under 0.5 mL
     source: IDSA/ASM 2024, Table 27
+    source_origin: sheet
     verified_by: KK
     assumed: false
   bal_room_temp__gram_stain:
@@ -251,6 +269,7 @@ policies:
     - past window
     - volume under 0.5 mL
     source: IDSA/ASM 2024, Table 27
+    source_origin: sheet
     verified_by: KK
     assumed: false
   bal_room_temp__afb_culture:
@@ -268,6 +287,7 @@ policies:
     - past window
     - volume under 0.5 mL
     source: IDSA/ASM 2024, Table 27
+    source_origin: sheet
     verified_by: KK
     assumed: false
   bal_room_temp__fungal_culture:
@@ -285,6 +305,7 @@ policies:
     - past window
     - volume under 0.5 mL
     source: IDSA/ASM 2024, Table 27
+    source_origin: sheet
     verified_by: KK
     assumed: false
   bal_room_temp__fungal_smear:
@@ -302,6 +323,7 @@ policies:
     - past window
     - volume under 0.5 mL
     source: IDSA/ASM 2024, Table 27
+    source_origin: sheet
     verified_by: KK
     assumed: false
   bal_room_temp__respiratory_panel:
@@ -319,6 +341,7 @@ policies:
     - past window
     - volume under 0.5 mL
     source: IDSA/ASM 2024, Table 27
+    source_origin: sheet
     verified_by: KK
     assumed: false
   bal_room_temp__aspergillus:
@@ -336,6 +359,7 @@ policies:
     - past window
     - volume under 0.5 mL
     source: IDSA/ASM 2024, Table 28
+    source_origin: sheet
     verified_by: KK
     assumed: false
   bal_room_temp__legionella:
@@ -353,6 +377,7 @@ policies:
     - past window
     - volume under 0.5 mL
     source: IDSA/ASM 2024, Table 27
+    source_origin: sheet
     verified_by: KK
     assumed: false
   bal_refrigerated__bacterial_culture:
@@ -370,6 +395,7 @@ policies:
     - past window
     - volume under 0.5 mL
     source: IDSA/ASM 2024, Table 27
+    source_origin: sheet
     verified_by: KK
     assumed: false
   bal_refrigerated__gram_stain:
@@ -387,6 +413,7 @@ policies:
     - past window
     - volume under 0.5 mL
     source: IDSA/ASM 2024, Table 27
+    source_origin: sheet
     verified_by: KK
     assumed: false
   bal_refrigerated__afb_culture:
@@ -404,6 +431,7 @@ policies:
     - past window
     - volume under 0.5 mL
     source: IDSA/ASM 2024, Table 27
+    source_origin: sheet
     verified_by: KK
     assumed: false
   bal_refrigerated__fungal_culture:
@@ -421,6 +449,7 @@ policies:
     - past window
     - volume under 0.5 mL
     source: IDSA/ASM 2024, Table 27
+    source_origin: sheet
     verified_by: KK
     assumed: false
   bal_refrigerated__fungal_smear:
@@ -438,6 +467,7 @@ policies:
     - past window
     - volume under 0.5 mL
     source: IDSA/ASM 2024, Table 27
+    source_origin: sheet
     verified_by: KK
     assumed: false
   bal_refrigerated__respiratory_panel:
@@ -455,6 +485,7 @@ policies:
     - past window
     - volume under 0.5 mL
     source: IDSA/ASM 2024, Table 27 (viral transport media)
+    source_origin: sheet
     verified_by: KK
     assumed: false
   bal_refrigerated__aspergillus:
@@ -472,6 +503,7 @@ policies:
     - past window
     - volume under 0.5 mL
     source: IDSA/ASM 2024, Table 28
+    source_origin: sheet
     verified_by: KK
     assumed: false
   bal_refrigerated__legionella:
@@ -489,6 +521,7 @@ policies:
     - past window
     - volume under 0.5 mL
     source: IDSA/ASM 2024, Table 27
+    source_origin: sheet
     verified_by: KK
     assumed: false
   culture_swab__gram_stain:
@@ -505,12 +538,15 @@ policies:
     - unlabeled
     - past window
     - missing Stuart's medium sponge
-    source: '? source not found (assumed)'
+    source: 'Stuart Transport Medium instructions for use (Condalab, Cat. 1518): swab can be stored up
+      to 24 h at room temperature'
+    source_origin: policy_sources
     verified_by: null
-    assumed: true
+    assumed: false
     detail:
     - BBL
     - Stuart's
+    note: Generic Stuart's medium sheet, not BD's own BBL CultureSwab IFU
   culture_swab__bacterial_culture:
     specimen_type: culture swab (BBL, Stuart's)
     test: bacterial culture
@@ -525,12 +561,15 @@ policies:
     - unlabeled
     - past window
     - missing Stuart's medium sponge
-    source: '? source not found (assumed)'
+    source: 'Stuart Transport Medium instructions for use (Condalab, Cat. 1518): swab can be stored up
+      to 24 h at room temperature'
+    source_origin: policy_sources
     verified_by: null
-    assumed: true
+    assumed: false
     detail:
     - BBL
     - Stuart's
+    note: Generic Stuart's medium sheet, not BD's own BBL CultureSwab IFU
   culture_swab__fungal_smear:
     specimen_type: culture swab (BBL, Stuart's)
     test: fungal smear
@@ -546,6 +585,7 @@ policies:
     - past window
     - missing Stuart's medium sponge
     source: '? source not found (assumed)'
+    source_origin: sheet
     verified_by: null
     assumed: true
     detail:
@@ -566,6 +606,7 @@ policies:
     - past window
     - missing Stuart's medium sponge
     source: '? source not found (assumed)'
+    source_origin: sheet
     verified_by: null
     assumed: true
     detail:
@@ -587,6 +628,7 @@ policies:
     - swab missing (liquid only)
     source: Copan ESwab Instructions for Use, specimen transport and storage (48 h; N. gonorrhoeae 24
       h)
+    source_origin: sheet
     verified_by: KK
     assumed: false
   eswab__aerobic_culture:
@@ -605,6 +647,7 @@ policies:
     - swab missing (liquid only)
     source: Copan ESwab Instructions for Use, specimen transport and storage (48 h; N. gonorrhoeae 24
       h)
+    source_origin: sheet
     verified_by: KK
     assumed: false
   eswab__anaerobic_culture:
@@ -623,6 +666,7 @@ policies:
     - swab missing (liquid only)
     source: Copan ESwab Instructions for Use, specimen transport and storage (48 h; N. gonorrhoeae 24
       h)
+    source_origin: sheet
     verified_by: KK
     assumed: false
   eswab__fungal_smear:
@@ -640,6 +684,7 @@ policies:
     - past window
     - swab missing (liquid only)
     source: '? assumed; Copan IFU covers bacteria only'
+    source_origin: sheet
     verified_by: null
     assumed: true
   eswab__fungal_culture:
@@ -657,6 +702,7 @@ policies:
     - past window
     - swab missing (liquid only)
     source: '? assumed; Copan IFU covers bacteria only'
+    source_origin: sheet
     verified_by: null
     assumed: true
   eswab__afb_culture:
@@ -674,6 +720,7 @@ policies:
     - past window
     - swab missing (liquid only)
     source: '? assumed; Copan IFU covers bacteria only'
+    source_origin: sheet
     verified_by: null
     assumed: true
   tissue__gram_stain:
@@ -691,6 +738,7 @@ policies:
     - past window
     - in formalin
     source: IDSA/ASM 2024, Table 47
+    source_origin: sheet
     verified_by: KK
     assumed: false
   tissue__aerobic_culture:
@@ -708,6 +756,7 @@ policies:
     - past window
     - in formalin
     source: IDSA/ASM 2024, Table 47
+    source_origin: sheet
     verified_by: KK
     assumed: false
   tissue__anaerobic_culture:
@@ -725,6 +774,7 @@ policies:
     - past window
     - in formalin
     source: IDSA/ASM 2024, Table 47
+    source_origin: sheet
     verified_by: KK
     assumed: false
   tissue__fungal_smear:
@@ -742,6 +792,7 @@ policies:
     - past window
     - in formalin
     source: IDSA/ASM 2024, Table 27
+    source_origin: sheet
     verified_by: KK
     assumed: false
   tissue__fungal_culture:
@@ -759,6 +810,7 @@ policies:
     - past window
     - in formalin
     source: IDSA/ASM 2024, Table 27
+    source_origin: sheet
     verified_by: KK
     assumed: false
   tissue__afb_culture:
@@ -775,9 +827,10 @@ policies:
     - unlabeled
     - past window
     - in formalin
-    source: '? source not found (assumed)'
+    source: 'IDSA/ASM 2024, Table 1 (AFB culture: tissue in sterile container, RT, 2 h)'
+    source_origin: policy_sources
     verified_by: null
-    assumed: true
+    assumed: false
   tissue__broad_range_pcr:
     specimen_type: tissue
     test: broad range PCR
@@ -794,5 +847,6 @@ policies:
     - in formalin
     - in saline
     source: IDSA/ASM 2024, Table 47 (16S PCR)
+    source_origin: sheet
     verified_by: KK
     assumed: false

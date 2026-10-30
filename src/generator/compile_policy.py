@@ -1,8 +1,10 @@
 """Compile Karissa's policy table (CSV) into config/breach_policy.yaml.
 
 The CSV is a verbatim export of the "Policy table" tab of the team's Policy Table
-sheet (docs/architecture.md §4.5). Edit the sheet, re-export it over
-config/policy_table.csv, then run:
+sheet (docs/architecture.md §4.5). config/policy_sources.csv adds, on our side,
+public sources found for rows the sheet left unsourced, and notes on rows that
+need one; it never overrides a source the sheet already gives. Edit the sheet,
+re-export it over config/policy_table.csv, then run:
 
     python -m src.generator.compile_policy
 
@@ -20,6 +22,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 CSV_PATH = ROOT / "config" / "policy_table.csv"
+SOURCES_PATH = ROOT / "config" / "policy_sources.csv"
 YAML_PATH = ROOT / "config" / "breach_policy.yaml"
 
 COLUMNS = [
@@ -47,8 +50,9 @@ HEADER = """\
 #
 # One policy per specimen type and test. A specimen with several tests is
 # governed by the shortest window among them (multi_test_rule).
-# assumed: true marks a row whose source_citation starts with "?" in the sheet:
-# no public source backs that window yet. Do not report it as sourced.
+# assumed: true marks a row with no public source behind its window yet. Do not
+# report it as sourced. source_origin says whether the source came from the
+# sheet or from config/policy_sources.csv.
 """
 
 
@@ -76,7 +80,25 @@ def parse_stain(value: str) -> tuple[bool, str | None]:
     return flag, note.group(1) if note else None
 
 
-def compile_rows(rows: list[dict[str, str]]) -> dict:
+def is_unsourced(citation: str) -> bool:
+    return not citation or citation.startswith("?")
+
+
+def index_sources(sources: list[dict[str, str]], rows: list[dict[str, str]]) -> dict:
+    keys = {(r["specimen_type"].strip(), r["test"].strip()): r for r in rows}
+    out = {}
+    for line, s in enumerate(sources, start=2):
+        key = (s["specimen_type"].strip(), s["test"].strip())
+        if key not in keys:
+            raise ValueError(f"policy_sources.csv line {line}: no policy table row {key}")
+        if s["source_citation"].strip() and not is_unsourced(keys[key]["source_citation"].strip()):
+            raise ValueError(f"policy_sources.csv line {line}: {key} already has a source in the sheet")
+        out[key] = s
+    return out
+
+
+def compile_rows(rows: list[dict[str, str]], sources: list[dict[str, str]] = ()) -> dict:
+    added = index_sources(list(sources), rows)
     policies: dict[str, dict] = {}
     for line, row in enumerate(rows, start=2):
         missing = [c for c in COLUMNS if c not in row]
@@ -95,6 +117,10 @@ def compile_rows(rows: list[dict[str, str]]) -> dict:
         stain, stain_note = parse_stain(row["stain_required"])
         source = row["source_citation"].strip()
         verified_by = row["verified_by"].strip() or None
+        origin = "sheet"
+        extra = added.get((row["specimen_type"].strip(), row["test"].strip()), {})
+        if extra.get("source_citation", "").strip():
+            source, origin = extra["source_citation"].strip(), "policy_sources"
 
         policy = {
             "specimen_type": specimen,
@@ -108,13 +134,16 @@ def compile_rows(rows: list[dict[str, str]]) -> dict:
             "preservative": row["preservative"].strip(),
             "rejection_criteria": [c.strip() for c in row["rejection_criteria"].split(";") if c.strip()],
             "source": source,
+            "source_origin": origin,
             "verified_by": verified_by,
-            "assumed": source.startswith("?") or not source,
+            "assumed": is_unsourced(source),
         }
         if detail:
             policy["detail"] = detail
         if stain_note:
             policy["stain_note"] = stain_note
+        if extra.get("note", "").strip():
+            policy["note"] = extra["note"].strip()
         policies[policy_id] = policy
 
     return {
@@ -136,12 +165,12 @@ def render(compiled: dict) -> str:
 
 
 def main() -> int:
-    compiled = compile_rows(read_csv())
+    compiled = compile_rows(read_csv(), read_csv(SOURCES_PATH))
     YAML_PATH.write_text(render(compiled), encoding="utf-8")
     ps = compiled["policies"].values()
     assumed = sum(p["assumed"] for p in ps)
     print(f"wrote {YAML_PATH.relative_to(ROOT)}: {len(compiled['policies'])} policies, "
-          f"{assumed} assumed (no source)")
+          f"{assumed} still assumed (no public source)")
     return 0
 
 
