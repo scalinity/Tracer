@@ -519,24 +519,24 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
       </div>
       <div id="copyHost"></div>
       <details class="runorder" open>
-        <summary>Run order from October 30, to get ahead of the plan</summary>
-        <p class="small">Claude Code works down this list without waiting for the planned days. The aim is the end-to-end gate by November 6 and the demo complete by November 10, so the last week goes to the talk. A line marked <b>Stops for Daniel</b> waits for his word; everything else just runs. W7 is done: the revised guidelines dropped the Results, Discussion and Responsible Deployment Plan drafts, so W3 to W5 are gone and their hours go to the demo.</p>
+        <summary>Run order from October 30: hands-off</summary>
+        <p class="small">Claude Code works down this list without waiting for the planned days or for Daniel. When the repo, the plan or the course guidelines can settle a call, it makes the call, labels it as an assumption in the pull request and the AI Teaming Log, and keeps going. The one hard stop is the spend guard: no Claude job over $2 and no more than $10 in all without Daniel's word. Steps that need Daniel's own hands are parked on his checklist below and never stop the run. Done so far: M5, M8 and M8b. The aim is the end-to-end gate by November 6 and the demo complete by November 10, so the last week goes to the talk.</p>
         <ol>
-          <li><b>M5</b> alert triage with the default weights and routing, plus the window-aware baseline.</li>
           <li><b>W8</b> start the AI Teaming Log, backfilled from the merged pull requests.</li>
-          <li><b>M8</b> then <b>M8b</b>: port the location filter and score it against the truth.</li>
+          <li><b>M6</b> run the evaluation from a clean checkout, save <code>results/mvp-nov8.json</code> and tag <code>v0.1-mvp</code>. Later checkpoints are tagged the same way, without asking.</li>
+          <li><b>D7</b> and <b>S1</b> closed: D7 on Daniel's acceptance of the code audit, S1 by checking what the repo and the API can show and recording the result.</li>
           <li><b>V1</b> move the system map and the 3D exhibit to the receipt clock.</li>
           <li><b>W6</b> bring the design documents up to date.</li>
-          <li><b>M7</b> draft the headline paragraph with its caveats.</li>
-          <li class="stop"><b>M6</b> tag <code>v0.1-mvp</code>. <b>Stops for Daniel</b>. The midterm-to-final improvement is still worth 2 points, and M5 is merged, so it can be tagged now.</li>
+          <li><b>M7</b> the headline paragraph, with the window-aware result beside the headline number.</li>
           <li><b>D11</b> and <b>D12</b>: the bundle exporter, its metrics grid and schema.</li>
           <li><b>M9</b> search briefs, template and Claude (about $0.50 by batch).</li>
           <li><b>P2</b> and <b>P3</b>: the demo board and the specimen timeline, clock at receipt.</li>
           <li><b>G3</b> showcase scenarios (about $0.30).</li>
           <li><b>P4</b>, <b>P5</b> and <b>P6</b>: the threshold control, Beat Tracer with its activity card, and the 3D link.</li>
-          <li class="stop"><b>P7</b> GitHub Pages and the QR code. <b>Stops for Daniel</b> for the device tests.</li>
+          <li><b>P7</b> GitHub Pages, the QR code and the browser checks Claude Code can run itself.</li>
+          <li>Then pull ahead the work after November 18 that needs no one: the sensitivity runs (A2) and the clean-clone test (A4).</li>
         </ol>
-        <p class="small">Daniel's own: W1 and W2 if not ticked, the credit check in S1, accepting the code audit in D7, and the talk (T1 to T4). Karissa's tasks stay as they are; nothing new is asked of her.</p>
+        <p class="small">Daniel's checklist, parked so nothing waits on it: tick W1 and W2 when they are done, open the published demo on his phones once P7 is up, and the talk and rehearsals (T1 to T4). Karissa's tasks stay as they are; nothing new is asked of her.</p>
       </details>
       <div id="ledger"></div>
       <div id="doneAlready"></div>
@@ -687,12 +687,12 @@ const PEOPLE = {D: "Daniel", K: "Karissa"};
 const TASKS = [
 {id:"W1", tr:"write", day:[10,28], who:{D:0.25}, t:"Submit Milestone 4 on Canvas",
  why:"It is due today and Canvas allows unlimited attempts, so submit now and refine later.",
- steps:["Open Canvas, Milestone 4: Project Check-In.","Paste the numbered answers from `docs/submissions/Milestone 4 - Project Check-In.md` into the text box. The PDF in Downloads is the formatted copy; attach it if the page offers an upload.","Submit, then open the submission and check that all ten answers appear in order."],
+ steps:["Daniel's to tick when it is done. Nothing in the build waits on it.","Open Canvas, Milestone 4: Project Check-In.","Paste the numbered answers from `docs/submissions/Milestone 4 - Project Check-In.md` into the text box. The PDF in Downloads is the formatted copy; attach it if the page offers an upload.","Submit, then open the submission and check that all ten answers appear in order."],
  done:"Canvas shows the submission with ten numbered answers.", earns:["M1"]},
 
 {id:"W2", tr:"write", day:[10,28], who:{D:0.25}, t:"Read the feedback on Milestones 2 and 3",
  why:"Response to instructor feedback is 10 of the 100 points, and the next submission is where it shows.",
- steps:["Open Canvas, Grades, and read each comment on Milestones 2 and 3.","Write one line per comment saying what changed because of it.","Put those lines in the next milestone, under the answer they belong to."],
+ steps:["Daniel's to tick when it is done. Nothing in the build waits on it.","Open Canvas, Grades, and read each comment on Milestones 2 and 3.","Write one line per comment saying what changed because of it.","Put those lines in the next milestone, under the answer they belong to."],
  done:"A list of comments, each with the change that answers it.", earns:["M3"]},
 
 {id:"W7", tr:"write", day:[10,30], who:{D:0.5}, t:"Read Ben's revised project guidelines and prune this plan",
@@ -707,8 +707,8 @@ const TASKS = [
 
 {id:"S1", tr:"data", day:[10,29], who:{D:1}, t:"Set up Claude API access with a hard cap",
  why:"Nothing else in the data track can run until this works, and the cap protects the credits.",
- steps:["Open: only the credit expiry check is left. The API has already run both pilots and the full dataset, about $2.37 of the $50 soft limit. Tick this once the expiry is confirmed to be after November 18.","Open the Anthropic Console, Billing. Read the promotional credit balance and its expiry date. The expiry must be after November 18. If it is earlier, switch to the fallback in the risks section.","No Console limit is set. The plan's soft limit is $50: stay under it, and go over only when a result needs it.","Done: a workspace and an API key, kept only in `.env`. Never paste the key into a chat, the repo or the demo page.","Done: the smoke test and every later call printed a stop reason and usage."],
- done:"The credit expiry is confirmed after November 18, and the plan shows the $50 soft limit.", earns:[]},
+ steps:["Claude Code closes this: it checks the credit balance and expiry with what the repo and the API key can show. If they cannot be confirmed from there, it records that here and the run goes on. The spend guard (no job over $2, no more than $10 in all without Daniel's word) protects the credits either way. About $2.37 has been spent so far.","No Console limit is set. The plan's soft limit is $50: stay under it, and go over only when a result needs it.","Done: a workspace and an API key, kept only in `.env`. Never paste the key into a chat, the repo or the demo page.","Done: the smoke test and every later call printed a stop reason and usage."],
+ done:"The credit expiry is confirmed after November 18, or recorded as not checkable from here, and the spend guard is in force.", earns:[]},
 
 {id:"S2", tr:"data", day:[10,29], who:{D:0.5}, t:"Scaffold the project for building",
  why:"One clean layout now saves every later task from deciding where things go.",
@@ -757,8 +757,8 @@ const TASKS = [
 
 {id:"D7", tr:"data", day:[11,2], who:{D:1}, t:"Fix what the review found", api:"J1b", needs:["K2"],
  why:"Group the notes by cause so one change fixes many trails.",
- steps:["Skipped at Daniel's request: Karissa's review (K2). The pilot was audited in code instead, so no plausibility count exists.","Done: the audit found that the notes on every stalled and misrouted trail (6 of 6) described the hidden path, one copying a worked example, and that most notes only restated the brief. The note rule in the prompt, the worked examples and validator check 8 changed.","Done: rerun of the pilot: 199 of 200 accepted, no leaking notes, 11 notes in all. A second pilot of 190 specimens with every fault, lost in tube included: 188 accepted. Cost $0.13.","Not done: the plausibility count from Karissa.","Open until Daniel accepts the code audit in place of the plausibility count. Then tick it."],
- done:"The pass rate and the plausibility count both meet the bar.", earns:[]},
+ steps:["Skipped at Daniel's request: Karissa's review (K2). The pilot was audited in code instead, so no plausibility count exists.","Done: the audit found that the notes on every stalled and misrouted trail (6 of 6) described the hidden path, one copying a worked example, and that most notes only restated the brief. The note rule in the prompt, the worked examples and validator check 8 changed.","Done: rerun of the pilot: 199 of 200 accepted, no leaking notes, 11 notes in all. A second pilot of 190 specimens with every fault, lost in tube included: 188 accepted. Cost $0.13.","Decided: on October 30 Daniel accepted the code audit in place of Karissa's plausibility count."],
+ done:"The pass rate meets the bar, and Daniel accepted the code audit in place of the plausibility count.", earns:[]},
 
 {id:"D8", tr:"data", day:[11,2], who:{D:1}, t:"Start the full run", api:"J2", needs:["D7"],
  why:"The Batch API is half price and takes minutes to a few hours, so start it early in the day.",
@@ -798,7 +798,7 @@ const TASKS = [
 
 {id:"M6", tr:"model", day:[11,7], who:{D:1.5}, t:"Run the comparison and tag the first prototype", needs:["M5"],
  why:"The course scores improvement between the midterm and final prototypes. This snapshot is the midterm.",
- steps:["Waits for Daniel: tag only after he has read Ben's revised guidelines and confirms the midterm-to-final comparison still counts. If it does, tag as soon as M5 is merged instead of waiting for November 7.","Run the evaluation end to end from a clean checkout.","Save `results/mvp-nov8.json` and tag the commit `v0.1-mvp`.","Keep that file untouched. The December 2 results must be compared against it."],
+ steps:["Decided: tag as soon as M5 is merged, with no go-ahead needed. The revised guidelines keep the 2 points for improvement between the midterm and final prototypes, and Daniel asked on October 30 for tags like this to happen on their own.","Run the evaluation end to end from a clean checkout.","Save `results/mvp-nov8.json` and tag the commit `v0.1-mvp`.","Keep that file untouched. The December 2 results must be compared against it."],
  done:"The tag is pushed and the results file is committed.", earns:["M2","P1","P5"]},
 
 {id:"K3", tr:"data", day:[11,7], who:{K:0.5}, t:"Cited policy table", needs:["K1"],
@@ -894,7 +894,7 @@ const TASKS = [
 
 {id:"P7", tr:"demo", day:[11,15], who:{D:2}, t:"Publish on GitHub Pages and test on devices", needs:["P4","P5"],
  why:"The rubric asks that the demo is accessible to every student. Only a real phone test shows that.",
- steps:["Repo settings, Pages, deploy from branch `main`, folder `/docs`. Open the address on your phone.","Make a QR code for the address and save it as `docs/demo/qr.png`.","Test on iPhone Safari, Android Chrome, and laptop Chrome, Safari and Firefox. Write down what fails.","Check that the page needs no key and calls no API."],
+ steps:["Claude Code turns on GitHub Pages for `main`, folder `/docs`, through the GitHub API or a deploy workflow, and checks that the public address loads.","Daniel's, parked on his checklist and never a stop: open the address on his own phones and note anything that breaks.","Make a QR code for the address and save it as `docs/demo/qr.png`.","Claude Code tests what it can without a phone: the page in headless Chromium, Firefox and WebKit at phone and laptop widths, with any failure fixed before it moves on.","Check that the page needs no key and calls no API."],
  done:"The public address opens the demo on three different devices.", earns:["D1","D4","P4"]},
 
 {id:"K7", tr:"story", day:[11,15], who:{K:1.5}, t:"Practice the clinical questions",
