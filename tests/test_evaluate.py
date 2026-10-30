@@ -1,3 +1,4 @@
+import csv
 import json
 import math
 
@@ -6,7 +7,7 @@ import pytest
 
 from src.generator import config
 from src.models import risk
-from src.pipeline import evaluate, intervals, store
+from src.pipeline import evaluate, intervals, store, triage
 from src.pipeline.evaluate import Spec
 
 
@@ -142,12 +143,19 @@ def test_the_reliability_table_counts_the_specimens_still_silent_at_the_landmark
 # ---- the real held-out runs ----
 
 @pytest.fixture(scope="module")
-def result():
-    return evaluate.evaluate()
+def evaluated():
+    return evaluate.run()
 
 
-def test_the_numbers_regenerate_exactly(result):
-    assert json.dumps(evaluate.evaluate(), sort_keys=True) == json.dumps(result, sort_keys=True)
+@pytest.fixture(scope="module")
+def result(evaluated):
+    return evaluated[0]
+
+
+def test_the_committed_numbers_are_the_ones_the_code_regenerates(result):
+    """A stale results/evaluation.json fails here: rerun `python -m src.pipeline.evaluate` and commit it."""
+    committed = json.loads(evaluate.RESULTS_PATH.read_text(encoding="utf-8"))
+    assert json.dumps(committed, sort_keys=True) == json.dumps(result, sort_keys=True)
 
 
 def test_the_held_out_population_matches_the_store(result):
@@ -165,20 +173,29 @@ def test_the_held_out_population_matches_the_store(result):
 def test_the_counts_inside_every_operating_point_are_consistent(result):
     assert list(result["operating_points"]) == ["1", "2", "4", "6"]
     for budget, point in result["operating_points"].items():
-        for name in ("baseline", "model"):
+        for name in ("baseline", "window_baseline", "model"):
             s = point[name]
             assert s["breaches"] == result["breaches"] and 0 <= s["caught"] <= s["breaches"]
+            assert sum(g["alerts"] for g in s["by_tier"].values()) == s["alerts"]
+            assert sum(g["specimens"] for g in s["by_tier"].values()) == result["with_a_clock"]
+            assert sum(g["breaches"] for g in s["by_tier"].values()) == s["breaches"]
             assert s["alerts"] >= s["caught"] and s["alerts"] - s["false_alerts"] >= s["caught"]
             assert 0 <= s["caught_with_good_warning"] <= s["catch_rate"] <= 1
             assert sum(g["breaches"] for g in s["by_window"].values()) == s["breaches"]
             assert sum(g["breaches"] for g in s["by_fault"].values()) == s["breaches"]
             assert 0.3 * int(budget) < s["alerts_per_shift"] < 2.0 * int(budget), (budget, name, s["alerts_per_shift"])
-        b = point["bootstrap_model_minus_baseline"]["median_warning_min"]
-        assert b["low"] <= b["high"]
+        for key in ("bootstrap_model_minus_baseline", "bootstrap_model_minus_window_baseline"):
+            b = point[key]["median_warning_min"]
+            assert b["low"] <= b["high"]
+        for name, v in point["weights_check"].items():
+            assert v["breaches"] == result["breaches"] and v["harm_threshold"] > 0, name
+        for key in ("bootstrap_minus_baseline", "bootstrap_minus_window_baseline"):
+            b = point["weights_check"]["equal"][key]["median_warning_all_breaches_min"]
+            assert b["low"] <= b["high"]
 
 
 def test_more_budget_means_more_alerts(result):
-    for name in ("baseline", "model"):
+    for name in ("baseline", "window_baseline", "model"):
         volumes = [result["operating_points"][b][name]["alerts_per_shift"] for b in ("1", "2", "4", "6")]
         assert volumes == sorted(volumes)
 
@@ -189,8 +206,16 @@ def test_the_knobs_are_set_on_the_fit_runs_not_the_held_out_ones(result):
     fit, _ = evaluate.load_specs(obs, None, start, stop, "fit")
     series = evaluate.risk_series(fit, params)
     shifts = len({s.run for s in fit}) * 21
+    point = result["operating_points"]["6"]
+    # equal weights make harm the plain risk, so that knob is the risk threshold M4 set
     theta = evaluate.tune(lambda v: evaluate.model_alerts(fit, series, v), 0.0, 1.0, fit, shifts, 6, 30)
-    assert theta == pytest.approx(result["operating_points"]["6"]["model_threshold"])
+    assert theta == pytest.approx(point["weights_check"]["equal"]["harm_threshold"])
+    weights = triage.weight_schemes(triage.load())["default"]
+    harm = triage.harm_series(fit, series, weights)
+    theta = evaluate.tune(lambda v: evaluate.model_alerts(fit, harm, v), 0.0, float(max(weights.values())), fit, shifts, 6, 30)
+    assert theta == pytest.approx(point["model_threshold"])
+    share = evaluate.tune(lambda v: triage.window_share_alerts(fit, v), 0.0, 1.0, fit, shifts, 6, 30)
+    assert share == pytest.approx(point["window_share"])
     assert {s.run for s in fit} == set(range(24))
 
 
@@ -231,16 +256,56 @@ def test_the_calibration_covers_both_landmarks(result):
 
 def test_the_table_prints_both_methods_at_every_budget(result):
     text = evaluate.table(result)
-    for needle in ("baseline (quantile rule)", "risk model", "1 alerts per shift", "6 alerts per shift",
-                   "median warning, all (min)", "calibration at 30 min", "never collected, set aside"):
+    for needle in ("baseline", "window", "model", "1 alerts per shift", "6 alerts per shift",
+                   "median warning, all (min)", "model, by weights", "model 3-2-1, by tier", "alert list at 6 per shift",
+                   "calibration at 30 min", "never collected, set aside", "synthetic data, no clinical review"):
         assert needle in text
 
 
-def test_main_writes_the_numbers(tmp_path, monkeypatch, capsys):
+def test_main_writes_the_numbers_and_the_alert_list(tmp_path, monkeypatch, capsys, evaluated):
+    monkeypatch.setattr(evaluate, "run", lambda: evaluated)  # the run itself is checked by the other tests
     monkeypatch.setattr(evaluate, "RESULTS_PATH", tmp_path / "evaluation.json")
+    monkeypatch.setattr(evaluate, "ALERTS_PATH", tmp_path / "alerts.csv")
     assert evaluate.main() == 0
     assert json.loads((tmp_path / "evaluation.json").read_text())["operating_points"]["6"]["model"]["alerts"] > 0
+    with (tmp_path / "alerts.csv").open(newline="", encoding="utf-8") as f:
+        written = list(csv.DictReader(f))
+    assert len(written) == len(evaluated[1]) > 0 and list(written[0]) == list(triage.ALERT_COLUMNS)
     assert "wrote" in capsys.readouterr().out
+
+
+# ---- the alert list (plan task M5) ----
+
+def test_the_alert_list_is_the_headline_models_alerts_one_row_per_specimen(result, evaluated):
+    rows = evaluated[1]
+    headline = result["operating_points"][str(result["triage"]["headline_budget_per_shift"])]["model"]
+    assert len(rows) == headline["alerts"] == result["alert_list"]["alerts"]
+    assert len({r["specimen_id"] for r in rows}) == len(rows)  # one alert per specimen
+    assert [r["alert_at"] for r in rows] == sorted(r["alert_at"] for r in rows)
+    assert sum(r["outcome"] == "breach" and r["warning_min"] > 0 for r in rows) == headline["caught"]
+    assert sum(result["alert_list"]["by_role"].values()) == len(rows)
+    assert sum(result["alert_list"]["by_tier"].values()) == len(rows)
+
+
+def test_every_alert_is_routed_by_its_route_and_closed_at_the_receipt_scan(evaluated):
+    cfg = triage.load()
+    con = store.open_observed()
+    receipt = dict(con.execute("select specimen_id, timestamp from events where activity = 'received'").fetchall())
+    route = dict(con.execute("select specimen_id, planned_route from specimens").fetchall())
+    for r in evaluated[1]:
+        assert r["role"] == cfg["routing"][route[r["specimen_id"]]] and r["route"] == route[r["specimen_id"]]
+        assert r["role"] != cfg["routing"]["still_at_unit"]  # applied once the location estimate lands (M8)
+        expected = receipt.get(r["specimen_id"])
+        assert r["closed_at"] == ("" if expected is None else expected.isoformat(timespec="minutes"))
+        assert r["closed_at"] == "" or r["closed_at"] > r["alert_at"]
+        assert r["warning_min"] == r["window_min"] - r["minutes_since_collection"]
+
+
+def test_the_committed_alert_list_is_the_one_the_code_regenerates(evaluated):
+    with evaluate.ALERTS_PATH.open(newline="", encoding="utf-8") as f:
+        committed = list(csv.DictReader(f))
+    fresh = [{k: str(v) for k, v in r.items()} for r in evaluated[1]]
+    assert committed == fresh
 
 
 def test_only_the_evaluation_and_the_store_open_the_truth_file():
