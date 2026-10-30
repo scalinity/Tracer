@@ -1,0 +1,686 @@
+{
+ "policy_hash": "9594d7c019363261",
+ "source_sha256": "3cd25064e77828805ad20f31693f74fe27ee9ee08f42fb54b76d6061e31f9c64",
+ "held_out_runs": "24 to 29",
+ "shift_minutes": 480,
+ "tick_minutes": 5,
+ "good_warning_min": 15,
+ "test_specimens": 2399,
+ "with_a_clock": 2378,
+ "without_a_clock": 21,
+ "breaches": 100,
+ "shifts": 126,
+ "breaches_per_shift": 0.7936507936507936,
+ "specimens_per_shift": 18.873015873015873,
+ "operating_points": {
+  "1": {
+   "budget_per_shift": 1,
+   "baseline_quantile": 0.9481865289291367,
+   "model_threshold": 0.6448405366390944,
+   "baseline": {
+    "alerts": 186,
+    "alerts_per_shift": 1.4761904761904763,
+    "breaches": 100,
+    "caught": 46,
+    "catch_rate": 0.46,
+    "median_warning_min": 1367.5,
+    "median_warning_all_breaches_min": 0.0,
+    "caught_with_good_warning": 0.39,
+    "false_alerts": 112,
+    "by_window": {
+     "long (a day or more)": {
+      "breaches": 26,
+      "caught": 26,
+      "catch_rate": 1.0,
+      "median_warning_min": 1375.0,
+      "median_warning_all_breaches_min": 1375.0
+     },
+     "short (up to 2 h)": {
+      "breaches": 74,
+      "caught": 20,
+      "catch_rate": 0.2702702702702703,
+      "median_warning_min": 45.0,
+      "median_warning_all_breaches_min": 0.0
+     }
+    },
+    "by_fault": {
+     "lost_in_tube": {
+      "breaches": 13,
+      "caught": 10,
+      "catch_rate": 0.7692307692307693,
+      "median_warning_min": 1372.5,
+      "median_warning_all_breaches_min": 1350.0
+     },
+     "misrouted": {
+      "breaches": 2,
+      "caught": 0,
+      "catch_rate": 0.0,
+      "median_warning_min": null,
+      "median_warning_all_breaches_min": 0.0
+     },
+     "none": {
+      "breaches": 30,
+      "caught": 4,
+      "catch_rate": 0.13333333333333333,
+      "median_warning_min": 5.0,
+      "median_warning_all_breaches_min": 0.0
+     },
+     "not_dispatched": {
+      "breaches": 34,
+      "caught": 28,
+      "catch_rate": 0.8235294117647058,
+      "median_warning_min": 1372.5,
+      "median_warning_all_breaches_min": 1367.5
+     },
+     "stalled_at_station": {
+      "breaches": 21,
+      "caught": 4,
+      "catch_rate": 0.19047619047619047,
+      "median_warning_min": 47.5,
+      "median_warning_all_breaches_min": 0.0
+     }
+    }
+   },
+   "model": {
+    "alerts": 149,
+    "alerts_per_shift": 1.1825396825396826,
+    "breaches": 100,
+    "caught": 100,
+    "catch_rate": 1.0,
+    "median_warning_min": 10.0,
+    "median_warning_all_breaches_min": 10.0,
+    "caught_with_good_warning": 0.45,
+    "false_alerts": 49,
+    "by_window": {
+     "long (a day or more)": {
+      "breaches": 26,
+      "caught": 26,
+      "catch_rate": 1.0,
+      "median_warning_min": 1300.0,
+      "median_warning_all_breaches_min": 1300.0
+     },
+     "short (up to 2 h)": {
+      "breaches": 74,
+      "caught": 74,
+      "catch_rate": 1.0,
+      "median_warning_min": 10.0,
+      "median_warning_all_breaches_min": 10.0
+     }
+    },
+    "by_fault": {
+     "lost_in_tube": {
+      "breaches": 13,
+      "caught": 13,
+      "catch_rate": 1.0,
+      "median_warning_min": 1295.0,
+      "median_warning_all_breaches_min": 1295.0
+     },
+     "misrouted": {
+      "breaches": 2,
+      "caught": 2,
+      "catch_rate": 1.0,
+      "median_warning_min": 10.0,
+      "median_warning_all_breaches_min": 10.0
+     },
+     "none": {
+      "breaches": 30,
+      "caught": 30,
+      "catch_rate": 1.0,
+      "median_warning_min": 10.0,
+      "median_warning_all_breaches_min": 10.0
+     },
+     "not_dispatched": {
+      "breaches": 34,
+      "caught": 34,
+      "catch_rate": 1.0,
+      "median_warning_min": 1295.0,
+      "median_warning_all_breaches_min": 1295.0
+     },
+     "stalled_at_station": {
+      "breaches": 21,
+      "caught": 21,
+      "catch_rate": 1.0,
+      "median_warning_min": 10.0,
+      "median_warning_all_breaches_min": 10.0
+     }
+    }
+   },
+   "bootstrap_model_minus_baseline": {
+    "median_warning_min": {
+     "low": -1362.5,
+     "high": -50.0,
+     "share_model_ahead": 0.0
+    },
+    "median_warning_all_breaches_min": {
+     "low": 5.0,
+     "high": 15.0,
+     "share_model_ahead": 0.996
+    },
+    "catch_rate": {
+     "low": 0.48275862068965514,
+     "high": 0.5900000000000001,
+     "share_model_ahead": 1.0
+    }
+   }
+  },
+  "2": {
+   "budget_per_shift": 2,
+   "baseline_quantile": 0.8927536240990274,
+   "model_threshold": 0.29162273835390806,
+   "baseline": {
+    "alerts": 308,
+    "alerts_per_shift": 2.4444444444444446,
+    "breaches": 100,
+    "caught": 99,
+    "catch_rate": 0.99,
+    "median_warning_min": 20.0,
+    "median_warning_all_breaches_min": 17.5,
+    "caught_with_good_warning": 0.55,
+    "false_alerts": 209,
+    "by_window": {
+     "long (a day or more)": {
+      "breaches": 26,
+      "caught": 26,
+      "catch_rate": 1.0,
+      "median_warning_min": 1395.0,
+      "median_warning_all_breaches_min": 1395.0
+     },
+     "short (up to 2 h)": {
+      "breaches": 74,
+      "caught": 73,
+      "catch_rate": 0.9864864864864865,
+      "median_warning_min": 10.0,
+      "median_warning_all_breaches_min": 10.0
+     }
+    },
+    "by_fault": {
+     "lost_in_tube": {
+      "breaches": 13,
+      "caught": 13,
+      "catch_rate": 1.0,
+      "median_warning_min": 1385.0,
+      "median_warning_all_breaches_min": 1385.0
+     },
+     "misrouted": {
+      "breaches": 2,
+      "caught": 2,
+      "catch_rate": 1.0,
+      "median_warning_min": 12.5,
+      "median_warning_all_breaches_min": 12.5
+     },
+     "none": {
+      "breaches": 30,
+      "caught": 29,
+      "catch_rate": 0.9666666666666667,
+      "median_warning_min": 10.0,
+      "median_warning_all_breaches_min": 10.0
+     },
+     "not_dispatched": {
+      "breaches": 34,
+      "caught": 34,
+      "catch_rate": 1.0,
+      "median_warning_min": 1385.0,
+      "median_warning_all_breaches_min": 1385.0
+     },
+     "stalled_at_station": {
+      "breaches": 21,
+      "caught": 21,
+      "catch_rate": 1.0,
+      "median_warning_min": 10.0,
+      "median_warning_all_breaches_min": 10.0
+     }
+    }
+   },
+   "model": {
+    "alerts": 285,
+    "alerts_per_shift": 2.261904761904762,
+    "breaches": 100,
+    "caught": 100,
+    "catch_rate": 1.0,
+    "median_warning_min": 25.0,
+    "median_warning_all_breaches_min": 25.0,
+    "caught_with_good_warning": 1.0,
+    "false_alerts": 185,
+    "by_window": {
+     "long (a day or more)": {
+      "breaches": 26,
+      "caught": 26,
+      "catch_rate": 1.0,
+      "median_warning_min": 1365.0,
+      "median_warning_all_breaches_min": 1365.0
+     },
+     "short (up to 2 h)": {
+      "breaches": 74,
+      "caught": 74,
+      "catch_rate": 1.0,
+      "median_warning_min": 25.0,
+      "median_warning_all_breaches_min": 25.0
+     }
+    },
+    "by_fault": {
+     "lost_in_tube": {
+      "breaches": 13,
+      "caught": 13,
+      "catch_rate": 1.0,
+      "median_warning_min": 1355.0,
+      "median_warning_all_breaches_min": 1355.0
+     },
+     "misrouted": {
+      "breaches": 2,
+      "caught": 2,
+      "catch_rate": 1.0,
+      "median_warning_min": 25.0,
+      "median_warning_all_breaches_min": 25.0
+     },
+     "none": {
+      "breaches": 30,
+      "caught": 30,
+      "catch_rate": 1.0,
+      "median_warning_min": 25.0,
+      "median_warning_all_breaches_min": 25.0
+     },
+     "not_dispatched": {
+      "breaches": 34,
+      "caught": 34,
+      "catch_rate": 1.0,
+      "median_warning_min": 1355.0,
+      "median_warning_all_breaches_min": 1355.0
+     },
+     "stalled_at_station": {
+      "breaches": 21,
+      "caught": 21,
+      "catch_rate": 1.0,
+      "median_warning_min": 25.0,
+      "median_warning_all_breaches_min": 25.0
+     }
+    }
+   },
+   "bootstrap_model_minus_baseline": {
+    "median_warning_min": {
+     "low": 5.0,
+     "high": 15.0,
+     "share_model_ahead": 0.996
+    },
+    "median_warning_all_breaches_min": {
+     "low": 5.0,
+     "high": 15.0,
+     "share_model_ahead": 0.996
+    },
+    "catch_rate": {
+     "low": 0.0,
+     "high": 0.02752293577981646,
+     "share_model_ahead": 0.676
+    }
+   }
+  },
+  "4": {
+   "budget_per_shift": 4,
+   "baseline_quantile": 0.7525252533473076,
+   "model_threshold": 0.1409959616139531,
+   "baseline": {
+    "alerts": 550,
+    "alerts_per_shift": 4.365079365079365,
+    "breaches": 100,
+    "caught": 100,
+    "catch_rate": 1.0,
+    "median_warning_min": 25.0,
+    "median_warning_all_breaches_min": 25.0,
+    "caught_with_good_warning": 1.0,
+    "false_alerts": 450,
+    "by_window": {
+     "long (a day or more)": {
+      "breaches": 26,
+      "caught": 26,
+      "catch_rate": 1.0,
+      "median_warning_min": 1405.0,
+      "median_warning_all_breaches_min": 1405.0
+     },
+     "short (up to 2 h)": {
+      "breaches": 74,
+      "caught": 74,
+      "catch_rate": 1.0,
+      "median_warning_min": 25.0,
+      "median_warning_all_breaches_min": 25.0
+     }
+    },
+    "by_fault": {
+     "lost_in_tube": {
+      "breaches": 13,
+      "caught": 13,
+      "catch_rate": 1.0,
+      "median_warning_min": 1400.0,
+      "median_warning_all_breaches_min": 1400.0
+     },
+     "misrouted": {
+      "breaches": 2,
+      "caught": 2,
+      "catch_rate": 1.0,
+      "median_warning_min": 27.5,
+      "median_warning_all_breaches_min": 27.5
+     },
+     "none": {
+      "breaches": 30,
+      "caught": 30,
+      "catch_rate": 1.0,
+      "median_warning_min": 25.0,
+      "median_warning_all_breaches_min": 25.0
+     },
+     "not_dispatched": {
+      "breaches": 34,
+      "caught": 34,
+      "catch_rate": 1.0,
+      "median_warning_min": 1402.5,
+      "median_warning_all_breaches_min": 1402.5
+     },
+     "stalled_at_station": {
+      "breaches": 21,
+      "caught": 21,
+      "catch_rate": 1.0,
+      "median_warning_min": 25.0,
+      "median_warning_all_breaches_min": 25.0
+     }
+    }
+   },
+   "model": {
+    "alerts": 562,
+    "alerts_per_shift": 4.4603174603174605,
+    "breaches": 100,
+    "caught": 100,
+    "catch_rate": 1.0,
+    "median_warning_min": 40.0,
+    "median_warning_all_breaches_min": 40.0,
+    "caught_with_good_warning": 1.0,
+    "false_alerts": 462,
+    "by_window": {
+     "long (a day or more)": {
+      "breaches": 26,
+      "caught": 26,
+      "catch_rate": 1.0,
+      "median_warning_min": 1395.0,
+      "median_warning_all_breaches_min": 1395.0
+     },
+     "short (up to 2 h)": {
+      "breaches": 74,
+      "caught": 74,
+      "catch_rate": 1.0,
+      "median_warning_min": 35.0,
+      "median_warning_all_breaches_min": 35.0
+     }
+    },
+    "by_fault": {
+     "lost_in_tube": {
+      "breaches": 13,
+      "caught": 13,
+      "catch_rate": 1.0,
+      "median_warning_min": 1385.0,
+      "median_warning_all_breaches_min": 1385.0
+     },
+     "misrouted": {
+      "breaches": 2,
+      "caught": 2,
+      "catch_rate": 1.0,
+      "median_warning_min": 37.5,
+      "median_warning_all_breaches_min": 37.5
+     },
+     "none": {
+      "breaches": 30,
+      "caught": 30,
+      "catch_rate": 1.0,
+      "median_warning_min": 35.0,
+      "median_warning_all_breaches_min": 35.0
+     },
+     "not_dispatched": {
+      "breaches": 34,
+      "caught": 34,
+      "catch_rate": 1.0,
+      "median_warning_min": 1385.0,
+      "median_warning_all_breaches_min": 1385.0
+     },
+     "stalled_at_station": {
+      "breaches": 21,
+      "caught": 21,
+      "catch_rate": 1.0,
+      "median_warning_min": 35.0,
+      "median_warning_all_breaches_min": 35.0
+     }
+    }
+   },
+   "bootstrap_model_minus_baseline": {
+    "median_warning_min": {
+     "low": 10.0,
+     "high": 15.0,
+     "share_model_ahead": 0.99
+    },
+    "median_warning_all_breaches_min": {
+     "low": 10.0,
+     "high": 15.0,
+     "share_model_ahead": 0.99
+    },
+    "catch_rate": {
+     "low": 0.0,
+     "high": 0.0,
+     "share_model_ahead": 0.0
+    }
+   }
+  },
+  "6": {
+   "budget_per_shift": 6,
+   "baseline_quantile": 0.6107142860951834,
+   "model_threshold": 0.096080232411623,
+   "baseline": {
+    "alerts": 790,
+    "alerts_per_shift": 6.26984126984127,
+    "breaches": 100,
+    "caught": 100,
+    "catch_rate": 1.0,
+    "median_warning_min": 30.0,
+    "median_warning_all_breaches_min": 30.0,
+    "caught_with_good_warning": 1.0,
+    "false_alerts": 690,
+    "by_window": {
+     "long (a day or more)": {
+      "breaches": 26,
+      "caught": 26,
+      "catch_rate": 1.0,
+      "median_warning_min": 1415.0,
+      "median_warning_all_breaches_min": 1415.0
+     },
+     "short (up to 2 h)": {
+      "breaches": 74,
+      "caught": 74,
+      "catch_rate": 1.0,
+      "median_warning_min": 30.0,
+      "median_warning_all_breaches_min": 30.0
+     }
+    },
+    "by_fault": {
+     "lost_in_tube": {
+      "breaches": 13,
+      "caught": 13,
+      "catch_rate": 1.0,
+      "median_warning_min": 1410.0,
+      "median_warning_all_breaches_min": 1410.0
+     },
+     "misrouted": {
+      "breaches": 2,
+      "caught": 2,
+      "catch_rate": 1.0,
+      "median_warning_min": 30.0,
+      "median_warning_all_breaches_min": 30.0
+     },
+     "none": {
+      "breaches": 30,
+      "caught": 30,
+      "catch_rate": 1.0,
+      "median_warning_min": 30.0,
+      "median_warning_all_breaches_min": 30.0
+     },
+     "not_dispatched": {
+      "breaches": 34,
+      "caught": 34,
+      "catch_rate": 1.0,
+      "median_warning_min": 1410.0,
+      "median_warning_all_breaches_min": 1410.0
+     },
+     "stalled_at_station": {
+      "breaches": 21,
+      "caught": 21,
+      "catch_rate": 1.0,
+      "median_warning_min": 30.0,
+      "median_warning_all_breaches_min": 30.0
+     }
+    }
+   },
+   "model": {
+    "alerts": 796,
+    "alerts_per_shift": 6.317460317460317,
+    "breaches": 100,
+    "caught": 100,
+    "catch_rate": 1.0,
+    "median_warning_min": 45.0,
+    "median_warning_all_breaches_min": 45.0,
+    "caught_with_good_warning": 1.0,
+    "false_alerts": 696,
+    "by_window": {
+     "long (a day or more)": {
+      "breaches": 26,
+      "caught": 26,
+      "catch_rate": 1.0,
+      "median_warning_min": 1400.0,
+      "median_warning_all_breaches_min": 1400.0
+     },
+     "short (up to 2 h)": {
+      "breaches": 74,
+      "caught": 74,
+      "catch_rate": 1.0,
+      "median_warning_min": 45.0,
+      "median_warning_all_breaches_min": 45.0
+     }
+    },
+    "by_fault": {
+     "lost_in_tube": {
+      "breaches": 13,
+      "caught": 13,
+      "catch_rate": 1.0,
+      "median_warning_min": 1395.0,
+      "median_warning_all_breaches_min": 1395.0
+     },
+     "misrouted": {
+      "breaches": 2,
+      "caught": 2,
+      "catch_rate": 1.0,
+      "median_warning_min": 42.5,
+      "median_warning_all_breaches_min": 42.5
+     },
+     "none": {
+      "breaches": 30,
+      "caught": 30,
+      "catch_rate": 1.0,
+      "median_warning_min": 45.0,
+      "median_warning_all_breaches_min": 45.0
+     },
+     "not_dispatched": {
+      "breaches": 34,
+      "caught": 34,
+      "catch_rate": 1.0,
+      "median_warning_min": 1395.0,
+      "median_warning_all_breaches_min": 1395.0
+     },
+     "stalled_at_station": {
+      "breaches": 21,
+      "caught": 21,
+      "catch_rate": 1.0,
+      "median_warning_min": 45.0,
+      "median_warning_all_breaches_min": 45.0
+     }
+    }
+   },
+   "bootstrap_model_minus_baseline": {
+    "median_warning_min": {
+     "low": 10.0,
+     "high": 15.0,
+     "share_model_ahead": 0.99
+    },
+    "median_warning_all_breaches_min": {
+     "low": 10.0,
+     "high": 15.0,
+     "share_model_ahead": 0.99
+    },
+    "catch_rate": {
+     "low": 0.0,
+     "high": 0.0,
+     "share_model_ahead": 0.0
+    }
+   }
+  }
+ },
+ "calibration": {
+  "30": {
+   "landmark_min": 30,
+   "n": 725,
+   "breach_rate": 0.13793103448275862,
+   "brier": 0.10926390092881673,
+   "brier_of_the_base_rate": 0.11890606420927466,
+   "bins": [
+    {
+     "from": 0.0,
+     "to": 0.05,
+     "n": 104,
+     "predicted": 0.047280891135858365,
+     "observed": 0.09615384615384616
+    },
+    {
+     "from": 0.05,
+     "to": 0.1,
+     "n": 350,
+     "predicted": 0.060878232367814825,
+     "observed": 0.05714285714285714
+    },
+    {
+     "from": 0.1,
+     "to": 0.2,
+     "n": 61,
+     "predicted": 0.11000417208932435,
+     "observed": 0.14754098360655737
+    },
+    {
+     "from": 0.2,
+     "to": 0.4,
+     "n": 210,
+     "predicted": 0.259242391352037,
+     "observed": 0.2904761904761905
+    }
+   ]
+  },
+  "60": {
+   "landmark_min": 60,
+   "n": 157,
+   "breach_rate": 0.2484076433121019,
+   "brier": 0.18168308819299833,
+   "brier_of_the_base_rate": 0.18670128605622946,
+   "bins": [
+    {
+     "from": 0.1,
+     "to": 0.2,
+     "n": 39,
+     "predicted": 0.1779711635907369,
+     "observed": 0.2564102564102564
+    },
+    {
+     "from": 0.2,
+     "to": 0.4,
+     "n": 104,
+     "predicted": 0.2490560071061937,
+     "observed": 0.23076923076923078
+    },
+    {
+     "from": 0.4,
+     "to": 0.7,
+     "n": 14,
+     "predicted": 0.4236368608151011,
+     "observed": 0.35714285714285715
+    }
+   ]
+  }
+ }
+}
