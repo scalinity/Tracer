@@ -36,8 +36,12 @@ Three things follow, and they shape every decision below:
 
 ## 1.1 The event source, and what real data can and cannot fix
 
-**The simulator is the event source.** Every event the system ingests, trains on and is evaluated against
-comes from the project's own discrete-event model.
+**A Claude-generated dataset is the event source.** Every event the system ingests, trains on and is
+evaluated against comes from one frozen synthetic dataset, `datasets/tracer-synthetic-v1.jsonl.gz`, and its
+manifest. Seeded code draws each specimen's brief (type, tests, unit, route, collection time, planted fault
+and every timing target), Claude writes the observed scan events and the hidden true path for that brief, a
+nine-check validator accepts or rejects each trail, and the accepted output is frozen with the model, the
+prompt hash, the seeds, the counts and the cost. §6 describes the method and what it can and cannot support.
 
 This is not a preference. The digital twin needs five or six observable states to be worth building, and no
 public dataset has them. MIMIC-IV's `microbiologyevents` records `charttime` (collection) and `storetime`
@@ -48,7 +52,7 @@ transit interval this project is about. The unobserved interval is unobserved th
 
 **Calibration against real data was tested and rejected.** An earlier version of this design proposed using
 the MIMIC-IV Clinical Database Demo (100 patients, open access, Open Data Commons Open Database License) to
-calibrate two simulator parameters: specimen-type mix and the collection time-of-day profile. The extract
+calibrate two generator parameters: specimen-type mix and the collection time-of-day profile. The extract
 was obtained and checked before any calibration code was written. **Neither parameter survived the check.**
 Full working in `docs/mimic-demo-findings.md`, reproducible via
 `notebooks/mimic_demo_calibration_check.ipynb`. The measured grounds:
@@ -62,7 +66,7 @@ The population objection is the decisive one. All 100 patients in the extract ha
 admissions arrived through the emergency room; this is Beth Israel Deaconess critical care data. Tracer's
 target setting is a general clinical microbiology laboratory serving inpatient, emergency **and outpatient**
 collection, whose specimen mix is characteristically heavy in outpatient urine and whose overnight
-collection volume is close to nil. Importing this hourly curve would not make the simulator more realistic;
+collection volume is close to nil. Importing this hourly curve would not make the generator more realistic;
 it would make it more specifically an ICU, while the report claimed the opposite. **An assumed value that is
 labelled as assumed is more honest than a fitted value drawn from the wrong population.**
 
@@ -80,13 +84,13 @@ identically in the full credentialed dataset: the events are not missing because
 few, but because the fields do not exist. That argument is written up for the report's Introduction in
 `docs/problem-evidence.md`.
 
-**Consequence: every simulator parameter is an assumption**, sourced from general laboratory literature and
+**Consequence: every generator parameter is an assumption**, sourced from general laboratory literature and
 Karissa's workflow knowledge, and marked inline as an assumption wherever it appears — arrival profile and
-specimen mix along with dispatch wait, tube transit, station dwell, receipt and setup times, loss, misroute
-and stall rates, scan-miss rate, staffing and queue structure. No calibration code is written and no
+specimen mix along with dispatch wait, tube transit, station dwell, hand-carry, accession and plating waits,
+and the loss, misroute, stall, never-sent and content-failure rates. No calibration code is written and no
 calibration is claimed.
 
-**The resulting claim, stated the way the report will state it.** "All simulator parameters are assumed,
+**The resulting claim, stated the way the report will state it.** "All generator parameters are assumed,
 drawn from general laboratory literature and clinical workflow knowledge, and varied in sensitivity
 analysis. Calibration against a public hospital dataset was attempted and rejected: the available extract
 describes a critical-care population whose specimen mix and collection-hour profile differ systematically
@@ -97,9 +101,13 @@ microbiology laboratory — a quality-indicator paper or published workload stat
 question rather than a data-access one, and it is worth one search before the arrival profile is fixed in
 Week 6.
 
-**No workplace data of any kind**, in any artifact, including simulator parameters and the policy table.
+**No workplace data of any kind**, in any artifact, including generator parameters and the policy table.
 Karissa's contributions are published standards and workflow structure common to clinical microbiology
 generally.
+
+**The dataset is synthetic and had no clinical review.** The plan's review of twenty pilot timelines by
+Karissa was skipped, so the validator, a code audit and the parameter-recovery check are the only checks on
+how realistic the trails are, and the manifest says so. Every result built on the dataset says the same.
 
 ---
 
@@ -107,10 +115,10 @@ generally.
 
 | # | Component | Path | Responsibility | Why it exists |
 |---|---|---|---|---|
-| 1 | Simulator | `src/simulator/` | Discrete-event model of one emergency department, one laboratory, one pneumatic tube system. Emits an **observed log** (scans only) and a **truth log** (true position each minute, plus the injected fault). | The only substrate with the observable states the twin needs, and the only one with ground truth for position and loss. |
-| 2 | Event pipeline | `src/pipeline/ingest.py` | Reads events in timestamp order under a replay clock, validates against the event schema, appends to the event store, dispatches to the twin. | One ordered entry point means batch replay, live board and demo run identical code and cannot drift apart. |
-| 3 | Specimen digital twin | `src/pipeline/twin.py` | Holds current state for every outstanding specimen, updates it on each event, resolves its breach policy. Owns the **tick scheduler** that re-scores everything outstanding every 5 minutes of clock time. | This is where absence becomes a signal. The tick is the architectural answer to "a missing specimen produces no event". |
-| 4 | Interval fitting | `src/models/dwell.py` | Fits residual-time distributions and failure weights per stratum and observable state from the event log. | Supplies the risk model's parameters directly (§5.2) and the location model's state durations (§5.3). It is no longer a supporting component; it is where the primary model's numbers come from. |
+| 1 | Generator | `src/generator/` | Draws each specimen's brief from seeded code, has Claude write its observed scan events and hidden true path, validates each trail, and freezes the accepted output with a manifest. Two logs come out: an **observed log** (scans only) and a **truth log** (the planted fault, the true timings and the true place over time). | The only substrate with the observable states the twin needs, and the only one with ground truth for position and loss. |
+| 2 | Event store | `src/pipeline/store.py` | Loads the frozen dataset into two DuckDB files, `observed` (what a model may read) and `truth` (only the evaluation opens it), and refuses a dataset or policy that differs from its manifest. | One ordered entry point, and a wall between what a model may see and the answer key. |
+| 3 | Specimen digital twin | the tick loop in `src/pipeline/evaluate.py` | Holds current state for every outstanding specimen, updates it on each event, resolves its breach policy. Owns the **tick scheduler** that re-scores everything outstanding every 5 minutes of clock time. | This is where absence becomes a signal. The tick is the architectural answer to "a missing specimen produces no event". |
+| 4 | Interval fitting | `src/pipeline/intervals.py` | Fits residual-time distributions and failure weights per stratum and observable state from the event log. | Supplies the risk model's parameters directly (§5.2) and the location model's state durations (§5.3). It is no longer a supporting component; it is where the primary model's numbers come from. |
 | 5 | Risk model | `src/models/risk.py` | P(this specimen misses its window), conditioned on the current state and elapsed time. Analytic mixture-survival, primary. | The alert trigger. |
 | 6 | Challenger model | `src/models/challenger.py` | Landmarked gradient-boosted trees over the full feature set, evaluated against the primary in Week 7. | A pre-registered experiment, not a component of the running system. See §5.2. |
 | 7 | Location posterior | `src/models/location.py` | A probability distribution over where the specimen is right now, including "lost". | Turns "something is wrong" into "look at the tube station", which is what makes an alert actionable, and selects which role it routes to. |
@@ -126,7 +134,7 @@ would not have worked" is a result worth being able to show.
 
 | Choice | Over | Reason |
 |---|---|---|
-| **SimPy** | Hand-rolled event loop | Queues and staffed resources are primitives, so congestion-driven delay emerges from the model rather than being drawn from a distribution we invented. That realism is the whole value of the simulator. |
+| **The Claude API with seeded briefs** | A SimPy discrete-event simulator, or sampling every interval from a distribution we invented | Seeded code draws every brief and every timing target, so the statistics are ours, checkable and re-drawable, and the model supplies only the texture of the scan trail around them. A language model left to draw timings itself produces thin tails, which is why it is not allowed to. |
 | **SciPy** (`stats`, `optimize`) | A survival library such as lifelines | The primary model is a three-component mixture with a defective component and a closed-form conditional survival. That is a short maximum-likelihood fit, and writing it directly means the likelihood is in the repository where it can be read and checked. |
 | **scikit-learn `HistGradientBoostingClassifier`** | LightGBM, XGBoost | Challenger only. Equivalent on tabular data at this size, already a dependency, and pure-Python-installable in a browser via Pyodide, which keeps a fully client-side public demo possible. |
 | **Polars** | pandas | The challenger's landmark expansion multiplies rows by roughly an order of magnitude; lazy evaluation and a sane memory profile matter there. |
@@ -141,11 +149,12 @@ would not have worked" is a result worth being able to show.
 
 ```mermaid
 flowchart TB
-    subgraph SIM["Simulator (SimPy) — the event source"]
-        GEN["Specimen generator<br/>NHPP arrivals by hour"] --> FLOW["Workflow processes<br/>dispatch · tube · station · accession · plate"]
-        FAULT["Fault injection<br/>9 failure modes"] --> FLOW
-        FLOW --> OBS["Observed log<br/>scan events only"]
-        FLOW --> TRUTH["Truth log<br/>true position per minute<br/>HELD OUT"]
+    subgraph GENR["Generator (Claude, frozen) — the event source"]
+        GEN["Seeded briefs<br/>type · route · planted fault · every timing"] --> CL["Claude writes the scan events<br/>and the hidden true path"]
+        FAULT["Planted faults<br/>7 modes"] --> GEN
+        CL --> VAL["Validator<br/>9 checks · retry once"]
+        VAL --> OBS["Observed log<br/>scan events only"]
+        VAL --> TRUTH["Truth log<br/>true path per specimen<br/>HELD OUT"]
     end
 
     OBS --> ING["Ingestion<br/>validate · order · persist"]
@@ -184,41 +193,41 @@ flowchart TB
 ```
 
 The dotted line from the truth log is load-bearing: it reaches the evaluation harness and nothing else. No
-component that runs at inference time may read it. That separation is what stops the simulator from quietly
+component that runs at inference time may read it. That separation is what stops the truth log from quietly
 becoming an oracle.
 
 ### One specimen, minute by minute
 
 The numbers below come from the working model in `visuals/architecture.html`, which implements §5.2 and
-§5.3 on assumed parameters. They illustrate the mechanism; they are not results. (The page still models a
-urine whose clock stops at plating; `visuals/README.md` tracks that gap.)
+§5.3 on assumed parameters, here with the 3D exhibit's 120-minute window (the policy's window for lavage).
+They illustrate the mechanism; they are not results. (The page itself shows an unpreserved urine with its
+60-minute window, so its times differ.)
 
-The simulator emits `collected` at 02:14. Ingestion validates it and hands it to the twin, which creates a
-state record, resolves the breach policy for `bal_room_temp__bacterial_culture` — clock starts at
-`collected`, stops at `received`, window 120 minutes — and sets `window_closes_at` to 04:14. At 02:15 the tick scheduler picks the
-specimen up for the first time. The fitted residual-time distribution for this stratum and state has a
-median of 46 minutes, so one minute elapsed is unremarkable. The risk model returns P(breach) = 0.07, close
-to the unconditional rate and not a signal. The location posterior puts essentially all its mass on
-"awaiting dispatch". No alert.
+The log has `collected` at 02:14. Ingestion hands it to the twin, which creates a state record, resolves the
+breach policy for `bal_room_temp__bacterial_culture` — clock starts at `collected`, stops at `received`,
+window 120 minutes — and sets `window_closes_at` to 04:14. At 02:15 the tick scheduler picks the specimen up
+for the first time. A normal transit has a median near 24 minutes, so one minute elapsed is unremarkable.
+The risk model returns P(breach) = 0.06, close to the unconditional rate and not a signal. The location
+posterior puts essentially all its mass on "awaiting dispatch". No alert.
 
-At 03:09, fifty-five minutes in, still no receipt scan. Only about five percent of normal transits are
+At 03:14, sixty minutes in, still no receipt scan. Only about three percent of normal transits are
 outstanding by this point, so the surviving probability mass has shifted decisively toward the stalled and
-lost components, and the risk model returns 0.50 — without any event having arrived to prompt it. The
-posterior puts 0.68 on the destination tube station and 0.31 on lost, since a specimen that entered the
+lost components, and the risk model returns 0.47 — without any event having arrived to prompt it. The
+posterior puts 0.64 on the destination tube station and 0.36 on lost, since a specimen that entered the
 tube and did not emerge is more likely parked at the far end than anywhere else. Expected harm crosses the
 operating point. Triage opens one alert of type `stalled_in_transit`, routed to the receiving technologist,
-naming the station, with 65 minutes remaining before the window closes. The receipt scan at 03:22 stops the
+naming the station, with 60 minutes remaining before the window closes. The receipt scan at 03:22 stops the
 clock 52 minutes inside the window: the specimen is resolved, its risk drops to zero and the alert
 auto-resolves; the outcome is recorded for evaluation.
 
 Note what generated the alert: a clock tick and an absence. Nothing in the record changed between 02:14 and
-03:09.
+03:14.
 
 ---
 
 ## 4. Data model
 
-Timestamps are simulation-clock ISO-8601 at second resolution, naive. IDs are strings. Persisted as Parquet;
+Timestamps are ISO-8601 at second resolution, naive, on the generated clock. IDs are strings. Persisted as Parquet;
 the shapes below are the Python dataclasses.
 
 ### 4.1 Breach policy — configuration, not code
@@ -260,10 +269,10 @@ The event log is the system of record. Everything else is derived and can be reb
 | Field | Type | Notes |
 |---|---|---|
 | `event_id` | `str` | `EV-{run_id}-{seq:08d}` |
-| `run_id` | `str` | Simulator run. The unit of train/test splitting |
+| `run_id` | `str` | Generated run: one seeded week of specimens. The unit of train/test splitting |
 | `specimen_id` | `str` | `SP-{run_id}-{n:06d}` |
 | `activity` | `enum` | `ordered · collected · received · accessioned · plated · stained · reported · rejected · cancelled` |
-| `timestamp` | `datetime` | Simulation clock |
+| `timestamp` | `datetime` | Generated clock |
 | `location` | `str` | Scan location node, e.g. `ed_bay_04`, `lab_receiving` |
 | `actor_role` | `enum` | `nurse · phlebotomist · courier · processor · technologist · system` |
 | `attributes` | `dict[str, str]` | Sparse. `rejection_reason`, `container_type`, `tube_station` |
@@ -368,8 +377,8 @@ HSMM's state durations, and the challenger's `dwell_percentile` feature.
 
 **Evaluation.** Held-out log-likelihood per stratum against a single pooled distribution, so stratification
 has to earn itself; a two-sample KS test on held-out runs; and **parameter recovery** — the fitted values
-compared against the simulator's known generating parameters, which tests the estimator against truth rather
-than against itself.
+compared against the generator's planted parameters (`python -m src.pipeline.recovery`), which tests the
+estimator against truth rather than against itself.
 
 ### 5.2 Risk model — analytic mixture survival, primary
 
@@ -473,7 +482,7 @@ errors and make them impossible to evaluate separately. It is used for routing a
 look.
 
 **The identifiability problem, stated plainly.** Nothing observes the inside of the transit interval, in the
-simulator's observed log or in any real dataset, so sub-leg durations are not identifiable from data.
+generated observed log or in any real dataset, so sub-leg durations are not identifiable from data.
 Splitting a 24-minute total into dispatch wait, tube transit and station dwell requires structure the data
 does not contain. The resolution: the *proportional* split comes from the workflow map as structural prior
 knowledge, and the absolute scale is fixed by moment-matching the convolution of the sub-legs to the fitted
@@ -481,26 +490,46 @@ total. This is an assumption, not an inference, and §9's misspecification arm e
 
 **Evaluation.** Top-1 and top-3 accuracy against the truth log, reported over elapsed-time bins so the decay
 with time-since-last-scan is visible; reliability of P(`lost`) as a calibration curve; and degradation when
-the transition structure is deliberately misspecified relative to the simulator.
+the transition structure is deliberately misspecified relative to the generator.
 
 ---
 
-## 6. The simulator
+## 6. The generator
 
-SimPy, one emergency department, one laboratory, one pneumatic tube system with two stations, one hand-carry
-runner path. Deliberately small, per `project-spec.md` §7.6.
+The event log is written by a generator with two halves. **Seeded code** owns the statistics. It draws each
+specimen's *brief*: the type and tests, the collecting unit, the priority, the route, the collection time,
+one planted fault, and every timing target (dispatch wait, tube transit, station dwell, hand carry, the
+stall or misroute delay, and the receipt, accession and plating waits), from `config/config.yaml`. It also
+resolves the label (window, whether the clock started, breach) from the policy. **Claude**
+(`claude-haiku-5-5`, low effort, thinking off, a JSON schema for the reply) writes the texture around a
+brief: the observed scan events with their locations and actors, the hidden true path, and now and then a
+note that records only what the person at that scan could see. A reply is accepted only if all nine checks in
+`src/generator/validate.py` pass. A failure is retried once with the error text added, and a second failure
+drops the specimen.
 
-**What it generates.** Orders arrive as a non-homogeneous Poisson process with an hourly rate profile and a
-weekday/weekend factor. Each specimen draws a type, a priority, a collecting unit and a route, then moves
-through SimPy processes for collection, dispatch wait, transit, receiving queue, accessioning, plating and
-staining. Accessioning and plating are staffed `Resource`s whose capacity changes by shift, so **queueing
-delay emerges from congestion rather than being drawn from a distribution we made up** — that is the reason
-for a discrete-event simulator rather than sampling intervals directly, and it is what gives the congestion
-features in the challenger experiment anything to learn from.
+**Why not a simulator.** A discrete-event simulator would have to be built, and its congestion would still be
+invented. A language model left to draw timings itself produces thin tails and cannot be re-drawn, so the
+timings come from code and the model may not change them: the validator holds the collection and receipt
+scans to within 2 minutes of the brief. If generation failed or credits ran out, the trails could be
+rendered from the briefs in code, since a brief already holds every timestamp.
 
-Two outputs, written separately: the **observed log** (scan events, with a scan-miss rate applied) and the
-**truth log** (one row per specimen per minute: true state, true location, injected fault). The truth log is
-read only by the evaluation harness.
+**What it generated.** 30 seeded runs of 7 days at 400 specimens a run: 12,000 requested through the Batch
+API, 11,967 accepted (99.7 percent, 99.4 percent on the first attempt), 33 dropped, 516 breaches (4.3
+percent), for $2.16. The drops lean toward long delays (21 of 356 specimens with a stage of 120 minutes or
+more), which thins the tail slightly, and the manifest says so. `datasets/manifest.json` records the model,
+the prompt hash, the policy and config hashes, the seed, the counts and the cost, and the loader checks the
+file's SHA-256 against it. The dataset is 1.3 MB and is committed. No clinical review was done (§1.1).
+
+**Two outputs, kept apart.** The observed log holds the scan events (`ordered`, `collected`, `received`,
+`accessioned`, `plated`, `rejected`). The truth log holds the planted fault, the true timings, the breach
+label and the hidden path, one segment per place. `python -m src.pipeline.store` loads them into two DuckDB
+files. Only `src/pipeline/evaluate.py` opens the truth file, and a test fails if anything under
+`src/models/` can reach it. Runs 0 to 23 are for fitting and 24 to 29 are held out, split by run number and
+never by specimen.
+
+The code is in `src/generator/`: `briefs.py` samples, `prompt.py` builds the request and prices the job,
+`validate.py` runs the nine checks, and `run.py` and `collect.py` submit and gather the batches and freeze
+the result.
 
 ### 6.1 Specimen types — from the policy table
 
@@ -520,48 +549,50 @@ collection to receipt.
 public source and are marked `assumed: true`. Report only the sourced windows as sourced. CSF and sputum,
 in the earlier provisional list, are not in the table and are out of the prototype.
 
+`config/config.yaml` lists all 12 variants in its `specimen_mix`, and `tests/test_config.py` fails if one is
+missing or names a policy the table does not have.
+
 Body fluid sent in a blood culture bottle is in: blood cultures were excluded because they are loaded
 onto an instrument rather than plated, but with the clock stopping at receipt the loading step no longer
 defines the label. Blood cultures drawn from blood stay out, since the table does not cover them.
 
 ### 6.2 Exposed parameters
 
-All in one `config.yaml`, all seeded, and — per the check in §1.1 — **all assumed**. Every entry below
-carries its source as a comment in the file, and every source is general laboratory literature or clinical
-workflow knowledge. None is fitted to a dataset.
+All in `config/config.yaml`, all seeded, and — per the check in §1.1 — **all assumed**. Every group carries
+`source: assumed` and a one-line reason for each value, and the loader fails loudly when a group has no
+source, when mix weights or fault rates do not sum to 1, or when a median or spread is not positive. None is
+fitted to a dataset.
 
-`seed` · `duration_days` · `arrival_rate_by_hour[24]` · `weekend_factor` ·
-`specimen_mix` (over the §6.1 variants) · `stat_fraction` · `collecting_units[]` ·
-`route_probability{tube, hand_carry}` · `dispatch_wait{family, params, by_shift}` ·
-`tube_transit{family, params}` · `station_dwell{family, params}` · `hand_carry_transit{family, params}` ·
-`accession_staff_by_shift[3]` · `accession_service_time` · `plating_staff_by_shift[3]` ·
-`plating_service_time` · `scan_miss_rate` · `fault_rates{9 modes}` · `tube_downtime{mtbf, duration}`
+`run{days, start_date}` · `arrivals{rate_per_hour[24], weekend_factor}` · `specimen_mix` (over the §6.1
+variants) · `collecting_units` · `priority.stat_fraction` · `route{tube_probability, hand_carry_probability}` ·
+`legs{dispatch_wait, tube_transit, station_dwell, hand_carry_transit, accession_wait, plating_wait}`, each as
+a median and a 90th percentile · `faults{7 modes}`, with a rate each and a delay range for the stall and the
+misroute
 
 Because every parameter is assumed, the sensitivity analysis in §9 is not a supplementary check; it is how
 the parameters are defended. The ones that move the results get varied and reported.
 
-### 6.3 Fault injection
+### 6.3 Planted faults
 
-At creation each specimen draws a fault from a categorical distribution (mostly `none`). Faults are
-behavioural modifications to the SimPy process, not post-hoc edits to the log — which matters, because a
-stalled specimen also occupies a station and congests everything behind it.
+Each brief draws one fault from a categorical distribution (mostly `none`). The rates are set high enough that
+12,000 specimens hold enough examples of each; real rates are lower.
 
-| Fault | Implementation | Observable as |
-|---|---|---|
-| `never_collected` | Order event, no collection process | An order that never produces a `collected` event |
-| `not_dispatched` | Specimen parked at the unit for `U(30, 240)` min | Long silence after `collected` |
-| `misrouted_tube` | Routed to the wrong station, discovered after a delay, re-sent | Receipt far out in the stratum's tail |
-| `stalled_at_station` | Holds the station resource for `U(30, 180)` min | Long silence, plus congestion behind it |
-| `lost_in_transit` | Process terminates; specimen enters `lost` | Silence forever |
-| `mislabeled` / `unlabeled` | Proceeds normally, `rejected` at accessioning | A `rejected` event with a reason |
-| `wrong_container` | As above | As above |
-| `temperature_excursion` | Proceeds normally, flagged in truth log, `rejected` at accessioning | As above |
-| `not_accessioned` | `received` fires, then the specimen sits on the bench | Silence after `received` |
+| Fault | Rate | How it is planted | Observable as |
+|---|---|---|---|
+| `none` | 92.8% | The specimen follows its timing targets | Receipt inside the stratum's usual range |
+| `never_collected` | 0.6% | An order with no collection | An order that never produces a `collected` event. No clock starts, so scoring sets it aside |
+| `not_dispatched` | 1.2% | Collected, then left at the unit and never sent | Silence after `collected`, forever |
+| `misrouted` | 0.8% | Sent to the wrong station, found after 20 to 120 min and re-sent | Receipt far out in the stratum's tail |
+| `stalled_at_station` | 2.0% | Left in the receiving station for 30 to 180 min | Long silence, then receipt |
+| `lost_in_tube` | 0.6% | Enters the tube and never arrives | Silence forever |
+| `content_failure` | 2.0% | Arrives normally, then is rejected at accessioning (mislabeled or leaking) | A `rejected` event with a reason |
 
-The last four are **content** failures, not timing failures. They produce no early signal and Tracer is not
-expected to predict them; the simulator injects them so the log is realistic and so the report can state
-plainly which failure modes the system cannot see. Under the receipt clock (§10), `not_accessioned` happens
-after the clock has stopped and cannot cause a breach.
+The last is a **content** failure, not a timing failure. It produces no early signal and Tracer is not
+expected to predict it; it is planted so the log is realistic and so the report can state plainly which
+failure modes the system cannot see. Under the receipt clock (§10) it happens at accessioning, after the
+clock has stopped, and cannot cause a breach. A fault is planted in the brief and written into the trail by
+Claude, so it is a statement about the event log and not a behaviour of a simulated queue: a stalled
+specimen does not congest the ones behind it.
 
 ---
 
@@ -595,27 +626,23 @@ moment the alert fired, so lead time is a visible distance rather than a statist
 
 ## 8. Build order
 
-| Week | Build | Done when |
-|---|---|---|
-| **5** (Sep 23) | Schemas (§4) as dataclasses with validation, including `breach_policy.yaml` and its graph-resolution check. Simulator skeleton: arrivals, happy path, no faults. Policy table ingested, provisional values allowed. | One command produces a valid observed log and truth log for 7 simulated days, the schema validator passes, and a policy naming a nonexistent state fails loudly. |
-| **6** (Sep 30) | Ingestion, twin, tick scheduler. Interval fitting (§5.1). **Primary risk model (§5.2)** — it is a closed form over those fits, so it lands the same week. Stratified-quantile baseline. Evaluation harness with lead time and alerts per shift. | Primary model versus baseline on held-out runs. A measurable, beatable number exists a week earlier than the previous plan allowed. |
-| **7** (Oct 7) | Fault injection, all nine modes. **The challenger experiment (§5.2.1)** with its pre-registered decision rule. Parameter sensitivity on arrival profile and specimen mix (§9 arm 4). Operating point selected by alert budget. | Baseline, primary and challenger compared on held-out runs, reported honestly whichever way it falls. This is the Week 7 "preliminary results" milestone. |
-| **8** (Oct 14) | **MVP.** API, live board, specimen timeline. End to end. | See below. |
-| **9–11** | Location posterior, truth-log evaluation, misspecification arm. Report drafts in parallel. | Top-1/top-3 accuracy with calibration, plus the degradation figure. |
-| **12–13** | Scenario bundles, demo narrative, `architecture.html` grows into the Interactive Demo and its honesty gaps in `visuals/README.md` are closed. | The demo runs from GitHub Pages with no server, driven by real model output. |
-| **14–15** | Polish, AI teaming log, final prototype and demo. | Dec 2. |
+The plan (`visuals/plan.html`) holds the tasks, dates and gates. This section holds only what the build has
+to keep true. A vertical slice stays alive end to end, and a part goes deeper only after the slice runs:
 
-### Minimum viable prototype, Week 8 — the definition it will be held to
+generator → store → interval fit → risk model → alerts → bundle → demo page
 
-One command runs a simulated 7-day period through the whole path: simulator → ingestion → twin → ticks →
-risk model → triage → board. The board shows outstanding specimens ranked by expected harm with live scores
-and predicted arrival quantiles. Clicking one shows its timeline with the transit gap visible, the risk
-curve, the window marker labelled with its stop event, and the alert moment. And a one-page evaluation
-output reports, on held-out runs: median lead time for the primary model and for the baseline, alerts per
-shift for both, catch rate for both, and a calibration curve.
+### The prototype's definition, and the midterm snapshot
 
-The location posterior is **not** in the MVP. It is the most interesting component and the one most likely
-to consume a month, so it comes after there is something that works without it.
+Each stage runs from the frozen dataset with one command (the README's "Running it"). On the held-out runs,
+`python -m src.pipeline.evaluate` prints the plan's baseline, a window-aware baseline and the risk model side
+by side at 1, 2, 4 and 6 alerts per shift: alerts per shift, breaches caught, median warning, calibration and
+bootstrap intervals, and it writes the alert list. The location filter is scored separately with
+`python -m src.pipeline.location_eval`. The first end-to-end result is saved in `results/mvp-nov8.json`
+(tag `v0.1-mvp`) and is never edited; the final results are compared against it. The public demo reads a
+frozen bundle exported from these stages and calls no API.
+
+The location posterior was built after the first end-to-end slice, because it is the most interesting
+component and the one most likely to consume a month.
 
 ---
 
@@ -627,9 +654,9 @@ reports, and four arms exist to bound it.
 1. **Held-out regime shift.** Test runs include configurations never trained on: higher arrival rate, a
    different fault mix, tube downtime. A model that only works at the training load is worth knowing about.
 2. **Misspecification arm.** The HSMM's transition structure is deliberately given the wrong graph relative
-   to the simulator — a missing station, a wrong route probability — and the degradation is reported.
+   to the generator — a missing station, a wrong route probability — and the degradation is reported.
    Without this the location result is circular by construction.
-3. **Parameter recovery.** §5.1's estimator is checked against the simulator's known generating parameters,
+3. **Parameter recovery.** §5.1's estimator is checked against the generator's planted parameters,
    testing the method against truth rather than against itself.
 4. **Parameter sensitivity (Week 7).** There was a fourth arm here that compared calibrated parameters
    against assumed ones. §1.1 records why it was removed: the only available extract describes the wrong
@@ -666,7 +693,8 @@ earlier default, `clock_stop: plated`, is retired. What follows from it:
 - The risk model needs only the collection-to-receipt residual (§5.1); a received specimen is resolved.
 - Accession and plating waits still appear in the event log for realism, but they no longer move the
   label, so their parameters can stay rough.
-- `not_accessioned` (§6.3) cannot cause a breach. It stays in the simulator as a content failure.
+- `not_accessioned` cannot cause a breach: it is not generated, and the content failure at accessioning
+  (§6.3) happens after the clock has stopped.
 - The trade-off, from Karissa's notes: on high-volume days the gap from receipt to plating can grow, and
   Tracer does not flag a delay at the bench. The report should say so.
 
@@ -691,8 +719,8 @@ changes the design rather than decorating it.
 | 6 | **How many alerts per shift a laboratory would tolerate.** | The operating point (§5.2.1), therefore the headline lead-time number. |
 | 7 | **Whether Gram stain is tracked separately per specimen type.** | Whether `stained` is a stage or an attribute of setup. Minor, but it shapes the journey band in the visual. |
 
-Nothing above blocks Weeks 5 or 6. Schemas, simulator skeleton, interval fitting and the baseline all build
-against provisional values and re-run when the policy table arrives, which is why the policy is a
+Nothing above blocked the build. The generator, interval fitting and the baseline all ran
+against provisional values and re-ran when the policy table arrived, which is why the policy is a
 configuration file rather than a constant.
 
 ---
@@ -703,10 +731,11 @@ Recorded so the final report is internally consistent.
 
 | Spec said | This says | Why |
 |---|---|---|
-| §8: MIMIC-IV primary data through PhysioNet credentialed access, simulator supporting | The simulator is the event source and **no MIMIC-IV data is used anywhere in the project**. Every parameter is assumed and marked as such | Two independent reasons, the second measured rather than argued. **Structure:** MIMIC-IV records only collection and final result, so the intermediate states the twin needs are unobserved there too; measured median collection-to-result is 80.1 hours, dominated by incubation. **Population:** the available extract is Beth Israel Deaconess critical care — 100 of 100 patients with an ICU stay, 38.3% blood culture, 8 CSF specimens, no container detail on urine, 19.6% of collections overnight. Tracer models a general laboratory serving outpatient collection. Calibrating against it would import an ICU's shape while claiming realism. Credentialed access fixes sample size and not population, so it was not pursued. §1.1, `docs/mimic-demo-findings.md`, and the design note in §13.2. |
+| §8: MIMIC-IV primary data through PhysioNet credentialed access, simulator supporting | The Claude-generated synthetic dataset is the event source and **no MIMIC-IV data is used anywhere in the project**. Every parameter is assumed and marked as such | Two independent reasons, the second measured rather than argued. **Structure:** MIMIC-IV records only collection and final result, so the intermediate states the twin needs are unobserved there too; measured median collection-to-result is 80.1 hours, dominated by incubation. **Population:** the available extract is Beth Israel Deaconess critical care — 100 of 100 patients with an ICU stay, 38.3% blood culture, 8 CSF specimens, no container detail on urine, 19.6% of collections overnight. Tracer models a general laboratory serving outpatient collection. Calibrating against it would import an ICU's shape while claiming realism. Credentialed access fixes sample size and not population, so it was not pursued. §1.1, `docs/mimic-demo-findings.md`, and the design note in §13.2. |
+| §7.6: a discrete-event simulator as the supporting substrate | A Claude-generated dataset: seeded briefs, Claude-written trails, a nine-check validator and a frozen, hashed output | Decided Oct 28. A simulator's congestion would still be invented and would cost weeks to build; a language model supplies realistic texture around timings that code draws and checks, and the run costs about $2. The dataset had no clinical review. §1.1 and §6. |
 | §7.2: breach = collection-to-result exceeds window | Breach = `clock_start` to `clock_stop` exceeds window, both configurable, set to collection-to-receipt by the policy table | Where the viability clock stops is a clinical judgement, not ours to fix in code; Karissa's table answers it with receipt. §4.1 and §10. |
 | §7.3: time-to-event model, family unspecified | Analytic mixture-survival with a defective component, primary; gradient-boosted landmark model as a pre-registered challenger | The quantity is the tail of a waiting-time distribution, which three fitted parameters represent directly and a tree model has to learn from the rare class. §5.2. |
-| §7.7: location inference is a stretch goal | A specified component, built Weeks 9–11, after the MVP | It is the project's most distinctive idea and deserves specification, but it stays out of the Week 8 MVP so it cannot sink the prototype. |
+| §7.7: location inference is a stretch goal | A specified component, built after the first end-to-end slice | It is the project's most distinctive idea and deserves specification, but it came after the first end-to-end results so it could not sink the prototype. |
 | §10: process discovery out of scope | Still out of scope, and the process-mining toolkit is dropped with it | The workflow is authored, so conformance is a short path validator and interval fitting is SciPy. A GPL-3.0 dependency for one figure is not worth its weight. |
 
 ---
@@ -746,7 +775,7 @@ screen.
 
 **Date:** Week 4. **Affects:** §1.1, §6.2, §9 arm 4, §12.
 
-The plan to calibrate the simulator against real data was revised twice and then abandoned, and the shape
+The plan to calibrate the simulator (the event source until October 28, now the generator of §6) against real data was revised twice and then abandoned, and the shape
 of that sequence is the lesson. It began as "MIMIC-IV is the primary data source", narrowed to "MIMIC-IV
 calibrates the parameters", narrowed again to "an open-access 100-patient extract calibrates two parameters,
 because a small sample can still fix central tendency", and ended at "no calibration". Each narrowing was a

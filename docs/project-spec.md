@@ -1,4 +1,6 @@
 # Project Spec — CAI 5724 AI Design Project
+> **Superseded where it disagrees by `docs/architecture.md` (§12).** This spec was written when the event source was planned as a discrete-event simulator. The event source is now a Claude-generated synthetic dataset (`docs/architecture.md` §6), and the dataset had no clinical review.
+
 **Course:** CAI 5724, AI in Health Design Studio I
 **Milestone:** Week 3 — Team formed, Problem Statement, AI Sketch (5% of project grade)
 **Deadline:** Wednesday, September 9, 11:59 PM, Canvas. Both team members submit the same file.
