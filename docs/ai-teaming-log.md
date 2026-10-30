@@ -228,6 +228,13 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** the first plan covered only the three named sections, but a search found the simulator named as the event source in the component table, the diagram, the build order and the divergences too, so the done line could not hold; all were rewritten. The worked example's numbers were stale after V1 changed the model.
 - **Assumed:** sections 7 (the API) and 4.3 and 4.4 (the twin and alert records) keep their Week 4 design, since the bundle exporter and the demo (D11 to P7) will update them when they are built. The older spec and the MIMIC findings got a note instead of a rewrite, because they are dated records. The doc's worked example keeps the lavage specimen with a 120-minute window and takes its numbers from the exhibit's model.
 
+### Oct 30 · M7 · Write the headline paragraph (this pull request)
+
+- **Agent:** wrote `results/README.md` from the midterm snapshot: one headline paragraph, a table of the three alert budgets and a list of the files. The window-aware baseline's result sits right beside the headline number, and every caveat is attached to the number it qualifies. Added a test that checks each number in the paragraph and the table against `results/mvp-nov8.json`.
+- **Daniel:** set the bar in advance (at least 5 more minutes of median warning at the same alerts per shift) and asked on Oct 30 that the window-aware result sit beside the headline and not only in the caveats. Sharing the paragraph with Karissa is Daniel's step, and nothing was sent.
+- **Went wrong:** nothing failed. The paragraph is long because the caveats are part of the claim; Daniel to confirm he wants it that way.
+- **Assumed:** the paragraph states the bar on median warning over all breaches (a miss counts as zero), the same measure the snapshot records. It leads with the default weights 3, 2, 1 because they are the plan's decision, and gives the equal-weights figure in the same sentence.
+
 ## The Claude API jobs
 
 All jobs call `claude-haiku-5-5` at low effort with thinking off. The reply must match a JSON schema, so replies parse and retries stay rare. Bulk jobs run through the Batch API at half price, and every call is logged to `data/claude/usage.jsonl` (kept local). The order for each job is a token count, a pilot, then the batch, and a job's estimate must be under the plan's gate before it starts.
