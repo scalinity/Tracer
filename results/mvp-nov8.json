@@ -1,0 +1,3540 @@
+{
+ "snapshot": "v0.1-mvp",
+ "purpose": "The midterm prototype's results. The December 2 results are compared against this file. It is never edited after this commit.",
+ "created": "2026-10-30T12:12:41-04:00",
+ "code_commit": "7bc3e6af0b2cc60061e12eebfe5c0eac21458d93",
+ "how_it_was_run": [
+  "A fresh clone of the repository at the commit above, with no local data folder.",
+  "python -m src.pipeline.store, then intervals, recovery, evaluate and location_eval.",
+  "Every file in results/ came out identical to the committed one.",
+  "pytest: 385 passed in the clean clone. node visuals/plan.check.cjs: plan data is consistent."
+ ],
+ "synthetic_data_notice": "Every number below comes from synthetic data with no clinical review.",
+ "dataset": {
+  "dataset": "tracer-synthetic-v1.jsonl.gz",
+  "sha256": "3cd25064e77828805ad20f31693f74fe27ee9ee08f42fb54b76d6061e31f9c64",
+  "bytes": 1330005,
+  "model": "claude-haiku-5-5",
+  "prompt_hash": "f330cff4c9eb144d",
+  "policy_hash": "9594d7c019363261",
+  "config_hash": "05f6486af5432f5f",
+  "seed": 1,
+  "runs": 30,
+  "requested": 12000,
+  "accepted": 11967,
+  "dropped": 33,
+  "breach_accepted": 516,
+  "cost_usd": 2.1612,
+  "clinical_review": "not done: plan task K2, Karissa's review of twenty pilot timelines, was skipped"
+ },
+ "split": {
+  "fit_runs": "0 to 23",
+  "held_out_runs": "24 to 29",
+  "specimens_with_a_clock": 2378,
+  "never_collected_set_aside": 21,
+  "breaches": 100,
+  "shifts": 126
+ },
+ "pre_registered_bar": {
+  "text": "At least 5 more minutes of median warning than the plan's baseline at the same alerts per shift.",
+  "measure": "Median warning over all breaches (a miss counts as zero), the lower end of the 95% paired-bootstrap interval over the 6 held-out runs.",
+  "met_by_the_lower_end": {
+   "2": {
+    "model_3_2_1": true,
+    "model_equal_weights": true
+   },
+   "4": {
+    "model_3_2_1": true,
+    "model_equal_weights": true
+   },
+   "6": {
+    "model_3_2_1": true,
+    "model_equal_weights": true
+   }
+  },
+  "not_assessed_at_1_per_shift": "At 1 per shift the plan's baseline catches 46 of 100 and the measures disagree; see the table."
+ },
+ "headline_by_alerts_per_shift": {
+  "1": {
+   "alerts_per_shift": {
+    "plan_baseline": 1.48,
+    "window_baseline": 0.98,
+    "model_3_2_1": 1.19,
+    "model_equal_weights": 1.18
+   },
+   "breaches_caught_of_100": {
+    "plan_baseline": 46,
+    "window_baseline": 100,
+    "model_3_2_1": 71,
+    "model_equal_weights": 100
+   },
+   "median_warning_all_breaches_min": {
+    "plan_baseline": 0.0,
+    "window_baseline": 10.0,
+    "model_3_2_1": 20.0,
+    "model_equal_weights": 10.0
+   },
+   "median_warning_among_caught_min": {
+    "plan_baseline": 1367.5,
+    "window_baseline": 10.0,
+    "model_3_2_1": 65.0,
+    "model_equal_weights": 10.0
+   },
+   "share_caught_with_15_min_warning": {
+    "plan_baseline": 0.39,
+    "window_baseline": 0.39,
+    "model_3_2_1": 0.6,
+    "model_equal_weights": 0.45
+   },
+   "model_minus_plan_baseline_95pct_bootstrap_min": {
+    "model_3_2_1": [
+     15.0,
+     20.0
+    ],
+    "model_equal_weights": [
+     5.0,
+     15.0
+    ]
+   },
+   "model_minus_window_baseline_95pct_bootstrap_min": {
+    "model_3_2_1": [
+     10.0,
+     10.0
+    ],
+    "model_equal_weights": [
+     0.0,
+     5.0
+    ]
+   }
+  },
+  "2": {
+   "alerts_per_shift": {
+    "plan_baseline": 2.44,
+    "window_baseline": 2.15,
+    "model_3_2_1": 2.22,
+    "model_equal_weights": 2.26
+   },
+   "breaches_caught_of_100": {
+    "plan_baseline": 99,
+    "window_baseline": 100,
+    "model_3_2_1": 100,
+    "model_equal_weights": 100
+   },
+   "median_warning_all_breaches_min": {
+    "plan_baseline": 17.5,
+    "window_baseline": 30.0,
+    "model_3_2_1": 30.0,
+    "model_equal_weights": 25.0
+   },
+   "median_warning_among_caught_min": {
+    "plan_baseline": 20.0,
+    "window_baseline": 30.0,
+    "model_3_2_1": 30.0,
+    "model_equal_weights": 25.0
+   },
+   "share_caught_with_15_min_warning": {
+    "plan_baseline": 0.55,
+    "window_baseline": 1.0,
+    "model_3_2_1": 1.0,
+    "model_equal_weights": 1.0
+   },
+   "model_minus_plan_baseline_95pct_bootstrap_min": {
+    "model_3_2_1": [
+     10.0,
+     20.0
+    ],
+    "model_equal_weights": [
+     5.0,
+     15.0
+    ]
+   },
+   "model_minus_window_baseline_95pct_bootstrap_min": {
+    "model_3_2_1": [
+     0.0,
+     0.0
+    ],
+    "model_equal_weights": [
+     -5.0,
+     -5.0
+    ]
+   }
+  },
+  "4": {
+   "alerts_per_shift": {
+    "plan_baseline": 4.37,
+    "window_baseline": 3.86,
+    "model_3_2_1": 4.37,
+    "model_equal_weights": 4.46
+   },
+   "breaches_caught_of_100": {
+    "plan_baseline": 100,
+    "window_baseline": 100,
+    "model_3_2_1": 100,
+    "model_equal_weights": 100
+   },
+   "median_warning_all_breaches_min": {
+    "plan_baseline": 25.0,
+    "window_baseline": 40.0,
+    "model_3_2_1": 40.0,
+    "model_equal_weights": 40.0
+   },
+   "median_warning_among_caught_min": {
+    "plan_baseline": 25.0,
+    "window_baseline": 40.0,
+    "model_3_2_1": 40.0,
+    "model_equal_weights": 40.0
+   },
+   "share_caught_with_15_min_warning": {
+    "plan_baseline": 1.0,
+    "window_baseline": 1.0,
+    "model_3_2_1": 1.0,
+    "model_equal_weights": 1.0
+   },
+   "model_minus_plan_baseline_95pct_bootstrap_min": {
+    "model_3_2_1": [
+     10.0,
+     20.0
+    ],
+    "model_equal_weights": [
+     10.0,
+     15.0
+    ]
+   },
+   "model_minus_window_baseline_95pct_bootstrap_min": {
+    "model_3_2_1": [
+     0.0,
+     5.0
+    ],
+    "model_equal_weights": [
+     -2.5,
+     0.0
+    ]
+   }
+  },
+  "6": {
+   "alerts_per_shift": {
+    "plan_baseline": 6.27,
+    "window_baseline": 5.31,
+    "model_3_2_1": 6.4,
+    "model_equal_weights": 6.32
+   },
+   "breaches_caught_of_100": {
+    "plan_baseline": 100,
+    "window_baseline": 100,
+    "model_3_2_1": 100,
+    "model_equal_weights": 100
+   },
+   "median_warning_all_breaches_min": {
+    "plan_baseline": 30.0,
+    "window_baseline": 45.0,
+    "model_3_2_1": 55.0,
+    "model_equal_weights": 45.0
+   },
+   "median_warning_among_caught_min": {
+    "plan_baseline": 30.0,
+    "window_baseline": 45.0,
+    "model_3_2_1": 55.0,
+    "model_equal_weights": 45.0
+   },
+   "share_caught_with_15_min_warning": {
+    "plan_baseline": 1.0,
+    "window_baseline": 1.0,
+    "model_3_2_1": 1.0,
+    "model_equal_weights": 1.0
+   },
+   "model_minus_plan_baseline_95pct_bootstrap_min": {
+    "model_3_2_1": [
+     20.0,
+     25.0
+    ],
+    "model_equal_weights": [
+     10.0,
+     15.0
+    ]
+   },
+   "model_minus_window_baseline_95pct_bootstrap_min": {
+    "model_3_2_1": [
+     5.0,
+     10.0
+    ],
+    "model_equal_weights": [
+     0.0,
+     0.0
+    ]
+   }
+  }
+ },
+ "caveats": [
+  "Synthetic data: the 11967 specimens were written by claude-haiku-5-5 and no clinical review was done (plan task K2 was skipped).",
+  "The data and the model share assumptions, because both are ours: the generator's leg times and fault rates are assumed, and the location filter uses the same ones. Read every result as a best case.",
+  "The plan's baseline ignores the stability window and the model uses it. The window-aware baseline is the check: at equal weights the model ties it at 4 and 6 alerts per shift (40.0 and 45.0 min median warning over all breaches against 40.0 and 45.0) and trails it at 2 (25.0 against 30.0).",
+  "The budget is generous: 6 alerts per shift is about a third of all specimens (18.9 specimens and 0.79 breaches per 8-hour shift on the held-out runs). The knob is set on the fit runs, and the held-out volume at the 6-per-shift setting is 6.4.",
+  "The urgency weights move the headline. At 6 alerts per shift the model's median warning over all breaches is 55.0 min at weights 3, 2, 1, 45.0 at equal weights and 50.0 at 9, 3, 1. The extra comes from tiers 1 and 2; tier 3 (61 of the 100 breaches) gets 40.0 min at 3, 2, 1 and 45.0 at equal weights. Every weight is an assumption.",
+  "Weak discrimination: the Brier score is only slightly better than the base rate (0.109 against 0.119 at 30 minutes of silence, 0.182 against 0.187 at 60), so the gain is in timing, not in sorting.",
+  "33 of 12000 requested specimens were dropped by the validator, and they lean toward long delays (21 of 356 specimens with a stage of 120 minutes or more); see the manifest.",
+  "The fit: the pooled stalled weight (5.4% of arrivals) describes the tail and is not the planted stall rate (about 3%), and the body of the distribution before 30 minutes is off by up to 0.028. From 30 minutes on, survival recovers within 3 standard errors.",
+  "Location: the most likely place is right 49, 55, 39 and 44 percent of the time at 15, 30, 60 and 90 minutes of silence, against 34, 38, 30 and 39 percent for always naming the commonest place. Only 13 specimens were really lost."
+ ],
+ "evaluation": {
+  "policy_hash": "9594d7c019363261",
+  "source_sha256": "3cd25064e77828805ad20f31693f74fe27ee9ee08f42fb54b76d6061e31f9c64",
+  "held_out_runs": "24 to 29",
+  "shift_minutes": 480,
+  "tick_minutes": 5,
+  "good_warning_min": 15,
+  "test_specimens": 2399,
+  "with_a_clock": 2378,
+  "without_a_clock": 21,
+  "breaches": 100,
+  "shifts": 126,
+  "breaches_per_shift": 0.7936507936507936,
+  "specimens_per_shift": 18.873015873015873,
+  "triage": {
+   "source": "config/triage.yaml, every value assumed",
+   "headline_budget_per_shift": 6,
+   "weights": {
+    "default": {
+     "1": 3,
+     "2": 2,
+     "3": 1
+    },
+    "equal": {
+     "1": 1,
+     "2": 1,
+     "3": 1
+    },
+    "steep": {
+     "1": 9,
+     "2": 3,
+     "3": 1
+    }
+   },
+   "routing": {
+    "tube": "receiving technologist",
+    "hand_carry": "courier coordinator",
+    "still_at_unit": "charge nurse"
+   }
+  },
+  "operating_points": {
+   "1": {
+    "budget_per_shift": 1,
+    "baseline_quantile": 0.9481865289291367,
+    "window_share": 0.7500000009313226,
+    "model_threshold": 0.8662310745567083,
+    "baseline": {
+     "alerts": 186,
+     "alerts_per_shift": 1.4761904761904763,
+     "breaches": 100,
+     "caught": 46,
+     "catch_rate": 0.46,
+     "median_warning_min": 1367.5,
+     "median_warning_all_breaches_min": 0.0,
+     "caught_with_good_warning": 0.39,
+     "false_alerts": 112,
+     "by_window": {
+      "long (a day or more)": {
+       "breaches": 26,
+       "caught": 26,
+       "catch_rate": 1.0,
+       "median_warning_min": 1375.0,
+       "median_warning_all_breaches_min": 1375.0
+      },
+      "short (up to 2 h)": {
+       "breaches": 74,
+       "caught": 20,
+       "catch_rate": 0.2702702702702703,
+       "median_warning_min": 45.0,
+       "median_warning_all_breaches_min": 0.0
+      }
+     },
+     "by_fault": {
+      "lost_in_tube": {
+       "breaches": 13,
+       "caught": 10,
+       "catch_rate": 0.7692307692307693,
+       "median_warning_min": 1372.5,
+       "median_warning_all_breaches_min": 1350.0
+      },
+      "misrouted": {
+       "breaches": 2,
+       "caught": 0,
+       "catch_rate": 0.0,
+       "median_warning_min": null,
+       "median_warning_all_breaches_min": 0.0
+      },
+      "none": {
+       "breaches": 30,
+       "caught": 4,
+       "catch_rate": 0.13333333333333333,
+       "median_warning_min": 5.0,
+       "median_warning_all_breaches_min": 0.0
+      },
+      "not_dispatched": {
+       "breaches": 34,
+       "caught": 28,
+       "catch_rate": 0.8235294117647058,
+       "median_warning_min": 1372.5,
+       "median_warning_all_breaches_min": 1367.5
+      },
+      "stalled_at_station": {
+       "breaches": 21,
+       "caught": 4,
+       "catch_rate": 0.19047619047619047,
+       "median_warning_min": 47.5,
+       "median_warning_all_breaches_min": 0.0
+      }
+     },
+     "by_tier": {
+      "1": {
+       "specimens": 427,
+       "alerts": 43,
+       "alerts_per_shift": 0.3412698412698413,
+       "breaches": 15,
+       "caught": 15,
+       "catch_rate": 1.0,
+       "median_warning_min": 60.0,
+       "median_warning_all_breaches_min": 60.0
+      },
+      "2": {
+       "specimens": 349,
+       "alerts": 36,
+       "alerts_per_shift": 0.2857142857142857,
+       "breaches": 24,
+       "caught": 6,
+       "catch_rate": 0.25,
+       "median_warning_min": 687.5,
+       "median_warning_all_breaches_min": 0.0
+      },
+      "3": {
+       "specimens": 1602,
+       "alerts": 107,
+       "alerts_per_shift": 0.8492063492063492,
+       "breaches": 61,
+       "caught": 25,
+       "catch_rate": 0.4098360655737705,
+       "median_warning_min": 1375.0,
+       "median_warning_all_breaches_min": 0.0
+      }
+     }
+    },
+    "window_baseline": {
+     "alerts": 124,
+     "alerts_per_shift": 0.9841269841269841,
+     "breaches": 100,
+     "caught": 100,
+     "catch_rate": 1.0,
+     "median_warning_min": 10.0,
+     "median_warning_all_breaches_min": 10.0,
+     "caught_with_good_warning": 0.39,
+     "false_alerts": 24,
+     "by_window": {
+      "long (a day or more)": {
+       "breaches": 26,
+       "caught": 26,
+       "catch_rate": 1.0,
+       "median_warning_min": 355.0,
+       "median_warning_all_breaches_min": 355.0
+      },
+      "short (up to 2 h)": {
+       "breaches": 74,
+       "caught": 74,
+       "catch_rate": 1.0,
+       "median_warning_min": 10.0,
+       "median_warning_all_breaches_min": 10.0
+      }
+     },
+     "by_fault": {
+      "lost_in_tube": {
+       "breaches": 13,
+       "caught": 13,
+       "catch_rate": 1.0,
+       "median_warning_min": 355.0,
+       "median_warning_all_breaches_min": 355.0
+      },
+      "misrouted": {
+       "breaches": 2,
+       "caught": 2,
+       "catch_rate": 1.0,
+       "median_warning_min": 10.0,
+       "median_warning_all_breaches_min": 10.0
+      },
+      "none": {
+       "breaches": 30,
+       "caught": 30,
+       "catch_rate": 1.0,
+       "median_warning_min": 10.0,
+       "median_warning_all_breaches_min": 10.0
+      },
+      "not_dispatched": {
+       "breaches": 34,
+       "caught": 34,
+       "catch_rate": 1.0,
+       "median_warning_min": 355.0,
+       "median_warning_all_breaches_min": 355.0
+      },
+      "stalled_at_station": {
+       "breaches": 21,
+       "caught": 21,
+       "catch_rate": 1.0,
+       "median_warning_min": 10.0,
+       "median_warning_all_breaches_min": 10.0
+      }
+     },
+     "by_tier": {
+      "1": {
+       "specimens": 427,
+       "alerts": 18,
+       "alerts_per_shift": 0.14285714285714285,
+       "breaches": 15,
+       "caught": 15,
+       "catch_rate": 1.0,
+       "median_warning_min": 25.0,
+       "median_warning_all_breaches_min": 25.0
+      },
+      "2": {
+       "specimens": 349,
+       "alerts": 28,
+       "alerts_per_shift": 0.2222222222222222,
+       "breaches": 24,
+       "caught": 24,
+       "catch_rate": 1.0,
+       "median_warning_min": 10.0,
+       "median_warning_all_breaches_min": 10.0
+      },
+      "3": {
+       "specimens": 1602,
+       "alerts": 78,
+       "alerts_per_shift": 0.6190476190476191,
+       "breaches": 61,
+       "caught": 61,
+       "catch_rate": 1.0,
+       "median_warning_min": 10.0,
+       "median_warning_all_breaches_min": 10.0
+      }
+     }
+    },
+    "model": {
+     "alerts": 150,
+     "alerts_per_shift": 1.1904761904761905,
+     "breaches": 100,
+     "caught": 71,
+     "catch_rate": 0.71,
+     "median_warning_min": 65.0,
+     "median_warning_all_breaches_min": 20.0,
+     "caught_with_good_warning": 0.6,
+     "false_alerts": 50,
+     "by_window": {
+      "long (a day or more)": {
+       "breaches": 26,
+       "caught": 26,
+       "catch_rate": 1.0,
+       "median_warning_min": 1335.0,
+       "median_warning_all_breaches_min": 1335.0
+      },
+      "short (up to 2 h)": {
+       "breaches": 74,
+       "caught": 45,
+       "catch_rate": 0.6081081081081081,
+       "median_warning_min": 20.0,
+       "median_warning_all_breaches_min": 5.0
+      }
+     },
+     "by_fault": {
+      "lost_in_tube": {
+       "breaches": 13,
+       "caught": 11,
+       "catch_rate": 0.8461538461538461,
+       "median_warning_min": 1245.0,
+       "median_warning_all_breaches_min": 1240.0
+      },
+      "misrouted": {
+       "breaches": 2,
+       "caught": 1,
+       "catch_rate": 0.5,
+       "median_warning_min": 20.0,
+       "median_warning_all_breaches_min": 10.0
+      },
+      "none": {
+       "breaches": 30,
+       "caught": 13,
+       "catch_rate": 0.43333333333333335,
+       "median_warning_min": 20.0,
+       "median_warning_all_breaches_min": 0.0
+      },
+      "not_dispatched": {
+       "breaches": 34,
+       "caught": 31,
+       "catch_rate": 0.9117647058823529,
+       "median_warning_min": 1245.0,
+       "median_warning_all_breaches_min": 1242.5
+      },
+      "stalled_at_station": {
+       "breaches": 21,
+       "caught": 15,
+       "catch_rate": 0.7142857142857143,
+       "median_warning_min": 20.0,
+       "median_warning_all_breaches_min": 5.0
+      }
+     },
+     "by_tier": {
+      "1": {
+       "specimens": 427,
+       "alerts": 46,
+       "alerts_per_shift": 0.36507936507936506,
+       "breaches": 15,
+       "caught": 15,
+       "catch_rate": 1.0,
+       "median_warning_min": 70.0,
+       "median_warning_all_breaches_min": 70.0
+      },
+      "2": {
+       "specimens": 349,
+       "alerts": 42,
+       "alerts_per_shift": 0.3333333333333333,
+       "breaches": 24,
+       "caught": 24,
+       "catch_rate": 1.0,
+       "median_warning_min": 20.0,
+       "median_warning_all_breaches_min": 20.0
+      },
+      "3": {
+       "specimens": 1602,
+       "alerts": 62,
+       "alerts_per_shift": 0.49206349206349204,
+       "breaches": 61,
+       "caught": 32,
+       "catch_rate": 0.5245901639344263,
+       "median_warning_min": 1245.0,
+       "median_warning_all_breaches_min": 5.0
+      }
+     }
+    },
+    "weights_check": {
+     "equal": {
+      "harm_threshold": 0.6448405366390944,
+      "alerts": 149,
+      "alerts_per_shift": 1.1825396825396826,
+      "breaches": 100,
+      "caught": 100,
+      "catch_rate": 1.0,
+      "median_warning_min": 10.0,
+      "median_warning_all_breaches_min": 10.0,
+      "caught_with_good_warning": 0.45,
+      "false_alerts": 49,
+      "by_window": {
+       "long (a day or more)": {
+        "breaches": 26,
+        "caught": 26,
+        "catch_rate": 1.0,
+        "median_warning_min": 1300.0,
+        "median_warning_all_breaches_min": 1300.0
+       },
+       "short (up to 2 h)": {
+        "breaches": 74,
+        "caught": 74,
+        "catch_rate": 1.0,
+        "median_warning_min": 10.0,
+        "median_warning_all_breaches_min": 10.0
+       }
+      },
+      "by_tier": {
+       "1": {
+        "specimens": 427,
+        "alerts": 23,
+        "alerts_per_shift": 0.18253968253968253,
+        "breaches": 15,
+        "caught": 15,
+        "catch_rate": 1.0,
+        "median_warning_min": 30.0,
+        "median_warning_all_breaches_min": 30.0
+       },
+       "2": {
+        "specimens": 349,
+        "alerts": 32,
+        "alerts_per_shift": 0.25396825396825395,
+        "breaches": 24,
+        "caught": 24,
+        "catch_rate": 1.0,
+        "median_warning_min": 10.0,
+        "median_warning_all_breaches_min": 10.0
+       },
+       "3": {
+        "specimens": 1602,
+        "alerts": 94,
+        "alerts_per_shift": 0.746031746031746,
+        "breaches": 61,
+        "caught": 61,
+        "catch_rate": 1.0,
+        "median_warning_min": 10.0,
+        "median_warning_all_breaches_min": 10.0
+       }
+      },
+      "bootstrap_minus_baseline": {
+       "median_warning_min": {
+        "low": -1362.5,
+        "high": -50.0,
+        "share_model_ahead": 0.0
+       },
+       "median_warning_all_breaches_min": {
+        "low": 5.0,
+        "high": 15.0,
+        "share_model_ahead": 0.996
+       },
+       "catch_rate": {
+        "low": 0.48275862068965514,
+        "high": 0.5900000000000001,
+        "share_model_ahead": 1.0
+       }
+      },
+      "bootstrap_minus_window_baseline": {
+       "median_warning_min": {
+        "low": 0.0,
+        "high": 5.0,
+        "share_model_ahead": 0.1575
+       },
+       "median_warning_all_breaches_min": {
+        "low": 0.0,
+        "high": 5.0,
+        "share_model_ahead": 0.1575
+       },
+       "catch_rate": {
+        "low": 0.0,
+        "high": 0.0,
+        "share_model_ahead": 0.0
+       }
+      }
+     },
+     "steep": {
+      "harm_threshold": 1.0000000074505806,
+      "alerts": 151,
+      "alerts_per_shift": 1.1984126984126984,
+      "breaches": 100,
+      "caught": 39,
+      "catch_rate": 0.39,
+      "median_warning_min": 25.0,
+      "median_warning_all_breaches_min": 0.0,
+      "caught_with_good_warning": 0.39,
+      "false_alerts": 112,
+      "by_window": {
+       "long (a day or more)": {
+        "breaches": 26,
+        "caught": 5,
+        "catch_rate": 0.19230769230769232,
+        "median_warning_min": 1355.0,
+        "median_warning_all_breaches_min": 0.0
+       },
+       "short (up to 2 h)": {
+        "breaches": 74,
+        "caught": 34,
+        "catch_rate": 0.4594594594594595,
+        "median_warning_min": 25.0,
+        "median_warning_all_breaches_min": 0.0
+       }
+      },
+      "by_tier": {
+       "1": {
+        "specimens": 427,
+        "alerts": 100,
+        "alerts_per_shift": 0.7936507936507936,
+        "breaches": 15,
+        "caught": 15,
+        "catch_rate": 1.0,
+        "median_warning_min": 85.0,
+        "median_warning_all_breaches_min": 85.0
+       },
+       "2": {
+        "specimens": 349,
+        "alerts": 51,
+        "alerts_per_shift": 0.40476190476190477,
+        "breaches": 24,
+        "caught": 24,
+        "catch_rate": 1.0,
+        "median_warning_min": 25.0,
+        "median_warning_all_breaches_min": 25.0
+       },
+       "3": {
+        "specimens": 1602,
+        "alerts": 0,
+        "alerts_per_shift": 0.0,
+        "breaches": 61,
+        "caught": 0,
+        "catch_rate": 0.0,
+        "median_warning_min": null,
+        "median_warning_all_breaches_min": 0.0
+       }
+      }
+     }
+    },
+    "bootstrap_model_minus_baseline": {
+     "median_warning_min": {
+      "low": -1347.5,
+      "high": 0.0,
+      "share_model_ahead": 0.0065
+     },
+     "median_warning_all_breaches_min": {
+      "low": 15.0,
+      "high": 20.0,
+      "share_model_ahead": 1.0
+     },
+     "catch_rate": {
+      "low": 0.163615221987315,
+      "high": 0.327913889389299,
+      "share_model_ahead": 1.0
+     }
+    },
+    "bootstrap_model_minus_window_baseline": {
+     "median_warning_min": {
+      "low": 10.0,
+      "high": 1230.0,
+      "share_model_ahead": 1.0
+     },
+     "median_warning_all_breaches_min": {
+      "low": 10.0,
+      "high": 10.0,
+      "share_model_ahead": 0.9915
+     },
+     "catch_rate": {
+      "low": -0.34693877551020413,
+      "high": -0.2222222222222222,
+      "share_model_ahead": 0.0
+     }
+    }
+   },
+   "2": {
+    "budget_per_shift": 2,
+    "baseline_quantile": 0.8927536240990274,
+    "window_share": 0.4166666669771075,
+    "model_threshold": 0.4362813178449869,
+    "baseline": {
+     "alerts": 308,
+     "alerts_per_shift": 2.4444444444444446,
+     "breaches": 100,
+     "caught": 99,
+     "catch_rate": 0.99,
+     "median_warning_min": 20.0,
+     "median_warning_all_breaches_min": 17.5,
+     "caught_with_good_warning": 0.55,
+     "false_alerts": 209,
+     "by_window": {
+      "long (a day or more)": {
+       "breaches": 26,
+       "caught": 26,
+       "catch_rate": 1.0,
+       "median_warning_min": 1395.0,
+       "median_warning_all_breaches_min": 1395.0
+      },
+      "short (up to 2 h)": {
+       "breaches": 74,
+       "caught": 73,
+       "catch_rate": 0.9864864864864865,
+       "median_warning_min": 10.0,
+       "median_warning_all_breaches_min": 10.0
+      }
+     },
+     "by_fault": {
+      "lost_in_tube": {
+       "breaches": 13,
+       "caught": 13,
+       "catch_rate": 1.0,
+       "median_warning_min": 1385.0,
+       "median_warning_all_breaches_min": 1385.0
+      },
+      "misrouted": {
+       "breaches": 2,
+       "caught": 2,
+       "catch_rate": 1.0,
+       "median_warning_min": 12.5,
+       "median_warning_all_breaches_min": 12.5
+      },
+      "none": {
+       "breaches": 30,
+       "caught": 29,
+       "catch_rate": 0.9666666666666667,
+       "median_warning_min": 10.0,
+       "median_warning_all_breaches_min": 10.0
+      },
+      "not_dispatched": {
+       "breaches": 34,
+       "caught": 34,
+       "catch_rate": 1.0,
+       "median_warning_min": 1385.0,
+       "median_warning_all_breaches_min": 1385.0
+      },
+      "stalled_at_station": {
+       "breaches": 21,
+       "caught": 21,
+       "catch_rate": 1.0,
+       "median_warning_min": 10.0,
+       "median_warning_all_breaches_min": 10.0
+      }
+     },
+     "by_tier": {
+      "1": {
+       "specimens": 427,
+       "alerts": 59,
+       "alerts_per_shift": 0.46825396825396826,
+       "breaches": 15,
+       "caught": 15,
+       "catch_rate": 1.0,
+       "median_warning_min": 70.0,
+       "median_warning_all_breaches_min": 70.0
+      },
+      "2": {
+       "specimens": 349,
+       "alerts": 54,
+       "alerts_per_shift": 0.42857142857142855,
+       "breaches": 24,
+       "caught": 24,
+       "catch_rate": 1.0,
+       "median_warning_min": 15.0,
+       "median_warning_all_breaches_min": 15.0
+      },
+      "3": {
+       "specimens": 1602,
+       "alerts": 195,
+       "alerts_per_shift": 1.5476190476190477,
+       "breaches": 61,
+       "caught": 60,
+       "catch_rate": 0.9836065573770492,
+       "median_warning_min": 10.0,
+       "median_warning_all_breaches_min": 10.0
+      }
+     }
+    },
+    "window_baseline": {
+     "alerts": 271,
+     "alerts_per_shift": 2.1507936507936507,
+     "breaches": 100,
+     "caught": 100,
+     "catch_rate": 1.0,
+     "median_warning_min": 30.0,
+     "median_warning_all_breaches_min": 30.0,
+     "caught_with_good_warning": 1.0,
+     "false_alerts": 171,
+     "by_window": {
+      "long (a day or more)": {
+       "breaches": 26,
+       "caught": 26,
+       "catch_rate": 1.0,
+       "median_warning_min": 835.0,
+       "median_warning_all_breaches_min": 835.0
+      },
+      "short (up to 2 h)": {
+       "breaches": 74,
+       "caught": 74,
+       "catch_rate": 1.0,
+       "median_warning_min": 30.0,
+       "median_warning_all_breaches_min": 30.0
+      }
+     },
+     "by_fault": {
+      "lost_in_tube": {
+       "breaches": 13,
+       "caught": 13,
+       "catch_rate": 1.0,
+       "median_warning_min": 835.0,
+       "median_warning_all_breaches_min": 835.0
+      },
+      "misrouted": {
+       "breaches": 2,
+       "caught": 2,
+       "catch_rate": 1.0,
+       "median_warning_min": 30.0,
+       "median_warning_all_breaches_min": 30.0
+      },
+      "none": {
+       "breaches": 30,
+       "caught": 30,
+       "catch_rate": 1.0,
+       "median_warning_min": 30.0,
+       "median_warning_all_breaches_min": 30.0
+      },
+      "not_dispatched": {
+       "breaches": 34,
+       "caught": 34,
+       "catch_rate": 1.0,
+       "median_warning_min": 835.0,
+       "median_warning_all_breaches_min": 835.0
+      },
+      "stalled_at_station": {
+       "breaches": 21,
+       "caught": 21,
+       "catch_rate": 1.0,
+       "median_warning_min": 30.0,
+       "median_warning_all_breaches_min": 30.0
+      }
+     },
+     "by_tier": {
+      "1": {
+       "specimens": 427,
+       "alerts": 37,
+       "alerts_per_shift": 0.29365079365079366,
+       "breaches": 15,
+       "caught": 15,
+       "catch_rate": 1.0,
+       "median_warning_min": 65.0,
+       "median_warning_all_breaches_min": 65.0
+      },
+      "2": {
+       "specimens": 349,
+       "alerts": 51,
+       "alerts_per_shift": 0.40476190476190477,
+       "breaches": 24,
+       "caught": 24,
+       "catch_rate": 1.0,
+       "median_warning_min": 30.0,
+       "median_warning_all_breaches_min": 30.0
+      },
+      "3": {
+       "specimens": 1602,
+       "alerts": 183,
+       "alerts_per_shift": 1.4523809523809523,
+       "breaches": 61,
+       "caught": 61,
+       "catch_rate": 1.0,
+       "median_warning_min": 30.0,
+       "median_warning_all_breaches_min": 30.0
+      }
+     }
+    },
+    "model": {
+     "alerts": 280,
+     "alerts_per_shift": 2.2222222222222223,
+     "breaches": 100,
+     "caught": 100,
+     "catch_rate": 1.0,
+     "median_warning_min": 30.0,
+     "median_warning_all_breaches_min": 30.0,
+     "caught_with_good_warning": 1.0,
+     "false_alerts": 180,
+     "by_window": {
+      "long (a day or more)": {
+       "breaches": 26,
+       "caught": 26,
+       "catch_rate": 1.0,
+       "median_warning_min": 1375.0,
+       "median_warning_all_breaches_min": 1375.0
+      },
+      "short (up to 2 h)": {
+       "breaches": 74,
+       "caught": 74,
+       "catch_rate": 1.0,
+       "median_warning_min": 20.0,
+       "median_warning_all_breaches_min": 20.0
+      }
+     },
+     "by_fault": {
+      "lost_in_tube": {
+       "breaches": 13,
+       "caught": 13,
+       "catch_rate": 1.0,
+       "median_warning_min": 1330.0,
+       "median_warning_all_breaches_min": 1330.0
+      },
+      "misrouted": {
+       "breaches": 2,
+       "caught": 2,
+       "catch_rate": 1.0,
+       "median_warning_min": 25.0,
+       "median_warning_all_breaches_min": 25.0
+      },
+      "none": {
+       "breaches": 30,
+       "caught": 30,
+       "catch_rate": 1.0,
+       "median_warning_min": 20.0,
+       "median_warning_all_breaches_min": 20.0
+      },
+      "not_dispatched": {
+       "breaches": 34,
+       "caught": 34,
+       "catch_rate": 1.0,
+       "median_warning_min": 1332.5,
+       "median_warning_all_breaches_min": 1332.5
+      },
+      "stalled_at_station": {
+       "breaches": 21,
+       "caught": 21,
+       "catch_rate": 1.0,
+       "median_warning_min": 20.0,
+       "median_warning_all_breaches_min": 20.0
+      }
+     },
+     "by_tier": {
+      "1": {
+       "specimens": 427,
+       "alerts": 69,
+       "alerts_per_shift": 0.5476190476190477,
+       "breaches": 15,
+       "caught": 15,
+       "catch_rate": 1.0,
+       "median_warning_min": 80.0,
+       "median_warning_all_breaches_min": 80.0
+      },
+      "2": {
+       "specimens": 349,
+       "alerts": 63,
+       "alerts_per_shift": 0.5,
+       "breaches": 24,
+       "caught": 24,
+       "catch_rate": 1.0,
+       "median_warning_min": 30.0,
+       "median_warning_all_breaches_min": 30.0
+      },
+      "3": {
+       "specimens": 1602,
+       "alerts": 148,
+       "alerts_per_shift": 1.1746031746031746,
+       "breaches": 61,
+       "caught": 61,
+       "catch_rate": 1.0,
+       "median_warning_min": 20.0,
+       "median_warning_all_breaches_min": 20.0
+      }
+     }
+    },
+    "weights_check": {
+     "equal": {
+      "harm_threshold": 0.29162273835390806,
+      "alerts": 285,
+      "alerts_per_shift": 2.261904761904762,
+      "breaches": 100,
+      "caught": 100,
+      "catch_rate": 1.0,
+      "median_warning_min": 25.0,
+      "median_warning_all_breaches_min": 25.0,
+      "caught_with_good_warning": 1.0,
+      "false_alerts": 185,
+      "by_window": {
+       "long (a day or more)": {
+        "breaches": 26,
+        "caught": 26,
+        "catch_rate": 1.0,
+        "median_warning_min": 1365.0,
+        "median_warning_all_breaches_min": 1365.0
+       },
+       "short (up to 2 h)": {
+        "breaches": 74,
+        "caught": 74,
+        "catch_rate": 1.0,
+        "median_warning_min": 25.0,
+        "median_warning_all_breaches_min": 25.0
+       }
+      },
+      "by_tier": {
+       "1": {
+        "specimens": 427,
+        "alerts": 46,
+        "alerts_per_shift": 0.36507936507936506,
+        "breaches": 15,
+        "caught": 15,
+        "catch_rate": 1.0,
+        "median_warning_min": 65.0,
+        "median_warning_all_breaches_min": 65.0
+       },
+       "2": {
+        "specimens": 349,
+        "alerts": 52,
+        "alerts_per_shift": 0.4126984126984127,
+        "breaches": 24,
+        "caught": 24,
+        "catch_rate": 1.0,
+        "median_warning_min": 25.0,
+        "median_warning_all_breaches_min": 25.0
+       },
+       "3": {
+        "specimens": 1602,
+        "alerts": 187,
+        "alerts_per_shift": 1.4841269841269842,
+        "breaches": 61,
+        "caught": 61,
+        "catch_rate": 1.0,
+        "median_warning_min": 25.0,
+        "median_warning_all_breaches_min": 25.0
+       }
+      },
+      "bootstrap_minus_baseline": {
+       "median_warning_min": {
+        "low": 5.0,
+        "high": 15.0,
+        "share_model_ahead": 0.996
+       },
+       "median_warning_all_breaches_min": {
+        "low": 5.0,
+        "high": 15.0,
+        "share_model_ahead": 0.996
+       },
+       "catch_rate": {
+        "low": 0.0,
+        "high": 0.02752293577981646,
+        "share_model_ahead": 0.676
+       }
+      },
+      "bootstrap_minus_window_baseline": {
+       "median_warning_min": {
+        "low": -5.0,
+        "high": -5.0,
+        "share_model_ahead": 0.0
+       },
+       "median_warning_all_breaches_min": {
+        "low": -5.0,
+        "high": -5.0,
+        "share_model_ahead": 0.0
+       },
+       "catch_rate": {
+        "low": 0.0,
+        "high": 0.0,
+        "share_model_ahead": 0.0
+       }
+      }
+     },
+     "steep": {
+      "harm_threshold": 0.7070839907974005,
+      "alerts": 270,
+      "alerts_per_shift": 2.142857142857143,
+      "breaches": 100,
+      "caught": 100,
+      "catch_rate": 1.0,
+      "median_warning_min": 30.0,
+      "median_warning_all_breaches_min": 30.0,
+      "caught_with_good_warning": 0.6,
+      "false_alerts": 170,
+      "by_window": {
+       "long (a day or more)": {
+        "breaches": 26,
+        "caught": 26,
+        "catch_rate": 1.0,
+        "median_warning_min": 1372.5,
+        "median_warning_all_breaches_min": 1372.5
+       },
+       "short (up to 2 h)": {
+        "breaches": 74,
+        "caught": 74,
+        "catch_rate": 1.0,
+        "median_warning_min": 10.0,
+        "median_warning_all_breaches_min": 10.0
+       }
+      },
+      "by_tier": {
+       "1": {
+        "specimens": 427,
+        "alerts": 120,
+        "alerts_per_shift": 0.9523809523809523,
+        "breaches": 15,
+        "caught": 15,
+        "catch_rate": 1.0,
+        "median_warning_min": 90.0,
+        "median_warning_all_breaches_min": 90.0
+       },
+       "2": {
+        "specimens": 349,
+        "alerts": 63,
+        "alerts_per_shift": 0.5,
+        "breaches": 24,
+        "caught": 24,
+        "catch_rate": 1.0,
+        "median_warning_min": 30.0,
+        "median_warning_all_breaches_min": 30.0
+       },
+       "3": {
+        "specimens": 1602,
+        "alerts": 87,
+        "alerts_per_shift": 0.6904761904761905,
+        "breaches": 61,
+        "caught": 61,
+        "catch_rate": 1.0,
+        "median_warning_min": 10.0,
+        "median_warning_all_breaches_min": 10.0
+       }
+      }
+     }
+    },
+    "bootstrap_model_minus_baseline": {
+     "median_warning_min": {
+      "low": 10.0,
+      "high": 20.0,
+      "share_model_ahead": 1.0
+     },
+     "median_warning_all_breaches_min": {
+      "low": 10.0,
+      "high": 20.0,
+      "share_model_ahead": 1.0
+     },
+     "catch_rate": {
+      "low": 0.0,
+      "high": 0.02752293577981646,
+      "share_model_ahead": 0.676
+     }
+    },
+    "bootstrap_model_minus_window_baseline": {
+     "median_warning_min": {
+      "low": 0.0,
+      "high": 0.0,
+      "share_model_ahead": 0.01
+     },
+     "median_warning_all_breaches_min": {
+      "low": 0.0,
+      "high": 0.0,
+      "share_model_ahead": 0.01
+     },
+     "catch_rate": {
+      "low": 0.0,
+      "high": 0.0,
+      "share_model_ahead": 0.0
+     }
+    }
+   },
+   "4": {
+    "budget_per_shift": 4,
+    "baseline_quantile": 0.7525252533473076,
+    "window_share": 0.2500000009313226,
+    "model_threshold": 0.2047078711912036,
+    "baseline": {
+     "alerts": 550,
+     "alerts_per_shift": 4.365079365079365,
+     "breaches": 100,
+     "caught": 100,
+     "catch_rate": 1.0,
+     "median_warning_min": 25.0,
+     "median_warning_all_breaches_min": 25.0,
+     "caught_with_good_warning": 1.0,
+     "false_alerts": 450,
+     "by_window": {
+      "long (a day or more)": {
+       "breaches": 26,
+       "caught": 26,
+       "catch_rate": 1.0,
+       "median_warning_min": 1405.0,
+       "median_warning_all_breaches_min": 1405.0
+      },
+      "short (up to 2 h)": {
+       "breaches": 74,
+       "caught": 74,
+       "catch_rate": 1.0,
+       "median_warning_min": 25.0,
+       "median_warning_all_breaches_min": 25.0
+      }
+     },
+     "by_fault": {
+      "lost_in_tube": {
+       "breaches": 13,
+       "caught": 13,
+       "catch_rate": 1.0,
+       "median_warning_min": 1400.0,
+       "median_warning_all_breaches_min": 1400.0
+      },
+      "misrouted": {
+       "breaches": 2,
+       "caught": 2,
+       "catch_rate": 1.0,
+       "median_warning_min": 27.5,
+       "median_warning_all_breaches_min": 27.5
+      },
+      "none": {
+       "breaches": 30,
+       "caught": 30,
+       "catch_rate": 1.0,
+       "median_warning_min": 25.0,
+       "median_warning_all_breaches_min": 25.0
+      },
+      "not_dispatched": {
+       "breaches": 34,
+       "caught": 34,
+       "catch_rate": 1.0,
+       "median_warning_min": 1402.5,
+       "median_warning_all_breaches_min": 1402.5
+      },
+      "stalled_at_station": {
+       "breaches": 21,
+       "caught": 21,
+       "catch_rate": 1.0,
+       "median_warning_min": 25.0,
+       "median_warning_all_breaches_min": 25.0
+      }
+     },
+     "by_tier": {
+      "1": {
+       "specimens": 427,
+       "alerts": 98,
+       "alerts_per_shift": 0.7777777777777778,
+       "breaches": 15,
+       "caught": 15,
+       "catch_rate": 1.0,
+       "median_warning_min": 85.0,
+       "median_warning_all_breaches_min": 85.0
+      },
+      "2": {
+       "specimens": 349,
+       "alerts": 76,
+       "alerts_per_shift": 0.6031746031746031,
+       "breaches": 24,
+       "caught": 24,
+       "catch_rate": 1.0,
+       "median_warning_min": 25.0,
+       "median_warning_all_breaches_min": 25.0
+      },
+      "3": {
+       "specimens": 1602,
+       "alerts": 376,
+       "alerts_per_shift": 2.984126984126984,
+       "breaches": 61,
+       "caught": 61,
+       "catch_rate": 1.0,
+       "median_warning_min": 25.0,
+       "median_warning_all_breaches_min": 25.0
+      }
+     }
+    },
+    "window_baseline": {
+     "alerts": 486,
+     "alerts_per_shift": 3.857142857142857,
+     "breaches": 100,
+     "caught": 100,
+     "catch_rate": 1.0,
+     "median_warning_min": 40.0,
+     "median_warning_all_breaches_min": 40.0,
+     "caught_with_good_warning": 1.0,
+     "false_alerts": 386,
+     "by_window": {
+      "long (a day or more)": {
+       "breaches": 26,
+       "caught": 26,
+       "catch_rate": 1.0,
+       "median_warning_min": 1075.0,
+       "median_warning_all_breaches_min": 1075.0
+      },
+      "short (up to 2 h)": {
+       "breaches": 74,
+       "caught": 74,
+       "catch_rate": 1.0,
+       "median_warning_min": 40.0,
+       "median_warning_all_breaches_min": 40.0
+      }
+     },
+     "by_fault": {
+      "lost_in_tube": {
+       "breaches": 13,
+       "caught": 13,
+       "catch_rate": 1.0,
+       "median_warning_min": 1075.0,
+       "median_warning_all_breaches_min": 1075.0
+      },
+      "misrouted": {
+       "breaches": 2,
+       "caught": 2,
+       "catch_rate": 1.0,
+       "median_warning_min": 40.0,
+       "median_warning_all_breaches_min": 40.0
+      },
+      "none": {
+       "breaches": 30,
+       "caught": 30,
+       "catch_rate": 1.0,
+       "median_warning_min": 40.0,
+       "median_warning_all_breaches_min": 40.0
+      },
+      "not_dispatched": {
+       "breaches": 34,
+       "caught": 34,
+       "catch_rate": 1.0,
+       "median_warning_min": 1075.0,
+       "median_warning_all_breaches_min": 1075.0
+      },
+      "stalled_at_station": {
+       "breaches": 21,
+       "caught": 21,
+       "catch_rate": 1.0,
+       "median_warning_min": 40.0,
+       "median_warning_all_breaches_min": 40.0
+      }
+     },
+     "by_tier": {
+      "1": {
+       "specimens": 427,
+       "alerts": 77,
+       "alerts_per_shift": 0.6111111111111112,
+       "breaches": 15,
+       "caught": 15,
+       "catch_rate": 1.0,
+       "median_warning_min": 85.0,
+       "median_warning_all_breaches_min": 85.0
+      },
+      "2": {
+       "specimens": 349,
+       "alerts": 87,
+       "alerts_per_shift": 0.6904761904761905,
+       "breaches": 24,
+       "caught": 24,
+       "catch_rate": 1.0,
+       "median_warning_min": 40.0,
+       "median_warning_all_breaches_min": 40.0
+      },
+      "3": {
+       "specimens": 1602,
+       "alerts": 322,
+       "alerts_per_shift": 2.5555555555555554,
+       "breaches": 61,
+       "caught": 61,
+       "catch_rate": 1.0,
+       "median_warning_min": 40.0,
+       "median_warning_all_breaches_min": 40.0
+      }
+     }
+    },
+    "model": {
+     "alerts": 550,
+     "alerts_per_shift": 4.365079365079365,
+     "breaches": 100,
+     "caught": 100,
+     "catch_rate": 1.0,
+     "median_warning_min": 40.0,
+     "median_warning_all_breaches_min": 40.0,
+     "caught_with_good_warning": 1.0,
+     "false_alerts": 450,
+     "by_window": {
+      "long (a day or more)": {
+       "breaches": 26,
+       "caught": 26,
+       "catch_rate": 1.0,
+       "median_warning_min": 1397.5,
+       "median_warning_all_breaches_min": 1397.5
+      },
+      "short (up to 2 h)": {
+       "breaches": 74,
+       "caught": 74,
+       "catch_rate": 1.0,
+       "median_warning_min": 30.0,
+       "median_warning_all_breaches_min": 30.0
+      }
+     },
+     "by_fault": {
+      "lost_in_tube": {
+       "breaches": 13,
+       "caught": 13,
+       "catch_rate": 1.0,
+       "median_warning_min": 1370.0,
+       "median_warning_all_breaches_min": 1370.0
+      },
+      "misrouted": {
+       "breaches": 2,
+       "caught": 2,
+       "catch_rate": 1.0,
+       "median_warning_min": 35.0,
+       "median_warning_all_breaches_min": 35.0
+      },
+      "none": {
+       "breaches": 30,
+       "caught": 30,
+       "catch_rate": 1.0,
+       "median_warning_min": 30.0,
+       "median_warning_all_breaches_min": 30.0
+      },
+      "not_dispatched": {
+       "breaches": 34,
+       "caught": 34,
+       "catch_rate": 1.0,
+       "median_warning_min": 1372.5,
+       "median_warning_all_breaches_min": 1372.5
+      },
+      "stalled_at_station": {
+       "breaches": 21,
+       "caught": 21,
+       "catch_rate": 1.0,
+       "median_warning_min": 30.0,
+       "median_warning_all_breaches_min": 30.0
+      }
+     },
+     "by_tier": {
+      "1": {
+       "specimens": 427,
+       "alerts": 159,
+       "alerts_per_shift": 1.2619047619047619,
+       "breaches": 15,
+       "caught": 15,
+       "catch_rate": 1.0,
+       "median_warning_min": 95.0,
+       "median_warning_all_breaches_min": 95.0
+      },
+      "2": {
+       "specimens": 349,
+       "alerts": 132,
+       "alerts_per_shift": 1.0476190476190477,
+       "breaches": 24,
+       "caught": 24,
+       "catch_rate": 1.0,
+       "median_warning_min": 45.0,
+       "median_warning_all_breaches_min": 45.0
+      },
+      "3": {
+       "specimens": 1602,
+       "alerts": 259,
+       "alerts_per_shift": 2.0555555555555554,
+       "breaches": 61,
+       "caught": 61,
+       "catch_rate": 1.0,
+       "median_warning_min": 30.0,
+       "median_warning_all_breaches_min": 30.0
+      }
+     }
+    },
+    "weights_check": {
+     "equal": {
+      "harm_threshold": 0.1409959616139531,
+      "alerts": 562,
+      "alerts_per_shift": 4.4603174603174605,
+      "breaches": 100,
+      "caught": 100,
+      "catch_rate": 1.0,
+      "median_warning_min": 40.0,
+      "median_warning_all_breaches_min": 40.0,
+      "caught_with_good_warning": 1.0,
+      "false_alerts": 462,
+      "by_window": {
+       "long (a day or more)": {
+        "breaches": 26,
+        "caught": 26,
+        "catch_rate": 1.0,
+        "median_warning_min": 1395.0,
+        "median_warning_all_breaches_min": 1395.0
+       },
+       "short (up to 2 h)": {
+        "breaches": 74,
+        "caught": 74,
+        "catch_rate": 1.0,
+        "median_warning_min": 35.0,
+        "median_warning_all_breaches_min": 35.0
+       }
+      },
+      "by_tier": {
+       "1": {
+        "specimens": 427,
+        "alerts": 73,
+        "alerts_per_shift": 0.5793650793650794,
+        "breaches": 15,
+        "caught": 15,
+        "catch_rate": 1.0,
+        "median_warning_min": 80.0,
+        "median_warning_all_breaches_min": 80.0
+       },
+       "2": {
+        "specimens": 349,
+        "alerts": 99,
+        "alerts_per_shift": 0.7857142857142857,
+        "breaches": 24,
+        "caught": 24,
+        "catch_rate": 1.0,
+        "median_warning_min": 35.0,
+        "median_warning_all_breaches_min": 35.0
+       },
+       "3": {
+        "specimens": 1602,
+        "alerts": 390,
+        "alerts_per_shift": 3.0952380952380953,
+        "breaches": 61,
+        "caught": 61,
+        "catch_rate": 1.0,
+        "median_warning_min": 40.0,
+        "median_warning_all_breaches_min": 40.0
+       }
+      },
+      "bootstrap_minus_baseline": {
+       "median_warning_min": {
+        "low": 10.0,
+        "high": 15.0,
+        "share_model_ahead": 0.99
+       },
+       "median_warning_all_breaches_min": {
+        "low": 10.0,
+        "high": 15.0,
+        "share_model_ahead": 0.99
+       },
+       "catch_rate": {
+        "low": 0.0,
+        "high": 0.0,
+        "share_model_ahead": 0.0
+       }
+      },
+      "bootstrap_minus_window_baseline": {
+       "median_warning_min": {
+        "low": -2.5,
+        "high": 0.0,
+        "share_model_ahead": 0.0
+       },
+       "median_warning_all_breaches_min": {
+        "low": -2.5,
+        "high": 0.0,
+        "share_model_ahead": 0.0
+       },
+       "catch_rate": {
+        "low": 0.0,
+        "high": 0.0,
+        "share_model_ahead": 0.0
+       }
+      }
+     },
+     "steep": {
+      "harm_threshold": 0.34923979081213474,
+      "alerts": 555,
+      "alerts_per_shift": 4.404761904761905,
+      "breaches": 100,
+      "caught": 100,
+      "catch_rate": 1.0,
+      "median_warning_min": 40.0,
+      "median_warning_all_breaches_min": 40.0,
+      "caught_with_good_warning": 1.0,
+      "false_alerts": 455,
+      "by_window": {
+       "long (a day or more)": {
+        "breaches": 26,
+        "caught": 26,
+        "catch_rate": 1.0,
+        "median_warning_min": 1392.5,
+        "median_warning_all_breaches_min": 1392.5
+       },
+       "short (up to 2 h)": {
+        "breaches": 74,
+        "caught": 74,
+        "catch_rate": 1.0,
+        "median_warning_min": 25.0,
+        "median_warning_all_breaches_min": 25.0
+       }
+      },
+      "by_tier": {
+       "1": {
+        "specimens": 427,
+        "alerts": 275,
+        "alerts_per_shift": 2.1825396825396823,
+        "breaches": 15,
+        "caught": 15,
+        "catch_rate": 1.0,
+        "median_warning_min": 105.0,
+        "median_warning_all_breaches_min": 105.0
+       },
+       "2": {
+        "specimens": 349,
+        "alerts": 112,
+        "alerts_per_shift": 0.8888888888888888,
+        "breaches": 24,
+        "caught": 24,
+        "catch_rate": 1.0,
+        "median_warning_min": 40.0,
+        "median_warning_all_breaches_min": 40.0
+       },
+       "3": {
+        "specimens": 1602,
+        "alerts": 168,
+        "alerts_per_shift": 1.3333333333333333,
+        "breaches": 61,
+        "caught": 61,
+        "catch_rate": 1.0,
+        "median_warning_min": 25.0,
+        "median_warning_all_breaches_min": 25.0
+       }
+      }
+     }
+    },
+    "bootstrap_model_minus_baseline": {
+     "median_warning_min": {
+      "low": 10.0,
+      "high": 20.0,
+      "share_model_ahead": 1.0
+     },
+     "median_warning_all_breaches_min": {
+      "low": 10.0,
+      "high": 20.0,
+      "share_model_ahead": 1.0
+     },
+     "catch_rate": {
+      "low": 0.0,
+      "high": 0.0,
+      "share_model_ahead": 0.0
+     }
+    },
+    "bootstrap_model_minus_window_baseline": {
+     "median_warning_min": {
+      "low": 0.0,
+      "high": 5.0,
+      "share_model_ahead": 0.4225
+     },
+     "median_warning_all_breaches_min": {
+      "low": 0.0,
+      "high": 5.0,
+      "share_model_ahead": 0.4225
+     },
+     "catch_rate": {
+      "low": 0.0,
+      "high": 0.0,
+      "share_model_ahead": 0.0
+     }
+    }
+   },
+   "6": {
+    "budget_per_shift": 6,
+    "baseline_quantile": 0.6107142860951834,
+    "window_share": 0.16666666697710752,
+    "model_threshold": 0.13741970993578434,
+    "baseline": {
+     "alerts": 790,
+     "alerts_per_shift": 6.26984126984127,
+     "breaches": 100,
+     "caught": 100,
+     "catch_rate": 1.0,
+     "median_warning_min": 30.0,
+     "median_warning_all_breaches_min": 30.0,
+     "caught_with_good_warning": 1.0,
+     "false_alerts": 690,
+     "by_window": {
+      "long (a day or more)": {
+       "breaches": 26,
+       "caught": 26,
+       "catch_rate": 1.0,
+       "median_warning_min": 1415.0,
+       "median_warning_all_breaches_min": 1415.0
+      },
+      "short (up to 2 h)": {
+       "breaches": 74,
+       "caught": 74,
+       "catch_rate": 1.0,
+       "median_warning_min": 30.0,
+       "median_warning_all_breaches_min": 30.0
+      }
+     },
+     "by_fault": {
+      "lost_in_tube": {
+       "breaches": 13,
+       "caught": 13,
+       "catch_rate": 1.0,
+       "median_warning_min": 1410.0,
+       "median_warning_all_breaches_min": 1410.0
+      },
+      "misrouted": {
+       "breaches": 2,
+       "caught": 2,
+       "catch_rate": 1.0,
+       "median_warning_min": 30.0,
+       "median_warning_all_breaches_min": 30.0
+      },
+      "none": {
+       "breaches": 30,
+       "caught": 30,
+       "catch_rate": 1.0,
+       "median_warning_min": 30.0,
+       "median_warning_all_breaches_min": 30.0
+      },
+      "not_dispatched": {
+       "breaches": 34,
+       "caught": 34,
+       "catch_rate": 1.0,
+       "median_warning_min": 1410.0,
+       "median_warning_all_breaches_min": 1410.0
+      },
+      "stalled_at_station": {
+       "breaches": 21,
+       "caught": 21,
+       "catch_rate": 1.0,
+       "median_warning_min": 30.0,
+       "median_warning_all_breaches_min": 30.0
+      }
+     },
+     "by_tier": {
+      "1": {
+       "specimens": 427,
+       "alerts": 132,
+       "alerts_per_shift": 1.0476190476190477,
+       "breaches": 15,
+       "caught": 15,
+       "catch_rate": 1.0,
+       "median_warning_min": 90.0,
+       "median_warning_all_breaches_min": 90.0
+      },
+      "2": {
+       "specimens": 349,
+       "alerts": 116,
+       "alerts_per_shift": 0.9206349206349206,
+       "breaches": 24,
+       "caught": 24,
+       "catch_rate": 1.0,
+       "median_warning_min": 30.0,
+       "median_warning_all_breaches_min": 30.0
+      },
+      "3": {
+       "specimens": 1602,
+       "alerts": 542,
+       "alerts_per_shift": 4.301587301587301,
+       "breaches": 61,
+       "caught": 61,
+       "catch_rate": 1.0,
+       "median_warning_min": 30.0,
+       "median_warning_all_breaches_min": 30.0
+      }
+     }
+    },
+    "window_baseline": {
+     "alerts": 669,
+     "alerts_per_shift": 5.309523809523809,
+     "breaches": 100,
+     "caught": 100,
+     "catch_rate": 1.0,
+     "median_warning_min": 45.0,
+     "median_warning_all_breaches_min": 45.0,
+     "caught_with_good_warning": 1.0,
+     "false_alerts": 569,
+     "by_window": {
+      "long (a day or more)": {
+       "breaches": 26,
+       "caught": 26,
+       "catch_rate": 1.0,
+       "median_warning_min": 1195.0,
+       "median_warning_all_breaches_min": 1195.0
+      },
+      "short (up to 2 h)": {
+       "breaches": 74,
+       "caught": 74,
+       "catch_rate": 1.0,
+       "median_warning_min": 45.0,
+       "median_warning_all_breaches_min": 45.0
+      }
+     },
+     "by_fault": {
+      "lost_in_tube": {
+       "breaches": 13,
+       "caught": 13,
+       "catch_rate": 1.0,
+       "median_warning_min": 1195.0,
+       "median_warning_all_breaches_min": 1195.0
+      },
+      "misrouted": {
+       "breaches": 2,
+       "caught": 2,
+       "catch_rate": 1.0,
+       "median_warning_min": 45.0,
+       "median_warning_all_breaches_min": 45.0
+      },
+      "none": {
+       "breaches": 30,
+       "caught": 30,
+       "catch_rate": 1.0,
+       "median_warning_min": 45.0,
+       "median_warning_all_breaches_min": 45.0
+      },
+      "not_dispatched": {
+       "breaches": 34,
+       "caught": 34,
+       "catch_rate": 1.0,
+       "median_warning_min": 1195.0,
+       "median_warning_all_breaches_min": 1195.0
+      },
+      "stalled_at_station": {
+       "breaches": 21,
+       "caught": 21,
+       "catch_rate": 1.0,
+       "median_warning_min": 45.0,
+       "median_warning_all_breaches_min": 45.0
+      }
+     },
+     "by_tier": {
+      "1": {
+       "specimens": 427,
+       "alerts": 134,
+       "alerts_per_shift": 1.0634920634920635,
+       "breaches": 15,
+       "caught": 15,
+       "catch_rate": 1.0,
+       "median_warning_min": 95.0,
+       "median_warning_all_breaches_min": 95.0
+      },
+      "2": {
+       "specimens": 349,
+       "alerts": 117,
+       "alerts_per_shift": 0.9285714285714286,
+       "breaches": 24,
+       "caught": 24,
+       "catch_rate": 1.0,
+       "median_warning_min": 45.0,
+       "median_warning_all_breaches_min": 45.0
+      },
+      "3": {
+       "specimens": 1602,
+       "alerts": 418,
+       "alerts_per_shift": 3.3174603174603177,
+       "breaches": 61,
+       "caught": 61,
+       "catch_rate": 1.0,
+       "median_warning_min": 45.0,
+       "median_warning_all_breaches_min": 45.0
+      }
+     }
+    },
+    "model": {
+     "alerts": 806,
+     "alerts_per_shift": 6.396825396825397,
+     "breaches": 100,
+     "caught": 100,
+     "catch_rate": 1.0,
+     "median_warning_min": 55.0,
+     "median_warning_all_breaches_min": 55.0,
+     "caught_with_good_warning": 1.0,
+     "false_alerts": 706,
+     "by_window": {
+      "long (a day or more)": {
+       "breaches": 26,
+       "caught": 26,
+       "catch_rate": 1.0,
+       "median_warning_min": 1402.5,
+       "median_warning_all_breaches_min": 1402.5
+      },
+      "short (up to 2 h)": {
+       "breaches": 74,
+       "caught": 74,
+       "catch_rate": 1.0,
+       "median_warning_min": 40.0,
+       "median_warning_all_breaches_min": 40.0
+      }
+     },
+     "by_fault": {
+      "lost_in_tube": {
+       "breaches": 13,
+       "caught": 13,
+       "catch_rate": 1.0,
+       "median_warning_min": 1385.0,
+       "median_warning_all_breaches_min": 1385.0
+      },
+      "misrouted": {
+       "breaches": 2,
+       "caught": 2,
+       "catch_rate": 1.0,
+       "median_warning_min": 45.0,
+       "median_warning_all_breaches_min": 45.0
+      },
+      "none": {
+       "breaches": 30,
+       "caught": 30,
+       "catch_rate": 1.0,
+       "median_warning_min": 40.0,
+       "median_warning_all_breaches_min": 40.0
+      },
+      "not_dispatched": {
+       "breaches": 34,
+       "caught": 34,
+       "catch_rate": 1.0,
+       "median_warning_min": 1387.5,
+       "median_warning_all_breaches_min": 1387.5
+      },
+      "stalled_at_station": {
+       "breaches": 21,
+       "caught": 21,
+       "catch_rate": 1.0,
+       "median_warning_min": 40.0,
+       "median_warning_all_breaches_min": 40.0
+      }
+     },
+     "by_tier": {
+      "1": {
+       "specimens": 427,
+       "alerts": 216,
+       "alerts_per_shift": 1.7142857142857142,
+       "breaches": 15,
+       "caught": 15,
+       "catch_rate": 1.0,
+       "median_warning_min": 100.0,
+       "median_warning_all_breaches_min": 100.0
+      },
+      "2": {
+       "specimens": 349,
+       "alerts": 186,
+       "alerts_per_shift": 1.4761904761904763,
+       "breaches": 24,
+       "caught": 24,
+       "catch_rate": 1.0,
+       "median_warning_min": 55.0,
+       "median_warning_all_breaches_min": 55.0
+      },
+      "3": {
+       "specimens": 1602,
+       "alerts": 404,
+       "alerts_per_shift": 3.2063492063492065,
+       "breaches": 61,
+       "caught": 61,
+       "catch_rate": 1.0,
+       "median_warning_min": 40.0,
+       "median_warning_all_breaches_min": 40.0
+      }
+     }
+    },
+    "weights_check": {
+     "equal": {
+      "harm_threshold": 0.096080232411623,
+      "alerts": 796,
+      "alerts_per_shift": 6.317460317460317,
+      "breaches": 100,
+      "caught": 100,
+      "catch_rate": 1.0,
+      "median_warning_min": 45.0,
+      "median_warning_all_breaches_min": 45.0,
+      "caught_with_good_warning": 1.0,
+      "false_alerts": 696,
+      "by_window": {
+       "long (a day or more)": {
+        "breaches": 26,
+        "caught": 26,
+        "catch_rate": 1.0,
+        "median_warning_min": 1400.0,
+        "median_warning_all_breaches_min": 1400.0
+       },
+       "short (up to 2 h)": {
+        "breaches": 74,
+        "caught": 74,
+        "catch_rate": 1.0,
+        "median_warning_min": 45.0,
+        "median_warning_all_breaches_min": 45.0
+       }
+      },
+      "by_tier": {
+       "1": {
+        "specimens": 427,
+        "alerts": 108,
+        "alerts_per_shift": 0.8571428571428571,
+        "breaches": 15,
+        "caught": 15,
+        "catch_rate": 1.0,
+        "median_warning_min": 90.0,
+        "median_warning_all_breaches_min": 90.0
+       },
+       "2": {
+        "specimens": 349,
+        "alerts": 134,
+        "alerts_per_shift": 1.0634920634920635,
+        "breaches": 24,
+        "caught": 24,
+        "catch_rate": 1.0,
+        "median_warning_min": 45.0,
+        "median_warning_all_breaches_min": 45.0
+       },
+       "3": {
+        "specimens": 1602,
+        "alerts": 554,
+        "alerts_per_shift": 4.396825396825397,
+        "breaches": 61,
+        "caught": 61,
+        "catch_rate": 1.0,
+        "median_warning_min": 45.0,
+        "median_warning_all_breaches_min": 45.0
+       }
+      },
+      "bootstrap_minus_baseline": {
+       "median_warning_min": {
+        "low": 10.0,
+        "high": 15.0,
+        "share_model_ahead": 0.99
+       },
+       "median_warning_all_breaches_min": {
+        "low": 10.0,
+        "high": 15.0,
+        "share_model_ahead": 0.99
+       },
+       "catch_rate": {
+        "low": 0.0,
+        "high": 0.0,
+        "share_model_ahead": 0.0
+       }
+      },
+      "bootstrap_minus_window_baseline": {
+       "median_warning_min": {
+        "low": 0.0,
+        "high": 0.0,
+        "share_model_ahead": 0.0
+       },
+       "median_warning_all_breaches_min": {
+        "low": 0.0,
+        "high": 0.0,
+        "share_model_ahead": 0.0
+       },
+       "catch_rate": {
+        "low": 0.0,
+        "high": 0.0,
+        "share_model_ahead": 0.0
+       }
+      }
+     },
+     "steep": {
+      "harm_threshold": 0.22659706603735685,
+      "alerts": 784,
+      "alerts_per_shift": 6.222222222222222,
+      "breaches": 100,
+      "caught": 100,
+      "catch_rate": 1.0,
+      "median_warning_min": 50.0,
+      "median_warning_all_breaches_min": 50.0,
+      "caught_with_good_warning": 1.0,
+      "false_alerts": 684,
+      "by_window": {
+       "long (a day or more)": {
+        "breaches": 26,
+        "caught": 26,
+        "catch_rate": 1.0,
+        "median_warning_min": 1402.5,
+        "median_warning_all_breaches_min": 1402.5
+       },
+       "short (up to 2 h)": {
+        "breaches": 74,
+        "caught": 74,
+        "catch_rate": 1.0,
+        "median_warning_min": 30.0,
+        "median_warning_all_breaches_min": 30.0
+       }
+      },
+      "by_tier": {
+       "1": {
+        "specimens": 427,
+        "alerts": 367,
+        "alerts_per_shift": 2.9126984126984126,
+        "breaches": 15,
+        "caught": 15,
+        "catch_rate": 1.0,
+        "median_warning_min": 115.0,
+        "median_warning_all_breaches_min": 115.0
+       },
+       "2": {
+        "specimens": 349,
+        "alerts": 166,
+        "alerts_per_shift": 1.3174603174603174,
+        "breaches": 24,
+        "caught": 24,
+        "catch_rate": 1.0,
+        "median_warning_min": 50.0,
+        "median_warning_all_breaches_min": 50.0
+       },
+       "3": {
+        "specimens": 1602,
+        "alerts": 251,
+        "alerts_per_shift": 1.992063492063492,
+        "breaches": 61,
+        "caught": 61,
+        "catch_rate": 1.0,
+        "median_warning_min": 30.0,
+        "median_warning_all_breaches_min": 30.0
+       }
+      }
+     }
+    },
+    "bootstrap_model_minus_baseline": {
+     "median_warning_min": {
+      "low": 20.0,
+      "high": 25.0,
+      "share_model_ahead": 1.0
+     },
+     "median_warning_all_breaches_min": {
+      "low": 20.0,
+      "high": 25.0,
+      "share_model_ahead": 1.0
+     },
+     "catch_rate": {
+      "low": 0.0,
+      "high": 0.0,
+      "share_model_ahead": 0.0
+     }
+    },
+    "bootstrap_model_minus_window_baseline": {
+     "median_warning_min": {
+      "low": 5.0,
+      "high": 10.0,
+      "share_model_ahead": 0.991
+     },
+     "median_warning_all_breaches_min": {
+      "low": 5.0,
+      "high": 10.0,
+      "share_model_ahead": 0.991
+     },
+     "catch_rate": {
+      "low": 0.0,
+      "high": 0.0,
+      "share_model_ahead": 0.0
+     }
+    }
+   }
+  },
+  "alert_list": {
+   "budget_per_shift": 6,
+   "alerts": 806,
+   "file": "results/alerts.csv",
+   "by_role": {
+    "charge nurse": 136,
+    "courier coordinator": 127,
+    "receiving technologist": 543
+   },
+   "by_tier": {
+    "1": 216,
+    "2": 186,
+    "3": 404
+   }
+  },
+  "calibration": {
+   "30": {
+    "landmark_min": 30,
+    "n": 725,
+    "breach_rate": 0.13793103448275862,
+    "brier": 0.10926390092881673,
+    "brier_of_the_base_rate": 0.11890606420927466,
+    "bins": [
+     {
+      "from": 0.0,
+      "to": 0.05,
+      "n": 104,
+      "predicted": 0.047280891135858365,
+      "observed": 0.09615384615384616
+     },
+     {
+      "from": 0.05,
+      "to": 0.1,
+      "n": 350,
+      "predicted": 0.060878232367814825,
+      "observed": 0.05714285714285714
+     },
+     {
+      "from": 0.1,
+      "to": 0.2,
+      "n": 61,
+      "predicted": 0.11000417208932435,
+      "observed": 0.14754098360655737
+     },
+     {
+      "from": 0.2,
+      "to": 0.4,
+      "n": 210,
+      "predicted": 0.259242391352037,
+      "observed": 0.2904761904761905
+     }
+    ]
+   },
+   "60": {
+    "landmark_min": 60,
+    "n": 157,
+    "breach_rate": 0.2484076433121019,
+    "brier": 0.18168308819299833,
+    "brier_of_the_base_rate": 0.18670128605622946,
+    "bins": [
+     {
+      "from": 0.1,
+      "to": 0.2,
+      "n": 39,
+      "predicted": 0.1779711635907369,
+      "observed": 0.2564102564102564
+     },
+     {
+      "from": 0.2,
+      "to": 0.4,
+      "n": 104,
+      "predicted": 0.2490560071061937,
+      "observed": 0.23076923076923078
+     },
+     {
+      "from": 0.4,
+      "to": 0.7,
+      "n": 14,
+      "predicted": 0.4236368608151011,
+      "observed": 0.35714285714285715
+     }
+    ]
+   }
+  }
+ },
+ "location": {
+  "policy_hash": "9594d7c019363261",
+  "source_sha256": "3cd25064e77828805ad20f31693f74fe27ee9ee08f42fb54b76d6061e31f9c64",
+  "held_out_runs": "24 to 29",
+  "specimens_with_a_clock": 2378,
+  "tube_share_from_the_fit_runs": 0.8114357788522177,
+  "note": "synthetic data with no clinical review; the filter's structure and fault mix are assumptions the data was drawn with",
+  "landmarks": {
+   "15": {
+    "silent_specimens": 1811,
+    "top1": 0.4864715626725566,
+    "top3": 0.9734953064605191,
+    "most_common_place": "at_station",
+    "most_common_share": 0.3390392048591938,
+    "true_places": {
+     "at_unit": 586,
+     "hand_carry": 267,
+     "in_tube": 296,
+     "at_station": 614,
+     "stalled_at_station": 23,
+     "misrouted": 17,
+     "lost": 8
+    },
+    "confusion_true_by_predicted": {
+     "at_unit": {
+      "at_unit": 0,
+      "hand_carry": 111,
+      "in_tube": 0,
+      "at_station": 475,
+      "stalled_at_station": 0,
+      "misrouted": 0,
+      "lost": 0
+     },
+     "hand_carry": {
+      "at_unit": 0,
+      "hand_carry": 267,
+      "in_tube": 0,
+      "at_station": 0,
+      "stalled_at_station": 0,
+      "misrouted": 0,
+      "lost": 0
+     },
+     "in_tube": {
+      "at_unit": 0,
+      "hand_carry": 0,
+      "in_tube": 0,
+      "at_station": 296,
+      "stalled_at_station": 0,
+      "misrouted": 0,
+      "lost": 0
+     },
+     "at_station": {
+      "at_unit": 0,
+      "hand_carry": 0,
+      "in_tube": 0,
+      "at_station": 614,
+      "stalled_at_station": 0,
+      "misrouted": 0,
+      "lost": 0
+     },
+     "stalled_at_station": {
+      "at_unit": 0,
+      "hand_carry": 0,
+      "in_tube": 0,
+      "at_station": 23,
+      "stalled_at_station": 0,
+      "misrouted": 0,
+      "lost": 0
+     },
+     "misrouted": {
+      "at_unit": 0,
+      "hand_carry": 0,
+      "in_tube": 0,
+      "at_station": 17,
+      "stalled_at_station": 0,
+      "misrouted": 0,
+      "lost": 0
+     },
+     "lost": {
+      "at_unit": 0,
+      "hand_carry": 0,
+      "in_tube": 0,
+      "at_station": 8,
+      "stalled_at_station": 0,
+      "misrouted": 0,
+      "lost": 0
+     }
+    }
+   },
+   "30": {
+    "silent_specimens": 725,
+    "top1": 0.5462068965517242,
+    "top3": 0.8758620689655172,
+    "most_common_place": "at_station",
+    "most_common_share": 0.3820689655172414,
+    "true_places": {
+     "at_unit": 188,
+     "hand_carry": 119,
+     "in_tube": 55,
+     "at_station": 277,
+     "stalled_at_station": 50,
+     "misrouted": 24,
+     "lost": 12
+    },
+    "confusion_true_by_predicted": {
+     "at_unit": {
+      "at_unit": 0,
+      "hand_carry": 37,
+      "in_tube": 0,
+      "at_station": 151,
+      "stalled_at_station": 0,
+      "misrouted": 0,
+      "lost": 0
+     },
+     "hand_carry": {
+      "at_unit": 0,
+      "hand_carry": 119,
+      "in_tube": 0,
+      "at_station": 0,
+      "stalled_at_station": 0,
+      "misrouted": 0,
+      "lost": 0
+     },
+     "in_tube": {
+      "at_unit": 0,
+      "hand_carry": 0,
+      "in_tube": 0,
+      "at_station": 55,
+      "stalled_at_station": 0,
+      "misrouted": 0,
+      "lost": 0
+     },
+     "at_station": {
+      "at_unit": 0,
+      "hand_carry": 0,
+      "in_tube": 0,
+      "at_station": 277,
+      "stalled_at_station": 0,
+      "misrouted": 0,
+      "lost": 0
+     },
+     "stalled_at_station": {
+      "at_unit": 0,
+      "hand_carry": 0,
+      "in_tube": 0,
+      "at_station": 50,
+      "stalled_at_station": 0,
+      "misrouted": 0,
+      "lost": 0
+     },
+     "misrouted": {
+      "at_unit": 0,
+      "hand_carry": 0,
+      "in_tube": 0,
+      "at_station": 24,
+      "stalled_at_station": 0,
+      "misrouted": 0,
+      "lost": 0
+     },
+     "lost": {
+      "at_unit": 0,
+      "hand_carry": 0,
+      "in_tube": 0,
+      "at_station": 12,
+      "stalled_at_station": 0,
+      "misrouted": 0,
+      "lost": 0
+     }
+    }
+   },
+   "60": {
+    "silent_specimens": 218,
+    "top1": 0.38990825688073394,
+    "top3": 0.8440366972477065,
+    "most_common_place": "at_unit",
+    "most_common_share": 0.2981651376146789,
+    "true_places": {
+     "at_unit": 65,
+     "hand_carry": 26,
+     "in_tube": 4,
+     "at_station": 36,
+     "stalled_at_station": 59,
+     "misrouted": 15,
+     "lost": 13
+    },
+    "confusion_true_by_predicted": {
+     "at_unit": {
+      "at_unit": 0,
+      "hand_carry": 11,
+      "in_tube": 0,
+      "at_station": 0,
+      "stalled_at_station": 54,
+      "misrouted": 0,
+      "lost": 0
+     },
+     "hand_carry": {
+      "at_unit": 0,
+      "hand_carry": 26,
+      "in_tube": 0,
+      "at_station": 0,
+      "stalled_at_station": 0,
+      "misrouted": 0,
+      "lost": 0
+     },
+     "in_tube": {
+      "at_unit": 0,
+      "hand_carry": 0,
+      "in_tube": 0,
+      "at_station": 0,
+      "stalled_at_station": 4,
+      "misrouted": 0,
+      "lost": 0
+     },
+     "at_station": {
+      "at_unit": 0,
+      "hand_carry": 0,
+      "in_tube": 0,
+      "at_station": 0,
+      "stalled_at_station": 36,
+      "misrouted": 0,
+      "lost": 0
+     },
+     "stalled_at_station": {
+      "at_unit": 0,
+      "hand_carry": 0,
+      "in_tube": 0,
+      "at_station": 0,
+      "stalled_at_station": 59,
+      "misrouted": 0,
+      "lost": 0
+     },
+     "misrouted": {
+      "at_unit": 0,
+      "hand_carry": 0,
+      "in_tube": 0,
+      "at_station": 0,
+      "stalled_at_station": 15,
+      "misrouted": 0,
+      "lost": 0
+     },
+     "lost": {
+      "at_unit": 0,
+      "hand_carry": 0,
+      "in_tube": 0,
+      "at_station": 0,
+      "stalled_at_station": 13,
+      "misrouted": 0,
+      "lost": 0
+     }
+    }
+   },
+   "90": {
+    "silent_specimens": 132,
+    "top1": 0.4393939393939394,
+    "top3": 0.803030303030303,
+    "most_common_place": "stalled_at_station",
+    "most_common_share": 0.38636363636363635,
+    "true_places": {
+     "at_unit": 43,
+     "hand_carry": 3,
+     "in_tube": 2,
+     "at_station": 11,
+     "stalled_at_station": 51,
+     "misrouted": 9,
+     "lost": 13
+    },
+    "confusion_true_by_predicted": {
+     "at_unit": {
+      "at_unit": 7,
+      "hand_carry": 0,
+      "in_tube": 0,
+      "at_station": 0,
+      "stalled_at_station": 36,
+      "misrouted": 0,
+      "lost": 0
+     },
+     "hand_carry": {
+      "at_unit": 3,
+      "hand_carry": 0,
+      "in_tube": 0,
+      "at_station": 0,
+      "stalled_at_station": 0,
+      "misrouted": 0,
+      "lost": 0
+     },
+     "in_tube": {
+      "at_unit": 0,
+      "hand_carry": 0,
+      "in_tube": 0,
+      "at_station": 0,
+      "stalled_at_station": 2,
+      "misrouted": 0,
+      "lost": 0
+     },
+     "at_station": {
+      "at_unit": 0,
+      "hand_carry": 0,
+      "in_tube": 0,
+      "at_station": 0,
+      "stalled_at_station": 11,
+      "misrouted": 0,
+      "lost": 0
+     },
+     "stalled_at_station": {
+      "at_unit": 0,
+      "hand_carry": 0,
+      "in_tube": 0,
+      "at_station": 0,
+      "stalled_at_station": 51,
+      "misrouted": 0,
+      "lost": 0
+     },
+     "misrouted": {
+      "at_unit": 0,
+      "hand_carry": 0,
+      "in_tube": 0,
+      "at_station": 0,
+      "stalled_at_station": 9,
+      "misrouted": 0,
+      "lost": 0
+     },
+     "lost": {
+      "at_unit": 0,
+      "hand_carry": 0,
+      "in_tube": 0,
+      "at_station": 0,
+      "stalled_at_station": 13,
+      "misrouted": 0,
+      "lost": 0
+     }
+    }
+   }
+  },
+  "lost_calibration": {
+   "pooled_ticks": 14696,
+   "specimens_really_lost": 13,
+   "share_of_ticks_really_lost": 0.04014697876973326,
+   "brier": 0.03403126792973733,
+   "brier_of_the_base_rate": 0.038535198865395845,
+   "bins": [
+    {
+     "from": 0.0,
+     "to": 0.01,
+     "n": 8685,
+     "predicted": 0.0023747608786873304,
+     "observed": 0.0024179620034542313
+    },
+    {
+     "from": 0.01,
+     "to": 0.02,
+     "n": 1241,
+     "predicted": 0.014865866961295241,
+     "observed": 0.016116035455278
+    },
+    {
+     "from": 0.02,
+     "to": 0.05,
+     "n": 1459,
+     "predicted": 0.032881037880257445,
+     "observed": 0.03427004797806717
+    },
+    {
+     "from": 0.05,
+     "to": 0.1,
+     "n": 1085,
+     "predicted": 0.07128346993227262,
+     "observed": 0.07741935483870968
+    },
+    {
+     "from": 0.1,
+     "to": 0.2,
+     "n": 925,
+     "predicted": 0.14416722490629047,
+     "observed": 0.1254054054054054
+    },
+    {
+     "from": 0.2,
+     "to": 0.4,
+     "n": 1301,
+     "predicted": 0.30078506400007465,
+     "observed": 0.22982321291314373
+    }
+   ]
+  }
+ },
+ "parameter_recovery": {
+  "planted_run": "seed 999, run 0, 397598 specimens",
+  "fit_size": 9514,
+  "survival_at": [
+   {
+    "minutes": 30,
+    "planted": 0.2955,
+    "fitted": 0.2997,
+    "gap": 0.0042,
+    "standard_errors": 0.89,
+    "within_bar": true
+   },
+   {
+    "minutes": 45,
+    "planted": 0.1346,
+    "fitted": 0.1298,
+    "gap": -0.0048,
+    "standard_errors": -1.36,
+    "within_bar": true
+   },
+   {
+    "minutes": 60,
+    "planted": 0.0799,
+    "fitted": 0.0776,
+    "gap": -0.0022,
+    "standard_errors": -0.8,
+    "within_bar": true
+   },
+   {
+    "minutes": 90,
+    "planted": 0.0457,
+    "fitted": 0.0445,
+    "gap": -0.0011,
+    "standard_errors": -0.52,
+    "within_bar": true
+   },
+   {
+    "minutes": 120,
+    "planted": 0.0337,
+    "fitted": 0.0306,
+    "gap": -0.0031,
+    "standard_errors": -1.68,
+    "within_bar": true
+   },
+   {
+    "minutes": 180,
+    "planted": 0.0219,
+    "fitted": 0.0198,
+    "gap": -0.002,
+    "standard_errors": -1.36,
+    "within_bar": true
+   }
+  ],
+  "never_arrive": {
+   "planted": 0.0178,
+   "fitted": 0.0163,
+   "standard_errors": -1.12,
+   "within_bar": true
+  },
+  "body_before_30_min": {
+   "largest_gap": 0.0278,
+   "at_minutes": 16
+  },
+  "grid": {
+   "minutes": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    67,
+    68,
+    69,
+    70,
+    71,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77,
+    78,
+    79,
+    80,
+    81,
+    82,
+    83,
+    84,
+    85,
+    86,
+    87,
+    88,
+    89,
+    90,
+    91,
+    92,
+    93,
+    94,
+    95,
+    96,
+    97,
+    98,
+    99,
+    100,
+    101,
+    102,
+    103,
+    104,
+    105,
+    106,
+    107,
+    108,
+    109,
+    110,
+    111,
+    112,
+    113,
+    114,
+    115,
+    116,
+    117,
+    118,
+    119,
+    120,
+    121,
+    122,
+    123,
+    124,
+    125,
+    126,
+    127,
+    128,
+    129,
+    130,
+    131,
+    132,
+    133,
+    134,
+    135,
+    136,
+    137,
+    138,
+    139,
+    140,
+    141,
+    142,
+    143,
+    144,
+    145,
+    146,
+    147,
+    148,
+    149,
+    150,
+    151,
+    152,
+    153,
+    154,
+    155,
+    156,
+    157,
+    158,
+    159,
+    160,
+    161,
+    162,
+    163,
+    164,
+    165,
+    166,
+    167,
+    168,
+    169,
+    170,
+    171,
+    172,
+    173,
+    174,
+    175,
+    176,
+    177,
+    178,
+    179,
+    180,
+    181,
+    182,
+    183,
+    184,
+    185,
+    186,
+    187,
+    188,
+    189,
+    190,
+    191,
+    192,
+    193,
+    194,
+    195,
+    196,
+    197,
+    198,
+    199,
+    200,
+    201,
+    202,
+    203,
+    204,
+    205,
+    206,
+    207,
+    208,
+    209,
+    210,
+    211,
+    212,
+    213,
+    214,
+    215,
+    216,
+    217,
+    218,
+    219,
+    220,
+    221,
+    222,
+    223,
+    224,
+    225,
+    226,
+    227,
+    228,
+    229,
+    230,
+    231,
+    232,
+    233,
+    234,
+    235,
+    236,
+    237,
+    238,
+    239,
+    240
+   ],
+   "planted": [
+    1.0,
+    0.99999,
+    0.99983,
+    0.99915,
+    0.99692,
+    0.99192,
+    0.98277,
+    0.96855,
+    0.94866,
+    0.92307,
+    0.89334,
+    0.85951,
+    0.8232,
+    0.7848,
+    0.74516,
+    0.70586,
+    0.66697,
+    0.62918,
+    0.59213,
+    0.55609,
+    0.52223,
+    0.48991,
+    0.45963,
+    0.43101,
+    0.40437,
+    0.37921,
+    0.3559,
+    0.33429,
+    0.3142,
+    0.29553,
+    0.27805,
+    0.26207,
+    0.24726,
+    0.2337,
+    0.22087,
+    0.20906,
+    0.19828,
+    0.18816,
+    0.17887,
+    0.1701,
+    0.16202,
+    0.15455,
+    0.14726,
+    0.1406,
+    0.13459,
+    0.12922,
+    0.12417,
+    0.11916,
+    0.11451,
+    0.11027,
+    0.10624,
+    0.1027,
+    0.09928,
+    0.09589,
+    0.09278,
+    0.08986,
+    0.08708,
+    0.08451,
+    0.08214,
+    0.07987,
+    0.0778,
+    0.07579,
+    0.07388,
+    0.07194,
+    0.07026,
+    0.06857,
+    0.06703,
+    0.06549,
+    0.06419,
+    0.06283,
+    0.06155,
+    0.06035,
+    0.05918,
+    0.05809,
+    0.05703,
+    0.05602,
+    0.05503,
+    0.05412,
+    0.05319,
+    0.05233,
+    0.0516,
+    0.05091,
+    0.0502,
+    0.0495,
+    0.0488,
+    0.04819,
+    0.04757,
+    0.04689,
+    0.04627,
+    0.04566,
+    0.04512,
+    0.04457,
+    0.04404,
+    0.04355,
+    0.04302,
+    0.04249,
+    0.042,
+    0.04149,
+    0.04109,
+    0.04071,
+    0.04026,
+    0.03989,
+    0.03952,
+    0.03908,
+    0.03875,
+    0.03834,
+    0.03795,
+    0.03755,
+    0.03721,
+    0.03684,
+    0.03648,
+    0.03612,
+    0.03583,
+    0.03547,
+    0.03514,
+    0.03484,
+    0.03453,
+    0.03424,
+    0.03396,
+    0.03367,
+    0.03337,
+    0.03308,
+    0.03276,
+    0.03248,
+    0.03211,
+    0.03185,
+    0.03159,
+    0.03133,
+    0.03107,
+    0.03083,
+    0.03057,
+    0.03033,
+    0.03008,
+    0.02983,
+    0.02959,
+    0.02936,
+    0.02915,
+    0.02891,
+    0.0287,
+    0.02853,
+    0.02834,
+    0.02818,
+    0.02797,
+    0.02778,
+    0.02757,
+    0.02739,
+    0.02722,
+    0.02705,
+    0.02686,
+    0.02668,
+    0.02651,
+    0.02635,
+    0.02617,
+    0.026,
+    0.02581,
+    0.02562,
+    0.02547,
+    0.02532,
+    0.02517,
+    0.02502,
+    0.02482,
+    0.02463,
+    0.02444,
+    0.02428,
+    0.02412,
+    0.02398,
+    0.02377,
+    0.02364,
+    0.02346,
+    0.02328,
+    0.02311,
+    0.02297,
+    0.02284,
+    0.02269,
+    0.02257,
+    0.02241,
+    0.02227,
+    0.02213,
+    0.022,
+    0.02185,
+    0.0217,
+    0.02155,
+    0.02139,
+    0.0212,
+    0.02104,
+    0.02091,
+    0.02073,
+    0.02059,
+    0.02043,
+    0.0203,
+    0.02017,
+    0.02003,
+    0.01989,
+    0.01979,
+    0.01971,
+    0.01957,
+    0.01948,
+    0.01937,
+    0.01928,
+    0.01921,
+    0.01912,
+    0.01904,
+    0.01897,
+    0.01892,
+    0.01886,
+    0.01879,
+    0.01874,
+    0.0187,
+    0.01865,
+    0.0186,
+    0.01856,
+    0.01853,
+    0.0185,
+    0.01846,
+    0.01843,
+    0.01839,
+    0.01836,
+    0.01834,
+    0.01832,
+    0.01829,
+    0.01827,
+    0.01824,
+    0.01822,
+    0.0182,
+    0.01818,
+    0.01816,
+    0.01815,
+    0.01814,
+    0.01812,
+    0.01812,
+    0.0181,
+    0.01809,
+    0.01807,
+    0.01806,
+    0.01806,
+    0.01806,
+    0.01804,
+    0.01804,
+    0.01803,
+    0.01802
+   ],
+   "fitted": [
+    1.0,
+    1.0,
+    0.99995,
+    0.99957,
+    0.99808,
+    0.99434,
+    0.98713,
+    0.97549,
+    0.9589,
+    0.93729,
+    0.91099,
+    0.88058,
+    0.84683,
+    0.81056,
+    0.77258,
+    0.73363,
+    0.69438,
+    0.6554,
+    0.61714,
+    0.57999,
+    0.5442,
+    0.50999,
+    0.47748,
+    0.44676,
+    0.41785,
+    0.39076,
+    0.36546,
+    0.34189,
+    0.31999,
+    0.29968,
+    0.28088,
+    0.26351,
+    0.24746,
+    0.23267,
+    0.21903,
+    0.20646,
+    0.19489,
+    0.18423,
+    0.17442,
+    0.16539,
+    0.15708,
+    0.14941,
+    0.14235,
+    0.13584,
+    0.12983,
+    0.12428,
+    0.11915,
+    0.1144,
+    0.11,
+    0.10592,
+    0.10214,
+    0.09862,
+    0.09534,
+    0.09229,
+    0.08943,
+    0.08677,
+    0.08427,
+    0.08192,
+    0.07972,
+    0.07765,
+    0.07569,
+    0.07384,
+    0.0721,
+    0.07044,
+    0.06887,
+    0.06737,
+    0.06595,
+    0.06459,
+    0.06329,
+    0.06204,
+    0.06085,
+    0.05971,
+    0.05861,
+    0.05755,
+    0.05653,
+    0.05554,
+    0.05459,
+    0.05368,
+    0.05279,
+    0.05192,
+    0.05109,
+    0.05028,
+    0.04949,
+    0.04873,
+    0.04798,
+    0.04726,
+    0.04655,
+    0.04587,
+    0.0452,
+    0.04454,
+    0.04391,
+    0.04329,
+    0.04268,
+    0.04209,
+    0.04151,
+    0.04094,
+    0.04039,
+    0.03985,
+    0.03932,
+    0.03881,
+    0.03831,
+    0.03781,
+    0.03733,
+    0.03686,
+    0.0364,
+    0.03595,
+    0.0355,
+    0.03507,
+    0.03465,
+    0.03424,
+    0.03383,
+    0.03344,
+    0.03305,
+    0.03267,
+    0.0323,
+    0.03194,
+    0.03158,
+    0.03124,
+    0.0309,
+    0.03057,
+    0.03024,
+    0.02992,
+    0.02961,
+    0.02931,
+    0.02901,
+    0.02872,
+    0.02844,
+    0.02816,
+    0.02789,
+    0.02762,
+    0.02736,
+    0.02711,
+    0.02686,
+    0.02662,
+    0.02638,
+    0.02615,
+    0.02592,
+    0.0257,
+    0.02548,
+    0.02527,
+    0.02506,
+    0.02486,
+    0.02466,
+    0.02447,
+    0.02428,
+    0.0241,
+    0.02392,
+    0.02374,
+    0.02357,
+    0.0234,
+    0.02324,
+    0.02308,
+    0.02292,
+    0.02276,
+    0.02261,
+    0.02247,
+    0.02233,
+    0.02219,
+    0.02205,
+    0.02192,
+    0.02179,
+    0.02166,
+    0.02153,
+    0.02141,
+    0.0213,
+    0.02118,
+    0.02107,
+    0.02096,
+    0.02085,
+    0.02074,
+    0.02064,
+    0.02054,
+    0.02044,
+    0.02035,
+    0.02025,
+    0.02016,
+    0.02007,
+    0.01998,
+    0.0199,
+    0.01982,
+    0.01974,
+    0.01966,
+    0.01958,
+    0.0195,
+    0.01943,
+    0.01936,
+    0.01929,
+    0.01922,
+    0.01915,
+    0.01909,
+    0.01902,
+    0.01896,
+    0.0189,
+    0.01884,
+    0.01878,
+    0.01872,
+    0.01867,
+    0.01861,
+    0.01856,
+    0.01851,
+    0.01846,
+    0.01841,
+    0.01836,
+    0.01831,
+    0.01827,
+    0.01822,
+    0.01818,
+    0.01814,
+    0.0181,
+    0.01805,
+    0.01801,
+    0.01798,
+    0.01794,
+    0.0179,
+    0.01786,
+    0.01783,
+    0.01779,
+    0.01776,
+    0.01773,
+    0.0177,
+    0.01766,
+    0.01763,
+    0.0176,
+    0.01757,
+    0.01755,
+    0.01752,
+    0.01749,
+    0.01746,
+    0.01744,
+    0.01741,
+    0.01739,
+    0.01736,
+    0.01734,
+    0.01732,
+    0.01729,
+    0.01727,
+    0.01725,
+    0.01723,
+    0.01721,
+    0.01719
+   ]
+  }
+ },
+ "fit": {
+  "source_sha256": "3cd25064e77828805ad20f31693f74fe27ee9ee08f42fb54b76d6061e31f9c64",
+  "policy_hash": "9594d7c019363261",
+  "pooled": {
+   "mu": 3.057459,
+   "sigma": 0.504763,
+   "stalled_mu": 4.492707,
+   "stalled_sigma": 0.465061,
+   "w_stalled": 0.054059,
+   "p_never": 0.016292,
+   "weights": {
+    "normal": 0.93053,
+    "stalled": 0.053179,
+    "never": 0.016292
+   },
+   "n_started": 9514,
+   "n_arrived": 9359,
+   "n_never": 155
+  },
+  "groups": 96,
+  "groups_that_took_a_parents_fit": 21
+ }
+}
