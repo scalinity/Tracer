@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tracer demo</title>
+<meta name="description" content="Tracer ranks unreceived laboratory specimens by the chance they miss their stability window. Synthetic data with no clinical review.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='5' fill='none' stroke='%2363C4D3' stroke-width='2'/%3E%3C/svg%3E">
+<style>
+/* Colour grammar of visuals/plan.html and visuals/architecture.html: cyan is observed (scans, the clock),
+   violet is inferred (risk, places, the silent interval), amber is an alert, red is the window closing.
+   Every state also carries a word or a shape, so nothing depends on colour alone. */
+:root{
+  color-scheme: dark;
+  --canvas:#0C1417; --panel:#111C20; --raised:#16242A;
+  --hair:#22343A; --hair-soft:#1A2A2F;
+  --ink:#E4EDEF; --ink-dim:#A8BEC4; --ink-mute:#7A939A;
+  --observed:#63C4D3; --observed-deep:#2E7C8A;
+  --infer:#9D8DF1; --infer-deep:#5B4E9E;
+  --warn:#E3A33C; --alarm:#D05A4A; --ok:#69B08A;
+  --obs-wash:rgba(99,196,211,.10); --inf-wash:rgba(157,141,241,.16);
+  --warn-wash:rgba(227,163,60,.10); --alarm-wash:rgba(208,90,74,.13);
+  --focus:#63C4D3;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI","Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    color-scheme: light;
+    --canvas:#F4F7F6; --panel:#FFFFFF; --raised:#ECF2F0;
+    --hair:#CFDAD7; --hair-soft:#E2EAE8;
+    --ink:#14201D; --ink-dim:#3D4D49; --ink-mute:#5B6C68;
+    --observed:#0F6E7C; --observed-deep:#58A7B3;
+    --infer:#5543BF; --infer-deep:#A89BEB;
+    --warn:#8F5A06; --alarm:#B0402B; --ok:#2B7048;
+    --obs-wash:rgba(15,110,124,.09); --inf-wash:rgba(85,67,191,.11);
+    --warn-wash:rgba(143,90,6,.10); --alarm-wash:rgba(176,64,43,.10);
+    --focus:#0F6E7C;
+  }
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--canvas);color:var(--ink);font:15px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+h1,h2,h3,p,ul,ol,dl,dd,figure,blockquote{margin:0;padding:0}
+ul,ol{list-style:none}
+button,input,select{font:inherit;color:inherit}
+button{background:none;border:0;padding:0;cursor:pointer}
+code{font-family:var(--mono);font-size:.9em;background:var(--raised);border:1px solid var(--hair-soft);border-radius:2px;padding:0 .3em;overflow-wrap:anywhere}
+b,strong{font-weight:600}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:2px}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.muted{color:var(--ink-mute)}
+.skip{position:absolute;left:16px;top:-60px;z-index:10;background:var(--panel);border:1px solid var(--hair);padding:10px 14px;color:var(--ink)}
+.skip:focus{top:12px}
+
+.page{max-width:1120px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px))}
+section{margin:0 0 60px;scroll-margin-top:16px}
+h2{font-family:var(--serif);font-weight:400;font-size:clamp(25px,3.6vw,31px);line-height:1.2;margin-bottom:10px}
+.lede{max-width:68ch;color:var(--ink-dim)}
+
+/* ───────── header ───────── */
+.mast{padding:36px 0 30px;margin-bottom:44px;border-bottom:1px solid var(--hair)}
+.wordmark{font-family:var(--serif);font-style:italic;font-weight:400;font-size:clamp(44px,8vw,60px);line-height:1;color:var(--observed);letter-spacing:.005em}
+.tagline{font-family:var(--serif);font-size:18px;line-height:1.62;color:var(--ink-dim);max-width:60ch;margin-top:16px}
+.honesty{margin-top:22px;max-width:72ch;border-left:2px solid var(--warn);padding:2px 0 2px 14px;font-size:14px;line-height:1.6;color:var(--ink-dim)}
+.honesty b{color:var(--ink)}
+
+/* ───────── the problem ───────── */
+.placeholder{max-width:68ch;border:1px dashed var(--hair);border-radius:3px;padding:16px 18px;font-family:var(--serif);font-size:16.5px;line-height:1.65;color:var(--ink-mute)}
+.placeholder b{font-family:var(--sans);font-size:13.5px;color:var(--warn)}
+
+/* ───────── board controls ───────── */
+.headline{max-width:72ch;margin-top:12px;font-size:14px;color:var(--ink-dim)}
+.headline .num{color:var(--ink)}
+.load{margin-top:18px;padding:14px 16px;border:1px solid var(--hair);border-radius:3px;background:var(--panel);color:var(--ink-dim);max-width:72ch}
+.load.failed{border-color:var(--alarm);background:var(--alarm-wash);color:var(--ink)}
+.load.failed b{color:var(--alarm)}
+.controls{display:grid;grid-template-columns:minmax(0,250px) minmax(0,1fr);gap:16px 28px;align-items:end;margin-top:20px;padding:16px;border:1px solid var(--hair);border-radius:3px;background:var(--panel)}
+.field label,.field .label{display:block;font-size:13px;color:var(--ink-mute);margin-bottom:6px}
+select{width:100%;min-height:44px;padding:8px 10px;background:var(--raised);border:1px solid var(--hair);border-radius:3px}
+.clock-row,.scrub-row{display:flex;align-items:center;gap:10px}
+.clock{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:30px;line-height:1;color:var(--observed);min-width:4.3ch}
+.step{flex:none;min-width:58px;min-height:44px;padding:0 10px;border:1px solid var(--hair);border-radius:3px;background:var(--raised);font-family:var(--mono);font-size:13px;color:var(--ink-dim)}
+.step:hover{border-color:var(--observed-deep);color:var(--ink)}
+.step:disabled{opacity:.4;cursor:default}
+input[type=range]{-webkit-appearance:none;appearance:none;flex:1 1 auto;min-width:0;height:44px;margin:0;background:transparent;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:var(--hair)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;margin-top:-10px;border-radius:50%;background:var(--observed);border:4px solid var(--panel)}
+input[type=range]::-moz-range-track{height:2px;background:var(--hair)}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--observed);border:4px solid var(--panel)}
+.board-status{margin-top:16px;font-size:14px;color:var(--ink-dim)}
+
+/* ───────── the board ───────── */
+.board{width:100%;border-collapse:collapse;margin-top:8px;font-size:13.5px}
+.board th{padding:8px 8px;border-bottom:1px solid var(--hair);text-align:left;vertical-align:bottom;font-size:12.5px;font-weight:500;color:var(--ink-mute)}
+.board td{padding:9px 8px;border-bottom:1px solid var(--hair-soft);vertical-align:top}
+.board tbody tr{cursor:pointer}
+.board tbody tr:hover{background:var(--raised)}
+.board tbody tr.is-open{background:var(--raised);box-shadow:inset 3px 0 0 var(--observed)}
+.c-rank .num{font-size:15px;color:var(--ink-mute)}
+.sid{min-height:32px;font-family:var(--mono);font-size:13.5px;color:var(--observed);text-decoration:underline;text-decoration-color:var(--observed-deep);text-underline-offset:3px;text-align:left}
+.sid:hover{text-decoration-color:var(--observed)}
+.tier{display:inline-block;margin-left:6px;padding:0 6px;border:1px solid var(--hair);border-radius:2px;font-size:11.5px;line-height:18px;color:var(--ink-dim);white-space:nowrap}
+.tier.t1{border-color:var(--ink-dim);color:var(--ink)}
+.type{display:block;font-family:var(--serif);font-size:15px;line-height:1.35;color:var(--ink);margin-top:2px}
+.c-from,.c-role{color:var(--ink-dim)}
+.board .num,.idline{white-space:nowrap}
+.riskcell{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.riskcell .num{min-width:5.2ch}
+.rbar{position:relative;display:inline-block;width:64px;height:6px;background:var(--hair-soft);border-radius:1px}
+.rbar i{position:absolute;left:0;top:0;bottom:0;background:var(--infer);border-radius:1px}
+.rbar b{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:var(--warn)}
+.closed .rbar i{background:var(--alarm)}
+.closed-word{color:var(--alarm);white-space:nowrap}
+.v{white-space:nowrap}
+.v::before{content:"";display:inline-block;width:8px;height:8px;margin-right:7px;box-sizing:border-box;vertical-align:0}
+.v-t::before{border-radius:50%;border:1.5px solid var(--ink-mute)}
+.v-p::before{transform:rotate(45deg) scale(.85);border:1.5px solid var(--ink-mute)}
+.v-t.on::before{background:var(--warn);border-color:var(--warn)}
+.v-p.on::before{background:var(--warn);border-color:var(--warn)}
+.v.on{color:var(--warn)}
+.v.off{color:var(--ink-mute)}
+.older{margin-top:14px;font-size:13.5px;color:var(--ink-dim);max-width:76ch}
+.older button{display:inline-flex;align-items:center;min-height:44px;font-family:var(--mono);color:var(--observed);text-decoration:underline;text-decoration-color:var(--observed-deep);text-underline-offset:3px}
+.key{margin-top:22px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 32px;max-width:980px;font-size:13.5px;color:var(--ink-dim)}
+.key b{color:var(--ink)}
+
+/* ───────── the timeline ───────── */
+.timeline{padding-top:28px;border-top:1px solid var(--hair)}
+.tl-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px 24px;flex-wrap:wrap}
+.tl-title{font-family:var(--serif);font-weight:400;font-size:clamp(23px,3.4vw,29px);line-height:1.25;outline-offset:4px}
+.tl-title .num{font-size:.68em;color:var(--observed);margin-right:10px;vertical-align:.12em}
+.tl-facts{margin-top:8px;max-width:76ch;font-size:14px;color:var(--ink-dim)}
+.close{min-height:44px;padding:0 14px;border:1px solid var(--hair);border-radius:3px;background:var(--raised);font-size:13.5px;color:var(--ink-dim)}
+.close:hover{border-color:var(--observed-deep);color:var(--ink)}
+.tl-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;align-items:start;margin-top:18px}
+.chart{border:1px solid var(--hair);border-radius:3px;background:var(--panel);padding:10px 8px 6px}
+.chart svg{display:block;width:100%;height:auto}
+.scrub-row{margin-top:10px}
+.scrub-at{margin-top:4px;font-size:13.5px;color:var(--ink-dim)}
+.scrub-at .num{color:var(--ink)}
+.events{margin-top:14px;font-size:13.5px;color:var(--ink-dim)}
+.events li{padding:3px 0}
+.events .gap{color:var(--infer);font-style:italic}
+.truth{margin-top:14px}
+.toggle{min-height:44px;padding:0 14px;border:1px dashed var(--hair);border-radius:3px;font-size:13.5px;color:var(--ink-dim)}
+.toggle[aria-pressed=true]{border-style:solid;border-color:var(--ink-mute);color:var(--ink)}
+.truth-line{margin-top:10px;max-width:76ch;font-size:14px;color:var(--ink-dim)}
+.truth-line b{color:var(--ink)}
+
+/* SVG: classes, so both themes apply */
+.ax{fill:var(--ink-mute);font:11px var(--mono)}
+.gridline{stroke:var(--hair-soft);stroke-width:1}
+.band{fill:url(#hatch)}
+.hatch{stroke:var(--infer);stroke-width:1;opacity:.24}
+.curve{fill:none;stroke:var(--infer);stroke-width:2;stroke-linejoin:round}
+.past{fill:var(--inf-wash)}
+.aline{stroke:var(--warn);stroke-width:1;stroke-dasharray:4 4}
+.lbl{font:11.5px var(--sans)}
+.halo{paint-order:stroke;stroke:var(--panel);stroke-width:4px;stroke-linejoin:round}
+.t-warn{fill:var(--warn)}
+.t-alarm{fill:var(--alarm)}
+.t-obs{fill:var(--observed)}
+.t-inf{fill:var(--infer);font-style:italic}
+.t-dim{fill:var(--ink-dim)}
+.win{stroke:var(--alarm);stroke-width:1.5}
+.warrow{fill:var(--alarm)}
+.tguide{stroke:var(--warn);stroke-width:1}
+.pguide{stroke:var(--warn);stroke-width:1;stroke-dasharray:2 3}
+.tdot{fill:var(--warn)}
+.pdot{fill:var(--panel);stroke:var(--warn);stroke-width:1.75}
+.scan{fill:var(--observed)}
+.scrub-line{stroke:var(--ink);stroke-width:1}
+.scrub-dot{fill:var(--ink);stroke:var(--panel);stroke-width:2}
+.seg{fill:var(--raised);stroke:var(--ink-mute);stroke-width:1}
+.seg.fault{fill:var(--alarm-wash);stroke:var(--alarm)}
+
+.readout{border:1px solid var(--hair);border-radius:3px;background:var(--panel)}
+.ro-when{padding:12px 16px;border-bottom:1px solid var(--hair-soft);background:var(--raised);font-size:14px;color:var(--ink-dim)}
+.ro-when .num{color:var(--ink)}
+.stat{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:9px 16px;border-bottom:1px solid var(--hair-soft)}
+.stat dt{font-size:13px;color:var(--ink-mute)}
+.stat dd{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:14px;text-align:right}
+.stat dd.big{font-size:24px;line-height:1.1;color:var(--infer)}
+.stat dd small{display:block;font-family:var(--sans);font-size:11.5px;color:var(--ink-mute)}
+.outcome{padding:12px 16px;border-bottom:1px solid var(--hair-soft);font-size:14px}
+.outcome.good{color:var(--ok)}
+.outcome.bad{color:var(--alarm)}
+.ro-h{font-family:var(--sans);font-weight:500;font-size:13px;color:var(--ink-mute);margin-bottom:4px}
+.ro-block{padding:12px 16px;border-bottom:1px solid var(--hair-soft)}
+.ro-block:last-child{border-bottom:0}
+.place{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 10px;margin-top:7px;font-size:13px;color:var(--ink-dim)}
+.place .pv{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.place .pbar{grid-column:1 / -1;height:5px;background:var(--hair-soft);border-radius:1px;overflow:hidden}
+.place .pbar i{display:block;height:100%;background:var(--infer)}
+.place.best{color:var(--ink)}
+.place.best .pv::after{content:" most likely";font-family:var(--sans);font-size:11.5px;color:var(--ink-mute)}
+.ro-note{font-size:13px;color:var(--ink-mute)}
+.verdicts li{margin-top:6px;font-size:13.5px;color:var(--ink-dim)}
+.verdicts .v{white-space:normal}
+
+.briefs{margin-top:26px}
+.briefs h3{font-family:var(--serif);font-weight:400;font-size:20px}
+.brief-note{margin-top:4px;font-size:13.5px;color:var(--ink-mute);max-width:76ch}
+.brief-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:12px}
+.brief{border:1px solid var(--hair);border-radius:3px;padding:14px 16px;background:var(--panel)}
+.brief figcaption{font-size:12.5px;color:var(--ink-mute);margin-bottom:6px}
+.brief blockquote{font-family:var(--serif);font-size:16px;line-height:1.6;color:var(--ink)}
+
+/* ───────── later tasks and limits ───────── */
+.later{margin:0 0 14px;padding:10px 0;border-top:1px dashed var(--hair-soft);font-size:13px;color:var(--ink-mute)}
+.later + section:not(.later){margin-top:44px}
+.limits{max-width:74ch;padding-left:18px;list-style:disc;color:var(--ink-dim)}
+.limits li{margin-bottom:9px}
+.limits li::marker{color:var(--warn)}
+.limits b{color:var(--ink)}
+.prov{margin-top:18px;max-width:90ch;font-size:12.5px;color:var(--ink-mute);overflow-wrap:anywhere}
+footer{padding-top:20px;border-top:1px solid var(--hair);font-size:12.5px;color:var(--ink-mute)}
+
+@media (max-width:900px){
+  .tl-grid{grid-template-columns:1fr}
+}
+@media (max-width:760px){
+  .controls{grid-template-columns:1fr}
+  .clock-row{flex-wrap:wrap}
+  .clock-row .clock{flex:1 0 100%;margin-bottom:2px}
+  .key{grid-template-columns:1fr}
+  .brief-pair{grid-template-columns:1fr}
+  /* The board's rows become stacked blocks; the roles keep the table's meaning for screen readers. */
+  .board thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .board,.board tbody{display:block}
+  .board tbody tr{display:grid;grid-template-columns:30px minmax(0,1fr) minmax(0,1fr);column-gap:10px;row-gap:7px;padding:14px 0;border-bottom:1px solid var(--hair);
+    grid-template-areas:"rank spec spec" "rank from from" "rank risk risk" "rank tracer plan" "rank silent left" "rank place role"}
+  .board tbody tr.is-open{box-shadow:inset 3px 0 0 var(--observed);padding-left:0}
+  .board td{display:block;padding:0;border:0}
+  .board td[data-label]::before{content:attr(data-label);display:block;font-size:11.5px;color:var(--ink-mute)}
+  .board td.c-rank{grid-area:rank;padding-left:8px}
+  .c-spec{grid-area:spec}.c-from{grid-area:from}.c-silent{grid-area:silent}.c-risk{grid-area:risk}
+  .c-place{grid-area:place}.c-left{grid-area:left}.c-tracer{grid-area:tracer}.c-plan{grid-area:plan}.c-role{grid-area:role}
+  .sid{min-height:44px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#board">Skip to the board</a>
+<div class="page">
+
+<header class="mast">
+  <h1 class="wordmark">Tracer</h1>
+  <p class="tagline">Between a specimen's collection scan and its receipt scan in the laboratory, there is no record.
+    Tracer re-scores every unreceived specimen on a clock tick, estimates the chance it misses its stability
+    window and where it probably is, and alerts while it can still be recovered.</p>
+  <p class="honesty"><b>Synthetic data, no clinical review.</b> Every specimen here was written by
+    <span id="fill-model">a language model</span> from briefs drawn by seeded code, and no clinical scientist has
+    reviewed the data or the model. Every parameter is an assumption, and the same assumptions shaped both the data
+    and the model. <span id="fill-budget">The alert budget is generous: a large share of all specimens get an alert.</span>
+    Warning means the minutes from an alert to the window closing.</p>
+</header>
+
+<main id="main">
+
+<section id="problem" aria-labelledby="problem-h">
+  <h2 id="problem-h">The problem in sixty seconds</h2>
+  <div class="placeholder">
+    <p><b>Placeholder.</b> Karissa Kocourek, the project's clinical microbiology scientist, writes this paragraph:
+      the problem as it looks from the bench. Nothing on this page is in her words yet.</p>
+  </div>
+</section>
+
+<section id="board" aria-labelledby="board-h">
+  <h2 id="board-h" tabindex="-1">The board</h2>
+  <p class="lede">Pick a day and move the clock. The board lists every specimen collected and not yet received at
+    that moment, ranked by expected harm: the chance it misses its stability window, times the weight of its
+    urgency tier. Select a specimen to open its timeline.</p>
+  <p class="headline" id="headline" hidden></p>
+  <div class="load" id="load-status" role="status">Loading the demo data.</div>
+  <noscript><p class="load failed"><b>This demo needs JavaScript.</b> It reads its data and computes every score in the browser.</p></noscript>
+
+  <div class="controls" id="controls" hidden>
+    <div class="field">
+      <label for="day">Day</label>
+      <select id="day"></select>
+    </div>
+    <div class="field">
+      <label for="clock">Clock</label>
+      <div class="clock-row">
+        <output class="clock" id="clock-out" for="clock"></output>
+        <button type="button" class="step" id="clock-back">−5 min</button>
+        <input type="range" id="clock" min="0" max="287" step="1" value="0">
+        <button type="button" class="step" id="clock-fwd">+5 min</button>
+      </div>
+    </div>
+  </div>
+  <p class="board-status" id="board-status" aria-live="polite"></p>
+
+  <div id="board-wrap" hidden>
+    <table class="board" role="table">
+      <caption class="vh">Outstanding specimens, ranked by expected harm</caption>
+      <thead role="rowgroup">
+        <tr role="row">
+          <th role="columnheader" scope="col">Rank</th>
+          <th role="columnheader" scope="col">Specimen</th>
+          <th role="columnheader" scope="col">From</th>
+          <th role="columnheader" scope="col">Silent</th>
+          <th role="columnheader" scope="col">Risk</th>
+          <th role="columnheader" scope="col">Most likely place</th>
+          <th role="columnheader" scope="col">Window left</th>
+          <th role="columnheader" scope="col">Tracer</th>
+          <th role="columnheader" scope="col">Plan's rule</th>
+          <th role="columnheader" scope="col">Alert goes to</th>
+        </tr>
+      </thead>
+      <tbody role="rowgroup" id="board-body"></tbody>
+    </table>
+  </div>
+  <p class="older" id="older" hidden></p>
+  <div class="key" id="key" hidden>
+    <p id="key-tracer"></p>
+    <p id="key-plan"></p>
+    <p id="key-score"></p>
+    <p id="key-route"></p>
+  </div>
+</section>
+
+<section id="timeline" class="timeline" aria-labelledby="tl-title" hidden>
+  <div class="tl-head">
+    <div>
+      <h2 class="tl-title" id="tl-title" tabindex="-1"></h2>
+      <p class="tl-facts" id="tl-facts"></p>
+    </div>
+    <div id="timeline-actions">
+      <button type="button" class="close" id="tl-close">Close timeline</button>
+    </div>
+  </div>
+  <div class="tl-grid">
+    <div>
+      <div class="chart" id="tl-chart">
+        <svg id="tl-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="tl-svg-label"><title id="tl-svg-label">Risk over time</title></svg>
+      </div>
+      <div class="scrub-row">
+        <button type="button" class="step" id="tl-back">−5 min</button>
+        <input type="range" id="tl-scrub" min="0" max="1" step="1" value="0" aria-label="Minutes since collection">
+        <button type="button" class="step" id="tl-fwd">+5 min</button>
+      </div>
+      <p class="scrub-at" id="tl-at" aria-live="polite"></p>
+      <ol class="events" id="tl-events" aria-label="Scan events"></ol>
+      <div class="truth">
+        <button type="button" class="toggle" id="tl-truth" aria-pressed="false" aria-controls="tl-truth-line">Show the truth</button>
+        <p class="truth-line" id="tl-truth-line" hidden></p>
+      </div>
+    </div>
+    <div class="readout" id="tl-readout">
+      <p class="ro-when" id="ro-when"></p>
+      <p class="outcome" id="ro-outcome" hidden></p>
+      <dl id="ro-stats">
+        <div class="stat"><dt>Chance it misses the window</dt><dd class="big" id="ro-risk"></dd></div>
+        <div class="stat"><dt>Expected harm</dt><dd id="ro-harm"></dd></div>
+        <div class="stat"><dt>Window left</dt><dd id="ro-left"></dd></div>
+        <div class="stat"><dt>If it arrives</dt><dd id="ro-arrival"></dd></div>
+      </dl>
+      <div class="ro-block">
+        <h3 class="ro-h">Where it probably is</h3>
+        <ul id="ro-places"></ul>
+      </div>
+      <div class="ro-block">
+        <h3 class="ro-h">Alerts</h3>
+        <ul class="verdicts" id="ro-verdicts"></ul>
+      </div>
+    </div>
+  </div>
+  <div class="briefs" id="tl-briefs" hidden>
+    <h3>Search brief for Tracer's alert</h3>
+    <p class="brief-note" id="brief-note"></p>
+    <div class="brief-pair" id="brief-pair">
+      <figure class="brief"><figcaption>Template, written by code</figcaption><blockquote id="brief-template"></blockquote></figure>
+      <figure class="brief"><figcaption id="brief-claude-cap">Claude</figcaption><blockquote id="brief-claude"></blockquote></figure>
+    </div>
+  </div>
+</section>
+
+<section id="threshold" class="later" aria-label="Threshold control"><p>Threshold control: to come.</p></section>
+<section id="beat" class="later" aria-label="Beat Tracer"><p>Beat Tracer, the class activity: to come.</p></section>
+<section id="why" class="later" aria-label="Why it is built this way"><p>Why it is built this way: to come.</p></section>
+
+<section id="limits" aria-labelledby="limits-h">
+  <h2 id="limits-h">Limits</h2>
+  <ul class="limits">
+    <li><b>The data is synthetic.</b> <span id="fill-model-2">A language model</span> wrote every scan event from
+      briefs drawn by seeded code. No laboratory's data is in it.</li>
+    <li><b>There was no clinical review</b> of the data or the model.</li>
+    <li><b>Every parameter is an assumption:</b> the transit times, the stall and loss rates, the tier weights and the
+      alert roles. A stability window with a published source shows its citation; the others say assumed.</li>
+    <li><b>The data and the model share assumptions.</b> The model was fitted to data written under the same assumed
+      timings, so a good result here shows the method behaves as designed, not that it works in a real laboratory.</li>
+    <li><b>The alert budget is generous.</b> <span id="fill-budget-2">A large share of all specimens get an alert, and
+      most of those specimens arrive in time.</span></li>
+    <li><b>Warning</b> is the minutes from an alert to the stability window closing. An alert at or after the close
+      does not count as a catch.</li>
+    <li><b>Where a specimen probably is comes from the workflow map,</b> not from any observation, and the estimate
+      stops at <span id="fill-horizon">the demo's horizon</span>.</li>
+  </ul>
+  <p class="prov" id="provenance"></p>
+</section>
+
+</main>
+
+<footer>Tracer is a course project for UF CAI 5724, Fall 2026, by Daniel Escalante and Karissa Kocourek.
+  This page makes no network calls beyond reading its two data files.</footer>
+</div>
+
+<script id="core">
+/* Tracer's arithmetic, with no access to the page: the normal distribution, the risk of missing the stability
+   window, the expected arrival, the two alert rules, expected harm and the ranking. The formulas are those of
+   src/models/risk.py, src/pipeline/evaluate.py, src/pipeline/triage.py and src/api/search_briefs.py.
+   tests/test_demo_page.py runs this block under node and holds it to the Python. */
+var TracerCore = (function () {
+  "use strict";
+  var SQRT_PI = Math.sqrt(Math.PI);
+
+  /* erfc to about 1e-14 relative on both tails. Below 1.5 it is 1 - erf(x), with erf from its series of
+     positive terms, erf(x) = 2/sqrt(pi) exp(-x^2) sum 2^n x^(2n+1) / (1*3*...*(2n+1)), so nothing cancels
+     inside the sum. From 1.5 on it is the continued fraction
+     erfc(x) = exp(-x^2) / sqrt(pi) / (x + (1/2) / (x + 1 / (x + (3/2) / (x + ...)))),
+     evaluated by the modified Lentz method. */
+  function erfc(x) {
+    if (x !== x) return NaN;
+    if (x < 0) return 2 - erfc(-x);
+    if (x < 1.5) {
+      var x2 = x * x, term = x, sum = x;
+      for (var n = 1; n < 100 && term > sum * 1e-17; n++) {
+        term *= 2 * x2 / (2 * n + 1);
+        sum += term;
+      }
+      return 1 - 2 / SQRT_PI * Math.exp(-x2) * sum;
+    }
+    if (x > 27) return 0;
+    var tiny = 1e-300, f = x, c = x, d = 0;
+    for (var k = 1; k < 300; k++) {
+      var a = k / 2;
+      d = x + a * d;
+      d = 1 / (d === 0 ? tiny : d);
+      c = x + a / c;
+      if (c === 0) c = tiny;
+      var delta = c * d;
+      f *= delta;
+      if (Math.abs(delta - 1) < 3e-16) break;
+    }
+    return Math.exp(-x * x) / SQRT_PI / f;
+  }
+
+  /* The standard normal CDF. */
+  function Phi(z) { return 0.5 * erfc(-z / Math.SQRT2); }
+
+  /* Lognormal survival P(T > t) for log-minutes with mean mu and standard deviation sigma. */
+  function survival(t, mu, sigma) {
+    return t <= 0 ? 1 : 0.5 * erfc((Math.log(t) - mu) / (sigma * Math.SQRT2));
+  }
+
+  /* The fitted mixture for a group: the group's normal transit, the pooled stall, and the share that never
+     arrives (src/models/risk.py mixture_from). */
+  function mixture(model, group) {
+    var p = model.pooled, w = p.weights, g = model.groups[group];
+    if (!g) throw new Error("the bundle has no fitted parameters for the group " + group);
+    return { never: w.never, comps: [[w.normal, g.mu, g.sigma], [w.stalled, p.stalled_mu, p.stalled_sigma]] };
+  }
+
+  function notReceived(t, mix) {
+    var s = mix.never;
+    for (var i = 0; i < mix.comps.length; i++) s += mix.comps[i][0] * survival(t, mix.comps[i][1], mix.comps[i][2]);
+    return s;
+  }
+
+  /* P(the window is missed | no receipt scan after t minutes). The clock stops at the receipt scan, so a
+     specimen misses its window exactly when it is still unreceived when the window closes; from then on the
+     miss is certain. */
+  function risk(t, mix, windowMin) {
+    return t >= windowMin ? 1 : notReceived(windowMin, mix) / notReceived(t, mix);
+  }
+
+  /* The risk at every scoring tick, with the running maximum that src/pipeline/evaluate.py applies. */
+  function riskSeries(ticks, mix, windowMin) {
+    var out = new Array(ticks.length), top = -Infinity;
+    for (var i = 0; i < ticks.length; i++) {
+      var r = risk(ticks[i], mix, windowMin);
+      if (r > top) top = r;
+      out[i] = top;
+    }
+    return out;
+  }
+
+  /* Minutes from now until a share q of the specimens still silent at t, among those that will arrive, have
+     arrived: bisection as in src/models/risk.py arrival_quantile. A specimen that never arrives is not in
+     this share; the risk counts it. */
+  function arrivalQuantile(t, mix, q) {
+    var c = mix.comps, at = [], out = 0, i;
+    for (i = 0; i < c.length; i++) { at[i] = survival(t, c[i][1], c[i][2]); out += c[i][0] * at[i]; }
+    if (!(out > 0)) return Infinity;
+    function arrived(x) {
+      var s = 0;
+      for (var j = 0; j < c.length; j++) s += c[j][0] * (at[j] - survival(x, c[j][1], c[j][2]));
+      return s / out;
+    }
+    var hi = Math.max(t, 1) * 2;
+    while (arrived(hi) < q && hi < 1e12) hi *= 2;
+    var lo = t;
+    for (i = 0; i < 80; i++) {
+      var mid = (lo + hi) / 2;
+      if (arrived(mid) < q) lo = mid; else hi = mid;
+    }
+    return hi - t;
+  }
+
+  /* Scoring times: every tick while the window is open and the specimen is unreceived
+     (src/pipeline/evaluate.py Spec.ticks). */
+  function ticksFor(windowMin, receivedMin, tickMin) {
+    var last = receivedMin == null ? windowMin : Math.min(windowMin, Math.ceil(receivedMin) - 1), out = [];
+    for (var t = tickMin; t <= last; t += tickMin) out.push(t);
+    return out;
+  }
+
+  /* Expected harm: the weight of the specimen's urgency tier times its risk. */
+  function harm(weight, r) { return weight * r; }
+
+  /* Tracer alerts at the first tick where expected harm reaches the threshold. */
+  function modelAlert(series, ticks, weight, threshold) {
+    for (var i = 0; i < series.length; i++) if (harm(weight, series[i]) >= threshold) return ticks[i];
+    return null;
+  }
+
+  /* The plan's rule alerts at the first tick strictly after its group's time threshold. */
+  function planAlert(ticks, thresholdMin) {
+    for (var i = 0; i < ticks.length; i++) if (ticks[i] > thresholdMin) return ticks[i];
+    return null;
+  }
+
+  /* Highest expected harm first. A specimen not yet scored has no harm and goes last. Ties go to the lower id,
+     so the order never depends on the order the rows came in. */
+  function rankByHarm(rows) {
+    return rows.slice().sort(function (a, b) {
+      var ha = a.harm == null ? -Infinity : a.harm, hb = b.harm == null ? -Infinity : b.harm;
+      if (ha !== hb) return hb > ha ? 1 : -1;
+      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+    });
+  }
+
+  /* Minutes since 1970-01-01 for an ISO local time, read as written: no time zone is applied. */
+  function civilMinutes(iso) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?)?$/.exec(iso);
+    if (!m) throw new Error("not an ISO date: " + iso);
+    return Date.UTC(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0)) / 60000;
+  }
+
+  /* The specimens that are collected and not yet received at `now` (minutes, as civilMinutes). Each spec
+     carries _c, its collection minute. A specimen whose window closed carryMin or more minutes ago leaves the
+     ranking for the `older` list. */
+  function outstanding(specs, now, carryMin) {
+    var live = [], older = [];
+    for (var i = 0; i < specs.length; i++) {
+      var s = specs[i], t = now - s._c;
+      if (t < 0 || (s.received_min != null && t >= s.received_min)) continue;
+      var closedFor = t - s.window_min;
+      (closedFor >= carryMin ? older : live).push({ spec: s, t: t, closed: closedFor >= 0 });
+    }
+    return { live: live, older: older };
+  }
+
+  /* One board row per outstanding specimen, scored at its latest tick and ranked by expected harm. Each spec
+     carries _ticks. ctx: tickMin, threshold, seriesOf(spec), weightOf(spec), planThresholdOf(spec). */
+  function boardRows(live, ctx) {
+    return rankByHarm(live.map(function (o) {
+      var s = o.spec, ticks = s._ticks, i = Math.min(Math.floor(o.t / ctx.tickMin), ticks.length) - 1;
+      var series = ctx.seriesOf(s), w = ctx.weightOf(s);
+      var tick = i >= 0 ? ticks[i] : null, r = i >= 0 ? series[i] : null;
+      var m = modelAlert(series, ticks, w, ctx.threshold), p = planAlert(ticks, ctx.planThresholdOf(s));
+      return { id: s.id, spec: s, t: o.t, closed: o.closed, tick: tick, index: i, risk: r,
+               harm: r == null ? null : harm(w, r), modelAt: m, planAt: p,
+               model: tick != null && m != null && m <= tick ? m : null,
+               plan: tick != null && p != null && p <= tick ? p : null };
+    }));
+  }
+
+  /* The seven places merged to six for a person looking: the lab's tube station and a stall there are one
+     place, worded as a stall when the stall holds at least half of it (src/api/search_briefs.py). */
+  function mergePlaces(row, order) {
+    var p = {}, i;
+    for (i = 0; i < order.length; i++) p[order[i]] = row[i];
+    var stall = p.stalled_at_station || 0, station = (p.at_station || 0) + stall, out = [], best = null;
+    for (i = 0; i < order.length; i++) {
+      var k = order[i];
+      if (k === "stalled_at_station") continue;
+      var item = { key: k, value: k === "at_station" ? station : p[k] };
+      out.push(item);
+      if (best === null || item.value > best.value) best = item;
+    }
+    return { places: out, best: best.key, stalled: station > 0 && stall >= 0.5 * station };
+  }
+
+  /* The role an alert goes to: the charge nurse when the specimen is most likely still at its unit, otherwise
+     by route (src/pipeline/triage.py role_for). Without a location row it goes by route. */
+  function roleFor(routing, route, row, order) {
+    if (!row) return routing[route];
+    var best = 0;
+    for (var i = 1; i < row.length; i++) if (row[i] > row[best]) best = i;
+    return order[best] === "at_unit" ? routing.still_at_unit : routing[route];
+  }
+
+  return { erfc: erfc, Phi: Phi, survival: survival, mixture: mixture, risk: risk, riskSeries: riskSeries,
+           arrivalQuantile: arrivalQuantile, ticksFor: ticksFor, harm: harm, modelAlert: modelAlert,
+           planAlert: planAlert, rankByHarm: rankByHarm, civilMinutes: civilMinutes, outstanding: outstanding,
+           boardRows: boardRows, mergePlaces: mergePlaces, roleFor: roleFor };
+})();
+</script>
+
+<script>
+/* The page: loads bundle.json, draws the board and the timeline. Every number comes from the bundle or from
+   TracerCore's recomputation of it. Later tasks use window.TracerDemo (end of this script) and fill the empty
+   sections #threshold, #beat and #why. */
+(function () {
+  "use strict";
+  var C = window.TracerCore;
+  function $(id) { return document.getElementById(id); }
+
+  /* The default moment, Monday, Sep 14 at 11:05 (run 28), was chosen once from the bundle. Scanning every
+     5-minute clock from 08:00 to 18:00 on the 42 days in date order, it is the first moment when at least four
+     specimens are outstanding, none silent longer than the 240-minute horizon or past its window, and the
+     top-ranked specimen is a tier 1 specimen that Tracer has alerted on, that the plan's rule has not, and
+     that went on to miss its window. tests/test_demo_page.py repeats the scan. */
+  var DEFAULT_DAY = "2026-09-14", DEFAULT_MINUTE = 11 * 60 + 5;
+
+  var UNIT = { ed: "ED", icu: "ICU", med_surg: "Med-surg", clinic: "Clinic", periop: "Periop" };
+  var ROUTE = { tube: "by tube", hand_carry: "hand carried" };
+  var PLACE = { at_unit: "at the collecting unit", hand_carry: "with the runner", in_tube: "in the tube",
+    at_station: "at the lab's tube station", misrouted: "at the wrong station", lost: "lost" };
+  var STALLED = "stalled at the lab's tube station";
+  var TRUTH = { at_unit: ["at the unit", "unit"], hand_carry: ["with the runner", "runner"],
+    in_tube: ["in the tube", "tube"], at_station: ["at the lab's tube station", "station"],
+    stalled_at_station: ["stalled at the lab's tube station", "stalled"], misrouted: ["at the wrong station", "wrong station"],
+    lost: ["lost", "lost"], at_receiving_bench: ["at the receiving bench", "bench"] };
+  var FAULT_STATES = { stalled_at_station: 1, misrouted: 1, lost: 1 };
+  var FAULT = { none: "none", stalled_at_station: "it stalled at the lab's tube station",
+    not_dispatched: "it was left at the unit and never sent", lost_in_tube: "it was lost in the tube system",
+    misrouted: "it was sent to the wrong tube station",
+    content_failure: "a content failure, rejected at the bench after it arrived, which no timing model can see" };
+  var ARTICLE = { technologist: "a technologist", nurse: "a nurse", phlebotomist: "a phlebotomist", system: "the system",
+    processor: "a processor", courier: "a courier" };
+  var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  var WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var B = null, byId = {}, byRun = {}, days = [], mixes = {};
+  var state = { day: 0, minute: DEFAULT_MINUTE, point: 0, open: null, positions: [], scrub: 0, truth: false };
+  var briefs = { data: null, error: null, loading: false };
+  var curveCache = { key: null, pts: null };
+
+  /* ---------- formatting ---------- */
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function int(n) { return Math.round(n).toLocaleString("en-US"); }
+  function mins(m) {
+    m = Math.round(m);
+    if (Math.abs(m) < 180) return int(m) + " min";
+    var h = Math.floor(m / 60), r = m % 60;
+    return int(h) + " h" + (r ? " " + r + " min" : "");
+  }
+  function pct(r) {
+    if (r >= 1) return "100%";
+    if (r > 0.999) return "over 99.9%";
+    if (r < 0.001) return "under 0.1%";
+    return (r * 100).toFixed(1) + "%";
+  }
+  function n(s) { return '<span class="num">' + esc(s) + "</span>"; }
+  function pad(x) { return (x < 10 ? "0" : "") + x; }
+  function hhmm(minute) {
+    var m = ((Math.round(minute) % 1440) + 1440) % 1440;
+    return pad(Math.floor(m / 60)) + ":" + pad(m % 60);
+  }
+  function dayLabel(date) {
+    var p = date.split("-"), d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
+    return WEEKDAYS[d.getUTCDay()] + ", " + MONTHS[d.getUTCMonth()] + " " + d.getUTCDate();
+  }
+  function shortType(type) { return type.replace(/\s*\(.*\)\s*$/, ""); }
+
+  /* ---------- the model, through the core ---------- */
+  function mixOf(s) { return mixes[s.group] || (mixes[s.group] = C.mixture(B.model, s.group)); }
+  function seriesOf(s) { return s._series || (s._series = C.riskSeries(s._ticks, mixOf(s), s.window_min)); }
+  function weightOf(s) { return B.triage.weights[String(s.tier)]; }
+  function threshold() { return B.grid[state.point].model.harm_threshold; }
+  function planThresholdOf(s) { return B.baselines.plan.threshold_min_by_group[s.group][state.point]; }
+  function modelAlertOf(s) { return C.modelAlert(seriesOf(s), s._ticks, weightOf(s), threshold()); }
+  function planAlertOf(s) { return C.planAlert(s._ticks, planThresholdOf(s)); }
+  function placesAt(s, minute) {
+    var i = minute / B.tick_min - 1;
+    return i >= 0 && i === Math.floor(i) && i < s.places.length ? s.places[i] : null;
+  }
+  function placeWords(merged, key) { return key === "at_station" && merged.stalled ? STALLED : PLACE[key]; }
+  function roleOf(s, alertMinute) { return C.roleFor(B.triage.routing, s.route, placesAt(s, alertMinute), B.place_order); }
+  function ctx() {
+    return { tickMin: B.tick_min, threshold: threshold(), seriesOf: seriesOf, weightOf: weightOf, planThresholdOf: planThresholdOf };
+  }
+
+  /* ---------- loading ---------- */
+  function loadFailed(err) {
+    var box = $("load-status");
+    box.hidden = false;
+    box.className = "load failed";
+    box.setAttribute("role", "alert");
+    var why = location.protocol === "file:"
+      ? "This page was opened as a file, and browsers do not let a file read <code>bundle.json</code> beside it."
+      : "Reading <code>bundle.json</code> failed: " + esc(err && err.message ? err.message : String(err)) + ".";
+    box.innerHTML = "<b>The demo data did not load.</b> " + why + " To fix it, open this page from its web address, " +
+      "or serve the folder yourself: in a terminal, run <code>python3 -m http.server</code> inside the " +
+      "<code>docs/demo</code> folder and open the address it prints.";
+  }
+
+  function start(bundle) {
+    B = bundle;
+    if (!B.model || !B.policy || B.model.policy_hash !== B.policy.hash) {
+      throw new Error("its model was fitted under a different policy than its policy table, so this page will not score it");
+    }
+    if (B.policy.clock_start !== "collected" || B.policy.clock_stop !== "received") {
+      throw new Error("this page draws a clock from the collection scan to the receipt scan, and the bundle's policy " +
+        "starts it at " + B.policy.clock_start + " and stops it at " + B.policy.clock_stop);
+    }
+    state.point = B.headline_index;
+    var seen = {};
+    B.specimens.forEach(function (s) {
+      s._c = C.civilMinutes(s.collected_at);
+      s._ticks = C.ticksFor(s.window_min, s.received_min, B.tick_min);
+      byId[s.id] = s;
+      (byRun[s.run] = byRun[s.run] || []).push(s);
+      var date = s.collected_at.slice(0, 10);
+      if (!seen[date]) { seen[date] = true; days.push({ date: date, run: s.run, start: C.civilMinutes(date) }); }
+    });
+    days.sort(function (a, b) { return a.start - b.start; });
+    state.day = Math.max(0, days.findIndex(function (d) { return d.date === DEFAULT_DAY; }));
+
+    fillStatic();
+    $("day").innerHTML = days.map(function (d, i) {
+      return '<option value="' + i + '">' + esc(dayLabel(d.date)) + " (run " + d.run + ")</option>";
+    }).join("");
+    $("day").value = String(state.day);
+    $("clock").max = String(1440 / B.tick_min - 1);
+    $("load-status").hidden = true;
+    $("controls").hidden = false;
+    $("board-wrap").hidden = false;
+    $("key").hidden = false;
+    wire();
+    renderBoard();
+    fromHash(true);
+  }
+
+  function fillStatic() {
+    var g = B.grid[B.headline_index];
+    var alerted = B.specimens.filter(function (s) { return s.alerts.model != null; }).length;
+    var total = B.specimens.length, share = Math.round(100 * alerted / total);
+    var shiftH = B.shift_min / 60;
+    $("fill-model").textContent = B.source.model;
+    $("fill-model-2").textContent = B.source.model;
+    $("fill-budget").innerHTML = "The alert budget is generous: at " + n(g.budget_per_shift) + " alerts per " +
+      n(shiftH) + "-hour shift, Tracer alerts on " + n(int(alerted)) + " of the " + n(int(total)) +
+      " held-out specimens (" + n(share + "%") + ").";
+    $("fill-budget-2").innerHTML = "At " + n(g.budget_per_shift) + " alerts per shift Tracer alerts on " + n(int(alerted)) +
+      " of " + n(int(total)) + " held-out specimens (" + n(share + "%") + "), and " + n(int(g.model.false_alerts)) +
+      " of those specimens arrived in time.";
+    $("fill-horizon").innerHTML = n(B.horizon_min + " min") + " after collection";
+    var headline = $("headline");
+    headline.innerHTML = "On the held-out runs, at " + n(g.budget_per_shift) + " alerts per " + n(shiftH) +
+      "-hour shift, the median warning before a missed window is " + n(g.model.median_warning_all_breaches_min + " min") +
+      " for Tracer, " + n(g.plan_baseline.median_warning_all_breaches_min + " min") + " for the plan's rule and " +
+      n(g.window_baseline.median_warning_all_breaches_min + " min") + " for a rule that alerts once a fixed share of " +
+      "the window has passed. Each method's median counts all " + n(g.model.breaches) + " missed windows, a miss as zero.";
+    headline.hidden = false;
+    $("key-score").innerHTML = "<b>Scores are recomputed in this page</b> from the fitted parameters in the bundle. " +
+      "Each specimen is scored every " + n(B.tick_min + " min") + " from its collection scan, and the board shows its " +
+      "latest score. A specimen whose window closed stays on the board for one shift (" + n(B.shift_min + " min") + ").";
+    var r = B.triage.routing;
+    $("key-route").innerHTML = "<b>Alerts go to</b> the " + esc(r.tube) + " for a specimen sent by tube, the " +
+      esc(r.hand_carry) + " for one carried by hand, or the " + esc(r.still_at_unit) +
+      " when the specimen is most likely still at its unit. These roles are assumptions too.";
+    var src = B.source;
+    $("provenance").innerHTML = "Bundle version " + n(B.bundle_version) + ": " + esc(src.dataset) + " (SHA-256 " +
+      n(src.sha256.slice(0, 16)) + "), written by " + esc(src.model) + " with seed " + n(src.seed) + "; held-out runs " +
+      esc(src.runs) + ", " + n(int(src.specimens)) + " specimens over " + n(int(src.shifts)) + " shifts, " +
+      n(int(src.breaches)) + " missed windows. Policy " + n(B.policy.hash) + ": the clock starts at the collection scan " +
+      "and stops at the receipt scan.";
+  }
+
+  /* ---------- the board ---------- */
+  /* How to read the two verdicts at the current grid point. */
+  function renderKey() {
+    var g = B.grid[state.point], w = B.triage.weights;
+    $("key-tracer").innerHTML = "<b>Tracer</b> is the risk model. It alerts once expected harm reaches " +
+      n(threshold().toFixed(3)) + ". The tier weights are " + n(w["1"]) + ", " + n(w["2"]) + " and " + n(w["3"]) +
+      " for tiers 1, 2 and 3 (" + esc(B.triage.source) + ").";
+    $("key-plan").innerHTML = "<b>The plan's rule</b> is the baseline the project set out to beat. It alerts once a " +
+      "specimen has been silent longer than " + n(Math.round(100 * B.baselines.plan.quantiles[state.point]) + "%") +
+      " of past specimens of the same type, priority and time of day took to arrive. Both methods are set to " +
+      n(g.budget_per_shift) + " alerts per shift on the fit runs.";
+  }
+
+  function renderBoard() {
+    renderKey();
+    var day = days[state.day], now = day.start + state.minute;
+    var clock = $("clock");
+    clock.value = String(state.minute / B.tick_min);
+    clock.setAttribute("aria-valuetext", hhmm(state.minute) + " on " + dayLabel(day.date));
+    $("clock-out").textContent = hhmm(state.minute);
+    $("clock-back").disabled = state.minute <= 0;
+    $("clock-fwd").disabled = state.minute >= 1440 - B.tick_min;
+
+    var out = C.outstanding(byRun[day.run], now, B.shift_min);
+    var rows = C.boardRows(out.live, ctx());
+    $("board-body").innerHTML = rows.map(rowHtml).join("");
+    var when = hhmm(state.minute) + " on " + dayLabel(day.date);
+    $("board-status").textContent = rows.length
+      ? rows.length + (rows.length === 1 ? " specimen is" : " specimens are") + " outstanding at " + when + "."
+      : out.older.length
+        ? "The board is empty at " + when + ": every unreceived specimen's window closed more than one shift ago. " +
+          "Move the clock or pick another day."
+        : "No specimen is outstanding at " + when + ". Move the clock or pick another day.";
+    $("board-wrap").hidden = rows.length === 0;
+
+    var older = $("older");
+    if (out.older.length) {
+      older.innerHTML = "Still unreceived, with windows that closed more than one shift ago, and so off the ranking: " +
+        out.older.map(function (o) {
+          return '<button type="button" data-open="' + esc(o.spec.id) + '">' + esc(o.spec.id) + "</button>";
+        }).join(", ") + ".";
+      older.hidden = false;
+    } else {
+      older.hidden = true;
+      older.textContent = "";
+    }
+  }
+
+  function verdict(minute, cls) {
+    return minute != null
+      ? '<span class="v ' + cls + ' on">alerted at ' + n(minute + " min") + "</span>"
+      : '<span class="v ' + cls + ' off">quiet</span>';
+  }
+
+  function rowHtml(r, i) {
+    var s = r.spec, open = state.open === s.id, w = weightOf(s);
+    var risk, place, left, role;
+    if (r.risk == null) {
+      risk = '<span class="muted">first score at ' + n(B.tick_min + " min") + "</span>";
+    } else {
+      var line = Math.min(1, threshold() / w);
+      risk = '<span class="riskcell' + (r.closed ? " closed" : "") + '">' + n(pct(r.risk)) +
+        '<span class="rbar" aria-hidden="true"><i style="width:' + (100 * r.risk).toFixed(1) + '%"></i>' +
+        '<b style="left:' + (100 * line).toFixed(1) + '%"></b></span></span>';
+    }
+    var row = r.tick != null ? placesAt(s, r.tick) : null;
+    if (r.tick == null) place = '<span class="muted">just collected</span>';
+    else if (!row) place = '<span class="muted">past the ' + n(B.horizon_min + " min") + " horizon</span>";
+    else { var mp = C.mergePlaces(row, B.place_order); place = esc(placeWords(mp, mp.best)); }
+    left = r.closed ? '<span class="closed-word">window closed</span>' : n(mins(s.window_min - r.t));
+    role = r.model != null ? esc(roleOf(s, r.model)) : '<span class="muted">no alert</span>';
+    var silent = r.tick == null && r.t < 1 ? "under 1 min" : mins(r.t);
+    return '<tr role="row" data-id="' + esc(s.id) + '"' + (open ? ' class="is-open"' : "") + ">" +
+      '<td role="cell" class="c-rank">' + n(i + 1) + "</td>" +
+      '<td role="cell" class="c-spec"><span class="idline"><button type="button" class="sid" aria-expanded="' + open +
+        '" aria-controls="timeline">' + esc(s.id) + '<span class="vh">, open its timeline</span></button>' +
+        '<span class="tier' + (s.tier === 1 ? " t1" : "") + '" title="expected-harm weight ' + w + '">Tier ' + s.tier + "</span></span>" +
+        '<span class="type">' + esc(shortType(s.type)) + "</span></td>" +
+      '<td role="cell" class="c-from">' + esc(UNIT[s.unit] || s.unit) + ", " + esc(ROUTE[s.route] || s.route) + "</td>" +
+      '<td role="cell" class="c-silent" data-label="Silent">' + n(silent) + "</td>" +
+      '<td role="cell" class="c-risk" data-label="Risk of missing the window">' + risk + "</td>" +
+      '<td role="cell" class="c-place" data-label="Most likely place">' + place + "</td>" +
+      '<td role="cell" class="c-left" data-label="Window left">' + left + "</td>" +
+      '<td role="cell" class="c-tracer" data-label="Tracer">' + (r.tick == null ? '<span class="v v-t off">not scored yet</span>' : verdict(r.model, "v-t")) + "</td>" +
+      '<td role="cell" class="c-plan" data-label="Plan\'s rule">' + (r.tick == null ? '<span class="v v-p off">not scored yet</span>' : verdict(r.plan, "v-p")) + "</td>" +
+      '<td role="cell" class="c-role" data-label="Alert goes to">' + role + "</td></tr>";
+  }
+
+  function markOpenRow() {
+    Array.prototype.forEach.call($("board-body").querySelectorAll("tr[data-id]"), function (tr) {
+      var open = tr.getAttribute("data-id") === state.open;
+      tr.classList.toggle("is-open", open);
+      tr.querySelector(".sid").setAttribute("aria-expanded", String(open));
+    });
+  }
+
+  /* ---------- the timeline ---------- */
+  function openSpecimen(id, opts) {
+    var s = byId[id];
+    if (!s) return false;
+    opts = opts || {};
+    state.open = id;
+    state.positions = [0].concat(s._ticks);
+    if (s.received_min != null) state.positions.push(s.received_min);
+    var a = modelAlertOf(s);
+    var want = opts.minute != null ? opts.minute : a != null ? a : s._ticks.length ? s._ticks[s._ticks.length - 1] : 0;
+    state.scrub = nearest(state.positions, want);
+    var scrub = $("tl-scrub");
+    scrub.max = String(state.positions.length - 1);
+    $("timeline").hidden = false;
+    renderHead(s);
+    renderMoment();
+    markOpenRow();
+    loadBriefs(s);
+    if (location.hash !== "#" + id) history.replaceState(null, "", "#" + id);
+    if (opts.focus) {
+      $("timeline").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+      $("tl-title").focus({ preventScroll: true });
+    }
+    return true;
+  }
+
+  function closeTimeline() {
+    var id = state.open;
+    state.open = null;
+    $("timeline").hidden = true;
+    history.replaceState(null, "", location.pathname + location.search);
+    markOpenRow();
+    var tr = id && $("board-body").querySelector('tr[data-id="' + id + '"] .sid');
+    (tr || $("board-h")).focus();
+  }
+
+  function nearest(list, value) {
+    var best = 0;
+    for (var i = 1; i < list.length; i++) if (Math.abs(list[i] - value) < Math.abs(list[best] - value)) best = i;
+    return best;
+  }
+
+  function renderHead(s) {
+    var pol = B.policy.policies[s.policy_id] || {};
+    var source = pol.assumed ? "assumed, with no cited source" : "cited: " + esc(pol.source || "");
+    $("tl-title").innerHTML = '<span class="num">' + esc(s.id) + "</span>" + esc(shortType(s.type));
+    $("tl-facts").innerHTML = "Collected at " + n(hhmm(s._c)) + " on " + esc(dayLabel(s.collected_at.slice(0, 10))) +
+      " (run " + s.run + "), " + esc(UNIT[s.unit] || s.unit) + ", " + esc(s.priority) + ", sent " + esc(ROUTE[s.route] || s.route) +
+      ". Tier " + s.tier + ", weight " + n(weightOf(s)) + ". Stability window " + n(mins(s.window_min)) + " (" + source + ").";
+    // the clock runs from collection to receipt, so scans after the receipt scan are not listed
+    var ev = s.events.filter(function (e) { return s.received_min == null || e.at_min <= s.received_min; })
+      .sort(function (x, y) { return x.at_min - y.at_min; });
+    var items = [];
+    ev.forEach(function (e) {
+      var who = ARTICLE[e.role] || e.role;
+      if (e.activity === "collected") {
+        items.push("<li>Collection scan at " + n(hhmm(s._c)) + " by " + esc(who) + ". The clock starts.</li>");
+        items.push('<li class="gap">' + (s.received_min != null
+          ? "No scan for " + n(mins(s.received_min)) + "."
+          : "No scan after this one.") + "</li>");
+      } else if (e.activity === "received") {
+        items.push("<li>Receipt scan at " + n(hhmm(s._c + e.at_min)) + " by " + esc(who) + ", " + n(mins(e.at_min)) +
+          " after collection. The clock stops.</li>");
+      } else if (e.activity === "ordered") {
+        items.push("<li>Order entered by " + esc(who) + ", " + n(mins(-e.at_min)) + " before collection.</li>");
+      }
+    });
+    $("tl-events").innerHTML = items.join("");
+    $("tl-truth").setAttribute("aria-pressed", String(state.truth));
+    $("tl-truth").textContent = state.truth ? "Hide the truth" : "Show the truth";
+    renderTruthLine(s);
+  }
+
+  function renderTruthLine(s) {
+    var line = $("tl-truth-line");
+    line.hidden = !state.truth;
+    if (!state.truth) { line.textContent = ""; return; }
+    var parts = s.truth.segments.map(function (g) {
+      var words = (TRUTH[g[0]] || [g[0]])[0];
+      return words + (g[2] == null ? " from " + mins(g[1]) + " on" : " from " + mins(g[1]) + " to " + mins(g[2]));
+    });
+    line.innerHTML = "<b>What really happened, which Tracer never sees:</b> " + esc(parts.join("; ")) + ". " +
+      "Planted fault: " + esc(FAULT[s.truth.fault] || s.truth.fault) + ". " +
+      (s.truth.breach ? "It missed its window." : "It made its window.");
+  }
+
+  function renderMoment() {
+    var s = byId[state.open], m = state.positions[state.scrub], scrub = $("tl-scrub");
+    scrub.value = String(state.scrub);
+    $("tl-back").disabled = state.scrub <= 0;
+    $("tl-fwd").disabled = state.scrub >= state.positions.length - 1;
+    var outcome = s.received_min != null && m >= s.received_min;
+    var r = outcome || m === 0 ? null : C.risk(m, mixOf(s), s.window_min);
+    var at = outcome ? "receipt scan, " + mins(m) + " after collection"
+      : m === 0 ? "collection scan" : mins(m) + " after collection";
+    scrub.setAttribute("aria-valuetext", at + (r != null ? ", risk " + pct(r) : ""));
+    $("tl-at").innerHTML = "Showing " + (outcome ? "the receipt scan, " + n(mins(m)) + " after collection"
+      : m === 0 ? "the collection scan" : n(mins(m)) + " after collection") + ", at " + n(hhmm(s._c + m)) +
+      (r != null ? ": risk " + n(pct(r)) + "." : ".");
+    drawChart();
+    renderReadout(s, m, outcome, r);
+  }
+
+  function renderReadout(s, m, outcome, r) {
+    var W = s.window_min, mix = mixOf(s);
+    $("ro-when").innerHTML = (outcome ? "At the receipt scan, " : m === 0 ? "At the collection scan, " : "At ") +
+      n(mins(m)) + " after collection (" + n(hhmm(s._c + m)) + ")";
+    var oc = $("ro-outcome"), stats = $("ro-stats");
+    oc.hidden = !outcome;
+    stats.hidden = outcome;
+    if (outcome) {
+      var inside = m <= W;
+      oc.className = "outcome " + (inside ? "good" : "bad");
+      oc.innerHTML = inside
+        ? "Received " + n(mins(W - m)) + " before the window closed. The clock stopped here, so nothing is scored after it."
+        : "Received " + n(mins(m - W)) + " after the window closed: a missed window. The clock stopped here.";
+    } else {
+      var w = weightOf(s), q50 = C.arrivalQuantile(m, mix, 0.5), q90 = C.arrivalQuantile(m, mix, 0.9);
+      if (m === 0) {
+        $("ro-risk").innerHTML = "<small>first score at " + B.tick_min + " min</small>";
+        $("ro-harm").innerHTML = "<small>first score at " + B.tick_min + " min</small>";
+      } else {
+        $("ro-risk").textContent = pct(r);
+        $("ro-harm").innerHTML = esc(C.harm(w, r).toFixed(3)) + "<small>weight " + w + " × risk; alerts at " +
+          esc(threshold().toFixed(3)) + "</small>";
+      }
+      $("ro-left").innerHTML = m >= W ? '<span class="closed-word">window closed</span>' : esc(mins(W - m));
+      $("ro-arrival").innerHTML = isFinite(q50)
+        ? "in about " + esc(mins(q50)) + "<small>9 in 10 within " + esc(mins(q90)) + "</small>"
+        : "<small>none expected</small>";
+    }
+
+    var list = $("ro-places"), row = !outcome && m > 0 ? placesAt(s, m) : null;
+    if (row) {
+      var mp = C.mergePlaces(row, B.place_order);
+      list.innerHTML = mp.places.map(function (p) {
+        return '<li class="place' + (p.key === mp.best ? " best" : "") + '"><span>' + esc(placeWords(mp, p.key)) +
+          '</span><span class="pv">' + esc((100 * p.value).toFixed(0) + "%") + '</span><span class="pbar" aria-hidden="true"><i style="width:' +
+          (100 * p.value).toFixed(1) + '%"></i></span></li>';
+      }).join("");
+    } else {
+      list.innerHTML = '<li class="ro-note">' + (outcome ? "Received: it is in the laboratory."
+        : m === 0 ? "Just scanned at the collecting unit." : "The location estimate stops at " + esc(mins(B.horizon_min)) + ".") + "</li>";
+    }
+
+    var a = modelAlertOf(s), p = planAlertOf(s), items = [];
+    items.push("<li>" + verdictAt("Tracer", a, m, W, "v-t") + "</li>");
+    items.push("<li>" + verdictAt("The plan's rule", p, m, W, "v-p") + "</li>");
+    if (a != null && a <= m) items.push("<li>Tracer's alert goes to the " + esc(roleOf(s, a)) + ".</li>");
+    $("ro-verdicts").innerHTML = items.join("");
+  }
+
+  function verdictAt(who, a, m, W, cls) {
+    if (a == null) return '<span class="v ' + cls + ' off">' + who + " never alerts.</span>";
+    var lead = W - a, warn = lead <= 0 ? "after the window closed"
+      : n(mins(lead)) + (m >= W ? " before the window closed" : " before the window closes");
+    if (a <= m) return '<span class="v ' + cls + ' on">' + who + " alerted at " + n(mins(a)) + ", " + warn + ".</span>";
+    return '<span class="v ' + cls + ' off">' + who + " is quiet here; it alerts at " + n(mins(a)) + ".</span>";
+  }
+
+  /* ---------- the chart ---------- */
+  var NS = "http://www.w3.org/2000/svg";
+  function el(name, attrs, text) {
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function niceStep(span, maxLabels) {
+    var steps = [5, 10, 15, 20, 30, 60, 90, 120, 180, 240, 360, 480, 720, 1440, 2880];
+    for (var i = 0; i < steps.length; i++) if (span / steps[i] <= maxLabels) return steps[i];
+    return steps[steps.length - 1];
+  }
+
+  function chartEnd(s, a, p, m) {
+    var base = s.received_min != null ? s.received_min : Math.min(s.window_min, B.horizon_min);
+    base = Math.max(base, a || 0, p || 0, m, 30);
+    if (s.window_min <= base * 1.5) base = Math.max(base, s.window_min);
+    return base * 1.06;
+  }
+
+  function curve(s, end) {
+    var key = s.id + "|" + end;
+    if (curveCache.key === key) return curveCache.pts;
+    var mix = mixOf(s), stop = s.received_min != null ? Math.min(s.received_min, end) : end, pts = [];
+    for (var i = 0; i <= 400; i++) {
+      var t = stop * i / 400;
+      pts.push([t, C.risk(t, mix, s.window_min)]);
+    }
+    curveCache = { key: key, pts: pts };
+    return pts;
+  }
+
+  function drawChart() {
+    var s = byId[state.open], svg = $("tl-svg"), m = state.positions[state.scrub];
+    var w = Math.max(280, Math.floor($("tl-chart").clientWidth - 16)), narrow = w < 560;
+    var a = modelAlertOf(s), p = planAlertOf(s), weight = weightOf(s), alertRisk = threshold() / weight;
+    var W = s.window_min, rec = s.received_min, mix = mixOf(s), end = chartEnd(s, a, p, m);
+    var top = 46, plotH = narrow ? 150 : 200, L = 42, R = 14, x0 = L, x1 = w - R;
+    function X(t) { return x0 + Math.min(t, end) / end * (x1 - x0); }
+    function Y(v) { return top + (1 - v) * plotH; }
+    // an early receipt puts its label on a second row, under the collection scan's
+    var lowRow = rec != null && rec <= end && X(rec) - X(0) < 260;
+    var axisY = top + plotH + 16, laneY = top + plotH + 44, truthY = laneY + (lowRow ? 60 : 46);
+    var H = state.truth ? truthY + 22 : laneY + (lowRow ? 44 : 30);
+    function text(x, y, cls, str, anchor) {
+      return el("text", { x: x.toFixed(1), y: y.toFixed(1), "class": cls, "text-anchor": anchor || "start" }, str);
+    }
+    /* A label beside a mark at x: to its right when it fits, else to its left, else flush with the nearer edge. */
+    function label(x, y, cls, str) {
+      var width = str.length * 6.3;
+      if (x + 6 + width <= w - 2) return text(x + 6, y, cls, str, "start");
+      if (x - 6 - width >= 2) return text(x - 6, y, cls, str, "end");
+      return x > w / 2 ? text(w - 2, y, cls, str, "end") : text(2, y, cls, str, "start");
+    }
+
+    svg.setAttribute("viewBox", "0 0 " + w + " " + H);
+    svg.setAttribute("width", String(w));
+    svg.setAttribute("height", String(H));
+    Array.prototype.slice.call(svg.childNodes).forEach(function (c) { if (c.id !== "tl-svg-label") svg.removeChild(c); });
+
+    var defs = el("defs"), pat = el("pattern", { id: "hatch", width: 7, height: 7, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" });
+    pat.appendChild(el("line", { x1: 0, y1: 0, x2: 0, y2: 7, "class": "hatch" }));
+    defs.appendChild(pat);
+    svg.appendChild(defs);
+
+    // the silent interval: no scan exists between the collection scan and the receipt scan
+    var silentEnd = rec != null ? Math.min(rec, end) : end;
+    svg.appendChild(el("rect", { x: X(0), y: top, width: Math.max(0, X(silentEnd) - X(0)), height: plotH, "class": "band" }));
+
+    [0, 0.5, 1].forEach(function (v) {
+      svg.appendChild(el("line", { x1: x0, x2: x1, y1: Y(v), y2: Y(v), "class": "gridline" }));
+      svg.appendChild(text(x0 - 7, Y(v) + 4, "ax", Math.round(v * 100) + "%", "end"));
+    });
+    var step = niceStep(end, Math.max(3, Math.floor((x1 - x0) / (narrow ? 58 : 74))));
+    for (var t = 0; t <= end; t += step) {
+      var last = t + step > end;
+      svg.appendChild(text(X(t), axisY, "ax", last ? int(t) + " min" : int(t), t === 0 ? "start" : last ? "end" : "middle"));
+    }
+
+    // Tracer's alert line for this specimen's tier: expected harm reaches the threshold
+    if (alertRisk <= 1) {
+      svg.appendChild(el("line", { x1: x0, x2: x1, y1: Y(alertRisk), y2: Y(alertRisk), "class": "aline" }));
+      svg.appendChild(text(x1, Y(alertRisk) - 6, "lbl t-warn halo", "Tracer's alert line, tier " + s.tier + ": " + pct(alertRisk), "end"));
+    }
+
+    // the risk curve, recomputed here, and the part the clock has passed
+    var pts = curve(s, end), d = "", area = "";
+    pts.forEach(function (q, i) { d += (i ? "L" : "M") + X(q[0]).toFixed(1) + " " + Y(q[1]).toFixed(1); });
+    var silentNow = rec == null || m < rec;
+    var upto = silentNow ? m : rec;
+    pts.forEach(function (q) { if (q[0] <= upto) area += "L" + X(q[0]).toFixed(1) + " " + Y(q[1]).toFixed(1); });
+    if (upto > 0) {
+      area += "L" + X(upto).toFixed(1) + " " + Y(C.risk(upto, mix, W)).toFixed(1);
+      svg.appendChild(el("path", { d: "M" + X(0).toFixed(1) + " " + Y(0).toFixed(1) + area + "L" + X(upto).toFixed(1) + " " + Y(0).toFixed(1) + "Z", "class": "past" }));
+    }
+    svg.appendChild(el("path", { d: d, "class": "curve" }));
+
+    // the window: it closes at W minutes, and the receipt scan is what stops the clock
+    if (W <= end) {
+      var wx = X(W);
+      svg.appendChild(el("line", { x1: wx, x2: wx, y1: 6, y2: laneY + 8, "class": "win" }));
+      svg.appendChild(label(wx, 15, "lbl t-alarm halo", "window closes, " + mins(W)));
+      svg.appendChild(label(wx, 30, "lbl t-alarm halo", "(receipt scan stops the clock)"));
+    } else {
+      svg.appendChild(el("path", { d: "M" + (x1 - 8) + " 6 L" + x1 + " 11 L" + (x1 - 8) + " 16 Z", "class": "warrow" }));
+      svg.appendChild(text(x1 - 12, 15, "lbl t-alarm halo", "window closes at " + mins(W), "end"));
+      svg.appendChild(text(x1 - 12, 30, "lbl t-alarm halo", "(receipt scan stops the clock)", "end"));
+    }
+
+    // the two alerts: Tracer a filled circle on the curve, the plan's rule an open diamond, each with a guide
+    // down to the axis and its label in its own row at the top of the plot
+    if (a != null) {
+      var ax = X(a), ay = Y(C.risk(a, mix, W));
+      svg.appendChild(el("line", { x1: ax, x2: ax, y1: top + 4, y2: top + plotH, "class": "tguide" }));
+      svg.appendChild(el("circle", { cx: ax, cy: ay, r: 5, "class": "tdot" }));
+      svg.appendChild(label(ax, top + 13, "lbl t-warn halo", "Tracer alerts, " + mins(a)));
+    }
+    if (p != null) {
+      var px = X(p), py = Y(C.risk(p, mix, W));
+      svg.appendChild(el("line", { x1: px, x2: px, y1: top + 19, y2: top + plotH, "class": "pguide" }));
+      svg.appendChild(el("rect", { x: px - 4.5, y: py - 4.5, width: 9, height: 9, transform: "rotate(45 " + px + " " + py + ")", "class": "pdot" }));
+      svg.appendChild(label(px, top + 29, "lbl t-warn halo", "plan's rule, " + mins(p)));
+    }
+
+    // the scans, with nothing drawn between them
+    svg.appendChild(el("circle", { cx: X(0), cy: laneY, r: 5, "class": "scan" }));
+    svg.appendChild(text(X(0) - 4, laneY + 20, "lbl t-obs", "collection scan", "start"));
+    var gapEnd = rec != null ? X(Math.min(rec, end)) : x1;
+    if (gapEnd - X(0) > 150) svg.appendChild(text((X(0) + gapEnd) / 2, laneY + 4, "lbl t-inf", "no scan exists here", "middle"));
+    if (rec != null && rec <= end) {
+      var rx = X(rec);
+      svg.appendChild(el("circle", { cx: rx, cy: laneY, r: 5, "class": "scan" }));
+      svg.appendChild(lowRow ? label(rx - 10, laneY + 34, "lbl t-obs", "receipt scan, clock stops")
+                             : text(rx + 4, laneY + 20, "lbl t-obs", "receipt scan, clock stops", "end"));
+    }
+
+    // where the scrubber stands
+    var sx = X(m);
+    svg.appendChild(el("line", { x1: sx, x2: sx, y1: top - 4, y2: laneY - 9, "class": "scrub-line" }));
+    if (silentNow && m > 0) svg.appendChild(el("circle", { cx: sx, cy: Y(C.risk(m, mix, W)), r: 4, "class": "scrub-dot" }));
+
+    // the truth, only when asked for
+    if (state.truth) {
+      s.truth.segments.forEach(function (g) {
+        var from = X(g[1]), to = X(g[2] == null ? end : g[2]);
+        if (to - from < 1) return;
+        svg.appendChild(el("rect", { x: from, y: truthY - 11, width: to - from, height: 16, "class": "seg" + (FAULT_STATES[g[0]] ? " fault" : "") }));
+        var label = (TRUTH[g[0]] || [g[0], g[0]])[1];
+        if (to - from > label.length * 6.4 + 8) svg.appendChild(text((from + to) / 2, truthY + 1, "lbl t-dim", label, "middle"));
+      });
+      svg.appendChild(text(x0 - 7, truthY + 1, "ax", "truth", "end"));
+    }
+    $("tl-svg-label").textContent = "Risk that " + s.id + " misses its window, from collection to " +
+      (rec != null ? "its receipt scan at " + mins(rec) : "the end of the chart; no receipt scan exists") +
+      ". The window closes at " + mins(W) + ". " + (a != null ? "Tracer alerts at " + mins(a) + ". " : "Tracer never alerts. ") +
+      (p != null ? "The plan's rule alerts at " + mins(p) + "." : "The plan's rule never alerts.");
+  }
+
+  /* ---------- the search briefs, loaded when a specimen with an alert is opened ---------- */
+  function loadBriefs(s) {
+    var box = $("tl-briefs");
+    var has = s.alerts.model != null && state.point === B.headline_index;
+    box.hidden = !has;
+    if (!has) return;
+    if (briefs.data) { showBrief(s); return; }
+    $("brief-note").textContent = briefs.error ? "The search briefs did not load: " + briefs.error + "." : "Loading the search brief.";
+    $("brief-pair").hidden = true;
+    if (briefs.loading || briefs.error) return;
+    briefs.loading = true;
+    fetch("briefs.json").then(function (r) {
+      if (!r.ok) throw new Error("the server answered " + r.status + " for briefs.json");
+      return r.json();
+    }).then(function (data) {
+      briefs.data = data;
+    }).catch(function (err) {
+      briefs.error = err && err.message ? err.message : String(err);
+    }).then(function () {
+      briefs.loading = false;
+      if (state.open) loadBriefs(byId[state.open]);
+    });
+  }
+
+  function showBrief(s) {
+    var entry = briefs.data.briefs[s.id];
+    if (!entry) {
+      $("brief-note").textContent = "No search brief is stored for this alert.";
+      $("brief-pair").hidden = true;
+      return;
+    }
+    var inp = entry.inputs;
+    $("brief-note").innerHTML = "Written ahead, before this page existed, from the alert's inputs at " +
+      n(inp.minutes_since_last_scan + " min") + " for the " + esc(inp.role) + ". Each brief is labeled by its writer; " +
+      "this is not the blind comparison.";
+    $("brief-template").textContent = entry.template;
+    $("brief-claude").textContent = entry.claude;
+    $("brief-claude-cap").textContent = "Claude, written by " + briefs.data.model;
+    $("brief-pair").hidden = false;
+  }
+
+  /* ---------- events ---------- */
+  function setMinute(minute) {
+    state.minute = Math.max(0, Math.min(1440 - B.tick_min, minute));
+    renderBoard();
+  }
+  function setScrub(i) {
+    state.scrub = Math.max(0, Math.min(state.positions.length - 1, i));
+    renderMoment();
+  }
+  function fromHash(initial) {
+    var id = decodeURIComponent(location.hash.slice(1));
+    if (id && byId[id]) {
+      if (id !== state.open) openSpecimen(id, { focus: !initial });
+      if (initial) $("timeline").scrollIntoView({ block: "start" });
+    } else if (state.open && !id) {
+      closeTimeline();
+    }
+  }
+
+  function wire() {
+    $("day").addEventListener("change", function () { state.day = +this.value; renderBoard(); });
+    $("clock").addEventListener("input", function () { setMinute(+this.value * B.tick_min); });
+    $("clock-back").addEventListener("click", function () { setMinute(state.minute - B.tick_min); });
+    $("clock-fwd").addEventListener("click", function () { setMinute(state.minute + B.tick_min); });
+    $("board-body").addEventListener("click", function (e) {
+      var tr = e.target.closest("tr[data-id]");
+      if (!tr) return;
+      var id = tr.getAttribute("data-id"), s = byId[id], t = days[state.day].start + state.minute - s._c;
+      var tick = Math.min(Math.floor(t / B.tick_min), s._ticks.length) * B.tick_min;
+      openSpecimen(id, { minute: tick, focus: true });
+    });
+    $("older").addEventListener("click", function (e) {
+      var b = e.target.closest("button[data-open]");
+      if (b) openSpecimen(b.getAttribute("data-open"), { focus: true });
+    });
+    $("tl-close").addEventListener("click", closeTimeline);
+    $("timeline").addEventListener("keydown", function (e) { if (e.key === "Escape") closeTimeline(); });
+    $("tl-scrub").addEventListener("input", function () { setScrub(+this.value); });
+    $("tl-back").addEventListener("click", function () { setScrub(state.scrub - 1); });
+    $("tl-fwd").addEventListener("click", function () { setScrub(state.scrub + 1); });
+    $("tl-truth").addEventListener("click", function () {
+      state.truth = !state.truth;
+      var s = byId[state.open];
+      renderHead(s);
+      renderMoment();
+    });
+    window.addEventListener("hashchange", function () { fromHash(false); });
+    var pending = false;
+    window.addEventListener("resize", function () {
+      if (pending || !state.open) return;
+      pending = true;
+      requestAnimationFrame(function () { pending = false; if (state.open) drawChart(); });
+    });
+  }
+
+  /* For later tasks: the bundle, the core, the state, and the two ways in. setPoint(i) moves both methods to
+     grid point i (the threshold control); openSpecimen(id) opens a timeline. */
+  window.TracerDemo = {
+    core: C,
+    state: state,
+    bundle: function () { return B; },
+    renderBoard: renderBoard,
+    openSpecimen: function (id) { return openSpecimen(id, { focus: true }); },
+    setPoint: function (i) {
+      state.point = i;
+      renderBoard();
+      if (state.open) { renderMoment(); loadBriefs(byId[state.open]); }
+    }
+  };
+
+  fetch("bundle.json").then(function (r) {
+    if (!r.ok) throw new Error("the server answered " + r.status + " " + r.statusText);
+    return r.json();
+  }).then(start).catch(loadFailed);
+})();
+</script>
+</body>
+</html>
