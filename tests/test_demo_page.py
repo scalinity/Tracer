@@ -1,15 +1,17 @@
-"""The public demo page, docs/demo/index.html (plan tasks P2 to P4).
+"""The public demo page, docs/demo/index.html (plan tasks P2 to P4 and P6).
 
 The page keeps its arithmetic in one <script id="core"> block that never touches the page. These tests slice
 that block out and run it under node, as tests/test_risk.py does with visuals/architecture.html, and hold it to
 the Python: the normal CDF to scipy, the risk to the bundle's arrays, the expected arrival to
 src/models/risk.arrival_quantile, both alert rules to the bundle's alert minutes for every specimen, and the
-threshold control's recomputation to the bundle's grid of 20 operating points.
+threshold control's recomputation to the bundle's grid of 20 operating points. The 3D bench is checked as a
+byte-identical copy that loads nothing from elsewhere, and its link for leaking a truth not yet shown.
 Static checks keep the page self-contained and honest, and a headless Chrome check loads it at phone and laptop
 widths. The browser check needs node, Playwright (from visuals/exhibit-3d/node_modules) and Google Chrome, and
 is skipped without them. Set TRACER_DEMO_SHOTS to a folder outside the repository to keep its screenshots.
 """
 
+import hashlib
 import json
 import os
 import random
@@ -350,6 +352,81 @@ def test_the_page_holds_no_key_and_stays_small():
     assert PAGE.stat().st_size < 200_000
 
 
+# ---- the 3D view (P6) ----
+
+EXHIBIT = DEMO / "exhibit"
+EXHIBIT_SOURCE = ROOT / "visuals" / "exhibit-3d" / "dist"
+# Addresses written inside the built exhibit's script. None is fetched (the browser check watches every request):
+# two XML namespaces, a link in one of three.js's error messages, the credit's link a visitor may follow, and the
+# source credited in a shader comment.
+EXHIBIT_URLS = {"http://www.w3.org/1999/xhtml", SVG_NAMESPACE, "https://github.com/mrdoob/three.js/issues/32012",
+                "https://github.com/scalinity", "https://www.shadertoy.com/view/WtyXRy"}
+
+
+def exhibit_files(root: Path) -> dict[str, str]:
+    return {p.relative_to(root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(root.rglob("*")) if p.is_file()}
+
+
+def exhibit_text() -> dict[str, str]:
+    return {p.name: p.read_text(encoding="utf-8") for p in EXHIBIT.rglob("*") if p.suffix in (".html", ".js", ".css", ".svg")}
+
+
+def test_the_exhibit_folder_is_a_byte_identical_copy_of_the_built_exhibit():
+    copied, built = exhibit_files(EXHIBIT), exhibit_files(EXHIBIT_SOURCE)
+    assert copied == built and "index.html" in copied and len(copied) >= 10
+    # built with base './', so it works from any folder
+    assert re.findall(r"""(?:src|href)="([^"]+)\"""", (EXHIBIT / "index.html").read_text(encoding="utf-8")) and all(
+        v.startswith("./") for v in re.findall(r"""(?:src|href)="([^"]+)\"""", (EXHIBIT / "index.html").read_text(encoding="utf-8")))
+
+
+def test_the_exhibit_loads_nothing_from_another_origin_and_holds_no_key():
+    texts = exhibit_text()
+    assert set(texts) >= {"index.html", "favicon.svg"} and any(name.endswith(".js") for name in texts)
+    found = set()
+    for name, text in texts.items():
+        assert not re.search(r"sk-ant-|ANTHROPIC_API_KEY|(?i:x-api-key)|(?i:api[_-]?key)\s*[:=]", text), name
+        found |= set(re.findall(r"(?i)https?://[^\s\"'`)<>\\]+", text))
+        assert not re.search(r"""\bimport\s*\(\s*["'`]https?:|<script\b[^>]*\bsrc=["']?(?:https?:)?//|@import\s+url\(\s*["']?(?:https?:)?//""", text), name
+    assert found <= EXHIBIT_URLS, found - EXHIBIT_URLS
+    assert all(not re.match(r"(?i)\s*(?:https?:)?//", v)
+               for v in re.findall(r"""\b(?:src|href)\s*=\s*["']([^"']*)""", texts["index.html"]))
+
+
+def test_the_exhibit_never_says_the_clock_stops_at_plating():
+    for name, text in exhibit_text().items():
+        lower = text.lower()
+        assert "plated" not in lower and "set-up" not in lower, name
+        # its one mention of plating says plating is outside the clock
+        for m in re.finditer(r"plating", lower):
+            assert lower[max(0, m.start() - 40):m.start()].endswith("nothing after the receipt scan, "), (name, lower[m.start() - 60:m.end() + 20])
+    # three.js names a method setup, so the word is checked in the exhibit's own page rather than its script
+    assert "setup" not in exhibit_text()["index.html"].lower()
+
+
+@needs_node
+def test_the_3d_link_takes_its_fate_from_the_scans_until_the_truth_is_shown():
+    got = run_core("""
+      var obs = DATA.obs.map(function (o) { return TracerCore.observedFate(o[0], o[1]); });
+      var tru = DATA.tru.map(function (o) { return TracerCore.trueFate(o[0], o[1], o[2]); });
+      var q = DATA.q.map(TracerCore.exhibitQuery);
+      out({obs: obs, tru: tru, q: q});
+    """, {"obs": [[20, None], [67, None], [68, None], [90, 120], [30, 27], [80, 70], [70, 70]],
+          "tru": [["lost_in_tube", None, 60], ["not_dispatched", None, 60], ["stalled_at_station", 90, 120], ["misrouted", 50, 60],
+                  ["none", 40, 60], ["none", 75, 60], ["content_failure", 30, 1440]],
+          "q": [{"fate": "stalls", "silence": 62, "window": 120, "alert": 0.45, "truth": False},
+                {"fate": "lost", "silence": 131, "window": 1440, "alert": 0.046, "truth": True},
+                {"fate": "arrives", "silence": 0, "window": 60, "alert": 0.9, "truth": False},
+                {"fate": "stalls", "silence": 62.4, "window": 240, "alert": 0.3333, "truth": False}]}, prelude=False)
+    assert got["obs"] == ["stalls", "stalls", "lost", "lost", "arrives", "stalls", "stalls"]
+    assert got["tru"] == ["lost", "unsent", "stalls", "stalls", "arrives", "stalls", "arrives"]
+    assert got["q"] == ["?fate=stalls&silence=62&window=120&alert=0.45&truth=0", "?fate=lost&truth=1",
+                        "?fate=arrives&silence=0&window=60&alert=0.9&truth=0", "?fate=stalls&silence=62&window=240&alert=0.33&truth=0"]
+    # the page reads a specimen's truth for the link only behind the truth toggle
+    html = page_html()
+    body = html[html.index("function renderLink3d"):html.index("/* ---------- the chart")]
+    assert "state.truth ? C.trueFate(s.truth.fault" in body and body.count("s.truth") == 1
+
+
 # ---- in a browser ----
 
 def playwright_dir() -> Path | None:
@@ -402,8 +479,32 @@ const { chromium } = require(PLAYWRIGHT);
     await page.click("#tl-fwd");
     run.riskAfterButton = await page.textContent("#ro-risk");
     await page.waitForFunction(() => document.getElementById("brief-template").textContent.length > 0, null, { timeout: 15000 });
+    // the 3D link before and after the truth, with the minute the scrubber stands at
+    const link3d = () => page.evaluate(() => ({ href: document.getElementById("tl-3d").getAttribute("href"),
+      shown: !document.getElementById("tl-3d").hidden, target: document.getElementById("tl-3d").target,
+      minute: window.TracerDemo.state.positions[window.TracerDemo.state.scrub] }));
+    run.link0 = await link3d();
     await page.click("#tl-truth");
     run.truthShown = await page.isVisible("#tl-truth-line");
+    run.link1 = await link3d();
+    if (width === 375) {
+      // follow it: the bench opens in a new tab from the copied exhibit folder
+      const [tab] = await Promise.all([context.waitForEvent("page"), page.click("#tl-3d")]);
+      const bench = { messages: [], errors: [], foreign: [] };
+      tab.on("request", (r) => { const u = r.url(); if (!u.startsWith(BASE + "/") && !u.startsWith("data:") && !u.startsWith("blob:")) bench.foreign.push(u); });
+      tab.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") bench.messages.push(m.type() + ": " + m.text()); });
+      tab.on("pageerror", (e) => bench.errors.push(String(e)));
+      await tab.waitForLoadState("load");
+      await tab.waitForFunction(() => !document.getElementById("loading"), null, { timeout: 20000 }).catch(() => {});
+      await tab.waitForTimeout(1500);
+      bench.url = tab.url();
+      bench.canvas = await tab.$$eval("canvas", (c) => c.length);
+      bench.stillLoading = await tab.evaluate(() => !!document.getElementById("loading"));
+      bench.gpu = await tab.evaluate(() => !!navigator.gpu);
+      await tab.screenshot({ path: SHOTS + "/bench-" + width + ".png" });
+      await tab.close();
+      run.bench = bench;
+    }
     run.overflowOpen = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     await page.screenshot({ path: SHOTS + "/timeline-" + width + ".png", fullPage: true });
     // the threshold control: one step of the threshold, then one step of the window, then back to the own windows
@@ -433,10 +534,46 @@ const { chromium } = require(PLAYWRIGHT);
   result.blocked = await page.textContent("#load-status");
   await page.screenshot({ path: SHOTS + "/blocked-375.png" });
   await context.close();
+  // ?lite=1 keeps the 2D timeline as the only view
+  const lite = await browser.newContext({ viewport: { width: 375, height: 812 } });
+  const litePage = await lite.newPage();
+  await litePage.goto(BASE + "/demo/index.html?lite=1", { waitUntil: "load" });
+  await litePage.waitForSelector("#board-body tr[data-id]", { timeout: 15000 });
+  await litePage.click("#board-body tr[data-id] .sid");
+  await litePage.waitForSelector("#timeline:not([hidden])");
+  result.lite = { shown: await litePage.isVisible("#tl-3d"), href: await litePage.getAttribute("#tl-3d", "href"),
+    note: await litePage.textContent("#tl-3d-note") };
+  await lite.close();
   await browser.close();
   console.log(JSON.stringify(result));
 })().catch((e) => { console.error(e); process.exit(1); });
 """
+
+
+def observed_fate(minute, received):
+    """The bench's fate from the scans seen by `minute` alone (the page's TracerCore.observedFate)."""
+    if received is None or minute < received:
+        return "stalls" if minute < 68 else "lost"
+    return "arrives" if received < 68 else "stalls"
+
+
+def true_fate(fault, received, window):
+    """The bench's fate nearest the true path (the page's TracerCore.trueFate)."""
+    if fault == "lost_in_tube":
+        return "lost"
+    if fault == "not_dispatched":
+        return "unsent"
+    if fault in ("stalled_at_station", "misrouted"):
+        return "stalls"
+    if received is None:
+        return "lost"
+    return "arrives" if received <= window else "stalls"
+
+
+def link_query(href: str) -> dict:
+    path, _, query = href.partition("?")
+    assert path == "exhibit/index.html"
+    return dict(part.split("=") for part in query.split("&"))
 
 
 @needs_node
@@ -478,6 +615,31 @@ def test_the_page_works_in_headless_chrome_at_phone_and_laptop_widths(tmp_path):
         assert th2["sentence"] != th1["sentence"] and th2["numbers"] != th1["numbers"], run  # and so did the window
         assert "Recomputed in this page for a 125-minute window" in th2["note"] and th2["boardRisk"] != th1["boardRisk"]
         assert th3["sentence"] == th1["sentence"] and th3["numbers"] == th1["numbers"]  # own windows give the grid back
+        # the 3D link: a new tab, the scrubber's minute and the window; the fate from the scans until the truth is shown
+        spec = next(s for s in json.loads(BUNDLE.read_text(encoding="utf-8"))["specimens"] if s["id"] == run["firstId"])
+        before, after = run["link0"], run["link1"]
+        assert before["shown"] and after["shown"] and before["target"] == "_blank"
+        q0, q1 = link_query(before["href"]), link_query(after["href"])
+        minute = before["minute"]
+        want = {"fate": observed_fate(minute, spec["received_min"]), "truth": "0"}
+        if minute <= 130:
+            want["silence"] = str(round(minute))
+        if 60 <= spec["window_min"] <= 240:
+            want["window"] = str(spec["window_min"])
+        if "alert" in q0:
+            want["alert"] = q0["alert"]
+            assert 0.1 <= float(q0["alert"]) <= 0.9
+        assert q0 == want
+        assert q1["fate"] == true_fate(spec["truth"]["fault"], spec["received_min"], spec["window_min"]) and q1["truth"] == "1"
+        assert {k: v for k, v in q1.items() if k not in ("fate", "truth")} == {k: v for k, v in q0.items() if k not in ("fate", "truth")}
+    # the default moment's top specimen was never sent: hidden, the link says stalls; shown, unsent
+    assert link_query(result["runs"][0]["link0"]["href"])["fate"] == "stalls"
+    assert link_query(result["runs"][0]["link1"]["href"])["fate"] == "unsent"
+    bench = result["runs"][0]["bench"]
+    assert bench["url"].endswith("/demo/" + result["runs"][0]["link1"]["href"]), bench
+    assert bench["messages"] == [] and bench["errors"] == [] and bench["foreign"] == [], bench
+    assert not bench["stillLoading"] and bench["canvas"] >= 1, bench
+    assert result["lite"]["shown"] is False and result["lite"]["href"] is None and "lite=1" in result["lite"]["note"]
     phone = result["runs"][0]
     assert phone["width"] == 375 and phone["overflow"] <= 0 and phone["overflowOpen"] <= 0, phone
     assert phone["overflowThreshold"] <= 0, phone

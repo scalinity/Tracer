@@ -136,6 +136,11 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .tl-facts{margin-top:8px;max-width:76ch;font-size:14px;color:var(--ink-dim)}
 .close{min-height:44px;padding:0 14px;border:1px solid var(--hair);border-radius:3px;background:var(--raised);font-size:13.5px;color:var(--ink-dim)}
 .close:hover{border-color:var(--observed-deep);color:var(--ink)}
+#timeline-actions{max-width:330px}
+.tl-buttons{display:flex;gap:10px;flex-wrap:wrap}
+.view3d{display:inline-flex;align-items:center;border-color:var(--observed-deep);color:var(--ink);text-decoration:none}
+.view3d[hidden]{display:none}
+.tl-3d-note{margin-top:6px;font-size:12.5px;line-height:1.45;color:var(--ink-mute)}
 .tl-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;align-items:start;margin-top:18px}
 .chart{border:1px solid var(--hair);border-radius:3px;background:var(--panel);padding:10px 8px 6px}
 .chart svg{display:block;width:100%;height:auto}
@@ -457,7 +462,11 @@ footer{padding-top:20px;border-top:1px solid var(--hair);font-size:12.5px;color:
       <p class="tl-facts" id="tl-facts"></p>
     </div>
     <div id="timeline-actions">
-      <button type="button" class="close" id="tl-close">Close timeline</button>
+      <div class="tl-buttons">
+        <a class="close view3d" id="tl-3d" href="exhibit/index.html" target="_blank" rel="noopener" hidden>View in 3D</a>
+        <button type="button" class="close" id="tl-close">Close timeline</button>
+      </div>
+      <p class="tl-3d-note" id="tl-3d-note"></p>
     </div>
   </div>
   <div class="tl-grid">
@@ -954,6 +963,42 @@ var TracerCore = (function () {
     return { at: a, warning: a != null && round.window - a > 0 ? round.window - a : 0, falseAlerts: others };
   }
 
+  /* ---------- the 3D view (plan task P6) ---------- */
+  /* The 3D bench (docs/demo/exhibit/, visuals/exhibit-3d) scripts four fates: arrives (receipt scan at 24 min),
+     stalls (receipt scan at 68 min), lost and unsent (no receipt scan). */
+  var BENCH_RECEIPT = { arrives: 24, stalls: 68 };
+
+  /* The bench's fate chosen only from the scans a visitor has seen by `minute`, for use before the truth is
+     shown: still silent, stalls while its scripted receipt is still to come, else lost, which never scans;
+     received, arrives for a receipt before 68 min, else stalls. */
+  function observedFate(minute, receivedMin) {
+    if (receivedMin == null || minute < receivedMin) return minute < BENCH_RECEIPT.stalls ? "stalls" : "lost";
+    return receivedMin < BENCH_RECEIPT.stalls ? "arrives" : "stalls";
+  }
+
+  /* The bench's fate nearest a specimen's true path, for use once the truth is shown: lost in the tube is lost,
+     never sent is unsent, a stall or a misroute (late, then found) stalls, and a trip with no transport fault
+     arrives when its receipt came in time and stalls when it came late. */
+  function trueFate(fault, receivedMin, windowMin) {
+    if (fault === "lost_in_tube") return "lost";
+    if (fault === "not_dispatched") return "unsent";
+    if (fault === "stalled_at_station" || fault === "misrouted") return "stalls";
+    if (receivedMin == null) return "lost";
+    return receivedMin <= windowMin ? "arrives" : "stalls";
+  }
+
+  /* The bench's address query. o: fate, silence (minutes), window (minutes), alert (risk), truth (boolean). A
+     value outside what the bench accepts (silence 0 to 130, window 60 to 240, alert 0.1 to 0.9) is left out
+     rather than clamped, as the bench itself ignores it. */
+  function exhibitQuery(o) {
+    var q = ["fate=" + o.fate];
+    if (o.silence != null && o.silence >= 0 && o.silence <= 130) q.push("silence=" + Math.round(o.silence));
+    if (o.window != null && o.window >= 60 && o.window <= 240) q.push("window=" + Math.round(o.window));
+    if (o.alert != null && o.alert >= 0.1 && o.alert <= 0.9) q.push("alert=" + (Math.round(o.alert * 100) / 100));
+    q.push("truth=" + (o.truth ? 1 : 0));
+    return "?" + q.join("&");
+  }
+
   return { erfc: erfc, Phi: Phi, survival: survival, mixture: mixture, risk: risk, riskSeries: riskSeries,
            arrivalQuantile: arrivalQuantile, ticksFor: ticksFor, harm: harm, modelAlert: modelAlert,
            planAlert: planAlert, rankByHarm: rankByHarm, civilMinutes: civilMinutes, outstanding: outstanding,
@@ -961,7 +1006,7 @@ var TracerCore = (function () {
            applyWindow: applyWindow, isMiss: isMiss, median: median, scoreAlerts: scoreAlerts,
            operatingGrid: operatingGrid, fmtWarn: fmtWarn, thresholdSentence: thresholdSentence,
            mulberry32: mulberry32, parseSeed: parseSeed, gameRounds: gameRounds, scoreRound: scoreRound,
-           tracerRound: tracerRound };
+           tracerRound: tracerRound, observedFate: observedFate, trueFate: trueFate, exhibitQuery: exhibitQuery };
 })();
 </script>
 
@@ -1351,6 +1396,52 @@ var TracerCore = (function () {
       (r != null ? ": risk " + n(pct(r)) + "." : ".");
     drawChart();
     renderReadout(s, m, outcome, r);
+    renderLink3d(s, m);
+  }
+
+  /* ---------- the 3D view (P6) ---------- */
+  /* The link opens the 3D bench in a new tab, so this page keeps its place, its controls and the game. Before
+     the truth is shown the bench's fate comes only from the scans shown here and its truth stays hidden; after,
+     it is the bench's nearest fate to the specimen's true path. ?lite=1, or a browser with neither WebGPU nor
+     WebGL 2, leaves the 2D timeline as the only view. */
+  var LITE = /[?&]lite=1(?:&|#|$)/.test(location.search), gfx = null;
+  function canRun3d() {
+    if (gfx === null) {
+      gfx = false;
+      if (navigator.gpu) gfx = true;
+      else if (window.WebGL2RenderingContext) {
+        try {
+          var ctx = document.createElement("canvas").getContext("webgl2");
+          gfx = !!ctx;
+          var lose = ctx && ctx.getExtension("WEBGL_lose_context");
+          if (lose) lose.loseContext();
+        } catch (e) { gfx = false; }
+      }
+    }
+    return gfx;
+  }
+
+  function renderLink3d(s, m) {
+    var link = $("tl-3d"), note = $("tl-3d-note");
+    if (LITE || !canRun3d()) {
+      link.hidden = true;
+      link.removeAttribute("href");
+      note.textContent = LITE
+        ? "The 3D view is off at this address (lite=1), so the timeline is the view of this specimen."
+        : "This browser cannot run the 3D view (it needs WebGPU or WebGL 2), so the timeline is the view of this specimen.";
+      return;
+    }
+    var W = windowOf(s), fate = state.truth ? C.trueFate(s.truth.fault, s.received_min, s.window_min) : C.observedFate(m, s.received_min);
+    var query = C.exhibitQuery({ fate: fate, silence: m, window: W, alert: threshold() / weightOf(s), truth: state.truth });
+    link.href = "exhibit/index.html" + query;
+    link.hidden = false;
+    link.setAttribute("aria-describedby", "tl-3d-note");
+    note.textContent = "Opens the 3D bench in a new tab" + (m <= 130 ? " at " + mins(m) + " after collection" : "") +
+      (W >= 60 && W <= 240 ? " with this window" : " with the bench's own 120 min window") +
+      "; close that tab to come back here. The bench runs its own assumed parameters, so its risk differs from this " +
+      "page's. " + (state.truth
+        ? "The truth is shown there as the bench's nearest scripted fate (" + fate + ")."
+        : "Its truth stays hidden, and its scripted receipts come at 24 or 68 min.");
   }
 
   function renderReadout(s, m, outcome, r) {
@@ -1772,7 +1863,7 @@ var TracerCore = (function () {
     game.results = [];
     $("game-end").hidden = true;
     $("game").hidden = false;
-    var addr = location.pathname + "?seed=" + seed + "#beat";
+    var addr = location.origin + location.pathname + "?seed=" + seed + "#beat";
     $("game-seed").innerHTML = fromAddress
       ? "Rounds from seed " + n(seed) + ", set in the address: everyone who opens this address plays the same three rounds."
       : "Rounds from seed " + n(seed) + ", chosen at random. To give a room the same rounds, share the address " +
