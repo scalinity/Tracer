@@ -22,12 +22,11 @@ Computed from the architecture, not drawn:
 
 | # | Gap | Closes |
 |---|---|---|
-| 1 | **Every parameter is invented.** Transit medians, the 120-minute window, the 0.45 operating point, the 4% loss fraction. None are measured, and the windows are unvalidated pending Karissa's policy table. | Week 6 for fitted intervals; Week 7 for the operating point; the policy table whenever it lands |
-| 2 | **The ending is scripted.** Receipt at 03:22 and plating at 03:41 are authored events. Nothing decided the specimen would be found — the recovery is narrative, not simulation output. | Week 12, when scenario bundles come from real runs |
+| 1 | **Every transit parameter is invented.** Transit medians, the 0.45 operating point and the 4% loss fraction are assumptions, none measured. The 60-minute window is the policy table's, for unpreserved urine at room temperature. | Week 6 for fitted intervals; Week 7 for the operating point; the policy table whenever it lands |
+| 2 | **The ending is scripted.** Receipt at 03:06 is an authored event, and so are the later accession and plating. Nothing decided the specimen would be found — the recovery is narrative, not simulation output. | Week 12, when scenario bundles come from real runs |
 | 3 | **It runs the analytic form, not a fitted model.** The page implements the mixture-survival equation in JavaScript with hand-set parameters. The prototype fits those parameters from an event log and the page does not. | Week 12, by loading `interval_params.json` from a real fit |
 | 4 | **Dwell distributions are hardcoded**, not fitted, and the specimen ID, unit and type are made up. | Week 12, with the scenario bundle |
 | 5 | **Build statuses are hand-maintained strings** in the page source, not read from anything. | Manual until the end; check before each demo, and republish the link below |
-| 6 | **The clock stops at plating on the page.** The policy table stops every clock at receipt (`docs/architecture.md` §10), and its unpreserved urine window is 60 minutes, not 120. The page's setup step after receipt and its "Plated, clock stops" label are out of date. | Week 12, with the scenario bundle (plan tasks P2 and P3) |
 
 ## How they close
 

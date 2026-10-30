@@ -310,9 +310,9 @@ footer a{color:var(--ink-dim)}
         <p class="lost">Probably lost <b id="pLost">—</b></p>
       </div>
 
-      <button class="stage post-void" data-key="received"><span class="line"></span><span class="dot"></span><span class="idx">4</span><span class="name">Received</span><span class="sub">lab scan</span></button>
+      <button class="stage post-void" data-key="received"><span class="line"></span><span class="dot"></span><span class="idx">4</span><span class="name">Received</span><span class="sub">clock stops</span></button>
       <button class="stage" data-key="accessioned"><span class="line"></span><span class="dot"></span><span class="idx">5</span><span class="name">Accessioned</span><span class="sub">lab scan</span></button>
-      <button class="stage" data-key="plated"><span class="line"></span><span class="dot"></span><span class="idx">6</span><span class="name">Plated</span><span class="sub">clock stops</span></button>
+      <button class="stage" data-key="plated"><span class="line"></span><span class="dot"></span><span class="idx">6</span><span class="name">Plated</span><span class="sub">incubation</span></button>
       <button class="stage" data-key="stained"><span class="line"></span><span class="dot"></span><span class="idx">7</span><span class="name">Stained</span><span class="sub">by type</span></button>
       <button class="stage" data-key="reported"><span class="line"></span><span class="dot"></span><span class="idx">8</span><span class="name">Reported</span><span class="sub">after growth</span></button>
     </div>
@@ -362,12 +362,13 @@ footer a{color:var(--ink-dim)}
     <div class="plot-card">
       <div class="controls">
         <button class="play" id="play"><span class="glyph" id="glyph">▶</span><span id="playLabel">Play</span></button>
-        <input type="range" id="scrub" min="0" max="130" value="0" step="1" aria-label="Minutes since collection">
+        <input type="range" id="scrub" min="0" max="90" value="0" step="1" aria-label="Minutes since collection">
         <span class="clock mono"><span id="clockT">02:14</span><b id="clockE">0 min elapsed</b></span>
       </div>
       <svg class="plot" id="plot" viewBox="0 0 700 260" role="img" aria-label="Probability of missing the stability window over time"></svg>
-      <p class="axis-note">Minutes since collection. The stability window for this specimen closes 120 minutes
-        after collection — an assumed value, pending the policy table.</p>
+      <p class="axis-note">Minutes since collection. The stability window for this specimen closes 60 minutes
+        after collection: the policy table's window for unpreserved urine at room temperature. The clock
+        stops at the receipt scan.</p>
     </div>
 
     <div class="readout">
@@ -382,16 +383,16 @@ footer a{color:var(--ink-dim)}
         <div class="stat"><dt>Since last scan</dt><dd id="rSilence">0 min</dd></div>
         <div class="stat"><dt>Misses window</dt><dd class="big" id="rRisk">0.05</dd></div>
         <div class="stat"><dt>Most likely</dt><dd id="rWhere">Awaiting dispatch</dd></div>
-        <div class="stat"><dt>Window closes</dt><dd>04:14</dd></div>
+        <div class="stat"><dt>Window closes</dt><dd id="rWindowAt">03:14</dd></div>
       </dl>
       <div class="alert-card" id="alertCard" hidden>
         <p class="k" id="alertKind">STALLED IN TRANSIT</p>
         <p class="t">Alert to the receiving technologist</p>
-        <p class="d">Check the <b>tube station at receiving</b>. Raised at <b id="alertAt">03:09</b>,
-          <b id="alertLead">65 minutes</b> before the window closes.</p>
+        <p class="d">Check the <b>tube station at receiving</b>. Raised at <b id="alertAt">02:54</b>,
+          <b id="alertLead">20 minutes</b> before the window closes.</p>
       </div>
-      <p class="resolved" id="resolvedNote" hidden>Found and received 03:22. Plated 03:41, inside the window
-        with 33 minutes to spare.</p>
+      <p class="resolved" id="resolvedNote" hidden>Found and received 03:06, 8 minutes before the window
+        closed. The clock stops at the receipt scan; plating comes after it.</p>
     </div>
   </div>
 
@@ -400,13 +401,13 @@ footer a{color:var(--ink-dim)}
     <div>
       <p>Because nothing happening is the information. A urine leaving this ward usually reaches the
         laboratory in about half an hour. At ten minutes of silence there is nothing to think about. At
-        fifty-five minutes the innocent explanations have mostly run out — the ordinary trip is over and
+        forty minutes the innocent explanations have mostly run out — the ordinary trip is over and
         this one is still not here.</p>
       <p>So the software is not reacting to an event. It wakes up every five minutes, looks at each
         specimen still unaccounted for, and asks how unusual that silence is for this kind of sample from
         this ward at this hour. When the answer gets bad enough that someone could still fix it, it says so,
         names the most likely place to look, and sends it to the person who can walk over there. Here that
-        happens at 03:09, with an hour of the specimen's useful life still left.</p>
+        happens at 02:54, with 20 minutes of the specimen's useful life still left.</p>
     </div>
   </div>
 </section>
@@ -485,9 +486,9 @@ footer a{color:var(--ink-dim)}
       </ul></dd></dl>
     <dl><dt>illustrative, and still to close</dt><dd>
       <ul class="fake">
-        <li>Every parameter is invented, including the 120-minute window, which is unvalidated pending the
-          clinical policy table.</li>
-        <li>The recovery is scripted. Nothing decided this specimen would be found at 03:22.</li>
+        <li>Every transit parameter is invented. The 60-minute window is the policy table's, for unpreserved
+          urine at room temperature; the transit times are not fitted to anything.</li>
+        <li>The recovery is scripted. Nothing decided this specimen would be found at <span id="foundAt">03:06</span>.</li>
         <li>The page evaluates the equation directly with hand-set parameters; it does not load a model
           fitted to an event log.</li>
         <li>Build statuses are maintained by hand in the page source.</li>
@@ -534,14 +535,13 @@ const PARAM = {
     {w:0.08, m:70, s:0.60, label:"stalled, arrives late"}
   ],
   lossFraction:  0.04,                     // never arrives
-  setupMedian:   22, setupSigma:   0.40,   // receipt → plated, minutes
-  windowMin:     120,                      // stability window
+  windowMin:     60,                       // stability window: the policy's, for unpreserved urine at room temperature
   tickMin:       5,                        // twin re-score cadence
   operatingPoint:0.45,                     // alert threshold on P(miss window)
   collectedAt:   2*60 + 14,                // 02:14 in minutes past midnight
-  receivedAt:    68,                       // scenario: found after the alert
-  accessionedAt: 76,
-  platedAt:      87,
+  receivedAt:    52,                       // scenario: found after the alert; the clock stops here
+  accessionedAt: 60,                       // later scans, after the clock has stopped
+  platedAt:      71,
   /* Sub-legs inside the unobserved interval, with explicit durations and where each
      one can go next. "Stalled" is a real state rather than a long tail, because a
      model whose only explanation for silence is loss will always cry loss. */
@@ -567,25 +567,23 @@ const lnCdf  = (t,m,s) => t <= 0 ? 0 : normCdf(Math.log(t/m)/s);
 const lnSurv = (t,m,s) => 1 - lnCdf(t,m,s);
 const lnPdf  = (t,m,s) => t <= 0 ? 0 : Math.exp(-Math.pow(Math.log(t/m),2)/(2*s*s))/(t*s*Math.sqrt(2*Math.PI));
 
-/* P(window missed | no receipt scan yet at t minutes).
-   Mixture of a lognormal transit and a fraction that never arrives. As t passes the
-   normal transit mode, the surviving mass is increasingly the failure component. */
+/* P(window missed | no receipt scan yet at t minutes). The clock stops at the receipt scan, so the
+   window is missed exactly when the scan has not come by W. Of the specimens still unreceived at t,
+   the ones that miss it are those still unreceived at W: the never-arrivals and the slow tail. As the
+   normal transit passes without a scan, the surviving mass is increasingly that failure component. */
 function riskUnreceived(t){
-  const {mix, setupMedian:m2, setupSigma:s2, lossFraction:pl, windowMin:W} = PARAM;
-  let notReceived = pl, safe = 0;           // safe = arrives at u, then set up in time
+  const {mix, lossFraction:pl, windowMin:W} = PARAM;
+  if (t >= W) return 1;
+  let notReceived = pl, notByWindow = pl;
   for (const c of mix){
     notReceived += c.w * lnSurv(t, c.m, c.s);
-    for (let u = Math.max(t,0) + 0.5; u < W; u += 1){
-      safe += c.w * lnPdf(u, c.m, c.s) * lnCdf(W-u, m2, s2);
-    }
+    notByWindow += c.w * lnSurv(W, c.m, c.s);
   }
-  return 1 - safe/notReceived;
+  return notByWindow / notReceived;
 }
-/* After the receipt scan, only the in-lab leg remains. */
-const riskReceived = t => lnSurv(PARAM.windowMin - t, PARAM.setupMedian, PARAM.setupSigma);
-
+/* After the receipt scan the clock has stopped and the outcome is known. */
 const riskAt = t => t < PARAM.receivedAt ? riskUnreceived(t)
-                  : t < PARAM.platedAt   ? riskReceived(t) : 0;
+                  : PARAM.receivedAt <= PARAM.windowMin ? 0 : 1;
 
 /* Location posterior: forward filter over sub-legs on a one-minute grid, conditioned
    on "no receipt scan yet". Absence of a scan is the input, not a special case. */
@@ -628,7 +626,7 @@ function locationSeries(maxT){
 /* ════════════════════════════════════════════════════════════
    2. Derived series and scenario events
    ════════════════════════════════════════════════════════════ */
-const MAXT = 130;
+const MAXT = 90;
 const RISK = Array.from({length: MAXT+1}, (_,t) => riskAt(t));
 const LOC  = locationSeries(MAXT);
 
@@ -691,7 +689,7 @@ function drawPlot(){
     stroke:"#D05A4A", "stroke-width":1}));
   svg.appendChild(el("text", {x:X(PARAM.windowMin)-7, y:PAD.t+8, "text-anchor":"end", fill:"#D05A4A",
     "font-size":"10.5", stroke:"#0C1417", "stroke-width":"3", "paint-order":"stroke"},
-    "window closes 04:14"));
+    "window closes " + hhmm(PARAM.windowMin)));
 
   // the unobserved interval, shaded behind the curve
   svg.appendChild(el("rect", {x:X(0), y:PAD.t, width:X(PARAM.receivedAt)-X(0), height:VH-PAD.t-PAD.b,
@@ -719,7 +717,7 @@ function drawPlot(){
 
   // scan events
   for (const e of EVENTS){
-    if (!e.t) continue;
+    if (!e.t || e.key === "plated") continue;   // plating comes after the clock has stopped
     svg.appendChild(el("line", {x1:X(e.t), x2:X(e.t), y1:VH-PAD.b-6, y2:VH-PAD.b,
       stroke:"#63C4D3", "stroke-width":1.5}));
     svg.appendChild(el("text", {x:X(e.t), y:VH-PAD.b-11, "text-anchor":"middle", fill:"#63C4D3",
@@ -786,7 +784,7 @@ function render(){
 
   const alerted = ALERT_T != null && t >= ALERT_T;
   $("alertCard").hidden = !alerted;
-  $("resolvedNote").hidden = t < PARAM.platedAt;
+  $("resolvedNote").hidden = t < PARAM.receivedAt;
 
   const ph = $("playhead"), pd = $("playdot"), ar = $("area");
   if (ph){ ph.setAttribute("x1", X(t)); ph.setAttribute("x2", X(t)); }
@@ -832,16 +830,16 @@ const DETAIL = {
     fields:{Record:"Order event in the LIS", Actor:"Clinician", "Scan exists":"Yes", "Tracer uses it for":"The denominator. An order with no collection is how never-collected becomes visible."}},
   collected:{kind:"Stage", title:"Collected", why:"A nurse or phlebotomist draws the specimen and scans it at the bedside. This is the last certain fact about the specimen's location until it reaches the laboratory, and it starts the stability clock. In real hospital records it is the first of only two timestamps the specimen will ever get.",
     fields:{Record:"Collection scan with unit and time", Actor:"Nurse or phlebotomist", "Scan exists":"Yes", "Tracer uses it for":"Starting the window, and the moment the twin begins re-scoring on a timer."}},
-  received:{kind:"Stage", title:"Received", why:"The laboratory scans the specimen on arrival. For Tracer this event is mostly an ending: it resolves the open question, closes any alert, and becomes a training label.",
+  received:{kind:"Stage", title:"Received", why:"The laboratory scans the specimen on arrival. For Tracer this event is mostly an ending: it stops the stability clock, resolves the open question, closes any alert, and becomes a training label.",
     fields:{Record:"Receipt scan at the laboratory", Actor:"Processor", "Scan exists":"Yes", "Tracer uses it for":"Auto-resolving alerts, and supplying the transit duration the mining layer fits."}},
   accessioned:{kind:"Stage", title:"Accessioned", why:"The specimen is entered into the laboratory's worklist. Specimens can sit here, received but not worked, which is a real failure mode that looks fine on a status screen.",
     fields:{Record:"Accession event", Actor:"Processor", "Scan exists":"Yes", "Tracer uses it for":"Detecting the arrived-but-not-worked case, and measuring in-lab backlog as a feature."}},
-  plated:{kind:"Stage", title:"Plated", why:"The specimen goes onto media. The viability clock stops here and the incubation clock starts, so this is the assumed stopping point for the stability window. Whether it is the right one is the first question for Karissa, and it is the single most consequential answer in the project: it defines what counts as a breach, and everything else is measured against that.",
-    fields:{Record:"Setup event", Actor:"Technologist", "Scan exists":"Yes", "Tracer uses it for":"Defining a breach: plated later than the window allows, or never plated at all.", Status:"ASSUMED. The clock's start and stop events are configuration resolved against the workflow graph, so a different answer is a one-line change — though it does invalidate every fitted parameter, which is why the question is being asked now rather than in November."}},
+  plated:{kind:"Stage", title:"Plated", why:"The specimen goes onto media and incubation starts. The stability clock has already stopped, at the receipt scan, so plating does not decide whether the window was met. The policy table sets where the clock stops for every row, and a different answer would be a one-line change to the configuration.",
+    fields:{Record:"Setup event", Actor:"Technologist", "Scan exists":"Yes", "Tracer uses it for":"Nothing in the risk model: the window is judged at receipt. Plating belongs to the laboratory's own turnaround.", Status:"The clock's start and stop events are configuration (clock_start: collected, clock_stop: received), resolved against the workflow graph."}},
   stained:{kind:"Stage", title:"Stained", why:"A Gram stain is read and often reported as a preliminary result. Not every specimen type is stained, so this is a conditional stage driven by the policy table rather than a fixed step in the path.",
     fields:{Record:"Stain result", Actor:"Technologist", "Scan exists":"Yes, when performed", "Open question":"Whether stain is tracked as its own step for each specimen type, or folded into setup."}},
   reported:{kind:"Stage", title:"Reported", why:"The culture is read and a result posts, typically a day or more after collection. In real hospital records this is the second and last timestamp a specimen ever gets — collection, then this, with everything in between unrecorded.",
-    fields:{Record:"Result event", Actor:"Technologist", "Scan exists":"Yes", "Tracer uses it for":"Nothing, by default: the decision it could have informed was made hours earlier. It is one of the three candidates for where the stability clock stops, which is the project's open clinical question, and the clock is configuration so the answer can move it without touching model code."}},
+    fields:{Record:"Result event", Actor:"Technologist", "Scan exists":"Yes", "Tracer uses it for":"Nothing, by default: the decision it could have informed was made hours earlier. The stability clock stopped earlier, at receipt, so a result never counts against the window."}},
 
   pipeline:{kind:"Component", title:"Event pipeline", status:"not started", why:"Reads scans in timestamp order under a replay clock, validates them against the event schema, appends them to the store and hands them to the twin. One ordered entry point means the live path and the training path run identical code and cannot drift apart.",
     fields:{Inputs:"Scan events from the simulator", Outputs:"Validated events to the store and the twin", "Where it will live":"src/pipeline/ingest.py"}},
@@ -932,6 +930,10 @@ function drawEdges(){
    7. Start
    ════════════════════════════════════════════════════════════ */
 $("alertAt").textContent = ALERT_T != null ? hhmm(ALERT_T) : "—";
+$("rWindowAt").textContent = hhmm(PARAM.windowMin);
+$("foundAt").textContent = hhmm(PARAM.receivedAt);
+$("resolvedNote").textContent = "Found and received " + hhmm(PARAM.receivedAt) + ", " + (PARAM.windowMin - PARAM.receivedAt) +
+  " minutes before the window closed. The clock stops at the receipt scan; plating comes after it.";
 $("alertLead").textContent = ALERT_T != null ? (PARAM.windowMin - ALERT_T) + " minutes" : "—";
 drawPlot();
 render();

@@ -4,7 +4,7 @@
 import type { ExhibitSchema } from '../kit/schema';
 import { FATES, type FateId, type Place } from '../model/fates';
 import { PRESETS, type Reading, type TracerModel } from '../model/state';
-import { lnSurv, MAX_T, type Params } from '../model/tracer';
+import { MAX_T, type Params } from '../model/tracer';
 import { silentCounts } from '../scene/loupe-drawing';
 
 /** Playback rate at 1×, simulated minutes per second; the card names it on its speed buttons. */
@@ -37,12 +37,6 @@ export function buildSchema(p: Params, model: TracerModel): ExhibitSchema {
   // The scripted fates' minutes.
   const { arrives, stalls, lost } = FATES;
   const inBin = Math.round(lost.segments.find((s) => s.spot === 'bin')!.from);
-  const labMin = stalls.plated! - stalls.received!;
-  // After the receipt scan the working model puts the whole setup ahead at every minute. Counting the
-  // setup already done instead conditions on it: P(setup > W − receipt) / P(setup > t − receipt).
-  const beforePlating = stalls.plated! - 1;
-  const setupOver = (x: number) => lnSurv(x, p.setupMedian, p.setupSigma);
-  const conditional = setupOver(p.windowMin - stalls.received!) / setupOver(beforePlating - stalls.received!);
   const leg = (i: number) => p.legs[i].name.toLowerCase();
   const exits = p.legs.map((l) => `${l.name}, median ${l.median} min, σ ${l.sigma.toFixed(2)}: ${l.exit.map(([kind, to, pr]) => `${share(pr)} → ${kind === 'recv' ? 'received' : kind === 'lost' ? 'lost' : leg(to)}`).join(', ')}.`).join(' ');
   return {
@@ -63,8 +57,8 @@ export function buildSchema(p: Params, model: TracerModel): ExhibitSchema {
     controls: [
       [
         {
-          kind: 'time', id: 'silence', label: 'Silence', min: 0, max: 130, step: 1, value: 55, unit: 'min',
-          ticks: [0, 30, 60, 90, 120], markers: [55], speeds: [1, 4], speed: 1, keyHint: 'Space , .',
+          kind: 'time', id: 'silence', label: 'Silence', min: 0, max: 130, step: 1, value: A, unit: 'min',
+          ticks: [0, 30, 60, 90, 120], markers: alerts === null ? [] : [alerts], speeds: [1, 4], speed: 1, keyHint: 'Space , .',
           speedLabel: (s) => `${s * MIN_PER_SECOND} min/s`,
           format: (v) => `${Math.round(v)} min`,
           valueText: (v) => `${Math.round(v)} minutes since the collection scan`,
@@ -134,7 +128,7 @@ export function buildSchema(p: Params, model: TracerModel): ExhibitSchema {
           body: [
             `Run the clock with Space or the card's play button (${MIN_PER_SECOND} min a second, or ${MIN_PER_SECOND * 4} at the faster speed), drag the stopwatch hand on the console, drag along the risk chart, use the card's scrubber, or press \`,\` \`.\` (Shift for 5 min). Backspace goes back to the collection scan.`,
             `The **alert line** is the operating point: Tracer alerts at the first ${p.tickMin}-minute re-score where the risk reaches it. Drag the amber dashed line on the chart, turn the ALERT LINE knob, use the card's slider, or press \`[\` \`]\` (Shift for 5 points) and \`0\` to reset it. A lower line warns sooner, and it also fires for more specimens that would have made it.`,
-            `The **stability window** is how long the specimen keeps before it must be plated (assumed ${p.windowMin} min; the project's policy table will replace it with a cited value). Drag the coral mark on the stopwatch's bezel, turn the WINDOW knob, use the card's slider, or press \`-\` \`=\` (Shift for 15 min). A shorter window brings the alert sooner.`,
+            `The **stability window** is how long the specimen keeps before the laboratory must have received it: the clock starts at the collection scan and stops at the receipt scan. The policy table sets a window for every specimen type, from 60 min for unpreserved urine at room temperature to days; ${p.windowMin} min is its window for lavage and tissue at room temperature. Drag the coral mark on the stopwatch's bezel, turn the WINDOW knob, use the card's slider, or press \`-\` \`=\` (Shift for 15 min). A shorter window brings the alert sooner.`,
           ],
         },
         {
@@ -155,11 +149,11 @@ export function buildSchema(p: Params, model: TracerModel): ExhibitSchema {
         body: [
           `**Exact:** the mixture-survival risk and the forward-filter location posterior as implemented in the project's working model (\`visuals/architecture.html\`), ported line for line and checked against it at every minute from 0 to ${MAX_T}: they agree to the last bit. The alert rule, the warning time and the loupe's shares come from the same functions.`,
           '**Assumed, every parameter:** none is measured, none is fitted, and none comes from any institution. They are the working model\'s own (`visuals/architecture.html`, which implements `docs/architecture.md` §5.2 and §5.3), set to show the mechanism until intervals fitted to the simulator and the policy table\'s cited windows replace them. A lognormal is given by its median and σ, the spread of its logarithm.',
-          `Transit, collection to receipt: ${p.mix.map((c, i) => `${share(c.w)} ${i === 0 ? 'normal' : 'late'} (median ${c.m} min, σ ${c.s.toFixed(2)})`).join(', ')}, ${share(p.lossFraction)} never arrive. Setup, receipt to plating: median ${p.setupMedian} min, σ ${p.setupSigma.toFixed(2)}. Window: ${p.windowMin} min from the collection scan. Re-scored every ${p.tickMin} min; alert line ${op}%.`,
+          `Transit, collection to receipt: ${p.mix.map((c, i) => `${share(c.w)} ${i === 0 ? 'normal' : 'late'} (median ${c.m} min, σ ${c.s.toFixed(2)})`).join(', ')}, ${share(p.lossFraction)} never arrive. Window: ${p.windowMin} min from the collection scan. Re-scored every ${p.tickMin} min; alert line ${op}%.`,
           `Location legs: ${exits}`,
-          `**Not real:** the four fates are scripted theatre: receipt at ${arrives.received} and ${stalls.received} min, plating ${labMin} min after receipt, the misrouted carrier and the one never sent. The tube layout is schematic and is not any hospital's system; real tubes are opaque, and the glass is here so you can see the truth. The clock runs at ${MIN_PER_SECOND} min a second (${MIN_PER_SECOND * 60} times real time) or ${MIN_PER_SECOND * 4} (${MIN_PER_SECOND * 240} times); presets, the lesson and the tour move it within a few seconds.`,
-          `**After the receipt scan** the working model, as written, puts the whole setup still ahead at every minute, so the risk climbs while the specimen waits in the lab: in the Stalls run, from ${riskPct(model.riskAt(stalls, stalls.received!, p.windowMin))} at ${stalls.received} min to ${riskPct(model.riskAt(stalls, beforePlating, p.windowMin))} at ${beforePlating} min, then 0 at plating. Counting the ${beforePlating - stalls.received!} min of setup already done would give ${riskPct(conditional)} at ${beforePlating} min. The exhibit shows the model as written.`,
-          `**Approximated, with sizes:** erf is Abramowitz and Stegun 7.1.26 (error under 1.5 × 10⁻⁷). The risk integral is a midpoint sum on a one-minute grid; it dips by at most 5 × 10⁻⁶ between minutes 1 and 4 instead of rising. The location filter runs on a one-minute grid with ages capped at 180 min. Readouts are taken at whole minutes, and the light is interpolated between them. Within the tube the light places each minute's cohort at the median speed, since the model has no positions inside a leg. A vessel's fill is its probability; the coral trickle down the branch is the probability moving into lost per minute. The loupe is a drawing of the model's weights, rounded to whole carriers. It counts the trip model's kinds (normal, late, never arrive), and the vessels show the location model, so the two need not agree: at ${A} min the loupe has ${neverCount} of 100 never arriving while the lost bin holds ${placePct(ex.places.lost)}.`,
+          `**Not real:** the four fates are scripted theatre: receipt at ${arrives.received} and ${stalls.received} min, the misrouted carrier and the one never sent. The tube layout is schematic and is not any hospital's system; real tubes are opaque, and the glass is here so you can see the truth. The clock runs at ${MIN_PER_SECOND} min a second (${MIN_PER_SECOND * 60} times real time) or ${MIN_PER_SECOND * 4} (${MIN_PER_SECOND * 240} times); presets, the lesson and the tour move it within a few seconds.`,
+          `**After the receipt scan** the clock has stopped and the outcome is known: the specimen made its window or it did not, so the risk is ${riskPct(0)} or ${riskPct(1)}. In the Stalls run the scan at ${stalls.received} min is inside the ${p.windowMin} min window; shrink the window below ${stalls.received} min and it is a miss. Nothing after the receipt scan, plating included, enters the model.`,
+          `**Approximated, with sizes:** erf is Abramowitz and Stegun 7.1.26 (error under 1.5 × 10⁻⁷). The risk is a closed form, so it carries no further error and never falls while the silence lasts. The location filter runs on a one-minute grid with ages capped at 180 min. Readouts are taken at whole minutes, and the light is interpolated between them. Within the tube the light places each minute's cohort at the median speed, since the model has no positions inside a leg. A vessel's fill is its probability; the coral trickle down the branch is the probability moving into lost per minute. The loupe is a drawing of the model's weights, rounded to whole carriers. It counts the trip model's kinds (normal, late, never arrive), and the vessels show the location model, so the two need not agree: at ${A} min the loupe has ${neverCount} of 100 never arriving while the lost bin holds ${placePct(ex.places.lost)}.`,
         ],
       },
       footnote: `Times are minutes since the collection scan. Parameters: ${p.source}. Address parameters: \`fate=arrives|stalls|lost|unsent\`, \`silence=0–130\`, \`alert=0.1–0.9\`, \`window=60–240\`, \`truth=0|1\`, \`embed=1\`, \`params=<same-origin JSON>\`. Tracer: Daniel Escalante and Karissa Kocourek, CAI 5724, University of Florida.`,
@@ -176,14 +170,10 @@ export function caption(r: Reading, truth: { shown: boolean; place: Place; words
   const m = `${r.minute} min`;
   const W = `${r.windowMin} min`;
   let text: string;
-  if (r.phase === 'plated') {
-    text = r.plated! <= r.windowMin
-      ? `Plated at {amber:${r.plated} min}, inside the {amber:${W}} window: the clock stopped, and the risk is {cyan:${riskPct(r.risk)}}.`
-      : `Plated at {amber:${r.plated} min}, after the {amber:${W}} window closed: the specimen missed it, {cyan:${riskPct(r.risk)}}.`;
-  } else if (r.phase === 'received') {
+  if (r.phase === 'received') {
     text = r.missed
-      ? `Received at {amber:${r.received} min}, but the {amber:${W}} window has closed before plating: missed, {cyan:${riskPct(r.risk)}}.`
-      : `The receipt scan at {amber:${r.received} min} ended the silence: only the in-lab setup remains, and the risk fell from {cyan:${riskPct(r.scan!.before)}} to {cyan:${riskPct(r.risk)}}.`;
+      ? `Received at {amber:${r.received} min}, but the {amber:${W}} window had closed: the specimen missed it, {cyan:${riskPct(r.risk)}}.`
+      : `The receipt scan at {amber:${r.received} min} stopped the clock inside the {amber:${W}} window: the risk fell from {cyan:${riskPct(r.scan!.before)}} to {cyan:${riskPct(r.risk)}}.`;
   } else if (r.missed) {
     text = `No scan for {amber:${m}}: the {amber:${W}} window has closed, so the specimen has missed it ({cyan:${riskPct(r.risk)}}).`;
   } else if (r.alert.fired) {

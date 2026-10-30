@@ -1,8 +1,8 @@
 // The four true fates the TRY presets script. They are theatre, declared in the help sheet: the
-// model never sees them. It sees only the scans a fate produces (collected at 0, then a receipt and
-// a plating scan, or nothing). Minutes from the collection scan. The stalled fate is the specimen of
-// architecture.md §3 (received 68, plated 87); the on-time fate takes the normal transit's median,
-// 24 min, and the same 19 minutes in the lab.
+// model never sees them. It sees only the scans a fate produces (collected at 0, then a receipt scan,
+// or nothing). The clock stops at the receipt scan, so no later scan is drawn. Minutes from the
+// collection scan. The stalled fate is the specimen of architecture.md §3, found at 68 min; the
+// on-time fate takes the normal transit's median, 24 min.
 
 export type FateId = 'arrives' | 'stalls' | 'lost' | 'unsent';
 
@@ -29,8 +29,6 @@ export interface Fate {
   label: string;
   /** Receipt scan minute, or null when none comes. */
   received: number | null;
-  /** Plating scan minute, or null. */
-  plated: number | null;
   segments: Segment[];
 }
 
@@ -48,15 +46,15 @@ const toStation: Segment[] = [
 
 export const FATES: Record<FateId, Fate> = {
   arrives: {
-    id: 'arrives', label: 'On time', received: 24, plated: 43,
+    id: 'arrives', label: 'On time', received: 24,
     segments: [...toStation, { from: IN_RECEIVER, to: 22, spot: 'station' }, { from: 22, to: 24, spot: 'carry' }, { from: 24, to: Infinity, spot: 'lab' }],
   },
   stalls: {
-    id: 'stalls', label: 'Stalls', received: 68, plated: 87,
+    id: 'stalls', label: 'Stalls', received: 68,
     segments: [...toStation, { from: IN_RECEIVER, to: 66, spot: 'station' }, { from: 66, to: 68, spot: 'carry' }, { from: 68, to: Infinity, spot: 'lab' }],
   },
   lost: {
-    id: 'lost', label: 'Lost', received: null, plated: null,
+    id: 'lost', label: 'Lost', received: null,
     segments: [
       { from: 0, to: DISPATCH, spot: 'ward' },
       { from: DISPATCH, to: LAUNCHED, spot: 'launch' },
@@ -66,7 +64,7 @@ export const FATES: Record<FateId, Fate> = {
     ],
   },
   unsent: {
-    id: 'unsent', label: 'Never sent', received: null, plated: null,
+    id: 'unsent', label: 'Never sent', received: null,
     segments: [{ from: 0, to: Infinity, spot: 'ward' }],
   },
 };
@@ -98,14 +96,14 @@ export function placeOfSpot(spot: Spot): Place {
 }
 
 /** Plain words for the truth label: "stalled at the station". */
-export function describeSpot(spot: Spot, t: number, fate: Fate): string {
+export function describeSpot(spot: Spot, t: number): string {
   switch (spot) {
     case 'ward': return t < DISPATCH ? 'waiting at the ward' : 'still at the ward';
     case 'launch': case 'tube': return 'in the tube';
     case 'drop': return 'arriving at the station';
     case 'station': return t > 25 ? 'stalled at the station' : 'waiting at the station';
     case 'carry': return 'carried to the scanner';
-    case 'lab': return fate.plated !== null && t >= fate.plated ? 'plated in the lab' : 'scanned in the lab';
+    case 'lab': return 'scanned in the lab';
     case 'branch': return 'misrouted';
     case 'bin': return 'in the lost bin';
   }
