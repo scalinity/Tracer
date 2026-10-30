@@ -320,18 +320,24 @@ def drop(brief: dict, errors: str, *, job: str, path: Path = DROPPED_LOG) -> Non
         f.write(json.dumps(row) + "\n")
 
 
+def attempt(client, brief: dict, *, job: str, model: str = prompt.MODEL, log_path: Path = prompt.USAGE_LOG,
+            error: str | None = None) -> tuple[dict | None, str | None]:
+    """One synchronous try: (trail, None) if it validates, otherwise (None, the error text for the next try)."""
+    try:
+        trail = prompt.generate_trail(client, brief, job=job, model=model, log_path=log_path, error=error)
+    except prompt.TrailError as e:
+        return None, f"check 1 (schema): {e}"
+    failures = validate(brief, trail)
+    return (None, error_text(failures)) if failures else (trail, None)
+
+
 def generate_valid(client, brief: dict, *, job: str, model: str = prompt.MODEL,
                    log_path: Path = prompt.USAGE_LOG, dropped_path: Path = DROPPED_LOG) -> dict | None:
     """A validated trail, or None after two failed attempts (the specimen is then logged and dropped)."""
     error = None
-    for attempt in (1, 2):
-        try:
-            trail = prompt.generate_trail(client, brief, job=job, model=model, log_path=log_path, error=error)
-            failures = validate(brief, trail)
-            error = error_text(failures) if failures else None
-        except prompt.TrailError as e:
-            error = f"check 1 (schema): {e}"
-        if error is None:
+    for _ in (1, 2):
+        trail, error = attempt(client, brief, job=job, model=model, log_path=log_path, error=error)
+        if trail is not None:
             return trail
     drop(brief, error, job=job, path=dropped_path)
     return None

@@ -240,16 +240,18 @@ def model_brief(brief: dict) -> dict:
     return {key: brief[key] for key in BRIEF_KEYS}
 
 
-def build_request(brief: dict, model: str = MODEL, error: str | None = None) -> dict:
+def build_request(brief: dict, model: str = MODEL, error: str | None = None, cache_ttl: str | None = None) -> dict:
     """Keyword arguments for client.messages.create. The brief is the last thing in the request.
 
     On a retry, `error` is the validator's text for the previous reply; it rides inside the brief.
+    A batch can take up to an hour to start, so its requests ask for the "1h" cache lifetime.
     """
     sent = model_brief(brief) | ({"validator_error": error} if error else {})
     return {
         "model": model,
         "max_tokens": MAX_TOKENS,
-        "system": [{"type": "text", "text": system_text(), "cache_control": {"type": "ephemeral"}}],
+        "system": [{"type": "text", "text": system_text(),
+                    "cache_control": {"type": "ephemeral"} | ({"ttl": cache_ttl} if cache_ttl else {})}],
         "messages": [{"role": "user", "content": _dump(sent)}],
         "thinking": {"type": "disabled"},
         "output_config": {"effort": EFFORT, "format": {"type": "json_schema", "schema": TRAIL_SCHEMA}},
@@ -313,18 +315,20 @@ def format_estimate(estimate: dict) -> str:
             f"{estimate['out_tokens']} tokens out each; estimated ${estimate['cost_usd']:.4f}")
 
 
-def usage_record(response, *, job: str, specimen_id: str, model: str = MODEL) -> dict:
+def usage_record(response, *, job: str, specimen_id: str, model: str = MODEL, batch: bool = False) -> dict:
     u = response.usage
     price = PRICES[model]
     cache_write = getattr(u, "cache_creation_input_tokens", 0) or 0
     cache_read = getattr(u, "cache_read_input_tokens", 0) or 0
     cost = (u.input_tokens * price["in"] + cache_write * price["in"] * CACHE_WRITE
             + cache_read * price["cache_read"] + u.output_tokens * price["out"]) / 1e6
+    cost *= BATCH_DISCOUNT if batch else 1
     return {
         "at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "job": job,
         "model": model,
         "specimen_id": specimen_id,
+        "batch": batch,
         "request_id": getattr(response, "_request_id", None),
         "stop_reason": response.stop_reason,
         "input_tokens": u.input_tokens,
@@ -341,18 +345,23 @@ def log_usage(record: dict, path: Path = USAGE_LOG) -> None:
         f.write(json.dumps(record) + "\n")
 
 
+def read_trail(response, specimen_id: str) -> dict:
+    """The parsed trail in a reply, or a TrailError if it stopped early or is not JSON."""
+    if response.stop_reason != "end_turn":
+        raise TrailError(f"{specimen_id}: stopped with {response.stop_reason!r}, not a complete trail")
+    text = next((b.text for b in response.content if b.type == "text"), "")
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as e:
+        raise TrailError(f"{specimen_id}: reply is not JSON: {e}") from e
+
+
 def generate_trail(client, brief: dict, *, job: str, model: str = MODEL, log_path: Path = USAGE_LOG,
                    error: str | None = None) -> dict:
     """One brief in, one parsed trail out. The call's usage is logged even when the reply is unusable."""
     response = client.messages.create(**build_request(brief, model, error))
     log_usage(usage_record(response, job=job, specimen_id=brief["specimen_id"], model=model), log_path)
-    if response.stop_reason != "end_turn":
-        raise TrailError(f"{brief['specimen_id']}: stopped with {response.stop_reason!r}, not a complete trail")
-    text = next((b.text for b in response.content if b.type == "text"), "")
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError as e:
-        raise TrailError(f"{brief['specimen_id']}: reply is not JSON: {e}") from e
+    return read_trail(response, brief["specimen_id"])
 
 
 def main(argv: list[str] | None = None) -> int:
