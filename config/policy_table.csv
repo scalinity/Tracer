@@ -1,0 +1,45 @@
+specimen_type,test,clock_stop,window_min,urgency_tier,transport_temperature,preservative,stain_required,rejection_criteria,source_citation,verified_by
+"urine, unpreserved, room temp",culture,received,60,3,room temperature,none,no (rarely),unlabeled; leaking; room temp over 4 hours; UA performed before culture aliquot taken,"IDSA/ASM 2024, Urinary Tract Infections, Table 38 and section text",KK
+"urine, unpreserved, refrigerated",culture,received,1440,3,refrigerated (2-8°C),none,no (rarely),unlabeled; leaking; past window; UA performed before culture aliquot taken,? source not found (assumed); Table 38 recommends refrigeration but gives no time limit,
+"urine, boric acid",culture,received,2880,3,room temperature or refrigerated,boric acid,no (rarely),unlabeled; leaking; past window; underfilled tube,? source not found (assumed),
+"body fluid, sterile container, room temp (pleural, peritoneal, synovial, pericardial)",Gram stain,received,60,2,room temperature,none,yes,unlabeled; past window; volume under 0.5 mL,"IDSA/ASM 2024, Table 27 (pleural) and Table 37 (peritoneal)",KK
+"body fluid, sterile container, room temp (pleural, peritoneal, synovial, pericardial)",bacterial culture,received,60,2,room temperature,none,yes,unlabeled; past window; volume under 0.5 mL,"IDSA/ASM 2024, Table 27 (pleural) and Table 37 (peritoneal)",KK
+"body fluid, sterile container, room temp (pleural, peritoneal, synovial, pericardial)",anaerobic culture,received,60,2,room temperature,none,yes,unlabeled; past window; volume under 0.5 mL,"IDSA/ASM 2024, Table 27 (pleural) and Table 37 (peritoneal)",KK
+"body fluid, sterile container, refrigerated",Gram stain,received,1440,2,refrigerated (2-8°C),none,yes,unlabeled; past window; volume under 0.5 mL,? source not found (assumed); Table 37 says refrigerate if over 1 h but gives no time limit,
+"body fluid, sterile container, refrigerated",bacterial culture,received,1440,2,refrigerated (2-8°C),none,yes,unlabeled; past window; volume under 0.5 mL,? source not found (assumed); Table 37 says refrigerate if over 1 h but gives no time limit,
+"body fluid, sterile container, refrigerated",anaerobic culture,received,1440,2,refrigerated (2-8°C),none,yes,unlabeled; past window; volume under 0.5 mL,? source not found (assumed); Table 37 says refrigerate if over 1 h but gives no time limit,
+"pleural fluid, anaerobic transport vial",anaerobic culture,received,4320,2,room temperature,anaerobic transport vial,no,unlabeled; past window,"IDSA/ASM 2024, Table 27",KK
+"body fluid, blood culture bottle (peritoneal, pleural)",bottle culture (BacTec),received,1440,2,"room temperature, do not refrigerate",blood culture broth,no,unlabeled; past window,? source not found (assumed),
+"BAL, room temp",bacterial culture,received,120,1,room temperature,none,yes,unlabeled; past window; volume under 0.5 mL,"IDSA/ASM 2024, Table 27",KK
+"BAL, room temp",Gram stain,received,120,1,room temperature,none,yes,unlabeled; past window; volume under 0.5 mL,"IDSA/ASM 2024, Table 27",KK
+"BAL, room temp",AFB culture,received,120,1,room temperature,none,yes,unlabeled; past window; volume under 0.5 mL,"IDSA/ASM 2024, Table 27",KK
+"BAL, room temp",fungal culture,received,120,1,room temperature,none,yes,unlabeled; past window; volume under 0.5 mL,"IDSA/ASM 2024, Table 27",KK
+"BAL, room temp",fungal smear,received,120,1,room temperature,none,yes,unlabeled; past window; volume under 0.5 mL,"IDSA/ASM 2024, Table 27",KK
+"BAL, room temp",respiratory panel,received,120,1,room temperature,none,yes,unlabeled; past window; volume under 0.5 mL,"IDSA/ASM 2024, Table 27",KK
+"BAL, room temp",Aspergillus,received,120,1,room temperature,none,yes,unlabeled; past window; volume under 0.5 mL,"IDSA/ASM 2024, Table 28",KK
+"BAL, room temp",Legionella,received,120,1,room temperature,none,yes,unlabeled; past window; volume under 0.5 mL,"IDSA/ASM 2024, Table 27",KK
+"BAL, refrigerated",bacterial culture,received,1440,1,refrigerated (2-8°C),none,yes,unlabeled; past window; volume under 0.5 mL,"IDSA/ASM 2024, Table 27",KK
+"BAL, refrigerated",Gram stain,received,1440,1,refrigerated (2-8°C),none,yes,unlabeled; past window; volume under 0.5 mL,"IDSA/ASM 2024, Table 27",KK
+"BAL, refrigerated",AFB culture,received,1440,1,refrigerated (2-8°C),none,yes,unlabeled; past window; volume under 0.5 mL,"IDSA/ASM 2024, Table 27",KK
+"BAL, refrigerated",fungal culture,received,1440,1,refrigerated (2-8°C),none,yes,unlabeled; past window; volume under 0.5 mL,"IDSA/ASM 2024, Table 27",KK
+"BAL, refrigerated",fungal smear,received,1440,1,refrigerated (2-8°C),none,yes,unlabeled; past window; volume under 0.5 mL,"IDSA/ASM 2024, Table 27",KK
+"BAL, refrigerated",respiratory panel,received,7200,1,refrigerated (2-8°C),none,yes,unlabeled; past window; volume under 0.5 mL,"IDSA/ASM 2024, Table 27 (viral transport media)",KK
+"BAL, refrigerated",Aspergillus,received,1440,1,refrigerated (2-8°C),none,yes,unlabeled; past window; volume under 0.5 mL,"IDSA/ASM 2024, Table 28",KK
+"BAL, refrigerated",Legionella,received,1440,1,refrigerated (2-8°C),none,yes,unlabeled; past window; volume under 0.5 mL,"IDSA/ASM 2024, Table 27",KK
+"culture swab (BBL, Stuart's)",Gram stain,received,1440,3,room temperature,Stuart's medium,yes,unlabeled; past window; missing Stuart's medium sponge,? source not found (assumed),
+"culture swab (BBL, Stuart's)",bacterial culture,received,1440,3,room temperature,Stuart's medium,yes,unlabeled; past window; missing Stuart's medium sponge,? source not found (assumed),
+"culture swab (BBL, Stuart's)",fungal smear,received,1440,3,room temperature,Stuart's medium,yes,unlabeled; past window; missing Stuart's medium sponge,? source not found (assumed),
+"culture swab (BBL, Stuart's)",fungal culture,received,1440,3,room temperature,Stuart's medium,yes,unlabeled; past window; missing Stuart's medium sponge,? source not found (assumed),
+eSwab,Gram stain,received,2880,3,room temperature or refrigerated,liquid Amies medium,yes,unlabeled; past window; swab missing (liquid only),"Copan ESwab Instructions for Use, specimen transport and storage (48 h; N. gonorrhoeae 24 h)",KK
+eSwab,aerobic culture,received,2880,3,room temperature or refrigerated,liquid Amies medium,yes,unlabeled; past window; swab missing (liquid only),"Copan ESwab Instructions for Use, specimen transport and storage (48 h; N. gonorrhoeae 24 h)",KK
+eSwab,anaerobic culture,received,2880,3,room temperature or refrigerated,liquid Amies medium,yes,unlabeled; past window; swab missing (liquid only),"Copan ESwab Instructions for Use, specimen transport and storage (48 h; N. gonorrhoeae 24 h)",KK
+eSwab,fungal smear,received,2880,3,room temperature or refrigerated,liquid Amies medium,yes,unlabeled; past window; swab missing (liquid only),? assumed; Copan IFU covers bacteria only,
+eSwab,fungal culture,received,2880,3,room temperature or refrigerated,liquid Amies medium,yes,unlabeled; past window; swab missing (liquid only),? assumed; Copan IFU covers bacteria only,
+eSwab,AFB culture,received,2880,3,room temperature or refrigerated,liquid Amies medium,yes,unlabeled; past window; swab missing (liquid only),? assumed; Copan IFU covers bacteria only,
+tissue,Gram stain,received,120,1,"room temperature, sterile anaerobic transport container",none (dry) or sterile saline,yes,unlabeled; past window; in formalin,"IDSA/ASM 2024, Table 47",KK
+tissue,aerobic culture,received,120,1,"room temperature, sterile anaerobic transport container",none (dry) or sterile saline,yes,unlabeled; past window; in formalin,"IDSA/ASM 2024, Table 47",KK
+tissue,anaerobic culture,received,120,1,"room temperature, sterile anaerobic transport container",none (dry) or sterile saline,yes,unlabeled; past window; in formalin,"IDSA/ASM 2024, Table 47",KK
+tissue,fungal smear,received,120,1,"room temperature, sterile anaerobic transport container",none (dry) or sterile saline,yes,unlabeled; past window; in formalin,"IDSA/ASM 2024, Table 27",KK
+tissue,fungal culture,received,120,1,"room temperature, sterile anaerobic transport container",none (dry) or sterile saline,yes,unlabeled; past window; in formalin,"IDSA/ASM 2024, Table 27",KK
+tissue,AFB culture,received,120,1,"room temperature, sterile anaerobic transport container",none (dry) or sterile saline,yes,unlabeled; past window; in formalin,? source not found (assumed),
+tissue,broad range PCR,received,120,1,"room temperature, sterile anaerobic transport container",none (dry),yes,unlabeled; past window; in formalin; in saline,"IDSA/ASM 2024, Table 47 (16S PCR)",KK

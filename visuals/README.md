@@ -27,6 +27,7 @@ Computed from the architecture, not drawn:
 | 3 | **It runs the analytic form, not a fitted model.** The page implements the mixture-survival equation in JavaScript with hand-set parameters. The prototype fits those parameters from an event log and the page does not. | Week 12, by loading `interval_params.json` from a real fit |
 | 4 | **Dwell distributions are hardcoded**, not fitted, and the specimen ID, unit and type are made up. | Week 12, with the scenario bundle |
 | 5 | **Build statuses are hand-maintained strings** in the page source, not read from anything. | Manual until the end; check before each demo, and republish the link below |
+| 6 | **The clock stops at plating on the page.** The policy table stops every clock at receipt (`docs/architecture.md` §10), and its unpreserved urine window is 60 minutes, not 120. The page's setup step after receipt and its "Plated, clock stops" label are out of date. | Week 12, with the scenario bundle (plan tasks P2 and P3) |
 
 ## How they close
 

@@ -676,12 +676,12 @@ const TASKS = [
 
 {id:"K1", tr:"data", day:[10,29], who:{D:0.5, K:1}, t:"Thirty-minute call: the policy first pass", api:"J0",
  why:"Everything downstream waits on five answers. Rough answers are fine. A citation can come later.",
- steps:["Where does the clock stop: receipt, set up on media, plated, or result? Milestone 2 says plating. Confirm or correct it.","For the five specimen types (urine, body fluid, bronchoalveolar lavage, culture swab, tissue) and the tests ordered on each, including anaerobic culture: how long is the stability window, and how must the specimen travel?","Between receipt and set-up, does a specimen wait somewhere, and for about how long?","Where do specimens really go missing or sit too long: before leaving the unit, in the tube, at the receiving end? Give rough times for each leg.","How many alerts in a shift would still feel useful, and who acts on each kind of failure?","Daniel types the answers into `config/breach_policy.yaml` during the call and marks every value `source: assumed (v0)`. Optional: run the starter-ranges recipe first and bring its table, so the call corrects numbers instead of inventing them."],
+ steps:["Where does the clock stop? Answered by the policy table: at receipt, for every row (docs/architecture.md §10).","For the five specimen types (urine, body fluid, bronchoalveolar lavage, culture swab, tissue) and the tests ordered on each, including anaerobic culture: how long is the stability window, and how must the specimen travel?","Between receipt and set-up, does a specimen wait somewhere, and for about how long?","Where do specimens really go missing or sit too long: before leaving the unit, in the tube, at the receiving end? Give rough times for each leg.","How many alerts in a shift would still feel useful, and who acts on each kind of failure?","Daniel types the answers into `config/breach_policy.yaml` during the call and marks every value `source: assumed (v0)`. Optional: run the starter-ranges recipe first and bring its table, so the call corrects numbers instead of inventing them."],
  done:"Five answers written down and five rows in the policy file.", earns:["M2","P2"]},
 
 {id:"D1", tr:"data", day:[10,30], who:{D:3}, t:"Write the three configuration files", needs:["K1"],
  why:"The clock rule, the workflow and every assumed parameter live in configuration, so a change from Karissa costs a re-run and not a rewrite.",
- steps:["`config/breach_policy.yaml`: one row per specimen type and test with `clock_start: collected`, `clock_stop: plated`, `window_min`, `urgency_tier` and `source`.","`config/workflow_graph.yaml`: the stages (ordered, collected, dispatched, in_tube, at_station, stalled_at_station, received, accessioned, plated, lost) and which of them produce a scan.","`config/config.yaml`: every generator parameter (arrivals by hour, specimen mix, route split, leg medians and spreads, fault rates), each with a comment that says it is an assumption.","Write `src/generator/config.py` to load all three. It must fail loudly if a policy names a stage that is not in the graph.","Write one test that feeds it a bad policy and expects that failure."],
+ steps:["Done: `config/breach_policy.yaml`, compiled from the policy table by `python -m src.generator.compile_policy`, 44 rows, clock stops at receipt.","Done: `config/workflow_graph.yaml`, the stages and which of them produce a scan.","`config/config.yaml`: every generator parameter (arrivals by hour, specimen mix, route split, leg medians and spreads, fault rates), each with a comment that says it is an assumption.","Done: `src/generator/config.py` loads the policy and graph and fails loudly on a bad policy; extend it to load `config.yaml`.","Done: the bad-policy tests in `tests/test_policy.py`."],
  done:"`pytest` passes, including the bad-policy test.", earns:["P2","P3"]},
 
 {id:"D2", tr:"data", day:[10,30], who:{D:2.5}, t:"Brief sampler, part 1: arrivals, mix and faults", needs:["D1"],
@@ -691,7 +691,7 @@ const TASKS = [
 
 {id:"D3", tr:"data", day:[10,31], who:{D:2}, t:"Brief sampler, part 2: the timing skeleton", needs:["D2"],
  why:"The skeleton fixes every timestamp before Claude writes a word, which keeps the statistics under our control.",
- steps:["For each brief, draw the leg durations (dispatch wait, tube transit, station dwell, accession wait, plating wait) from the medians and spreads in the config.","Apply the planted fault: a stall adds 30 to 180 minutes at the station, a loss removes the receipt.","Write the targets into the brief: the minute each stage ends.","Test that the same seed gives the same targets."],
+ steps:["For each brief, draw the leg durations (dispatch wait, tube transit, station dwell, accession wait, plating wait) from the medians and spreads in the config. The clock stops at receipt, so the accession and plating waits only add realism and can stay rough.","Apply the planted fault: a stall adds 30 to 180 minutes at the station, a loss removes the receipt.","Write the targets into the brief: the minute each stage ends.","Test that the same seed gives the same targets."],
  done:"200 briefs print as a table and every row is consistent: stage times add up and losses have no receipt.", earns:[]},
 
 {id:"D4", tr:"data", day:[10,31], who:{D:1.5}, t:"Write the trail prompt and output schema", api:"J1", needs:["S1","D3"],
@@ -746,7 +746,7 @@ const TASKS = [
 
 {id:"M3", tr:"model", day:[11,5], who:{D:2}, t:"Risk model and parameter recovery", needs:["M2"],
  why:"Parity with the JavaScript proves the demo and the pipeline are the same model. Recovery proves the fitting works.",
- steps:["Implement the closed form from `docs/architecture.md` section 5.2: the chance a specimen misses its window given that it is still silent after tau minutes.","Run it and the JavaScript in `visuals/architecture.html` on the same 50 random states. They must agree to 1e-6, which needs the same one-minute midpoint sum for the in-lab step; an exact integral may not agree that closely.","After the receipt scan the JavaScript restarts the setup clock every minute, so risk climbs from 1.6% to 13.8% between minutes 68 and 86. In the Python, condition on the time already spent in setup, which keeps it near 2%, and compare parity on states before the scan.","Parameter recovery: compare the fitted values with the generator's planted values. They should agree within sampling error."],
+ steps:["Implement the closed form from `docs/architecture.md` section 5.2: the chance a specimen misses its window given that it is still silent after tau minutes.","Run it and the JavaScript in `visuals/architecture.html` on the same 50 random states. They must agree to 1e-6, which needs the same one-minute midpoint sum for the in-lab step; an exact integral may not agree that closely.","The clock stops at the receipt scan, so in the Python a received specimen is resolved. The JavaScript still models a setup step after receipt, so compare parity only on states before the scan.","Parameter recovery: compare the fitted values with the generator's planted values. They should agree within sampling error."],
  done:"The parity and recovery tests pass and the recovery plot is saved in `results/`.", earns:["P1","T3"]},
 
 {id:"M4", tr:"model", day:[11,6], who:{D:2}, t:"Baseline and evaluation", needs:["M3"],
@@ -764,9 +764,9 @@ const TASKS = [
  steps:["Run the evaluation end to end from a clean checkout.","Save `results/mvp-nov8.json` and tag the commit `v0.1-mvp`.","Keep that file untouched. The December 2 results must be compared against it."],
  done:"The tag is pushed and the results file is committed.", earns:["M2","P1","P5"]},
 
-{id:"K3", tr:"data", day:[11,7], who:{K:1.5}, t:"Cited policy table", needs:["K1"],
+{id:"K3", tr:"data", day:[11,7], who:{K:0.5}, t:"Cited policy table", needs:["K1"],
  why:"The windows become published facts instead of assumptions, which is the strongest thing the project can say about its labels.",
- steps:["For each row in `config/breach_policy.yaml`, find the sentence in the IDSA and ASM guide that gives the window, and paste the section or page as the citation.","Confirm where the clock stops and who decides a specimen is too late.","Confirm the alert budget and who is alerted for each failure type."],
+ steps:["Citations: done for 34 of 44 rows. The other 10 stay marked `assumed: true`; nothing more is asked of Karissa here.","Where the clock stops: answered, at receipt.","Confirm the alert budget and who is alerted for each failure type."],
  done:"Every row has a citation, or says plainly 'not found, assumed'.", earns:["P2"]},
 
 {id:"M7", tr:"model", day:[11,8], who:{D:1.5}, t:"Does the risk model beat the simple rule?", needs:["M6"],
@@ -911,6 +911,7 @@ const DONE_ALREADY = [
  {t:"Problem statement, architecture and roadmap", s:"Milestones 1 to 3, submitted."},
  {t:"The evidence that no public dataset records the interval", s:"MIMIC-IV demo check: 1,336 specimens, a median of 80.1 hours between their only two timestamps."},
  {t:"System map with the risk model and location filter running", s:"`visuals/architecture.html`, on assumed parameters."},
+ {t:"Policy table, first pass and most citations", s:"Karissa's 44 rows, loaded as `config/breach_policy.yaml`. The clock stops at receipt; 34 rows are sourced and 10 are marked assumed."},
  {t:"Milestone 4 written", s:"A four-page LaTeX PDF and a paste-ready Markdown copy, on GitHub, in the shared Drive folder and in Downloads. Submitting it on Canvas is the first task below."}
 ];
 
@@ -928,7 +929,7 @@ const CUTS = [
  {id:"C2", label:"Choose showcase specimens by hand, with no Claude-written stories", note:"Keeps the scenarios and drops one Claude job.", saves:{G3:{D:1}, K6:{K:0.5}}},
  {id:"C3", label:"Beat Tracer with three rounds and no replay", note:"Still fills the time the run of show gives it.", saves:{P5:{D:1.5}}},
  {id:"C4", label:"Score the location estimate by overall top-1 only", note:"Drops the by-minute breakdown.", saves:{M8b:{D:1}}},
- {id:"C5", label:"Move the cited policy table to after the presentation", note:"The windows stay labeled as assumptions.", saves:{K3:{K:1.5}}},
+ {id:"C5", label:"Move the cited policy table to after the presentation", note:"The windows stay labeled as assumptions.", saves:{K3:{K:0.5}}},
  {id:"C6", label:"Ship the template search brief only", note:"Loses the language-model module and its comparison. Last resort.", saves:{M9:{D:2}, K4:{K:1.5}}}
 ];
 

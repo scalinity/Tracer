@@ -1,0 +1,24 @@
+# Workflow graph: the named states a specimen moves through, and which of them a
+# scanner or a person records. The breach policy may only name states that exist
+# here, and its clock_stop must be reachable from its clock_start
+# (docs/architecture.md §4.1). Hidden states produce no event: that silence is
+# what Tracer scores.
+#
+# ASSUMED: the stage list follows plan task D1 and the event activities in
+# docs/architecture.md §4.2. Not yet reviewed by Karissa.
+
+states:
+  ordered:            {scan: true,  next: [collected, cancelled]}
+  collected:          {scan: true,  next: [dispatched, lost]}          # lost here = never sent
+  dispatched:         {scan: false, next: [in_tube, received]}         # received directly = hand carry
+  in_tube:            {scan: false, next: [at_station, lost]}
+  at_station:         {scan: false, next: [received, stalled_at_station, lost]}
+  stalled_at_station: {scan: false, next: [received, lost]}
+  received:           {scan: true,  next: [accessioned, rejected]}
+  accessioned:        {scan: true,  next: [plated, rejected]}
+  plated:             {scan: true,  next: [stained, reported]}
+  stained:            {scan: true,  next: [reported]}
+  reported:           {scan: true,  next: []}
+  rejected:           {scan: true,  next: []}
+  cancelled:          {scan: true,  next: []}
+  lost:               {scan: false, next: []}

@@ -44,6 +44,8 @@ The system map opens directly from disk and needs no server: `open visuals/archi
 | `docs/submissions/` | Each course milestone as `Milestone N - Title`, in `.docx` and `.pdf`; Milestones 2 and 3 also have a Markdown mirror. Milestone 4 is a LaTeX-built `.pdf` with its `.tex` source and a Markdown mirror |
 | `docs/course/` | Course guidelines and blank templates, unmodified; kept local, not in the repository |
 | `visuals/architecture.html` | Interactive system map; seed of the Week 15 demo |
-| `src/` | `simulator/`, `pipeline/`, `models/`, `api/` |
+| `config/` | Karissa's policy table as exported (`policy_table.csv`), sources we added (`policy_sources.csv`), the compiled `breach_policy.yaml` and the workflow graph |
+| `src/` | `generator/`, `simulator/`, `pipeline/`, `models/`, `api/` |
+| `tests/` | `pytest`; the policy loader and its fail-loudly checks |
 | `notes/` | Working notes, questions, meeting capture; kept local, not in the repository |
 | `data/` | MIMIC extracts and simulator output (gitignored) |
