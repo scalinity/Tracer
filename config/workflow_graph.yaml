@@ -11,9 +11,10 @@ states:
   ordered:            {scan: true,  next: [collected, cancelled]}
   collected:          {scan: true,  next: [dispatched, lost]}          # lost here = never sent
   dispatched:         {scan: false, next: [in_tube, received]}         # received directly = hand carry
-  in_tube:            {scan: false, next: [at_station, lost]}
+  in_tube:            {scan: false, next: [at_station, misrouted, lost]}
   at_station:         {scan: false, next: [received, stalled_at_station, lost]}
   stalled_at_station: {scan: false, next: [received, lost]}
+  misrouted:          {scan: false, next: [at_station, lost]}          # ASSUMED: wrong station, found late, re-sent to the right one
   received:           {scan: true,  next: [accessioned, rejected]}
   accessioned:        {scan: true,  next: [plated, rejected]}
   plated:             {scan: true,  next: [stained, reported]}
