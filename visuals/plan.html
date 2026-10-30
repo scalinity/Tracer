@@ -520,7 +520,7 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
       <div id="copyHost"></div>
       <details class="runorder" open>
         <summary>Run order from October 30: hands-off</summary>
-        <p class="small">Claude Code works down this list without waiting for the planned days or for Daniel. When the repo, the plan or the course guidelines can settle a call, it makes the call, labels it as an assumption in the pull request and the AI Teaming Log, and keeps going. The one hard stop is the spend guard: no Claude job over $2 and no more than $10 in all without Daniel's word. Steps that need Daniel's own hands are parked on his checklist below and never stop the run. Done so far: M5, M6, M7, M8, M8b, S1, V1, W6, W8, D11, D12, M9, G3, A2, P2, P3, P4, P5 and P6. The aim is the end-to-end gate by November 6 and the demo complete by November 10, so the last week goes to the talk.</p>
+        <p class="small">Claude Code works down this list without waiting for the planned days or for Daniel. When the repo, the plan or the course guidelines can settle a call, it makes the call, labels it as an assumption in the pull request and the AI Teaming Log, and keeps going. The one hard stop is the spend guard: no Claude job over $2 and no more than $10 in all without Daniel's word. Steps that need Daniel's own hands are parked on his checklist below and never stop the run. Done so far: M5, M6, M7, M8, M8b, S1, V1, W6, W8, D11, D12, M9, G3, A2, P2, P3, P4, P5, P6 and P7. The aim is the end-to-end gate by November 6 and the demo complete by November 10, so the last week goes to the talk.</p>
         <ol>
           <li><b>W8</b> start the AI Teaming Log, backfilled from the merged pull requests.</li>
           <li><b>M6</b> run the evaluation from a clean checkout, save <code>results/mvp-nov8.json</code> and tag <code>v0.1-mvp</code>. Later checkpoints are tagged the same way, without asking.</li>
@@ -536,7 +536,7 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
           <li><b>P7</b> GitHub Pages, the QR code and the browser checks Claude Code can run itself.</li>
           <li>Then pull ahead the work after November 18 that needs no one: the sensitivity runs (A2) and the clean-clone test (A4).</li>
         </ol>
-        <p class="small">Daniel's checklist, parked so nothing waits on it: tick W1 and W2 when they are done, open the published demo on his phones once P7 is up, and the talk and rehearsals (T1 to T4). Karissa's tasks stay as they are; nothing new is asked of her.</p>
+        <p class="small">Daniel's checklist, parked so nothing waits on it: tick W1 and W2 when they are done, open the published demo (https://scalinity.github.io/Tracer/demo/) on his phones, play Beat Tracer with three people (P5's playtest), check the footer on the demo page that names both authors, and the talk and rehearsals (T1 to T4). Karissa's tasks stay as they are; nothing new is asked of her.</p>
       </details>
       <div id="ledger"></div>
       <div id="doneAlready"></div>
@@ -894,7 +894,7 @@ const TASKS = [
 
 {id:"P7", tr:"demo", day:[11,15], who:{D:2}, t:"Publish on GitHub Pages and test on devices", needs:["P4","P5"],
  why:"The rubric asks that the demo is accessible to every student. Only a real phone test shows that.",
- steps:["Claude Code turns on GitHub Pages for `main`, folder `/docs`, through the GitHub API or a deploy workflow, and checks that the public address loads.","Daniel's, parked on his checklist and never a stop: open the address on his own phones and note anything that breaks.","Make a QR code for the address and save it as `docs/demo/qr.png`.","Claude Code tests what it can without a phone: the page in headless Chromium, Firefox and WebKit at phone and laptop widths, with any failure fixed before it moves on.","Check that the page needs no key and calls no API."],
+ steps:["Done: GitHub Pages publishes `main`, folder `/docs`, through the GitHub API, with Jekyll off (`docs/.nojekyll`). The public address is https://scalinity.github.io/Tracer/demo/. Every demo file there matches the repo by hash, the types are right and the exhibit's assets load.","Daniel's, parked on his checklist and never a stop: open the address on his own phones and note anything that breaks.","Done: the QR code is `docs/demo/qr.png`, written by `python -m src.api.qr`. A test decodes it, and the copy on the public site decodes to the address.","Done: a test loads the page in headless Chromium, Firefox and WebKit at 390 and 1280 px under the `/Tracer/` path GitHub Pages uses, opens a timeline, moves the threshold and window controls, starts a round of Beat Tracer and checks the 3D link. All three pass. A real phone and a screen reader have not been run.","Done: the page makes no request outside the site in any of the three engines, and a test finds no key-shaped text or API host in anything published and not the value of the key in `.env` in any tracked file."],
  done:"The public address opens the demo on three different devices.", earns:["D1","D4","P4"]},
 
 {id:"K7", tr:"story", day:[11,15], who:{K:1.5}, t:"Practice the clinical questions",

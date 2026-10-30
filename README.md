@@ -8,6 +8,9 @@ alert while the specimen can still be recovered.
 Course project for CAI 5724, AI in Health Design Studio I (University of Florida).
 Team: Daniel Escalante and Karissa Kocourek.
 
+The demo is a static page on GitHub Pages, <https://scalinity.github.io/Tracer/demo/> (the QR code is `docs/demo/qr.png`). It reads
+its data files in the browser and makes no other request, so it needs no key and no server.
+
 Events come from a Claude-generated synthetic dataset, because no public dataset records where a specimen
 is mid-transit, when it was received, or that one never arrived at all. Seeded code draws each specimen's
 brief and every timing, `claude-haiku-5-5` writes the scan events and the hidden true path, a nine-check
@@ -71,7 +74,7 @@ The system map opens directly from disk and needs no server: `open visuals/archi
 | `datasets/` | The frozen synthetic dataset and its manifest (model, hashes, seed, counts, cost) |
 | `src/` | `generator/` (briefs, prompt, validator, batch runs), `pipeline/` (store, fit, evaluate, triage), `models/` (risk, location), `api/` |
 | `tests/` | `pytest`: the policy and config loaders, the generator and its validator, the store, the fit, the models, the evaluation and the midterm snapshot |
-| `docs/demo/` | The demo's data: `bundle.json` (the held-out specimens with their risk, alerts and truth, and a grid of 20 operating points) and its `bundle.schema.json`, plus `briefs.json`, a template and a Claude search brief for each alert; `python -m src.api.export` and `python -m src.api.search_briefs` write them |
+| `docs/demo/` | The public demo, published by GitHub Pages from `docs/`: `index.html` (the board, the specimen timeline, the threshold control, Beat Tracer and the link to the 3D bench in `exhibit/`), `qr.png` (the QR code for the address, written by `python -m src.api.qr`), and the data it reads: `bundle.json` (the held-out specimens with their risk, alerts and truth, and a grid of 20 operating points) with its `bundle.schema.json`, `briefs.json` (a template and a Claude search brief for each alert) and `heroes.json` (the showcase stories); `python -m src.api.export`, `python -m src.api.search_briefs` and `python -m src.api.heroes` write them |
 | `results/` | Fitted parameters, the evaluation, the alert list, the location scores, the recovery plot and the midterm snapshot `mvp-nov8.json` |
 | `notes/` | Working notes, questions, meeting capture; kept local, not in the repository |
 | `data/` | Claude output, the two-file store in `data/store/` and MIMIC extracts (gitignored) |
