@@ -51,6 +51,27 @@ def risk_unreceived(t: float, mix: Mixture, window: float) -> float:
     return not_by_window / p_not_received(t, mix)
 
 
+def arrival_quantile(t: float, mix: Mixture, q: float) -> float:
+    """Minutes from now until a share q of the specimens that are still silent at t and will arrive have
+    arrived: the expected arrival, for a technologist deciding how long to wait. A specimen that never
+    arrives is not in this share, so it is read next to the risk, which counts it."""
+    still_out = sum(w * (1 - ln_cdf(t, mu, s)) for w, mu, s in mix.components)
+    if still_out <= 0:
+        return math.inf
+
+    def arrived(x: float) -> float:
+        return sum(w * (ln_cdf(x, mu, s) - ln_cdf(t, mu, s)) for w, mu, s in mix.components) / still_out
+
+    hi = max(t, 1.0) * 2
+    while arrived(hi) < q:
+        hi *= 2
+    lo = t
+    for _ in range(80):
+        mid = (lo + hi) / 2
+        lo, hi = (mid, hi) if arrived(mid) < q else (lo, mid)
+    return hi - t
+
+
 def mixture_from(params: dict, group: str) -> Mixture:
     """The fitted mixture for one group of results/interval_params.json."""
     pooled, g = params["pooled"], params["groups"][group]
