@@ -726,12 +726,12 @@ const TASKS = [
 
 {id:"D8", tr:"data", day:[11,2], who:{D:1}, t:"Start the full run", api:"J2", needs:["D7"],
  why:"The Batch API is half price and takes minutes to a few hours, so start it early in the day.",
- steps:["`python -m src.generator.run --seed 1 --runs 30 --n 400 --batch --dry-run` prints the token count and the estimated cost. Continue only if it is under $5.","Run it again without `--dry-run`. The script saves the batch ids so you can resume.","Do not start it late at night. Check it in the morning."],
+ steps:["Done: `python -m src.generator.run --seed 1 --runs 30 --n 400 --batch --dry-run --budget-usd 5` estimated $2.98. A 10-specimen batch through the real API came first as a smoke test.","Done: the same command without `--dry-run` submitted 30 batches. The ids are saved in `data/claude/batches.json`, with the seed and the hashes, so a rerun resumes.","Done: started at 5:26 AM EDT; every batch had ended within about seven minutes."],
  done:"Batch ids are saved and the status reads in progress.", earns:[]},
 
 {id:"D9", tr:"data", day:[11,3], who:{D:1.5}, t:"Collect, validate and freeze the dataset", needs:["D8"],
  why:"A frozen, hashed file is what makes the project reproducible. The generator may never be run again after this.",
- steps:["`python -m src.generator.collect --batch-ids data/claude/batches.json`","Validate every trail and keep those that pass. Write `datasets/tracer-synthetic-v1.jsonl.gz` and `datasets/manifest.json` (model id, prompt hash, seeds, counts, pass rate, cost, date).","If the compressed file is over 25 MB, publish it as a GitHub release asset and commit only the manifest and a checksum.","Commit."],
+ steps:["Done: `python -m src.generator.collect --batch-ids data/claude/batches.json --wait`. Each failed trail was retried once.","Done: `--freeze` wrote `datasets/tracer-synthetic-v1.jsonl.gz` and `datasets/manifest.json`: 11,967 of 12,000 accepted (99.7 percent; 99.4 percent on the first attempt), cost $2.16. The 33 dropped specimens skew toward long delays, and the manifest says so.","Done: the file is 1.3 MB, under the 25 MB limit, so it is committed directly.","Done: committed. The manifest records that clinical review was not done, because K2 was skipped."],
  done:"At least 11,000 specimens accepted, the manifest committed, and the cost recorded.", earns:["M2","P4","D4"]},
 
 {id:"W3", tr:"write", day:[11,4], who:{D:1}, t:"Draft of Results, if still due",
@@ -918,6 +918,7 @@ const DONE_ALREADY = [
  {t:"System map with the risk model and location filter running", s:"`visuals/architecture.html`, on assumed parameters."},
  {t:"Policy table, first pass and most citations", s:"Karissa's 44 rows, compiled into `config/breach_policy.yaml` with the workflow graph, a loader that fails loudly and nine tests. The clock stops at receipt; 34 rows are sourced and 10 are marked assumed."},
  {t:"The 3D specimen exhibit", s:"Built in `visuals/exhibit-3d` and embedded in the 3D view section."},
+ {t:"The frozen synthetic dataset", s:"`datasets/tracer-synthetic-v1.jsonl.gz`: 11,967 specimens in 30 runs, 516 breaches (4.3 percent), written by `claude-haiku-5-5` for $2.16 and described in `datasets/manifest.json`. No clinical review: K2 was skipped."},
  {t:"Milestone 4 written", s:"A four-page LaTeX PDF and a paste-ready Markdown copy, on GitHub, in the shared Drive folder and in Downloads. Submitting it on Canvas is the first task below."}
 ];
 

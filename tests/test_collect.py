@@ -199,6 +199,9 @@ def test_freeze_writes_a_deterministic_dataset_and_a_manifest(runs, ctx, env, mo
     assert manifest["runs"] == 3 and manifest["prompt_hash"] == prompt.prompt_hash() and manifest["created"]
     assert sum(manifest["requested_by_fault"].values()) == 120 and sum(manifest["accepted_by_fault"].values()) == 119
     assert manifest["cost_usd"] > 0 and "K2" in manifest["clinical_review"]
+    long_stage = manifest["stage_ge_120_min"]
+    assert 0 < long_stage["accepted"] <= long_stage["requested"] and "not a random slice" in manifest["drop_note"]
+    assert manifest["breach_requested"] >= manifest["breach_accepted"]
     assert manifest["breach_accepted"] == sum(r["label"]["breach"] for r in
                                               (json.loads(l)["brief"] for l in
                                                gzip.open(collect.DATASET_PATH, "rt").read().splitlines()))
