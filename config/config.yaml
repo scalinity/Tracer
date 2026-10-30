@@ -1,0 +1,176 @@
+# Generator parameters: everything src/generator/briefs.py draws from.
+#
+# EVERY value below is an assumption, marked `source: assumed` and given a one-line
+# reason. None is fitted to a dataset or taken from a workplace. A value that gains a
+# citation replaces `assumed` with the citation. Karissa sees the effect of these
+# numbers in the pilot review (plan task K2) rather than being asked for them.
+#
+# The loader (src/generator/config.py) fails loudly when mix weights or fault rates do
+# not sum to 1, when a mix entry names no policy, when a fault names a state the
+# workflow graph lacks, or when a median or spread is not positive.
+# Leg times are minutes. `p90_min` is the 90th percentile: nine legs in ten finish
+# sooner. The generator draws each leg from a lognormal with that median and 90th
+# percentile, so the right-skewed tail comes from two numbers a person can sanity-check.
+
+version: 1
+
+# One run is a week; run r starts r weeks after start_date (a Monday).
+run:
+  days: 7                       # ASSUMED: 30 runs of 7 days is the dataset plan (AGENTS.md)
+  start_date: "2026-03-02"      # ASSUMED: a Monday; only the weekday pattern matters
+  source: assumed
+
+# Specimens collected per hour of day on a weekday. make_briefs(n) fixes the total
+# count, so only the shape matters; the values sum to about 62 a day, which gives
+# about 400 in a week with the weekend factor.
+arrivals:
+  rate_per_hour:                # ASSUMED: quiet overnight, a morning-draw peak at 08:00 to 10:00, a slow evening tail
+    - 1.2    # 00
+    - 0.9    # 01
+    - 0.8    # 02
+    - 0.8    # 03
+    - 1.1    # 04
+    - 1.8    # 05
+    - 3.2    # 06
+    - 4.2    # 07
+    - 4.8    # 08
+    - 5.0    # 09
+    - 4.6    # 10
+    - 4.2    # 11
+    - 3.6    # 12
+    - 3.4    # 13
+    - 3.2    # 14
+    - 3.0    # 15
+    - 2.8    # 16
+    - 2.6    # 17
+    - 2.4    # 18
+    - 2.2    # 19
+    - 2.0    # 20
+    - 1.8    # 21
+    - 1.5    # 22
+    - 1.3    # 23
+  weekend_factor: 0.7           # ASSUMED: fewer scheduled draws and procedures on Saturday and Sunday
+  source: assumed
+
+# What is sent. Each entry is one specimen with its tests, written as policy ids from
+# config/breach_policy.yaml (a specimen_type plus its tests), so every combination has a
+# window. When several tests ride on one specimen the shortest window governs.
+specimen_mix:
+  source: assumed               # ASSUMED: urine and swabs dominate a general-hospital culture workload
+  entries:
+    urine_room_temp:            # ASSUMED weight 0.22: the most common culture, mostly sent unpreserved
+      weight: 0.22
+      policies: [urine_unpreserved_room_temp__culture]
+    urine_refrigerated:         # ASSUMED weight 0.10: units that hold urine in a refrigerator before pickup
+      weight: 0.10
+      policies: [urine_unpreserved_refrigerated__culture]
+    urine_boric_acid:           # ASSUMED weight 0.08: preserved tube, used by outpatient clinics
+      weight: 0.08
+      policies: [urine_boric_acid__culture]
+    body_fluid_room_temp:       # ASSUMED weight 0.06: smear and culture on pleural, peritoneal or synovial fluid
+      weight: 0.06
+      policies: [body_fluid_sterile_container_room_temp__gram_stain, body_fluid_sterile_container_room_temp__bacterial_culture]
+    body_fluid_refrigerated:    # ASSUMED weight 0.04: the same panel with anaerobic culture added
+      weight: 0.04
+      policies: [body_fluid_sterile_container_refrigerated__gram_stain, body_fluid_sterile_container_refrigerated__bacterial_culture, body_fluid_sterile_container_refrigerated__anaerobic_culture]
+    pleural_anaerobic_vial:     # ASSUMED weight 0.02: occasional pleural fluid sent for anaerobes only
+      weight: 0.02
+      policies: [pleural_fluid_anaerobic_transport_vial__anaerobic_culture]
+    body_fluid_culture_bottle:  # ASSUMED weight 0.02: fluid inoculated into a culture bottle at the bedside
+      weight: 0.02
+      policies: [body_fluid_blood_culture_bottle__bottle_culture]
+    bal_room_temp:              # ASSUMED weight 0.06: lavage from a bronchoscopy suite, smear and culture
+      weight: 0.06
+      policies: [bal_room_temp__bacterial_culture, bal_room_temp__gram_stain]
+    bal_refrigerated:           # ASSUMED weight 0.04: lavage held cold; the respiratory panel has the longest window, so the shortest rule applies
+      weight: 0.04
+      policies: [bal_refrigerated__bacterial_culture, bal_refrigerated__gram_stain, bal_refrigerated__respiratory_panel]
+    swab_stuarts:               # ASSUMED weight 0.16: wound and body-site swabs in transport medium
+      weight: 0.16
+      policies: [culture_swab__gram_stain, culture_swab__bacterial_culture]
+    swab_eswab:                 # ASSUMED weight 0.12: liquid-medium swabs, smear plus aerobic culture
+      weight: 0.12
+      policies: [eswab__gram_stain, eswab__aerobic_culture]
+    tissue:                     # ASSUMED weight 0.08: operating-room tissue, the rarest and most urgent
+      weight: 0.08
+      policies: [tissue__gram_stain, tissue__aerobic_culture, tissue__anaerobic_culture]
+
+collecting_units:
+  source: assumed               # ASSUMED: one emergency department, one ICU, general wards, a procedure area and clinics
+  weights:
+    ed: 0.35                    # ASSUMED: the emergency department sends the most cultures
+    icu: 0.15                   # ASSUMED: sicker patients, more cultures per bed
+    med_surg: 0.25              # ASSUMED: the largest inpatient area
+    periop: 0.10                # ASSUMED: surgical and procedure areas, tissue and fluids
+    clinic: 0.15                # ASSUMED: outpatient clinics, mostly urine and swabs
+
+priority:
+  stat_fraction: 0.35           # ASSUMED: about a third of cultures are ordered stat
+  source: assumed
+
+route:
+  tube_probability: 0.8         # ASSUMED: most units are on the pneumatic tube
+  hand_carry_probability: 0.2   # ASSUMED: tissue, large containers and units off the tube are carried by a runner
+  source: assumed
+
+legs:
+  dispatch_wait:                # collection scan to leaving the unit
+    median_min: 8               # ASSUMED: label, bag and walk to the tube station
+    p90_min: 25                 # ASSUMED: busy units hold specimens until the next rounds
+    source: assumed
+  tube_transit:                 # in the tube
+    median_min: 4               # ASSUMED: pneumatic systems run a few minutes end to end
+    p90_min: 8                  # ASSUMED: a long route or a queue at a divert adds a few minutes
+    source: assumed
+  station_dwell:                # arrival at the laboratory tube station to the receipt scan
+    median_min: 6               # ASSUMED: someone empties the station and scans the carrier
+    p90_min: 18                 # ASSUMED: a busy bench lets carriers wait
+    source: assumed
+  hand_carry_transit:           # hand carry from the unit to the laboratory receiving desk
+    median_min: 12              # ASSUMED: a runner collects on a round or on call
+    p90_min: 30                 # ASSUMED: a runner on another errand or a distant unit
+    source: assumed
+  accession_wait:               # receipt to accession; after the clock stops, so it adds realism only
+    median_min: 10              # ASSUMED: queue at the receiving bench
+    p90_min: 35                 # ASSUMED: shift change and high-volume mornings
+    source: assumed
+  plating_wait:                 # accession to plating; after the clock stops, so it adds realism only
+    median_min: 15              # ASSUMED: set-up queue at the media bench
+    p90_min: 45                 # ASSUMED: batching before set-up
+    source: assumed
+
+# Planted faults, one per specimen at most. `states` names the workflow-graph states
+# the fault touches; each must exist in config/workflow_graph.yaml. Lost, not-dispatched
+# and never-collected specimens have no receipt. Rates are set high enough that a
+# 12,000-specimen dataset holds enough examples of each; real rates are lower.
+faults:
+  none:
+    rate: 0.928                 # ASSUMED: the remainder after every fault below
+    states: [received]
+    source: assumed
+  lost_in_tube:
+    rate: 0.006                 # ASSUMED: rare but real, inflated so the dataset holds about 70 cases
+    states: [in_tube, lost]
+    source: assumed
+  stalled_at_station:
+    rate: 0.020                 # ASSUMED: a carrier left in the receiving station
+    states: [at_station, stalled_at_station, received]
+    delay_min: [30, 180]        # ASSUMED: the stall adds 30 to 180 minutes, uniform
+    source: assumed
+  misrouted:
+    rate: 0.008                 # ASSUMED: a carrier sent to the wrong station
+    states: [in_tube, misrouted, at_station]
+    delay_min: [20, 120]        # ASSUMED: found and re-sent after 20 to 120 minutes, uniform
+    source: assumed
+  not_dispatched:
+    rate: 0.012                 # ASSUMED: collected, then left at the unit and never sent
+    states: [collected, lost]
+    source: assumed
+  never_collected:
+    rate: 0.006                 # ASSUMED: ordered, but the draw never happens
+    states: [ordered]
+    source: assumed
+  content_failure:
+    rate: 0.020                 # ASSUMED: mislabeled or leaking specimens, rejected at accessioning
+    states: [received, rejected]
+    source: assumed
