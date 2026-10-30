@@ -26,7 +26,8 @@ the median warning over all breaches (a miss counts as zero) and the share caugh
 GOOD_WARNING_MIN of notice. Specimens with no collection scan (never collected) have no clock; they are
 counted and set aside. Intervals come from a paired bootstrap over the held-out runs. Writes
 results/evaluation.json and, for the model at the operating point in config/triage.yaml,
-results/alerts.csv: one row per alert, routed to a role and closed at the receipt scan.
+results/alerts.csv: one row per alert, with its most likely place from the location filter, routed to a role
+(by route, or the charge nurse when the filter places it at its unit) and closed at the receipt scan.
 """
 
 from __future__ import annotations
@@ -263,6 +264,7 @@ def run() -> tuple[dict, list[dict]]:
     fit_specs, _ = load_specs(obs, None, start, stop, "fit")  # no labels: only used to set the knobs
     fit_series = risk_series(fit_specs, params)
     fit_harm = {name: triage.harm_series(fit_specs, fit_series, w) for name, w in schemes.items()}
+    tube_share = sum(s.route == "tube" for s in fit_specs) / len(fit_specs)  # observed at collection
     fit_shifts = len({s.run for s in fit_specs}) * 7 * 3
 
     specs, excluded = load_specs(obs, truth, start, stop, "test")
@@ -306,7 +308,8 @@ def run() -> tuple[dict, list[dict]]:
             specs, equal, 7 * 3, "window_baseline", "equal")
         result["operating_points"][str(budget)] = point
         if budget == headline:
-            rows = triage.alert_rows(specs, alerts["model"], series, harm["default"], cfg)
+            places = triage.likely_places(specs, alerts["model"], params, loaded["config"], tube_share)
+            rows = triage.alert_rows(specs, alerts["model"], series, harm["default"], places, cfg)
     result["alert_list"] = {"budget_per_shift": headline, "alerts": len(rows), "file": "results/alerts.csv",
                             "by_role": {r: sum(row["role"] == r for row in rows) for r in sorted({x["role"] for x in rows})},
                             "by_tier": {str(t): sum(row["tier"] == t for row in rows) for t in triage.TIERS}}

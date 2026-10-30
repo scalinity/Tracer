@@ -1981,8 +1981,9 @@
   "alerts": 806,
   "file": "results/alerts.csv",
   "by_role": {
-   "courier coordinator": 147,
-   "receiving technologist": 659
+   "charge nurse": 136,
+   "courier coordinator": 127,
+   "receiving technologist": 543
   },
   "by_tier": {
    "1": 216,

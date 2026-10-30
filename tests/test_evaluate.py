@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from src.generator import config
-from src.models import risk
+from src.models import location, risk
 from src.pipeline import evaluate, intervals, store, triage
 from src.pipeline.evaluate import Spec
 
@@ -293,8 +293,9 @@ def test_every_alert_is_routed_by_its_route_and_closed_at_the_receipt_scan(evalu
     receipt = dict(con.execute("select specimen_id, timestamp from events where activity = 'received'").fetchall())
     route = dict(con.execute("select specimen_id, planned_route from specimens").fetchall())
     for r in evaluated[1]:
-        assert r["role"] == cfg["routing"][route[r["specimen_id"]]] and r["route"] == route[r["specimen_id"]]
-        assert r["role"] != cfg["routing"]["still_at_unit"]  # applied once the location estimate lands (M8)
+        assert r["route"] == route[r["specimen_id"]] and r["likely_place"] in location.PLACES
+        assert r["role"] == (cfg["routing"]["still_at_unit"] if r["likely_place"] == "at_unit" else cfg["routing"][r["route"]])
+        assert 0 < r["place_probability"] <= 1
         expected = receipt.get(r["specimen_id"])
         assert r["closed_at"] == ("" if expected is None else expected.isoformat(timespec="minutes"))
         assert r["closed_at"] == "" or r["closed_at"] > r["alert_at"]
