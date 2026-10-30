@@ -616,7 +616,7 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
     <!-- ───────── rubric ───────── -->
     <section id="rubric">
       <div class="head"><h2>Where the points are</h2><span class="note" id="rubNote"></span></div>
-      <p class="prose">The course guidelines score the project out of 100. Each line below lists the tasks that earn it, so nothing is left to chance. A tick means the task is done. The weekly milestones are worth the most and are the easiest to lose by skipping one.</p>
+      <p class="prose">The course guidelines score the project out of 100. These lines come from the guidelines as they stood before Ben's October 28 revision, which reduces the deliverables, so task W7 checks them. Each line below lists the tasks that earn it, so nothing is left to chance. A tick means the task is done. The weekly milestones are worth the most and are the easiest to lose by skipping one.</p>
       <div class="scroll-x" style="margin-top:18px"><table class="t" id="rubTable" style="min-width:760px"></table></div>
     </section>
 
@@ -629,7 +629,7 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
       <h3 class="sub">After November 18</h3>
       <ul class="after" id="after"></ul>
       <footer style="margin-top:56px">
-        <p>Hour estimates are ours and can be edited in each task. Prices are Anthropic's list prices as of October 6, 2026. Weekly draft dates come from the course guidelines, which call them tentative, so check Canvas. Every number in the cost table is an estimate until the pilot reports real usage. The page stores ticks, spend and cuts in the shared store when it can reach one, and on this device otherwise.</p>
+        <p>Updated October 30: Karissa's policy table is loaded and the clock stops at receipt, task K1 is done, S2 and D1 are partly done, and task W7 checks the plan against the revised course guidelines. Hour estimates are ours and can be edited in each task. Prices are Anthropic's list prices as of October 6, 2026. Weekly draft dates come from the course guidelines, which call them tentative, so check Canvas. Every number in the cost table is an estimate until the pilot reports real usage. The page stores ticks, spend and cuts in the shared store when it can reach one, and on this device otherwise.</p>
       </footer>
     </section>
 
@@ -664,25 +664,30 @@ const TASKS = [
  steps:["Open Canvas, Grades, and read each comment on Milestones 2 and 3.","Write one line per comment saying what changed because of it.","Put those lines in the next milestone, under the answer they belong to."],
  done:"A list of comments, each with the change that answers it.", earns:["M3"]},
 
+{id:"W7", tr:"write", day:[10,30], who:{D:0.5}, t:"Read Ben's revised project guidelines and prune this plan",
+ why:"Ben posted revised guidelines on October 28, after this plan was written. His announcement says the deliverables are greatly reduced and simplified, and teams now have much more freedom in the system, the talk and the final report. The 'if still due' drafts, the rubric below and some tasks may no longer be needed.",
+ steps:["Open the updated guidelines document linked from Ben's Canvas announcement of October 28.","For W3, W4 and W5, and for each rubric line under Points, note whether the revised guidelines still ask for it and what it is worth.","Delete tasks that are no longer required, or add them to the cuts, and change the rubric points to match. Move the freed hours to the board, the timeline and the rehearsals.","Run `node visuals/plan.check.cjs` after editing."],
+ done:"Every 'if still due' task and every rubric line is confirmed or removed against the revised guidelines.", earns:["M1"]},
+
 {id:"S1", tr:"data", day:[10,29], who:{D:1}, t:"Set up Claude API access with a hard cap",
  why:"Nothing else in the data track can run until this works, and the cap protects the credits.",
  steps:["Open the Anthropic Console, Billing. Read the promotional credit balance and its expiry date. The expiry must be after November 18. If it is earlier, tell Karissa today and switch to the fallback in the risks section.","Settings, Limits: set a monthly spend limit of $25.","Create a workspace named tracer and an API key named tracer-gen. Save the key in `.env` as `ANTHROPIC_API_KEY=...`. Never paste it into a chat, the repo or the demo page.","Run `pip install anthropic python-dotenv`.","Smoke test: `python -c \"import anthropic; r=anthropic.Anthropic().messages.create(model='claude-haiku-5-5', max_tokens=50, messages=[{'role':'user','content':'Say ok'}]); print(r.stop_reason, r.usage)\"`"],
  done:"The call prints a stop reason and a usage line, and the Console shows the $25 limit.", earns:[]},
 
-{id:"S2", tr:"data", day:[10,29], who:{D:1.5}, t:"Scaffold the project for building",
+{id:"S2", tr:"data", day:[10,29], who:{D:0.5}, t:"Scaffold the project for building",
  why:"One clean layout now saves every later task from deciding where things go.",
- steps:["Create `requirements.txt` with `anthropic`, `numpy`, `scipy`, `polars`, `duckdb`, `pyyaml`, `pytest` and `python-dotenv`.","Create `config/`, `tests/`, and the packages `src/generator/`, `src/pipeline/`, `src/models/`, `src/api/`, each with an `__init__.py`.","Add `.env` to `.gitignore` and add `.env.example` containing only the variable name.","Run `pytest`. It should report zero tests and exit cleanly.","Commit this as one change."],
- done:"`pytest` runs, and `git check-ignore .env` prints `.env`.", earns:["P4"]},
+ steps:["Partly done: `requirements.txt` has `pyyaml` and `pytest`. Add `anthropic`, `numpy`, `scipy`, `polars`, `duckdb` and `python-dotenv`.","Partly done: `config/`, `tests/` and `src/generator/` exist. Add an `__init__.py` to `src/pipeline/`, `src/models/` and `src/api/`.","Add `.env` to `.gitignore` and add `.env.example` containing only the variable name.","Run `pytest`. The nine policy tests should pass.","Commit this as one change."],
+ done:"`pytest` passes, and `git check-ignore .env` prints `.env`.", earns:["P4"]},
 
-{id:"K1", tr:"data", day:[10,29], who:{D:0.5, K:1}, t:"Thirty-minute call: the policy first pass", api:"J0",
- why:"Everything downstream waits on five answers. Rough answers are fine. A citation can come later.",
- steps:["Where does the clock stop? Answered by the policy table: at receipt, for every row (docs/architecture.md §10).","For the five specimen types (urine, body fluid, bronchoalveolar lavage, culture swab, tissue) and the tests ordered on each, including anaerobic culture: how long is the stability window, and how must the specimen travel?","Between receipt and set-up, does a specimen wait somewhere, and for about how long?","Where do specimens really go missing or sit too long: before leaving the unit, in the tube, at the receiving end? Give rough times for each leg.","How many alerts in a shift would still feel useful, and who acts on each kind of failure?","Daniel types the answers into `config/breach_policy.yaml` during the call and marks every value `source: assumed (v0)`. Optional: run the starter-ranges recipe first and bring its table, so the call corrects numbers instead of inventing them."],
- done:"Five answers written down and five rows in the policy file.", earns:["M2","P2"]},
+{id:"K1", tr:"data", day:[10,29], who:{D:0.5, K:1}, t:"Policy first pass",
+ why:"Everything downstream waited on these answers. Karissa's policy table, made on October 28, answered them without a call.",
+ steps:["Answered by the table: the clock stops at receipt for every row (`docs/architecture.md` §10).","Answered by the table: the stability window, transport and preservative for each specimen type and test, including anaerobic culture. 34 of 44 rows are sourced and 10 stay marked assumed.","No longer needed: any wait between receipt and set-up falls after the clock stops.","Moved to D1: rough times for each transport leg and the fault rates are drafted as labeled assumptions in `config/config.yaml`. Karissa sees their effect in the pilot review (K2).","Moved to K3: the alert budget and who acts on each kind of failure."],
+ done:"Karissa's table is loaded as `config/breach_policy.yaml` and its tests pass.", earns:["M2","P2"]},
 
-{id:"D1", tr:"data", day:[10,30], who:{D:3}, t:"Write the three configuration files", needs:["K1"],
+{id:"D1", tr:"data", day:[10,30], who:{D:1.5}, t:"Write the three configuration files", needs:["K1"], api:"J0",
  why:"The clock rule, the workflow and every assumed parameter live in configuration, so a change from Karissa costs a re-run and not a rewrite.",
- steps:["Done: `config/breach_policy.yaml`, compiled from the policy table by `python -m src.generator.compile_policy`, 44 rows, clock stops at receipt.","Done: `config/workflow_graph.yaml`, the stages and which of them produce a scan.","`config/config.yaml`: every generator parameter (arrivals by hour, specimen mix, route split, leg medians and spreads, fault rates), each with a comment that says it is an assumption.","Done: `src/generator/config.py` loads the policy and graph and fails loudly on a bad policy; extend it to load `config.yaml`.","Done: the bad-policy tests in `tests/test_policy.py`."],
- done:"`pytest` passes, including the bad-policy test.", earns:["P2","P3"]},
+ steps:["Done: `config/breach_policy.yaml`, compiled from the policy table by `python -m src.generator.compile_policy`, 44 rows, clock stops at receipt.","Done: `config/workflow_graph.yaml`, the stages and which of them produce a scan.","`config/config.yaml`: every generator parameter (arrivals by hour, specimen mix, route split, leg medians and spreads, fault rates), each with a comment that says it is an assumption. The specimen mix uses only the types and tests in the policy table. Optional: run the starter-ranges recipe for the leg times.","Done: `src/generator/config.py` loads the policy and graph and fails loudly on a bad policy; extend it to load `config.yaml`.","Done: the bad-policy tests in `tests/test_policy.py`."],
+ done:"`pytest` passes, including a test that `config.yaml` loads and that every specimen type and test in its mix has a policy row.", earns:["P2","P3"]},
 
 {id:"D2", tr:"data", day:[10,30], who:{D:2.5}, t:"Brief sampler, part 1: arrivals, mix and faults", needs:["D1"],
  why:"A seeded sampler decides what happens to each specimen, so the truth is ours and the dataset can be reproduced.",
@@ -775,8 +780,8 @@ const TASKS = [
  done:"The paragraph exists and quotes the numbers in `results/mvp-nov8.json`.", earns:["F3","T2","T3"]},
 
 {id:"W6", tr:"write", day:[11,8], who:{D:1}, t:"Bring the design documents up to date",
- why:"Today `docs/architecture.md` still says a simulator is the event source, and it lists a different five specimen types than Milestone 3.",
- steps:["Update `docs/architecture.md` sections 1.1, 6 and 12, and `README.md`, to describe the Claude-generated dataset.","Make the five specimen types match the Milestone 3 list.","Update the local `CLAUDE.md` and `AGENTS.md` status."],
+ why:"Today `docs/architecture.md` section 1.1 still says a simulator is the event source. The specimen types already follow the policy table.",
+ steps:["Update `docs/architecture.md` sections 1.1, 6 and 12, and `README.md`, to describe the Claude-generated dataset.","Check that section 6.1 and the generator config name the same specimen types as the policy table.","Update the local `CLAUDE.md` and `AGENTS.md` status."],
  done:"No document in the repo still says the simulator is the event source.", earns:["F2"]},
 
 {id:"M8", tr:"model", day:[11,9], who:{D:2}, t:"Location estimate, part 1: port the filter", needs:["M2"],
@@ -826,7 +831,7 @@ const TASKS = [
 
 {id:"P3", tr:"demo", day:[11,13], who:{D:3}, t:"Demo page, part 2: the specimen timeline", needs:["P2","D12"],
  why:"This is the moment of the demo: drag the clock and watch silence turn into an alert.",
- steps:["Click a board row to open its timeline: events with the silent gap drawn as a gap, the risk curve, location bars, expected arrival, the window marker labelled with the event that stops the clock, and the alert moment.","A scrubber moves time. Risk is recomputed in the browser from the parameters in the bundle.","Parity test: browser risk equals the Python risk to 1e-6 on 50 states."],
+ steps:["Click a board row to open its timeline: events with the silent gap drawn as a gap, the risk curve, location bars, expected arrival, the window marker labelled with the event that stops the clock, and the alert moment.","A scrubber moves time. Risk is recomputed in the browser from the parameters in the bundle.","Draw the window from collection to receipt, as the policy says. The system map still draws a set-up step after receipt, a 'Plated, clock stops' label and a 120-minute unpreserved urine window (gap 6 in `visuals/README.md`). None of that carries into the demo.","Parity test: browser risk equals the Python risk to 1e-6 on 50 states."],
  done:"You can scrub a real specimen and the alert fires at the same minute Python reports.", earns:["D3","D5","T3"]},
 
 {id:"G3", tr:"demo", day:[11,13], who:{D:1}, t:"Showcase scenarios", api:"J3", needs:["D12"],
@@ -911,7 +916,8 @@ const DONE_ALREADY = [
  {t:"Problem statement, architecture and roadmap", s:"Milestones 1 to 3, submitted."},
  {t:"The evidence that no public dataset records the interval", s:"MIMIC-IV demo check: 1,336 specimens, a median of 80.1 hours between their only two timestamps."},
  {t:"System map with the risk model and location filter running", s:"`visuals/architecture.html`, on assumed parameters."},
- {t:"Policy table, first pass and most citations", s:"Karissa's 44 rows, loaded as `config/breach_policy.yaml`. The clock stops at receipt; 34 rows are sourced and 10 are marked assumed."},
+ {t:"Policy table, first pass and most citations", s:"Karissa's 44 rows, compiled into `config/breach_policy.yaml` with the workflow graph, a loader that fails loudly and nine tests. The clock stops at receipt; 34 rows are sourced and 10 are marked assumed."},
+ {t:"The 3D specimen exhibit", s:"Built in `visuals/exhibit-3d` and embedded in the 3D view section."},
  {t:"Milestone 4 written", s:"A four-page LaTeX PDF and a paste-ready Markdown copy, on GitHub, in the shared Drive folder and in Downloads. Submitting it on Canvas is the first task below."}
 ];
 
@@ -941,7 +947,7 @@ const PRICE = {
 };
 const OUT_ALLOWANCE = 1.15;
 const JOBS = [
- {id:"J0", name:"Starter ranges", what:"One request that proposes ranges for transit times and failure rates, each with a reason, for Karissa to correct.", model:"sonnet", n:1, inTok:2500, cacheTok:0, outTok:2500, batch:false, when:"Oct 29", opt:true, task:"K1"},
+ {id:"J0", name:"Starter ranges", what:"One request that proposes ranges for transit times and failure rates, each with a reason, for Karissa to correct.", model:"sonnet", n:1, inTok:2500, cacheTok:0, outTok:2500, batch:false, when:"Oct 30", opt:true, task:"D1"},
  {id:"J1", name:"Pilot trails", what:"Event trail and true path for 200 specimens.", model:"haiku", n:200, inTok:350, cacheTok:3000, outTok:750, batch:false, when:"Nov 1", task:"D6"},
  {id:"J1b", name:"Pilot rerun, in reserve", what:"A second pilot if the first misses the bar.", model:"haiku", n:200, inTok:350, cacheTok:3000, outTok:750, batch:false, when:"Nov 2", opt:true, task:"D7"},
  {id:"J2", name:"Full dataset", what:"12,000 specimens in 30 seeded runs, through the Batch API.", model:"haiku", n:12000, inTok:350, cacheTok:3000, outTok:750, batch:true, when:"Nov 2", task:"D8"},
@@ -1001,25 +1007,25 @@ const BEATS = [
 
 const RISKS = [
  {r:"The generated trails are not realistic enough", watch:"Karissa marks fewer than 17 of 20 pilot timelines plausible, or the validator passes under 90 percent.", act:"Tighten the briefs and the prompt and rerun the pilot (about ten cents). If it still fails, render the trails from the briefs in code and let Claude write only the notes. The briefs already hold every timestamp, so this fallback costs nothing and cannot fail."},
- {r:"The policy table arrives late", watch:"The first call has not happened by October 30.", act:"Run on the assumed windows, marked assumed in every output. Citations can follow because the clock rule is configuration."},
+ {r:"Ten policy rows are still assumptions", watch:"The 10 rows marked `assumed: true` in `config/breach_policy.yaml`.", act:"Every output that uses them says so, and the limits beat names them. A citation found later goes into `config/policy_sources.csv` and costs a recompile, not a code change."},
+ {r:"The revised guidelines change what is graded", watch:"Task W7 on October 30.", act:"Prune the plan to what the revised guidelines ask for and move the freed hours to the board, the timeline and the rehearsals."},
  {r:"The risk model does not beat the simple rule", watch:"The Gate B comparison.", act:"Report it as the result, show both in the demo, and tell the story as a simple rule being good enough, with the evidence. The architecture already commits to this."},
  {r:"We run out of hours", watch:"The schedule check at the top shows a gate short by more than two hours.", act:"Take the cuts in the order listed, starting with the 3D link-up. Never cut the board, the timeline or the rehearsals."},
  {r:"The credits expire or the API is down", watch:"Balance and expiry checked on October 29. Batch status on November 2.", act:"Every Claude output is saved as a file once generated, so the demo is unaffected. For missing data use the code fallback above."},
  {r:"The demo fails on class devices", watch:"The device tests on November 15.", act:"The 2D timeline is the default path and 3D is the extra. `?lite=1` forces 2D."},
  {r:"Karissa is unavailable on the day or for a rehearsal", watch:"Calendars confirmed by November 8.", act:"The text for Karissa's beats is written ahead and the first rehearsal is recorded, so Daniel can cover those beats from notes."},
  {r:"The instructor does not accept a static page as the demo", watch:"The answer to the November 4 question.", act:"Export the same logic as a Marimo app that runs in the browser, or host on Streamlit Community Cloud. Two to four hours."},
- {r:"The design documents contradict the plan", watch:"The architecture still says a simulator is the event source and lists a different five specimen types.", act:"Task W6 on November 8 brings them in line."}
+ {r:"The design documents contradict the plan", watch:"The architecture's section 1.1 still says a simulator is the event source.", act:"Task W6 on November 8 brings it in line."}
 ];
 
 const QUESTIONS = [
+ {q:"What do Ben's revised guidelines of October 28 still require: which drafts, which deliverables, and how many points each?", who:"Daniel", by:"Oct 30"},
  {q:"Is a static GitHub Pages page an acceptable publicly accessible interactive web application?", who:"Instructor", by:"Nov 4"},
  {q:"How long is each presentation slot?", who:"Instructor", by:"Nov 4"},
  {q:"Are the weekly draft milestones (Results Nov 4, Discussion Nov 11, Responsible Deployment Plan Nov 18) still due, now that Milestone 4 replaced the Methods draft?", who:"Instructor", by:"Nov 1"},
  {q:"How much provenance does the report need for AI-generated synthetic data?", who:"Instructor", by:"Nov 11"},
  {q:"Do the promotional credits last past November 18, and what is the exact balance?", who:"Daniel", by:"Oct 29"},
  {q:"Is there instructor feedback on Milestones 2 and 3 that the next submission should answer?", who:"Daniel", by:"Oct 28"},
- {q:"Which five specimen types? Milestone 3 lists urine, body fluid, lavage, culture swab and tissue. Section 6.1 of the architecture still lists CSF, two urines, a wound swab and sputum.", who:"Karissa", by:"Oct 29"},
- {q:"Where does the clock stop? Milestone 2 says plating. Confirm it, with the citation.", who:"Karissa", by:"Nov 8"},
  {q:"How many alerts per shift would a laboratory tolerate, and who acts on each kind of failure?", who:"Karissa", by:"Nov 8"}
 ];
 
@@ -1039,8 +1045,8 @@ const RECIPES = [
   {pre:"You write a search brief for a laboratory receiving technologist. The input is JSON: specimen type, minutes since the last scan, risk of missing the stability window, the most likely locations with probabilities, the expected arrival time, and minutes left before the window closes.\n\nWrite at most 60 words of plain text in three parts, in this order: where to look first, why that place, how many minutes are left.\n\nUse only the numbers in the input. Do not claim certainty. Do not give medical advice."}]},
  {title:"Showcase scenario", sub:"Used in G3", parts:[
   {pre:"You write the story of one real simulated specimen for a mixed audience of students and clinicians. The input is its timeline, what Tracer did, and the true path. Return JSON with three fields: story (at most 90 words, past tense, no names), takeaway (one sentence), and question (one question the audience should ask). Use only facts in the input."}]},
- {title:"Starter ranges", sub:"Optional, used in K1", parts:[
-  {pre:"List plausible ranges for pneumatic tube specimen transport in a general hospital laboratory: wait before dispatch, tube transit, dwell at the receiving station, wait between receipt and set-up, and how often specimens stall, are misrouted or are lost. For each give a median in minutes, a spread, a one-sentence reason, and what would change your mind. A clinical scientist will correct these. Label every value as an assumption. Do not present any figure as measured data."}]}
+ {title:"Starter ranges", sub:"Optional, used in D1 for the leg times in config.yaml", parts:[
+  {pre:"List plausible ranges for pneumatic tube specimen transport in a general hospital laboratory: wait before dispatch, tube transit, dwell at the receiving station, wait between receipt and set-up, and how often specimens stall, are misrouted or are lost. For each give a median in minutes, a spread, a one-sentence reason, and what would change your mind. A clinical scientist will review the pilot they produce. Label every value as an assumption. Do not present any figure as measured data."}]}
 ];
 
 /* ───────── arithmetic ───────── */
