@@ -286,6 +286,14 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** the first engine test read the window control's label before the page's next animation frame had applied it, and failed in all three engines; the page was right and the test now waits for the change. The public site's root returns 404, because only `/demo/` has a page.
 - **Assumed:** the address is the project site's, <https://scalinity.github.io/Tracer/demo/>. Publishing `docs/` makes everything in it reachable by address: the notes, the submissions and the tracked guidelines PDF, all already public in the repository. The browser checks ran against a local copy served under `/Tracer/`, and the public site was checked with curl, not loaded in a browser. A real phone, a screen reader and Beat Tracer with three people have not been run.
 
+### Oct 30 · A4 (clean-clone test) · Run the README from a fresh clone (this pull request)
+
+- **Agent:** cloned the repository from GitHub into a new folder, installed `requirements.txt` into a new venv and ran the README's commands in order, then wrote `scripts/clean_clone.sh` to repeat it and fixed what the first run found. The script fails on a test failure or on any committed output that differs from what the commands write again.
+- **Daniel:** the run order pulled the clean-clone test ahead of schedule. He did not choose what it checks.
+- **Went wrong:** the README ran `pytest` before the store existed, so 4 tests failed and 44 errored; the store now comes first. A fresh install gets DuckDB 2.0, which removed `fetchone()` on a relation, and five test queries failed on it (the product code was not affected); they now go through `execute()`. The script's first version broke on a Python path with spaces in it.
+- **Assumed:** a fresh clone installs the newest versions that `requirements.txt` allows, so the test is only as good as that day's releases and should be rerun before the freeze and the final prototype. The key-value test skips without `.env`, as intended. The README and demo polish parts of A4 are not done.
+- **Found:** with the fixes, every committed result, the demo bundle and the QR code regenerate byte for byte on a clean clone, and 575 tests pass.
+
 ## The Claude API jobs
 
 All jobs call `claude-haiku-5-5` at low effort with thinking off. The reply must match a JSON schema, so replies parse and retries stay rare. Bulk jobs run through the Batch API at half price, and every call is logged to `data/claude/usage.jsonl` (kept local). The order for each job is a token count, a pilot, then the batch, and a job's estimate must be under the plan's gate before it starts.
