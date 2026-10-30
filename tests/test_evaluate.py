@@ -160,13 +160,13 @@ def test_the_committed_numbers_are_the_ones_the_code_regenerates(result):
 
 def test_the_held_out_population_matches_the_store(result):
     con = store.open_observed()
-    assert result["test_specimens"] == con.sql("select count(*) from specimens where split = 'test'").fetchone()[0]
+    assert result["test_specimens"] == con.execute("select count(*) from specimens where split = 'test'").fetchone()[0]
     assert result["with_a_clock"] + result["without_a_clock"] == result["test_specimens"]
     assert result["held_out_runs"] == "24 to 29" and result["shifts"] == 126
     t = store.open_truth()
-    assert result["breaches"] == t.sql(
+    assert result["breaches"] == t.execute(
         "select count(*) from truth_specimens where split = 'test' and breach and clock_started").fetchone()[0]
-    assert result["without_a_clock"] == t.sql(
+    assert result["without_a_clock"] == t.execute(
         "select count(*) from truth_specimens where split = 'test' and not clock_started").fetchone()[0]
 
 

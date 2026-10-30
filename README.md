@@ -29,9 +29,9 @@ Everything below runs from the frozen dataset, with no API key and no network.
 ```sh
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-pytest                                    # the unit and integration tests, all offline
-
 python -m src.pipeline.store              # load datasets/ into data/store/: an observed file and a truth file
+pytest                                    # the unit and integration tests, all offline; many read the store, so it comes first
+
 python -m src.pipeline.intervals          # fit the transit-time distributions -> results/interval_params.json
 python -m src.pipeline.recovery           # does the fit recover what the generator planted?
 python -m src.pipeline.evaluate           # baselines against the risk model on the held-out runs, and the alert list
@@ -41,6 +41,7 @@ python -m src.pipeline.sensitivity      # reweight the held-out runs for other v
 
 node visuals/plan.check.cjs               # the plan's data is consistent
 (cd visuals/exhibit-3d && npm install && npm test)   # the 3D exhibit's tests; `npm run dev` serves it
+scripts/clean_clone.sh                    # all of this from a fresh clone, failing on a test or a changed output (about 5 minutes)
 ```
 
 Generating a dataset needs `ANTHROPIC_API_KEY` in `.env` and spends money. The first command prints a table

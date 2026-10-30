@@ -101,9 +101,9 @@ def test_a_group_fits_itself_exactly_when_it_has_thirty_received(params):
 
 def test_the_fit_uses_the_fit_runs_only(params):
     con = store.open_observed()
-    started = con.sql("""select count(*) from specimens s join events e on e.specimen_id = s.specimen_id
+    started = con.execute("""select count(*) from specimens s join events e on e.specimen_id = s.specimen_id
                          and e.activity = 'collected' where s.split = 'fit'""").fetchone()[0]
-    everything = con.sql("select count(*) from events where activity = 'collected'").fetchone()[0]
+    everything = con.execute("select count(*) from events where activity = 'collected'").fetchone()[0]
     assert params["pooled"]["n_started"] == started < everything
     assert params["fit_runs"] == "0 to 23"
 
