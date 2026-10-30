@@ -213,8 +213,8 @@ def test_ten_showcase_candidates_one_per_kind_and_each_is_in_the_bundle(bundle):
     assert max(shortest) <= bundle["horizon_min"]  # the timeline and the 3D view can show them
 
 
-def test_no_hero_stories_yet(bundle):
-    assert bundle["heroes"] == []  # plan task G3 fills them
+def test_the_heroes_are_the_stories_for_the_candidates(bundle):
+    assert [h["id"] for h in bundle["heroes"]] == [c["id"] for c in bundle["showcase_candidates"]]  # plan task G3
 
 
 # ---- what the bundle must not be ----
