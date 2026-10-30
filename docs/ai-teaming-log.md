@@ -200,6 +200,13 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** the history does not show Daniel's part in most entries, so most say "Daniel to confirm". He should correct any entry that misstates his part.
 - **Assumed:** the agent's account of each entry comes from the descriptions and its own record of the session, not from a second source.
 
+### Oct 30 · M6 · Save the midterm snapshot and tag v0.1-mvp (this pull request)
+
+- **Agent:** cloned `main` fresh into an empty folder and rebuilt everything from the frozen dataset: the two stores, the fit, the recovery check, the evaluation and the location scoring. Every result matched the committed one, and 385 tests passed in the clone. Then wrote `results/mvp-nov8.json` (the headline by alerts per shift, the pre-registered bar, nine caveats, the full results and where each came from), pinned its hash in a test, and tagged the merge commit `v0.1-mvp`.
+- **Daniel:** decided on Oct 30 that tags happen on their own once their condition is met, and that the file stays untouched so the December 2 results can be compared against it.
+- **Went wrong:** the first draft of the snapshot counted all 96 groups as having taken a parent's fit instead of 21, found by reading the output before it was saved.
+- **Assumed:** the bar is judged on median warning over all breaches (a miss counts as zero), at the lower end of the 95% interval. The clean checkout reused the repo's existing Python environment instead of installing a new one. The tag sits on the merge commit that adds the file, whose code is the commit the evaluation ran on.
+
 ## The Claude API jobs
 
 All jobs call `claude-haiku-5-5` at low effort with thinking off. The reply must match a JSON schema, so replies parse and retries stay rare. Bulk jobs run through the Batch API at half price, and every call is logged to `data/claude/usage.jsonl` (kept local). The order for each job is a token count, a pilot, then the batch, and a job's estimate must be under the plan's gate before it starts.
