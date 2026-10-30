@@ -5,7 +5,7 @@
 
 import { FATES, truthAt, type FateId, type Fate, type Place } from './fates';
 import {
-  alertMinute, componentWeights, locationSeries, MAX_T, riskReceived, riskUnreceived, TUBE_AGES, type LocationStep, type Params,
+  alertMinute, componentWeights, locationSeries, MAX_T, riskAfterReceipt, riskUnreceived, TUBE_AGES, type LocationStep, type Params,
 } from './tracer';
 
 export interface ExhibitState {
@@ -41,9 +41,9 @@ export interface Preset { id: FateId; label: string; silence: number }
 /** The fates in teaching order, each at the minute that shows its idea. */
 export const PRESETS: Preset[] = [
   { id: 'arrives', label: FATES.arrives.label, silence: 26 },
-  { id: 'stalls', label: FATES.stalls.label, silence: 55 },
+  { id: 'stalls', label: FATES.stalls.label, silence: 62 },
   { id: 'lost', label: FATES.lost.label, silence: 90 },
-  { id: 'unsent', label: FATES.unsent.label, silence: 55 },
+  { id: 'unsent', label: FATES.unsent.label, silence: 62 },
 ];
 
 const clamp = (v: number, [lo, hi]: [number, number]) => Math.min(hi, Math.max(lo, v));
@@ -98,11 +98,10 @@ export interface Reading {
   minute: number;
   windowMin: number;
   alertLine: number;
-  /** Silent: no receipt scan yet. Received: in the lab, not yet plated. Plated: the clock has stopped. */
-  phase: 'silent' | 'received' | 'plated';
-  /** Scans the lab has seen by now (minutes), besides the collection scan at 0. */
+  /** Silent: no receipt scan yet. Received: in the lab, the clock has stopped and the outcome is known. */
+  phase: 'silent' | 'received';
+  /** The receipt scan's minute once it has come: the clock stops there. */
   received: number | null;
-  plated: number | null;
   /** P(miss the window). */
   risk: number;
   /** Where the specimen is: the location posterior while silent, the lab once scanned. Sums to 1. */
@@ -125,7 +124,7 @@ export interface Reading {
   lead: number | null;
   /** The mixture's weights among specimens still silent (normal, stalled…, then lost); null once scanned. */
   components: { parts: number[]; lost: number } | null;
-  /** The window closed before plating. */
+  /** The window closed before the receipt scan. */
   missed: boolean;
   /** The last receipt scan and the risk an instant before and after it. */
   scan: { at: number; before: number; after: number } | null;
@@ -167,8 +166,7 @@ export class TracerModel {
   /** P(miss) for this fate at whole minute t, as the lab's Tracer would have computed it then. */
   riskAt(fate: Fate, t: number, W: number): number {
     if (fate.received === null || t < fate.received) return this.curve(W)[t];
-    if (fate.plated === null || t < fate.plated) return riskReceived(t, this.params, W);
-    return fate.plated <= W ? 0 : 1;
+    return riskAfterReceipt(fate.received, W);
   }
 
   read(s: ExhibitState): Reading {
@@ -177,8 +175,7 @@ export class TracerModel {
     const fate = FATES[s.fate];
     const curve = this.curve(W);
     const received = fate.received !== null && m >= fate.received ? fate.received : null;
-    const plated = fate.plated !== null && m >= fate.plated ? fate.plated : null;
-    const phase = plated !== null ? 'plated' : received !== null ? 'received' : 'silent';
+    const phase = received !== null ? 'received' : 'silent';
     const risk = this.riskAt(fate, m, W);
 
     const places: Record<Place, number> = { ward: 0, tube: 0, station: 0, lost: 0, lab: 0 };
@@ -202,14 +199,14 @@ export class TracerModel {
     const projected = alertMinute((t) => curve[t], line, p.tickMin, MAX_T);
     const fired = minute !== null && minute <= m;
     return {
-      minute: m, windowMin: W, alertLine: line, phase, received, plated, risk, places, stalled,
+      minute: m, windowMin: W, alertLine: line, phase, received, risk, places, stalled,
       likely: { place: likely, p: places[likely] },
       alert: { projected, minute, fired, clearedAt: fired && received !== null ? received : null },
       windowLeft: Math.max(0, W - m),
       lead: projected === null ? null : W - projected,
       components: phase === 'silent' ? componentWeights(m, p) : null,
-      missed: m >= W && !(plated !== null && plated <= W),
-      scan: received === null ? null : { at: received, before: curve[received], after: riskReceived(received, p, W) },
+      missed: m >= W && !(fate.received !== null && fate.received <= W),
+      scan: received === null ? null : { at: received, before: curve[received], after: riskAfterReceipt(received, W) },
     };
   }
 

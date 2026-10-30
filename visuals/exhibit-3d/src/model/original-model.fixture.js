@@ -11,14 +11,13 @@ const PARAM = {
     {w:0.08, m:70, s:0.60, label:"stalled, arrives late"}
   ],
   lossFraction:  0.04,                     // never arrives
-  setupMedian:   22, setupSigma:   0.40,   // receipt → plated, minutes
-  windowMin:     120,                      // stability window
+  windowMin:     60,                       // stability window: the policy's, for unpreserved urine at room temperature
   tickMin:       5,                        // twin re-score cadence
   operatingPoint:0.45,                     // alert threshold on P(miss window)
   collectedAt:   2*60 + 14,                // 02:14 in minutes past midnight
-  receivedAt:    68,                       // scenario: found after the alert
-  accessionedAt: 76,
-  platedAt:      87,
+  receivedAt:    52,                       // scenario: found after the alert; the clock stops here
+  accessionedAt: 60,                       // later scans, after the clock has stopped
+  platedAt:      71,
   /* Sub-legs inside the unobserved interval, with explicit durations and where each
      one can go next. "Stalled" is a real state rather than a long tail, because a
      model whose only explanation for silence is loss will always cry loss. */
@@ -44,25 +43,23 @@ const lnCdf  = (t,m,s) => t <= 0 ? 0 : normCdf(Math.log(t/m)/s);
 const lnSurv = (t,m,s) => 1 - lnCdf(t,m,s);
 const lnPdf  = (t,m,s) => t <= 0 ? 0 : Math.exp(-Math.pow(Math.log(t/m),2)/(2*s*s))/(t*s*Math.sqrt(2*Math.PI));
 
-/* P(window missed | no receipt scan yet at t minutes).
-   Mixture of a lognormal transit and a fraction that never arrives. As t passes the
-   normal transit mode, the surviving mass is increasingly the failure component. */
+/* P(window missed | no receipt scan yet at t minutes). The clock stops at the receipt scan, so the
+   window is missed exactly when the scan has not come by W. Of the specimens still unreceived at t,
+   the ones that miss it are those still unreceived at W: the never-arrivals and the slow tail. As the
+   normal transit passes without a scan, the surviving mass is increasingly that failure component. */
 function riskUnreceived(t){
-  const {mix, setupMedian:m2, setupSigma:s2, lossFraction:pl, windowMin:W} = PARAM;
-  let notReceived = pl, safe = 0;           // safe = arrives at u, then set up in time
+  const {mix, lossFraction:pl, windowMin:W} = PARAM;
+  if (t >= W) return 1;
+  let notReceived = pl, notByWindow = pl;
   for (const c of mix){
     notReceived += c.w * lnSurv(t, c.m, c.s);
-    for (let u = Math.max(t,0) + 0.5; u < W; u += 1){
-      safe += c.w * lnPdf(u, c.m, c.s) * lnCdf(W-u, m2, s2);
-    }
+    notByWindow += c.w * lnSurv(W, c.m, c.s);
   }
-  return 1 - safe/notReceived;
+  return notByWindow / notReceived;
 }
-/* After the receipt scan, only the in-lab leg remains. */
-const riskReceived = t => lnSurv(PARAM.windowMin - t, PARAM.setupMedian, PARAM.setupSigma);
-
+/* After the receipt scan the clock has stopped and the outcome is known. */
 const riskAt = t => t < PARAM.receivedAt ? riskUnreceived(t)
-                  : t < PARAM.platedAt   ? riskReceived(t) : 0;
+                  : PARAM.receivedAt <= PARAM.windowMin ? 0 : 1;
 
 /* Location posterior: forward filter over sub-legs on a one-minute grid, conditioned
    on "no receipt scan yet". Absence of a scan is the input, not a special case. */
@@ -105,7 +102,7 @@ function locationSeries(maxT){
 /* ════════════════════════════════════════════════════════════
    2. Derived series and scenario events
    ════════════════════════════════════════════════════════════ */
-const MAXT = 130;
+const MAXT = 90;
 const RISK = Array.from({length: MAXT+1}, (_,t) => riskAt(t));
 const LOC  = locationSeries(MAXT);
 

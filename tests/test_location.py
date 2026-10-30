@@ -38,7 +38,7 @@ def gen():
 def js_location_series(max_t):
     """locationSeries from the real page, evaluated by node: one row per minute, the four legs then lost."""
     html = ARCHITECTURE.read_text(encoding="utf-8")
-    script = (html[html.index("const PARAM = {"):html.index("const MAXT = 130;")]
+    script = (html[html.index("const PARAM = {"):html.index("const MAXT = ")]
               + f"\nconsole.log(JSON.stringify(locationSeries({max_t}).map(s => [...s.legs, s.lost])));")
     return np.array(json.loads(subprocess.run(["node", "-e", script], capture_output=True, text=True, check=True).stdout))
 

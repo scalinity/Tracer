@@ -25,7 +25,7 @@ export interface Decks {
   /** Front-edge anchors for the deck labels. */
   anchors: { truth: THREE.Object3D; lab: THREE.Object3D; tracer: THREE.Object3D };
   /** 0 to 1: the decks rise from the bench to their heights. Scans light their pips. */
-  update(explode: number, scans: { received: boolean; plated: boolean }): void;
+  update(explode: number, scans: { received: boolean }): void;
 }
 
 /** A thin etched line on a plate between two plan points. */
@@ -100,7 +100,6 @@ export function buildDecks(): Decks {
   };
   pipAt(ward);
   pipAt(lab);
-  pipAt(new THREE.Vector2(lab.x + 0.75, lab.y));
 
   // ---- What Tracer infers: the plate the glow lifts onto, its route etched faintly ----
   const tracerDeck = deck('WHAT TRACER INFERS');
@@ -124,7 +123,6 @@ export function buildDecks(): Decks {
       group.visible = explode > 0.02;
       pips[0].value = 2.6;
       pips[1].value = scans.received ? 2.6 : 0.12;
-      pips[2].value = scans.plated ? 2.6 : 0.12;
     },
   };
 }

@@ -259,11 +259,11 @@ labels.add(app.anchors.beacon, {
 });
 const truthLabel = labels.add(carrier.anchor, {
   name: 'Truth', color: 'truth', priority: 7, leader: true, offset: { x: -0.35, y: -1.05, z: 1.35 },
-  value: () => describeSpot(model.truth(state.fate, silence.value).spot, silence.value, FATES[state.fate]),
+  value: () => describeSpot(model.truth(state.fate, silence.value).spot, silence.value),
 });
 const deckLabels = [
   labels.add(decks.anchors.truth, { name: 'What happened', color: 'truth', priority: 2, occlude: false, value: () => 'the truth' }),
-  labels.add(decks.anchors.lab, { name: 'What the lab sees', color: 'amber', priority: 2, occlude: false, value: () => `${1 + (shown.received !== null ? 1 : 0) + (shown.plated !== null ? 1 : 0)} scan${shown.received !== null ? 's' : ''}` }),
+  labels.add(decks.anchors.lab, { name: 'What the lab sees', color: 'amber', priority: 2, occlude: false, value: () => `${1 + (shown.received !== null ? 1 : 0)} scan${shown.received !== null ? 's' : ''}` }),
   labels.add(decks.anchors.tracer, { name: 'What Tracer infers', color: 'cyan', priority: 2, occlude: false, value: () => `${riskPct(shown.risk)} risk` }),
 ];
 // Amber hint pills on the parts, each shown only while a lesson step waits on that part.
@@ -357,7 +357,7 @@ const lesson = new Lesson([
     hold: 0.4,
     said: () => {
       const scan = readAt({ silence: 26 }).scan!;
-      return `The scan at {amber:${scan.at} min} ended the silence: the risk fell from {cyan:${riskPct(scan.before)}} to {cyan:${riskPct(scan.after)}}.`;
+      return `The scan at {amber:${scan.at} min} stopped the clock: the risk fell from {cyan:${riskPct(scan.before)}} to {cyan:${riskPct(scan.after)}}.`;
     },
     perform: () => {
       setState({ ...state, fate: 'arrives', silence: 0, truth: true }, { instant: true });
@@ -383,13 +383,13 @@ const lesson = new Lesson([
       const r = readAt({ silence: a });
       return `After {amber:${a} min} of silence the risk reached {cyan:${riskPct(r.risk)}}, past the {amber:${Math.round(r.alertLine * 100)}%} line: Tracer alerts with {amber:${r.windowMin - a} min} left and looks first at ${r.likely.place === 'lost' ? 'lost' : `the ${PLACE_WORDS[r.likely.place]}`} (${placeShare(r.likely.place, r.likely.p)}).`;
     },
-    perform: runClock(58, 7),
+    perform: runClock(63, 7),
   },
   {
     ask: 'Lower the alert line to warn sooner: drag it on the chart, or turn the ALERT LINE knob.',
     hint: knobHint,
     enter: () => setPlaying(false),
-    done: () => shown.alert.projected !== null && shown.alert.projected <= 45 && alertLine.settled,
+    done: () => shown.alert.projected !== null && shown.alert.projected <= 50 && alertLine.settled,
     hold: 0.6,
     said: () => {
       const base = readAt({ alertLine: P.operatingPoint });
@@ -584,7 +584,7 @@ stage.onFrame((dt, elapsed) => {
   app.beaconLevel.value = beaconOn * (3.0 + (prefersReducedMotion() ? 0 : 0.45 * Math.sin(elapsed * 2.2)));
   // The scanner's line flashes as a scan happens.
   const f = FATES[state.fate];
-  const near = Math.min(...[f.received, f.plated].map((t) => (t === null ? Infinity : Math.abs(ds.silence - t))));
+  const near = f.received === null ? Infinity : Math.abs(ds.silence - f.received);
   app.scanLevel.value = 0.55 + 4.5 * Math.max(0, 1 - near / 1.5);
 
   // The truth, and the light.
@@ -593,7 +593,7 @@ stage.onFrame((dt, elapsed) => {
   carrier.setReveal(reveal.value * arrival.value);
   truthLabel.setVisible(reveal.value > 0.5);
   glow.update(dt, { fate: state.fate, silence: ds.silence, explode: explode.value });
-  decks.update(explode.value, { received: shown.received !== null, plated: shown.plated !== null });
+  decks.update(explode.value, { received: shown.received !== null });
   for (const l of deckLabels) l.setVisible(explode.value > 0.6);
 
   // Console screens: redrawn only when what they show changes.
@@ -606,7 +606,7 @@ stage.onFrame((dt, elapsed) => {
   });
   const truthPlace = reveal.value > 0.5 ? placeOfSpot(tr.spot) : null;
   app.bars.draw([shown.minute, state.fate, truthPlace, shown.phase], (ctx, size) => drawBars(ctx, size, { reading: shown, truth: truthPlace }));
-  app.log.draw([shown.phase === 'silent' ? shown.minute : -1, shown.received, shown.plated, shown.alert.fired], (ctx, size) => drawLog(ctx, size, { reading: shown }));
+  app.log.draw([shown.phase === 'silent' ? shown.minute : -1, shown.received, shown.alert.fired], (ctx, size) => drawLog(ctx, size, { reading: shown }));
 
   // Readouts, the card, the caption.
   const risk = riskPct(shown.risk);
@@ -618,7 +618,7 @@ stage.onFrame((dt, elapsed) => {
   }
   const likelyColor = shown.likely.place === 'lost' ? 'coral' : '';
   if (likelyColor !== last.likelyColor) hud.setStatColor('likely', (last.likelyColor = likelyColor) || null);
-  const warning = shown.phase === 'plated' ? '—' : String(shown.windowLeft);
+  const warning = shown.phase === 'received' ? '—' : String(shown.windowLeft);
   if (warning !== last.warning) hud.setStat('warning', (last.warning = warning), warning === '—' ? undefined : 'min');
   const warnColor = shown.alert.fired && shown.alert.clearedAt === null ? 'amber' : '';
   if (warnColor !== last.warnColor) hud.setStatColor('warning', (last.warnColor = warnColor) || null);
@@ -628,7 +628,7 @@ stage.onFrame((dt, elapsed) => {
   hud.setControl('alertLine', ds.alertLine);
   hud.setControl('windowMin', ds.windowMin);
   lesson.update(dt);
-  const live = caption(shown, { shown: reveal.value > 0.5, place: placeOfSpot(tr.spot), words: describeSpot(tr.spot, ds.silence, f) }, P);
+  const live = caption(shown, { shown: reveal.value > 0.5, place: placeOfSpot(tr.spot), words: describeSpot(tr.spot, ds.silence) }, P);
   const c = lesson.caption(live);
   if (c !== last.caption) hud.setCaption((last.caption = c));
   root.classList.toggle('lesson-on', lesson.speaking);

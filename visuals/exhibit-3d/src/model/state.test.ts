@@ -4,7 +4,7 @@ import { applyOverride } from './params';
 import {
   defaultState, matchPreset, nudge, PRESETS, TracerModel, withPreset, withTruth, withValue, type ExhibitState,
 } from './state';
-import { ASSUMED, MAX_T, riskReceived, riskUnreceived } from './tracer';
+import { ASSUMED, MAX_T, riskAfterReceipt, riskUnreceived } from './tracer';
 import { readSpecimenQuery, sameOriginUrl, setsUpState, startState } from './url';
 
 const model = new TracerModel(ASSUMED);
@@ -12,50 +12,51 @@ const at = (fate: ExhibitState['fate'], silence: number, extra: Partial<ExhibitS
   ({ ...defaultState(ASSUMED), fate, silence, ...extra });
 
 describe('the start state and the presets', () => {
-  it('starts on the stalled specimen of architecture.md §3 at its alert minute, truth shown', () => {
+  it('starts on the stalled specimen of architecture.md §3 just past its alert minute, truth shown', () => {
     const s = defaultState(ASSUMED);
-    expect(s).toEqual({ fate: 'stalls', silence: 55, alertLine: 0.45, windowMin: 120, truth: true });
+    expect(s).toEqual({ fate: 'stalls', silence: 62, alertLine: 0.45, windowMin: 120, truth: true });
     expect(matchPreset(s, ASSUMED)).toBe('stalls');
   });
 
-  it('On time: the receipt scan at 24 min ends the silence and the risk falls to 0.0%', () => {
+  it('On time: the receipt scan at 24 min stops the clock and the risk falls to 0.0%', () => {
     const r = model.read(withPreset(defaultState(ASSUMED), 'arrives', ASSUMED));
     expect(r.phase).toBe('received');
-    expect(r.scan).toEqual({ at: 24, before: riskUnreceived(24, ASSUMED), after: riskReceived(24, ASSUMED) });
-    expect(r.risk).toBe(riskReceived(26, ASSUMED));
-    expect(r.risk).toBeLessThan(0.0005);
+    expect(r.scan).toEqual({ at: 24, before: riskUnreceived(24, ASSUMED), after: 0 });
+    expect(r.risk).toBe(0);
+    expect(r.missed).toBe(false);
     expect(r.likely).toEqual({ place: 'lab', p: 1 });
     expect(r.alert.fired).toBe(false);
   });
 
-  it('Stalls: the alert fires at 55 min with 65 min left, and the station is most likely', () => {
+  it('Stalls: the alert fires at 60 min with 60 min of lead, and the station is most likely', () => {
     const r = model.read(withPreset(defaultState(ASSUMED), 'stalls', ASSUMED));
-    expect(r.alert).toEqual({ projected: 55, minute: 55, fired: true, clearedAt: null });
-    expect(r.windowLeft).toBe(65);
-    expect(r.lead).toBe(65);
+    expect(r.alert).toEqual({ projected: 60, minute: 60, fired: true, clearedAt: null });
+    expect(r.windowLeft).toBe(58);
+    expect(r.lead).toBe(60);
     expect(r.likely.place).toBe('station');
-    expect(r.likely.p).toBeCloseTo(0.6845, 4);
+    expect(r.likely.p).toBeCloseTo(0.619, 3);
   });
 
-  it('Stalls: the receipt scan at 68 min clears the alert', () => {
+  it('Stalls: the receipt scan at 68 min clears the alert and stops the clock', () => {
     const r = model.read(at('stalls', 70));
-    expect(r.alert).toEqual({ projected: 55, minute: 55, fired: true, clearedAt: 68 });
-    expect(r.risk).toBe(riskReceived(70, ASSUMED));
+    expect(r.alert).toEqual({ projected: 60, minute: 60, fired: true, clearedAt: 68 });
+    expect(r.risk).toBe(riskAfterReceipt(68, ASSUMED.windowMin));
+    expect(r.risk).toBe(0);
   });
 
   it('Lost: by 90 min lost is the best explanation', () => {
     const r = model.read(withPreset(defaultState(ASSUMED), 'lost', ASSUMED));
     expect(r.likely.place).toBe('lost');
     expect(r.likely.p).toBeCloseTo(0.5968, 4);
-    expect(r.risk).toBeCloseTo(0.9276, 4);
+    expect(r.risk).toBeCloseTo(0.7834, 4);
   });
 
-  it('Never sent reads exactly like Stalls at 55 min: silence carries no clue', () => {
+  it('Never sent reads exactly like Stalls at 62 min: silence carries no clue', () => {
     const a = model.read(withPreset(defaultState(ASSUMED), 'unsent', ASSUMED));
     const b = model.read(withPreset(defaultState(ASSUMED), 'stalls', ASSUMED));
     expect(a).toEqual(b);
-    expect(truthAt(FATES.unsent, 55).spot).toBe('ward');
-    expect(truthAt(FATES.stalls, 55).spot).toBe('station');
+    expect(truthAt(FATES.unsent, 62).spot).toBe('ward');
+    expect(truthAt(FATES.stalls, 62).spot).toBe('station');
   });
 
   it('presets come in teaching order with keys 1 to 4', () => {
@@ -82,20 +83,20 @@ describe('readouts', () => {
     expect(model.read(at('lost', 130, { windowMin: 120 })).windowLeft).toBe(0);
   });
 
-  it('a lower line warns sooner: 30% alerts at 45 min with 75 min of lead', () => {
+  it('a lower line warns sooner: 30% alerts at 50 min with 70 min of lead', () => {
     const r = model.read(at('lost', 55, { alertLine: 0.3 }));
-    expect(r.alert.projected).toBe(45);
-    expect(r.lead).toBe(75);
+    expect(r.alert.projected).toBe(50);
+    expect(r.lead).toBe(70);
   });
 
-  it('a shorter window warns sooner and leaves less warning: 60 min alerts at 20 with 40 left', () => {
+  it('a shorter window warns sooner and leaves less warning: 60 min alerts at 40 with 20 left', () => {
     const r = model.read(at('lost', 55, { windowMin: 60 }));
-    expect(r.alert.projected).toBe(20);
-    expect(r.lead).toBe(40);
-    expect(model.read(at('lost', 55, { windowMin: 90 })).lead).toBeLessThan(65);
+    expect(r.alert.projected).toBe(40);
+    expect(r.lead).toBe(20);
+    expect(model.read(at('lost', 55, { windowMin: 90 })).lead).toBeLessThan(60);
   });
 
-  it('plating inside the window ends the risk; a window shorter than the trip is missed', () => {
+  it('a receipt inside the window ends the risk; a window shorter than the trip is missed', () => {
     expect(model.read(at('stalls', 90)).risk).toBe(0);
     const late = model.read(at('stalls', 90, { windowMin: 60 }));
     expect(late.risk).toBe(1);
@@ -170,7 +171,7 @@ describe('parameter overrides', () => {
   });
 
   it('an override without a source is still labeled assumed', () => {
-    expect(applyOverride(ASSUMED, { setupMedian: 30 }).params?.source).toBe('assumed');
+    expect(applyOverride(ASSUMED, { operatingPoint: 0.5 }).params?.source).toBe('assumed');
   });
 
   it('weights that do not sum to 1 are rejected whole', () => {

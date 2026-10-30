@@ -22,9 +22,6 @@ export interface Params {
   mix: { w: number; m: number; s: number; label: string }[];
   /** The defective mass: specimens that never arrive. */
   lossFraction: number;
-  /** Receipt → plated, lognormal (minutes). */
-  setupMedian: number;
-  setupSigma: number;
   /** Stability window, minutes from collection. */
   windowMin: number;
   /** Re-score cadence; the alert rule checks on these ticks. */
@@ -36,7 +33,12 @@ export interface Params {
   smearOf: number[][];
 }
 
-/** The working model's parameters, exactly as architecture.html sets them. All assumed. */
+/**
+ * The working model's parameters as architecture.html sets them, all assumed, except the window. The
+ * page's example is an unpreserved urine (60 min, the policy table's window for it); the exhibit starts
+ * at 120 min, the policy's window for lavage and tissue at room temperature, and the visitor can move
+ * it from 60 to 240. The clock stops at the receipt scan, so nothing after it enters the model.
+ */
 export const ASSUMED: Params = {
   source: 'assumed',
   mix: [
@@ -44,8 +46,6 @@ export const ASSUMED: Params = {
     { w: 0.08, m: 70, s: 0.60, label: 'stalled, arrives late' },
   ],
   lossFraction: 0.04,
-  setupMedian: 22,
-  setupSigma: 0.40,
   windowMin: 120,
   tickMin: 5,
   operatingPoint: 0.45,
@@ -58,7 +58,7 @@ export const ASSUMED: Params = {
   smearOf: [[0], [1], [2, 3]],
 };
 
-/** The longest silence the exhibit plays (minutes), as in the original's plot. */
+/** The longest silence the exhibit plays (minutes); the page's own scenario plots the first 90. */
 export const MAX_T = 130;
 /** Ages per leg the forward filter tracks (minutes), as in the original. */
 const CAP = 180;
@@ -76,30 +76,28 @@ export function erf(x: number): number {
 export const normCdf = (z: number): number => 0.5 * (1 + erf(z / Math.SQRT2));
 export const lnCdf = (t: number, m: number, s: number): number => (t <= 0 ? 0 : normCdf(Math.log(t / m) / s));
 export const lnSurv = (t: number, m: number, s: number): number => 1 - lnCdf(t, m, s);
-export const lnPdf = (t: number, m: number, s: number): number =>
-  t <= 0 ? 0 : Math.exp(-Math.pow(Math.log(t / m), 2) / (2 * s * s)) / (t * s * Math.sqrt(2 * Math.PI));
 
 /**
- * P(window missed | no receipt scan yet at t minutes). A mixture of lognormal transits and a fraction
- * that never arrives: as t passes the normal transit mode, the surviving mass is increasingly the
- * failure component.
+ * P(window missed | no receipt scan yet at t minutes). The clock stops at the receipt scan, so the
+ * window is missed exactly when the scan has not come by W. Of the specimens still unreceived at t,
+ * the ones that miss it are those still unreceived at W: the never-arrivals and the slow tail. As the
+ * normal transit passes without a scan, the surviving mass is increasingly that failure component.
  */
 export function riskUnreceived(t: number, p: Params, W = p.windowMin): number {
-  const { mix, setupMedian: m2, setupSigma: s2, lossFraction: pl } = p;
+  const { mix, lossFraction: pl } = p;
+  if (t >= W) return 1;
   let notReceived = pl;
-  let safe = 0; // arrives at u, then set up in time
+  let notByWindow = pl;
   for (const c of mix) {
     notReceived += c.w * lnSurv(t, c.m, c.s);
-    for (let u = Math.max(t, 0) + 0.5; u < W; u += 1) {
-      safe += c.w * lnPdf(u, c.m, c.s) * lnCdf(W - u, m2, s2);
-    }
+    notByWindow += c.w * lnSurv(W, c.m, c.s);
   }
-  return 1 - safe / notReceived;
+  return notByWindow / notReceived;
 }
 
-/** After the receipt scan only the in-lab leg remains. */
-export function riskReceived(t: number, p: Params, W = p.windowMin): number {
-  return lnSurv(W - t, p.setupMedian, p.setupSigma);
+/** After the receipt scan the clock has stopped and the outcome is known: 0 if it came in time, 1 if not. */
+export function riskAfterReceipt(receivedAt: number, W: number): number {
+  return receivedAt <= W ? 0 : 1;
 }
 
 /**

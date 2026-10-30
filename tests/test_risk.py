@@ -16,19 +16,27 @@ from test_truth_isolation import touches_truth
 
 ARCHITECTURE = intervals.ROOT / "visuals" / "architecture.html"
 
-# The illustrative parameters in visuals/architecture.html: PARAM.mix, lossFraction, setup, windowMin.
+# The illustrative parameters in visuals/architecture.html: PARAM.mix, lossFraction, windowMin, receivedAt.
 JS_MIX = Mixture(((0.88, math.log(24), 0.50), (0.08, math.log(70), 0.60)), 0.04)
-JS_POST, JS_WINDOW = (22, 0.40), 120
+JS_WINDOW, JS_RECEIVED = 60, 52
 
 
-def js_risk_unreceived(times):
-    """riskUnreceived from the real page, evaluated by node."""
+def js_page(change=None, times=()):
+    """The page's own risk, run by node: riskUnreceived at the given times, the scenario's RISK curve
+    (every whole minute) and its alert minute. `change` overrides PARAM fields first."""
     html = ARCHITECTURE.read_text(encoding="utf-8")
-    start = html.index("const PARAM = {")
-    end = html.index("/* Location posterior")
-    script = html[start:end] + f"\nconsole.log(JSON.stringify({json.dumps(times)}.map(riskUnreceived)));"
-    out = subprocess.run(["node", "-e", script], capture_output=True, text=True, check=True).stdout
-    return json.loads(out)
+    model = html[html.index("const PARAM = {"):html.index("const MAXT = ")]
+    rest = html[html.index("const MAXT = "):html.index("const hhmm")]
+    script = (model + f"\nObject.assign(PARAM, {json.dumps(change or {})});\n" + rest
+              + f"\nconsole.log(JSON.stringify({{at: {json.dumps(list(times))}.map(riskUnreceived), risk: RISK, alert: ALERT_T}}));")
+    return json.loads(subprocess.run(["node", "-e", script], capture_output=True, text=True, check=True).stdout)
+
+
+def scenario_risk(t, mix=JS_MIX, window=JS_WINDOW, received=JS_RECEIVED):
+    """The same scenario in Python: the model while silent, the known outcome after the receipt scan."""
+    if t < received:
+        return risk.risk_unreceived(t, mix, window)
+    return 0.0 if received <= window else 1.0
 
 
 # ---- parity with the JavaScript ----
@@ -37,24 +45,49 @@ def js_risk_unreceived(times):
 def test_python_agrees_with_the_javascript_to_1e_6_on_50_states_before_the_scan():
     rng = random.Random(0)
     times = [0.0] + [round(rng.uniform(0, 110), 2) for _ in range(49)]
-    js = js_risk_unreceived(times)
-    py = [risk.risk_unreceived(t, JS_MIX, JS_WINDOW, post=JS_POST) for t in times]
+    js = js_page(times=times)["at"]
+    py = [risk.risk_unreceived(t, JS_MIX, JS_WINDOW) for t in times]
     worst = max(abs(a - b) for a, b in zip(js, py))
     assert worst < 1e-6, worst
-    assert max(js) > 0.3 and min(js) < 0.2  # the 50 states cover a real range of risk
+    assert max(js) > 0.9 and min(js) < 0.2  # the 50 states cover a real range of risk
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+def test_python_agrees_with_the_javascript_at_every_minute_of_the_scenario_including_after_the_scan():
+    js = js_page()["risk"]
+    py = [scenario_risk(t) for t in range(len(js))]
+    assert len(js) == 91 and max(abs(a - b) for a, b in zip(js, py)) < 1e-6
+    assert js[JS_RECEIVED - 1] > 0.7 and js[JS_RECEIVED] == 0 and js[-1] == 0  # the scan resolves it
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+@pytest.mark.parametrize("window, received", [(60, 52), (60, 70), (90, 52), (120, 68)])
+def test_parity_holds_for_other_windows_and_for_a_scan_that_comes_too_late(window, received):
+    js = js_page({"windowMin": window, "receivedAt": received})["risk"]
+    py = [scenario_risk(t, window=window, received=received) for t in range(len(js))]
+    assert max(abs(a - b) for a, b in zip(js, py)) < 1e-6
+    assert js[-1] == (0 if received <= window else 1)  # a scan after the window closed is a miss
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+def test_the_page_alert_minute_is_the_first_five_minute_tick_at_the_operating_point():
+    out = js_page()
+    first = next(t for t in range(0, JS_RECEIVED, 5) if risk.risk_unreceived(t, JS_MIX, JS_WINDOW) >= 0.45)
+    assert out["alert"] == first == 40
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 def test_the_javascript_parameters_are_the_ones_used_here():
     html = ARCHITECTURE.read_text(encoding="utf-8")
     assert re.search(r"\{w:0\.88, m:24, s:0\.50", html) and re.search(r"\{w:0\.08, m:70, s:0\.60", html)
-    assert "lossFraction:  0.04" in html and "setupMedian:   22, setupSigma:   0.40" in html
-    assert "windowMin:     120" in html
+    assert "lossFraction:  0.04" in html and "windowMin:     60," in html and "receivedAt:    52," in html
+    assert "setupMedian" not in html and "riskReceived" not in html  # the clock stops at receipt: no step after it
 
 
-def test_the_midpoint_sum_dips_by_microscopic_amounts_so_parity_is_a_tolerance_not_a_curve():
-    values = [risk.risk_unreceived(t, JS_MIX, JS_WINDOW, post=JS_POST) for t in (0, 1, 2, 3, 4, 5)]
-    assert max(values[:5]) - min(values[:5]) < 5e-5 + 1e-5
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+def test_the_page_risk_never_falls_while_silent():
+    js = js_page()["risk"][:JS_RECEIVED]
+    assert all(b >= a for a, b in zip(js, js[1:]))
 
 
 # ---- the closed form under the receipt clock ----
@@ -62,13 +95,14 @@ def test_the_midpoint_sum_dips_by_microscopic_amounts_so_parity_is_a_tolerance_n
 def test_closed_form_matches_numerical_integration():
     mix, W = Mixture(((0.9, math.log(22), 0.45), (0.07, math.log(90), 0.5)), 0.03), 60
     for t in (0.5, 10, 25, 40, 55):
-        pdf = lambda u: sum(w * risk.ln_pdf(u, mu, s) for w, mu, s in mix.components)
+        pdf = lambda u: sum(w * math.exp(-((math.log(u) - mu) ** 2) / (2 * s * s)) / (u * s * math.sqrt(2 * math.pi))
+                            for w, mu, s in mix.components)
         arrives = integrate.quad(pdf, t, W)[0]
         assert risk.risk_unreceived(t, mix, W) == pytest.approx(1 - arrives / risk.p_not_received(t, mix), abs=1e-9)
 
 
 def test_before_anything_is_known_the_risk_is_the_unconditional_breach_chance():
-    mix, W = JS_MIX, 120
+    mix, W = JS_MIX, 60
     expected = 1 - sum(w * risk.ln_cdf(W, mu, s) for w, mu, s in mix.components)
     assert risk.risk_unreceived(0, mix, W) == pytest.approx(expected)
 
@@ -90,21 +124,6 @@ def test_with_no_failure_mass_the_risk_is_driven_only_by_the_tail():
 def test_weights_that_do_not_add_up_are_refused():
     with pytest.raises(ValueError, match="add up"):
         Mixture(((0.5, 0.0, 1.0),), 0.1)
-
-
-# ---- the conditional form for a clock that stops after receipt ----
-
-def test_after_receipt_the_risk_is_conditioned_on_the_step_already_running():
-    post, r, W = (22, 0.40), 68, 120
-    mu, s = math.log(22), 0.40
-    at_receipt = risk.risk_after_receipt(r, r, W, post)
-    assert at_receipt == pytest.approx(1 - risk.ln_cdf(W - r, mu, s))
-    series = [risk.risk_after_receipt(t, r, W, post) for t in range(68, 119, 2)]
-    assert all(b >= a for a, b in zip(series, series[1:])) and series[-1] > series[0]
-    assert risk.risk_after_receipt(60 + r, r, W, post) == 1.0
-    # The page's version, lnSurv(W - t), is unconditional in the time already spent, so it differs.
-    page_style = 1 - risk.ln_cdf(W - 86, mu, s)
-    assert risk.risk_after_receipt(86, r, W, post) != pytest.approx(page_style, abs=1e-3)
 
 
 # ---- the fitted model ----

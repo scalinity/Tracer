@@ -110,9 +110,9 @@ export function drawChart(g: CanvasRenderingContext2D, size: { w: number; h: num
     g.fillText(text, tx, below ? ly + 9 * k : ly - 20 * k);
     g.restore();
   }
-  // Scans the lab has seen besides the collection: ticks on the time axis.
-  for (const [t, name] of [[r.received, 'RECEIVED'], [r.plated, 'PLATED']] as [number | null, string][]) {
-    if (t === null) continue;
+  // The receipt scan, once it has come: a tick on the time axis. The clock stops here.
+  if (r.received !== null) {
+    const t = r.received;
     g.save();
     g.strokeStyle = CREAM;
     g.fillStyle = CREAM;
@@ -124,7 +124,7 @@ export function drawChart(g: CanvasRenderingContext2D, size: { w: number; h: num
     g.font = `500 ${Math.round(7.5 * k)}px ${MONO}`;
     g.textAlign = 'center';
     g.textBaseline = 'bottom';
-    g.fillText(name, plot.px(t), rect.y + rect.h - 10 * k);
+    g.fillText('RECEIVED', plot.px(t), rect.y + rect.h - 10 * k);
     g.restore();
   }
   plot.marker(r.minute, r.risk, { drop: true });
@@ -222,7 +222,6 @@ export function drawLog(g: CanvasRenderingContext2D, size: { w: number; h: numbe
   g.fillText('SCAN LOG', size.w * 0.08, size.h * 0.2);
   const rows: [string, string, string][] = [['0 min', 'COLLECTED', SCREEN_COLORS.amber]];
   if (r.received !== null) rows.push([`${r.received} min`, 'RECEIVED', SCREEN_COLORS.amber]);
-  if (r.plated !== null) rows.push([`${r.plated} min`, 'PLATED', SCREEN_COLORS.amber]);
   g.font = `500 ${Math.round(15 * k)}px ${MONO}`;
   rows.forEach(([t, what, c], i) => {
     const y = size.h * (0.42 + i * 0.17);

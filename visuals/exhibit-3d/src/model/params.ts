@@ -22,7 +22,6 @@ export function applyOverride(base: Params, override: unknown): Result {
   }
   if (!unit(p.lossFraction) || p.lossFraction >= 1) return { error: 'lossFraction must lie in [0, 1)' };
   if (!near1(p.mix.reduce((s, c) => s + c.w, p.lossFraction))) return { error: 'mix weights and lossFraction must sum to 1' };
-  if (!positive(p.setupMedian) || !positive(p.setupSigma)) return { error: 'setupMedian and setupSigma must be positive' };
   if (!positive(p.windowMin)) return { error: 'windowMin must be positive' };
   if (!positive(p.tickMin) || !Number.isInteger(p.tickMin)) return { error: 'tickMin must be a positive whole number of minutes' };
   if (!unit(p.operatingPoint) || p.operatingPoint === 0) return { error: 'operatingPoint must lie in (0, 1]' };
