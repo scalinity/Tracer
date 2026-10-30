@@ -1,5 +1,7 @@
 # MIMIC-IV demo — calibration go/no-go findings
 
+> Written when the event source was planned as a simulator. The event source is now a Claude-generated synthetic dataset (`docs/architecture.md` §6); the findings below stand, and "simulator parameters" now means the generator's parameters.
+
 **Question.** `docs/architecture.md` §1.1 proposed calibrating two simulator parameters against the
 MIMIC-IV Clinical Database Demo: **specimen-type mix** and the **collection time-of-day profile**. Can it?
 
