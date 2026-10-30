@@ -124,7 +124,9 @@ Faults, by fixed planted_fault:
 - never_collected: the draw never happens. Observed: a single ordered event at collected_at, which is the scheduled time. Truth: one open-ended not_collected segment from collected_at at the collection location.
 - content_failure: timing is normal up to the receipt. After accession_wait_min the lab rejects the specimen (for example mislabeled or leaking): an observed rejected event instead of accessioned and plated, with a note giving the reason. The last truth segment is at_receiving_bench, ending at the rejection time. outcome.plated is false.
 
-outcome.received is true when a received event exists. outcome.plated is true when a plated event exists. outcome.fault repeats planted_fault.\
+outcome.received is true when a received event exists. outcome.plated is true when a plated event exists. outcome.fault repeats planted_fault.
+
+If the brief has a "validator_error", your previous reply for this brief failed that check. Fix it and return the whole trail again.\
 """
 
 EXAMPLE_BRIEFS = (
@@ -229,13 +231,17 @@ def model_brief(brief: dict) -> dict:
     return {key: brief[key] for key in BRIEF_KEYS}
 
 
-def build_request(brief: dict, model: str = MODEL) -> dict:
-    """Keyword arguments for client.messages.create. The brief is the last thing in the request."""
+def build_request(brief: dict, model: str = MODEL, error: str | None = None) -> dict:
+    """Keyword arguments for client.messages.create. The brief is the last thing in the request.
+
+    On a retry, `error` is the validator's text for the previous reply; it rides inside the brief.
+    """
+    sent = model_brief(brief) | ({"validator_error": error} if error else {})
     return {
         "model": model,
         "max_tokens": MAX_TOKENS,
         "system": [{"type": "text", "text": system_text(), "cache_control": {"type": "ephemeral"}}],
-        "messages": [{"role": "user", "content": _dump(model_brief(brief))}],
+        "messages": [{"role": "user", "content": _dump(sent)}],
         "thinking": {"type": "disabled"},
         "output_config": {"effort": EFFORT, "format": {"type": "json_schema", "schema": TRAIL_SCHEMA}},
     }
@@ -326,9 +332,10 @@ def log_usage(record: dict, path: Path = USAGE_LOG) -> None:
         f.write(json.dumps(record) + "\n")
 
 
-def generate_trail(client, brief: dict, *, job: str, model: str = MODEL, log_path: Path = USAGE_LOG) -> dict:
+def generate_trail(client, brief: dict, *, job: str, model: str = MODEL, log_path: Path = USAGE_LOG,
+                   error: str | None = None) -> dict:
     """One brief in, one parsed trail out. The call's usage is logged even when the reply is unusable."""
-    response = client.messages.create(**build_request(brief, model))
+    response = client.messages.create(**build_request(brief, model, error))
     log_usage(usage_record(response, job=job, specimen_id=brief["specimen_id"], model=model), log_path)
     if response.stop_reason != "end_turn":
         raise TrailError(f"{brief['specimen_id']}: stopped with {response.stop_reason!r}, not a complete trail")
