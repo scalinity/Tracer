@@ -823,7 +823,7 @@ const TASKS = [
 
 {id:"M8b", tr:"model", day:[11,10], who:{D:2}, t:"Location estimate, part 2: score it", needs:["M8"],
  why:"Accuracy against the hidden truth is the result that makes the location claim honest.",
- steps:["Compare the most likely location with the truth segments at 15, 30, 60 and 90 minutes of silence. Report top-1 and top-3 accuracy.","Plot the probability of lost against how often specimens were really lost."],
+ steps:["Done: `python -m src.pipeline.location_eval` places every held-out specimen still silent at 15, 30, 60 and 90 minutes and compares the most likely place and the three most likely with the truth segments. Top-1 is 49, 55, 39 and 44 percent, against 34, 38, 30 and 39 percent for always naming the commonest true place. Top-3 is 97, 88, 84 and 80 percent. The silent specimens number 1,811, 725, 218 and 132, and they become the faulty ones as the minutes pass.","Done: the probability of lost against how often specimens were really lost, pooled over every 5-minute tick from minute 5 to 240. Below 7 percent predicted it is within 2 points of what happened; in the top bin it predicts 30 percent and 23 percent were lost. Only 13 specimens were really lost, and the ticks are not independent. Brier 0.0340 against 0.0385 for the base rate.","Done: `results/location-accuracy.json` (with the confusion table) and `results/location-calibration.svg`. The data was drawn with the same structure and fault mix the filter assumes, so this is a best case."],
  done:"A table and a plot are saved in `results/`.", earns:["F3"]},
 
 {id:"V1", tr:"demo", day:[11,9], who:{D:2}, t:"Move the system map and the 3D exhibit to the receipt clock",
