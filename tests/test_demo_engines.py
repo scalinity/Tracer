@@ -1,7 +1,7 @@
 """The demo page in the three browser engines GitHub Pages visitors use (plan task P7).
 
 Chromium covers Chrome and Android, WebKit covers Safari on iPhone, Firefox covers Firefox. Each loads the page at
-a phone width and a laptop width, served under /Tracer/ the way GitHub Pages serves the project (a page at
+a phone width and a laptop width, opens a timeline, moves the threshold and window controls and starts a round of Beat Tracer, served under /Tracer/ the way GitHub Pages serves the project (a page at
 /Tracer/demo/), so an address written as "/demo/..." instead of a relative one fails here and not at the talk.
 A real phone is still Daniel's check; this is what can be checked without one. An engine that is not installed
 is skipped and says so: run `npx playwright install firefox webkit` in visuals/exhibit-3d to add it.
@@ -50,6 +50,21 @@ const engines = { chromium, firefox, webkit };
         await page.waitForSelector("#timeline:not([hidden])", { timeout: 10000 });
         run.timeline = true;
         run.overflowOpen = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        run.link = await page.$eval("#tl-3d", (a) => a.href).catch(() => null);
+        await page.focus("#th-point");
+        const sentence = await page.textContent("#th-sentence");
+        await page.keyboard.press("ArrowRight");
+        run.sentenceChanged = (await page.textContent("#th-sentence")) !== sentence;
+        await page.focus("#th-win");
+        const windowOut = await page.textContent("#th-win-out");
+        await page.keyboard.press("ArrowRight");
+        // the page applies a window on the next animation frame, so wait for the label rather than read it at once
+        run.windowChanged = await page.waitForFunction((was) => document.getElementById("th-win-out").textContent !== was, windowOut, { timeout: 3000 }).then(() => true, () => false);
+        await page.click("#game-go");
+        const clock = await page.textContent("#game-clock");
+        await page.waitForTimeout(1500);
+        run.gameClockMoves = (await page.textContent("#game-clock")) !== clock;
+        run.overflowGame = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
         if (SHOTS) await page.screenshot({ path: SHOTS + "/" + name + "-" + width + ".png", fullPage: true });
       } catch (e) { run.failure = String(e.message).split("\\n")[0]; }
       out[name].runs.push(run);
@@ -116,4 +131,6 @@ def test_the_page_works_in_the_engine_at_phone_and_laptop_widths_under_the_pages
         assert run["messages"] == [] and run["errors"] == [], run
         assert run["foreign"] == [], f"{engine} asked for something outside the site: {run['foreign']}"
         assert run["rows"] >= 3 and run["timeline"], run
-        assert run["overflow"] <= 0 and run["overflowOpen"] <= 0, f"{engine} scrolls sideways at {run['width']} px: {run}"
+        assert run["overflow"] <= 0 and run["overflowOpen"] <= 0 and run["overflowGame"] <= 0, f"{engine} scrolls sideways at {run['width']} px: {run}"
+        assert run["sentenceChanged"] and run["windowChanged"] and run["gameClockMoves"], f"a control did nothing in {engine}: {run}"
+        assert "/Tracer/demo/exhibit/index.html?" in run["link"], f"the 3D link does not point into the site: {run['link']}"
