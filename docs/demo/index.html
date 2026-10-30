@@ -210,6 +210,30 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .brief figcaption{font-size:12.5px;color:var(--ink-mute);margin-bottom:6px}
 .brief blockquote{font-family:var(--serif);font-size:16px;line-height:1.6;color:var(--ink)}
 
+/* ───────── the threshold control ───────── */
+.th-controls{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+.th-out{font-size:22px;min-width:5.6ch}
+.th-own{min-width:0;font-family:var(--sans)}
+.th-ends{display:flex;justify-content:space-between;margin:-4px 0 0;font-size:12px;color:var(--ink-mute)}
+.th-help{margin-top:6px;font-size:13px;color:var(--ink-dim)}
+.th-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;align-items:start;margin-top:18px}
+.th-chart{margin:0}
+.th-table{width:100%;border-collapse:collapse;font-size:14px}
+.th-table th,.th-table td{padding:10px 8px;border-bottom:1px solid var(--hair-soft);text-align:left;font-weight:400}
+.th-table thead th{font-size:12.5px;color:var(--ink-mute);border-bottom-color:var(--hair)}
+.th-table td.num{font-size:20px;color:var(--ink)}
+.th-sentence{margin-top:18px;max-width:62ch;font-family:var(--serif);font-size:19px;line-height:1.5;color:var(--ink)}
+.th-note{margin-top:10px;max-width:76ch;font-size:13.5px;color:var(--ink-dim)}
+.th-note b{color:var(--ink)}
+.th-note .shift{color:var(--warn)}
+.tr-line{fill:none;stroke-width:1.75;stroke-linejoin:round}
+.tr-m{stroke:var(--infer)}
+.tr-p{stroke:var(--ink-mute);stroke-dasharray:5 4}
+.tr-dot-m{fill:var(--infer)}
+.tr-dot-p{fill:var(--panel);stroke:var(--ink-mute);stroke-width:1.5}
+.tr-now{fill:none;stroke:var(--warn);stroke-width:2}
+.tr-guide{stroke:var(--warn);stroke-width:1;stroke-dasharray:2 3}
+
 /* ───────── later tasks and limits ───────── */
 .later{margin:0 0 14px;padding:10px 0;border-top:1px dashed var(--hair-soft);font-size:13px;color:var(--ink-mute)}
 .later + section:not(.later){margin-top:44px}
@@ -221,10 +245,11 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 footer{padding-top:20px;border-top:1px solid var(--hair);font-size:12.5px;color:var(--ink-mute)}
 
 @media (max-width:900px){
-  .tl-grid{grid-template-columns:1fr}
+  .tl-grid,.th-grid{grid-template-columns:1fr}
 }
 @media (max-width:760px){
-  .controls{grid-template-columns:1fr}
+  .controls,.th-controls{grid-template-columns:1fr}
+  .th-sentence{font-size:17.5px}
   .clock-row{flex-wrap:wrap}
   .clock-row .clock{flex:1 0 100%;margin-bottom:2px}
   .key{grid-template-columns:1fr}
@@ -384,7 +409,48 @@ footer{padding-top:20px;border-top:1px solid var(--hair);font-size:12.5px;color:
   </div>
 </section>
 
-<section id="threshold" class="later" aria-label="Threshold control"><p>Threshold control: to come.</p></section>
+<section id="threshold" aria-labelledby="threshold-h" hidden>
+  <h2 id="threshold-h">Set the threshold</h2>
+  <p class="lede">An alert threshold is a trade. Set it low and Tracer warns early, and alerts on many specimens that
+    would have arrived anyway; set it high and it alerts less, and later. The plan's rule makes the same trade with a
+    time limit. Move the threshold to see both methods on the held-out runs. The board and the timeline above follow
+    it.</p>
+  <div class="controls th-controls">
+    <div class="field">
+      <label for="th-point">Alert threshold</label>
+      <div class="clock-row">
+        <output class="clock th-out" id="th-point-out" for="th-point"></output>
+        <input type="range" id="th-point" min="0" max="19" step="1" value="0">
+      </div>
+      <p class="th-ends"><span>fewer alerts</span><span>more alerts</span></p>
+      <p class="th-help" id="th-point-help"></p>
+    </div>
+    <div class="field">
+      <label for="th-win">Stability window</label>
+      <div class="clock-row">
+        <output class="clock th-out" id="th-win-out" for="th-win"></output>
+        <input type="range" id="th-win" min="60" max="240" step="5" value="120">
+        <button type="button" class="step th-own" id="th-own">Own windows</button>
+      </div>
+      <p class="th-help" id="th-win-help"></p>
+    </div>
+  </div>
+  <div class="th-grid">
+    <figure class="chart th-chart" id="th-chart">
+      <svg id="th-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="th-svg-label"><title id="th-svg-label">Warning against alerts per shift</title></svg>
+    </figure>
+    <table class="th-table">
+      <caption class="vh">The two methods at this setting</caption>
+      <thead><tr><th scope="col"><span class="vh">Method</span></th><th scope="col">Median warning</th><th scope="col">Alerts per shift</th></tr></thead>
+      <tbody>
+        <tr><th scope="row"><span class="v v-t on">Tracer</span></th><td class="num" id="th-m-warn"></td><td class="num" id="th-m-rate"></td></tr>
+        <tr><th scope="row"><span class="v v-p on">Plan's rule</span></th><td class="num" id="th-p-warn"></td><td class="num" id="th-p-rate"></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="th-sentence" id="th-sentence" aria-live="polite"></p>
+  <p class="th-note" id="th-note"></p>
+</section>
 <section id="beat" class="later" aria-label="Beat Tracer"><p>Beat Tracer, the class activity: to come.</p></section>
 <section id="why" class="later" aria-label="Why it is built this way"><p>Why it is built this way: to come.</p></section>
 
@@ -558,13 +624,14 @@ var TracerCore = (function () {
 
   /* The specimens that are collected and not yet received at `now` (minutes, as civilMinutes). Each spec
      carries _c, its collection minute. A specimen whose window closed carryMin or more minutes ago leaves the
-     ranking for the `older` list. */
-  function outstanding(specs, now, carryMin) {
+     ranking for the `older` list. windowOf(spec), when given, is the window in force (the page's window
+     control); without it each specimen keeps its own. */
+  function outstanding(specs, now, carryMin, windowOf) {
     var live = [], older = [];
     for (var i = 0; i < specs.length; i++) {
       var s = specs[i], t = now - s._c;
       if (t < 0 || (s.received_min != null && t >= s.received_min)) continue;
-      var closedFor = t - s.window_min;
+      var closedFor = t - (windowOf ? windowOf(s) : s.window_min);
       (closedFor >= carryMin ? older : live).push({ spec: s, t: t, closed: closedFor >= 0 });
     }
     return { live: live, older: older };
@@ -610,10 +677,85 @@ var TracerCore = (function () {
     return order[best] === "at_unit" ? routing.still_at_unit : routing[route];
   }
 
+  /* ---------- the threshold control (plan task P4) ---------- */
+
+  /* The window in force for every specimen: its own (windowMin null) or one window for all. Each spec gets
+     _window and fresh _ticks, and its cached risk series is dropped, since both depend on the window. */
+  function applyWindow(specs, windowMin, tickMin) {
+    for (var i = 0; i < specs.length; i++) {
+      var s = specs[i];
+      s._window = windowMin == null ? s.window_min : windowMin;
+      s._ticks = ticksFor(s._window, s.received_min, tickMin);
+      s._series = null;
+    }
+  }
+
+  /* A missed window, read from the receipt scan as src/pipeline/evaluate.py derives it: no receipt scan, or
+     one after the window closed. */
+  function isMiss(receivedMin, windowMin) { return receivedMin == null || receivedMin > windowMin; }
+
+  /* The median as numpy computes it: the mean of the two middle values when the count is even. */
+  function median(xs) {
+    if (!xs.length) return null;
+    var v = xs.slice().sort(function (a, b) { return a - b; }), h = v.length >> 1;
+    return v.length % 2 ? v[h] : (v[h - 1] + v[h]) / 2;
+  }
+
+  /* One method's results over a set of specimens (src/pipeline/evaluate.py score): alerts[i] is the alert
+     minute for specs[i] or null. Warning is the window minus the alert minute; an alert at or after the close
+     catches nothing, and the median over all missed windows counts a miss as zero. */
+  function scoreAlerts(specs, alerts, windowOf, shifts) {
+    var fired = 0, breaches = 0, warnings = [], falseAlerts = 0;
+    for (var i = 0; i < specs.length; i++) {
+      var s = specs[i], W = windowOf(s), a = alerts[i], miss = isMiss(s.received_min, W);
+      if (a != null) { fired++; if (!miss) falseAlerts++; }
+      if (miss) { breaches++; if (a != null && W - a > 0) warnings.push(W - a); }
+    }
+    var everyone = warnings.slice();
+    while (everyone.length < breaches) everyone.push(0);
+    return { alerts: fired, alerts_per_shift: fired / shifts, breaches: breaches, caught: warnings.length,
+             median_warning_min: median(warnings), median_warning_all_breaches_min: median(everyone),
+             false_alerts: falseAlerts };
+  }
+
+  /* Both methods at every operating point, recomputed from the specimens. ctx: points (how many), shifts,
+     windowOf(s), ticksOf(s), seriesOf(s), weightOf(s), theta(i) (Tracer's harm threshold at point i) and
+     planThreshold(s, i) (the plan's rule's minutes at point i). */
+  function operatingGrid(specs, ctx) {
+    var out = [];
+    for (var i = 0; i < ctx.points; i++) {
+      var th = ctx.theta(i), m = new Array(specs.length), p = new Array(specs.length);
+      for (var j = 0; j < specs.length; j++) {
+        var s = specs[j], ticks = ctx.ticksOf(s);
+        m[j] = modelAlert(ctx.seriesOf(s), ticks, ctx.weightOf(s), th);
+        p[j] = planAlert(ticks, ctx.planThreshold(s, i));
+      }
+      out.push({ model: scoreAlerts(specs, m, ctx.windowOf, ctx.shifts), plan: scoreAlerts(specs, p, ctx.windowOf, ctx.shifts) });
+    }
+    return out;
+  }
+
+  /* Minutes as the threshold sentence prints them: whole minutes, or one decimal for a median that falls
+     between two. */
+  function fmtWarn(v) { return v == null ? "no" : Math.abs(v - Math.round(v)) < 1e-9 ? String(Math.round(v)) : v.toFixed(1); }
+
+  /* The sentence under the threshold chart. model and plan carry median_warning_all_breaches_min and
+     alerts_per_shift; windowMin is the one window set for every specimen, or null for their own. */
+  function thresholdSentence(model, plan, windowMin) {
+    function part(who, m) {
+      return who + " warns " + fmtWarn(m.median_warning_all_breaches_min) + " min ahead and alerts " +
+        m.alerts_per_shift.toFixed(1) + " times a shift";
+    }
+    return (windowMin == null ? "At this setting " : "At this setting, with every window set to " + windowMin + " min, ") +
+      part("Tracer", model) + "; " + part("the plan's rule", plan) + ".";
+  }
+
   return { erfc: erfc, Phi: Phi, survival: survival, mixture: mixture, risk: risk, riskSeries: riskSeries,
            arrivalQuantile: arrivalQuantile, ticksFor: ticksFor, harm: harm, modelAlert: modelAlert,
            planAlert: planAlert, rankByHarm: rankByHarm, civilMinutes: civilMinutes, outstanding: outstanding,
-           boardRows: boardRows, mergePlaces: mergePlaces, roleFor: roleFor };
+           boardRows: boardRows, mergePlaces: mergePlaces, roleFor: roleFor,
+           applyWindow: applyWindow, isMiss: isMiss, median: median, scoreAlerts: scoreAlerts,
+           operatingGrid: operatingGrid, fmtWarn: fmtWarn, thresholdSentence: thresholdSentence };
 })();
 </script>
 
@@ -654,7 +796,8 @@ var TracerCore = (function () {
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   var B = null, byId = {}, byRun = {}, days = [], mixes = {};
-  var state = { day: 0, minute: DEFAULT_MINUTE, point: 0, open: null, positions: [], scrub: 0, truth: false };
+  // window: null while every specimen keeps its own stability window, else the minutes the window control sets
+  var state = { day: 0, minute: DEFAULT_MINUTE, point: 0, open: null, positions: [], scrub: 0, truth: false, window: null };
   var briefs = { data: null, error: null, loading: false };
   var curveCache = { key: null, pts: null };
 
@@ -691,7 +834,9 @@ var TracerCore = (function () {
 
   /* ---------- the model, through the core ---------- */
   function mixOf(s) { return mixes[s.group] || (mixes[s.group] = C.mixture(B.model, s.group)); }
-  function seriesOf(s) { return s._series || (s._series = C.riskSeries(s._ticks, mixOf(s), s.window_min)); }
+  /* The window in force: the specimen's own, or the one the window control sets for every specimen. */
+  function windowOf(s) { return s._window; }
+  function seriesOf(s) { return s._series || (s._series = C.riskSeries(s._ticks, mixOf(s), windowOf(s))); }
   function weightOf(s) { return B.triage.weights[String(s.tier)]; }
   function threshold() { return B.grid[state.point].model.harm_threshold; }
   function planThresholdOf(s) { return B.baselines.plan.threshold_min_by_group[s.group][state.point]; }
@@ -734,12 +879,14 @@ var TracerCore = (function () {
     var seen = {};
     B.specimens.forEach(function (s) {
       s._c = C.civilMinutes(s.collected_at);
-      s._ticks = C.ticksFor(s.window_min, s.received_min, B.tick_min);
       byId[s.id] = s;
       (byRun[s.run] = byRun[s.run] || []).push(s);
       var date = s.collected_at.slice(0, 10);
       if (!seen[date]) { seen[date] = true; days.push({ date: date, run: s.run, start: C.civilMinutes(date) }); }
     });
+    C.applyWindow(B.specimens, null, B.tick_min);
+    var wins = B.specimens.map(function (s) { return s.window_min; });
+    winRange = [Math.min.apply(null, wins), Math.max.apply(null, wins)];
     days.sort(function (a, b) { return a.start - b.start; });
     state.day = Math.max(0, days.findIndex(function (d) { return d.date === DEFAULT_DAY; }));
 
@@ -753,8 +900,11 @@ var TracerCore = (function () {
     $("controls").hidden = false;
     $("board-wrap").hidden = false;
     $("key").hidden = false;
+    $("th-point").max = String(B.grid.length - 1);
+    $("threshold").hidden = false;
     wire();
     renderBoard();
+    renderThreshold();
     fromHash(true);
   }
 
@@ -817,7 +967,7 @@ var TracerCore = (function () {
     $("clock-back").disabled = state.minute <= 0;
     $("clock-fwd").disabled = state.minute >= 1440 - B.tick_min;
 
-    var out = C.outstanding(byRun[day.run], now, B.shift_min);
+    var out = C.outstanding(byRun[day.run], now, B.shift_min, windowOf);
     var rows = C.boardRows(out.live, ctx());
     $("board-body").innerHTML = rows.map(rowHtml).join("");
     var when = hhmm(state.minute) + " on " + dayLabel(day.date);
@@ -863,7 +1013,7 @@ var TracerCore = (function () {
     if (r.tick == null) place = '<span class="muted">just collected</span>';
     else if (!row) place = '<span class="muted">past the ' + n(B.horizon_min + " min") + " horizon</span>";
     else { var mp = C.mergePlaces(row, B.place_order); place = esc(placeWords(mp, mp.best)); }
-    left = r.closed ? '<span class="closed-word">window closed</span>' : n(mins(s.window_min - r.t));
+    left = r.closed ? '<span class="closed-word">window closed</span>' : n(mins(windowOf(s) - r.t));
     role = r.model != null ? esc(roleOf(s, r.model)) : '<span class="muted">no alert</span>';
     var silent = r.tick == null && r.t < 1 ? "under 1 min" : mins(r.t);
     return '<tr role="row" data-id="' + esc(s.id) + '"' + (open ? ' class="is-open"' : "") + ">" +
@@ -938,7 +1088,10 @@ var TracerCore = (function () {
     $("tl-title").innerHTML = '<span class="num">' + esc(s.id) + "</span>" + esc(shortType(s.type));
     $("tl-facts").innerHTML = "Collected at " + n(hhmm(s._c)) + " on " + esc(dayLabel(s.collected_at.slice(0, 10))) +
       " (run " + s.run + "), " + esc(UNIT[s.unit] || s.unit) + ", " + esc(s.priority) + ", sent " + esc(ROUTE[s.route] || s.route) +
-      ". Tier " + s.tier + ", weight " + n(weightOf(s)) + ". Stability window " + n(mins(s.window_min)) + " (" + source + ").";
+      ". Tier " + s.tier + ", weight " + n(weightOf(s)) + ". " + (state.window == null
+        ? "Stability window " + n(mins(s.window_min)) + " (" + source + ")."
+        : "Stability window set to " + n(mins(state.window)) + " by the window control; its own is " + n(mins(s.window_min)) +
+          " (" + source + ").");
     // the clock runs from collection to receipt, so scans after the receipt scan are not listed
     var ev = s.events.filter(function (e) { return s.received_min == null || e.at_min <= s.received_min; })
       .sort(function (x, y) { return x.at_min - y.at_min; });
@@ -982,7 +1135,7 @@ var TracerCore = (function () {
     $("tl-back").disabled = state.scrub <= 0;
     $("tl-fwd").disabled = state.scrub >= state.positions.length - 1;
     var outcome = s.received_min != null && m >= s.received_min;
-    var r = outcome || m === 0 ? null : C.risk(m, mixOf(s), s.window_min);
+    var r = outcome || m === 0 ? null : C.risk(m, mixOf(s), windowOf(s));
     var at = outcome ? "receipt scan, " + mins(m) + " after collection"
       : m === 0 ? "collection scan" : mins(m) + " after collection";
     scrub.setAttribute("aria-valuetext", at + (r != null ? ", risk " + pct(r) : ""));
@@ -994,7 +1147,7 @@ var TracerCore = (function () {
   }
 
   function renderReadout(s, m, outcome, r) {
-    var W = s.window_min, mix = mixOf(s);
+    var W = windowOf(s), mix = mixOf(s);
     $("ro-when").innerHTML = (outcome ? "At the receipt scan, " : m === 0 ? "At the collection scan, " : "At ") +
       n(mins(m)) + " after collection (" + n(hhmm(s._c + m)) + ")";
     var oc = $("ro-outcome"), stats = $("ro-stats");
@@ -1065,19 +1218,19 @@ var TracerCore = (function () {
   }
 
   function chartEnd(s, a, p, m) {
-    var base = s.received_min != null ? s.received_min : Math.min(s.window_min, B.horizon_min);
+    var W = windowOf(s), base = s.received_min != null ? s.received_min : Math.min(W, B.horizon_min);
     base = Math.max(base, a || 0, p || 0, m, 30);
-    if (s.window_min <= base * 1.5) base = Math.max(base, s.window_min);
+    if (W <= base * 1.5) base = Math.max(base, W);
     return base * 1.06;
   }
 
   function curve(s, end) {
-    var key = s.id + "|" + end;
+    var W = windowOf(s), key = s.id + "|" + end + "|" + W;
     if (curveCache.key === key) return curveCache.pts;
     var mix = mixOf(s), stop = s.received_min != null ? Math.min(s.received_min, end) : end, pts = [];
     for (var i = 0; i <= 400; i++) {
       var t = stop * i / 400;
-      pts.push([t, C.risk(t, mix, s.window_min)]);
+      pts.push([t, C.risk(t, mix, W)]);
     }
     curveCache = { key: key, pts: pts };
     return pts;
@@ -1087,7 +1240,7 @@ var TracerCore = (function () {
     var s = byId[state.open], svg = $("tl-svg"), m = state.positions[state.scrub];
     var w = Math.max(280, Math.floor($("tl-chart").clientWidth - 16)), narrow = w < 560;
     var a = modelAlertOf(s), p = planAlertOf(s), weight = weightOf(s), alertRisk = threshold() / weight;
-    var W = s.window_min, rec = s.received_min, mix = mixOf(s), end = chartEnd(s, a, p, m);
+    var W = windowOf(s), rec = s.received_min, mix = mixOf(s), end = chartEnd(s, a, p, m);
     var top = 46, plotH = narrow ? 150 : 200, L = 42, R = 14, x0 = L, x1 = w - R;
     function X(t) { return x0 + Math.min(t, end) / end * (x1 - x0); }
     function Y(v) { return top + (1 - v) * plotH; }
@@ -1131,9 +1284,25 @@ var TracerCore = (function () {
     }
 
     // Tracer's alert line for this specimen's tier: expected harm reaches the threshold
+    // Its label goes where the risk curve is not: the first of right-above, right-below, left-above and
+    // left-below whose box no point of the curve enters, in full words and then in short ones.
     if (alertRisk <= 1) {
-      svg.appendChild(el("line", { x1: x0, x2: x1, y1: Y(alertRisk), y2: Y(alertRisk), "class": "aline" }));
-      svg.appendChild(text(x1, Y(alertRisk) - 6, "lbl t-warn halo", "Tracer's alert line, tier " + s.tier + ": " + pct(alertRisk), "end"));
+      // the right-hand spots end short of the window's line when it is drawn
+      var ay0 = Y(alertRisk), cpts = curve(s, end), pick = null, xr = W <= end ? X(W) - 6 : x1;
+      ["Tracer's alert line, tier " + s.tier + ": " + pct(alertRisk), "alert line, tier " + s.tier + ": " + pct(alertRisk)].some(function (aStr) {
+        var aW = aStr.length * 6.3;
+        return [[xr - aW, ay0 - 6, xr, "end"], [xr - aW, ay0 + 15, xr, "end"], [x0 + 6, ay0 - 6, x0 + 6, "start"],
+                [x0 + 6, ay0 + 15, x0 + 6, "start"]].some(function (sp) {
+          var bx0 = sp[0] - 3, bx1 = sp[0] + aW + 3, by0 = sp[1] - 12, by1 = sp[1] + 4;
+          if (by1 > axisY - 11 || by0 < top - 2 || bx0 < x0 || bx1 > x1 + 4) return false;
+          var hit = cpts.some(function (q) { var qx = X(q[0]), qy = Y(q[1]); return qx >= bx0 && qx <= bx1 && qy >= by0 && qy <= by1; });
+          if (!hit) pick = [sp[2], sp[1], aStr, sp[3]];
+          return !hit;
+        });
+      });
+      if (!pick) { var shortStr = "alert line, tier " + s.tier + ": " + pct(alertRisk); pick = [x1, ay0 - 6, shortStr, "end"]; }
+      svg.appendChild(el("line", { x1: x0, x2: x1, y1: ay0, y2: ay0, "class": "aline" }));
+      svg.appendChild(text(pick[0], pick[1], "lbl t-warn halo", pick[2], pick[3]));
     }
 
     // the risk curve, recomputed here, and the part the clock has passed
@@ -1212,7 +1381,8 @@ var TracerCore = (function () {
   /* ---------- the search briefs, loaded when a specimen with an alert is opened ---------- */
   function loadBriefs(s) {
     var box = $("tl-briefs");
-    var has = s.alerts.model != null && state.point === B.headline_index;
+    // the briefs were written for the stored alerts: the headline threshold at each specimen's own window
+    var has = s.alerts.model != null && state.point === B.headline_index && state.window == null;
     box.hidden = !has;
     if (!has) return;
     if (briefs.data) { showBrief(s); return; }
@@ -1248,6 +1418,134 @@ var TracerCore = (function () {
     $("brief-claude").textContent = entry.claude;
     $("brief-claude-cap").textContent = "Claude, written by " + briefs.data.model;
     $("brief-pair").hidden = false;
+  }
+
+  /* ---------- the threshold control (P4) ---------- */
+  /* At each specimen's own window the two methods' numbers are the bundle's grid, as the evaluation computed
+     them. With one window set for every specimen the grid no longer describes the setting, so the page
+     recomputes both methods at all 20 points from the receipt scans, at the same thresholds, and says so.
+     tests/test_demo_page.py holds the recomputation to the grid at the own windows. */
+  var gridCache = { window: undefined, rows: null }, winRange = [0, 0];
+  function gridRows() {
+    if (state.window == null) {
+      return B.grid.map(function (g) { return { model: g.model, plan: g.plan_baseline }; });
+    }
+    if (gridCache.window !== state.window) {
+      gridCache = { window: state.window, rows: C.operatingGrid(B.specimens, {
+        points: B.grid.length, shifts: B.source.shifts, windowOf: windowOf, seriesOf: seriesOf, weightOf: weightOf,
+        ticksOf: function (s) { return s._ticks; },
+        theta: function (i) { return B.grid[i].model.harm_threshold; },
+        planThreshold: function (s, i) { return B.baselines.plan.threshold_min_by_group[s.group][i]; } }) };
+    }
+    return gridCache.rows;
+  }
+
+  function warnText(v) { return v == null ? "none" : C.fmtWarn(v) + " min"; }
+
+  function renderThreshold() {
+    var i = state.point, g = B.grid[i], rows = gridRows(), row = rows[i], own = state.window == null;
+    var slider = $("th-point");
+    slider.value = String(i);
+    $("th-point-out").textContent = g.model.harm_threshold.toFixed(3);
+    slider.setAttribute("aria-valuetext", "harm threshold " + g.model.harm_threshold.toFixed(3) + ", set for " + g.budget_per_shift + " alerts per shift");
+    $("th-point-help").innerHTML = "Expected harm at which Tracer alerts. Both methods were set on the fit runs to " +
+      n(g.budget_per_shift) + (g.budget_per_shift === 1 ? " alert" : " alerts") + " per " + n(B.shift_min / 60) + "-hour shift" +
+      (i === B.headline_index ? ", the setting the board's headline uses." : ".");
+    $("th-win-out").textContent = own ? "own" : state.window + " min";
+    $("th-win").setAttribute("aria-valuetext", own ? "each specimen's own window" : state.window + " minutes for every specimen");
+    $("th-own").disabled = own;
+    $("th-win-help").innerHTML = own
+      ? "Each specimen keeps its own window, from " + n(mins(winRange[0])) + " to " + n(mins(winRange[1])) +
+        ". Move the slider to give every specimen one window from " + n("60 min") + " to " + n("240 min") + "; risk is recomputed in this page."
+      : "Every specimen's window is " + n(state.window + " min") + ". Risk, both alert rules and which specimens miss their windows are recomputed in this page.";
+    $("th-m-warn").textContent = warnText(row.model.median_warning_all_breaches_min);
+    $("th-p-warn").textContent = warnText(row.plan.median_warning_all_breaches_min);
+    $("th-m-rate").textContent = row.model.alerts_per_shift.toFixed(2);
+    $("th-p-rate").textContent = row.plan.alerts_per_shift.toFixed(2);
+    $("th-sentence").textContent = C.thresholdSentence(row.model, row.plan, state.window);
+    $("th-note").innerHTML = "<b>Synthetic data, no clinical review.</b> Warning is the median over all " +
+      n(int(row.model.breaches)) + " missed windows in the held-out runs, a miss counted as zero. " +
+      (own
+        ? "These numbers are the evaluation's own, read from the bundle."
+        : '<span class="shift">Recomputed in this page for a ' + esc(state.window) + "-minute window: the thresholds were set at each " +
+          "specimen's own window, so alerts per shift drift from the budget of " + esc(g.budget_per_shift) + ".</span>");
+    drawTradeoff(rows);
+  }
+
+  function drawTradeoff(rows) {
+    var svg = $("th-svg"), i = state.point;
+    var w = Math.max(280, Math.floor($("th-chart").clientWidth - 16)), narrow = w < 560;
+    var top = narrow ? 50 : 34, plotH = narrow ? 160 : 200, L = 42, R = 16, x0 = L, x1 = w - R, H = top + plotH + 40;
+    var maxX = 0, maxY = 0;
+    rows.forEach(function (r) {
+      maxX = Math.max(maxX, r.model.alerts_per_shift, r.plan.alerts_per_shift);
+      maxY = Math.max(maxY, r.model.median_warning_all_breaches_min || 0, r.plan.median_warning_all_breaches_min || 0);
+    });
+    maxX = Math.ceil(maxX / 2) * 2 || 2;
+    var yStep = niceStep(maxY || 10, 4);
+    maxY = Math.max(yStep, Math.ceil((maxY || 1) / yStep) * yStep);
+    function X(v) { return x0 + v / maxX * (x1 - x0); }
+    function Y(v) { return top + (1 - (v || 0) / maxY) * plotH; }
+    function text(x, y, cls, str, anchor) {
+      return el("text", { x: x.toFixed(1), y: y.toFixed(1), "class": cls, "text-anchor": anchor || "start" }, str);
+    }
+    svg.setAttribute("viewBox", "0 0 " + w + " " + H);
+    svg.setAttribute("width", String(w));
+    svg.setAttribute("height", String(H));
+    Array.prototype.slice.call(svg.childNodes).forEach(function (c) { if (c.id !== "th-svg-label") svg.removeChild(c); });
+    for (var v = 0; v <= maxY; v += yStep) {
+      svg.appendChild(el("line", { x1: x0, x2: x1, y1: Y(v), y2: Y(v), "class": "gridline" }));
+      svg.appendChild(text(x0 - 7, Y(v) + 4, "ax", String(v), "end"));
+    }
+    svg.appendChild(text(x0 - 7, 13, "ax", "median warning, min", "start"));
+    var xStep = maxX <= 8 ? 1 : 2;
+    if (narrow && maxX > 8) xStep = 4;
+    for (var u = 0; u <= maxX; u += xStep) svg.appendChild(text(X(u), top + plotH + 16, "ax", String(u), u === 0 ? "start" : "middle"));
+    svg.appendChild(text(x1, top + plotH + 32, "ax", "alerts per shift", "end"));
+    [["plan", "tr-p", "tr-dot-p"], ["model", "tr-m", "tr-dot-m"]].forEach(function (k) {
+      var d = "";
+      rows.forEach(function (r, j) { d += (j ? "L" : "M") + X(r[k[0]].alerts_per_shift).toFixed(1) + " " + Y(r[k[0]].median_warning_all_breaches_min).toFixed(1); });
+      svg.appendChild(el("path", { d: d, "class": "tr-line " + k[1] }));
+      rows.forEach(function (r) {
+        var cx = X(r[k[0]].alerts_per_shift), cy = Y(r[k[0]].median_warning_all_breaches_min);
+        svg.appendChild(k[0] === "model" ? el("circle", { cx: cx, cy: cy, r: 3, "class": k[2] })
+          : el("rect", { x: cx - 3, y: cy - 3, width: 6, height: 6, transform: "rotate(45 " + cx + " " + cy + ")", "class": k[2] }));
+      });
+    });
+    var cur = rows[i], mx = X(cur.model.alerts_per_shift), my = Y(cur.model.median_warning_all_breaches_min);
+    var px = X(cur.plan.alerts_per_shift), py = Y(cur.plan.median_warning_all_breaches_min);
+    svg.appendChild(el("line", { x1: mx, x2: mx, y1: my, y2: top + plotH, "class": "tr-guide" }));
+    svg.appendChild(el("circle", { cx: mx, cy: my, r: 8, "class": "tr-now" }));
+    svg.appendChild(el("circle", { cx: px, cy: py, r: 8, "class": "tr-now" }));
+    // the key, top right: the marks of the timeline's chart, and the ring for this setting
+    var kx = x1, ky = narrow ? 31 : 13;
+    [["plan's rule", "t-dim", "p"], ["Tracer", "t-inf", "m"], ["this setting", "t-warn", "now"]].forEach(function (k) {
+      var tw = k[0].length * 6.3;
+      svg.appendChild(text(kx, ky, "lbl " + k[1], k[0], "end"));
+      var cx = kx - tw - 9, cy = ky - 4;
+      if (k[2] === "m") svg.appendChild(el("circle", { cx: cx, cy: cy, r: 3, "class": "tr-dot-m" }));
+      else if (k[2] === "p") svg.appendChild(el("rect", { x: cx - 3, y: cy - 3, width: 6, height: 6, transform: "rotate(45 " + cx + " " + cy + ")", "class": "tr-dot-p" }));
+      else svg.appendChild(el("circle", { cx: cx, cy: cy, r: 5, "class": "tr-now" }));
+      kx = cx - 18;
+    });
+    $("th-svg-label").textContent = "Median warning against alerts per shift for Tracer and the plan's rule at all " + rows.length +
+      " thresholds. At this one, Tracer: " + warnText(cur.model.median_warning_all_breaches_min) + ", " +
+      cur.model.alerts_per_shift.toFixed(2) + " alerts per shift; the plan's rule: " + warnText(cur.plan.median_warning_all_breaches_min) +
+      ", " + cur.plan.alerts_per_shift.toFixed(2) + ".";
+  }
+
+  /* One stability window for every specimen (minutes), or null for their own. Ticks and risk are recomputed,
+     the board redraws, and an open timeline reopens at the nearest minute. */
+  function setWindow(w) {
+    state.window = w == null ? null : Math.max(60, Math.min(240, Math.round(w / 5) * 5));
+    C.applyWindow(B.specimens, state.window, B.tick_min);
+    curveCache = { key: null, pts: null };
+    renderBoard();
+    if (state.open) {
+      var minute = state.positions[state.scrub];
+      openSpecimen(state.open, { minute: minute });
+    }
+    renderThreshold();
   }
 
   /* ---------- events ---------- */
@@ -1296,28 +1594,45 @@ var TracerCore = (function () {
       renderHead(s);
       renderMoment();
     });
+    $("th-point").addEventListener("input", function () { setPoint(+this.value); });
+    var winPending = false;
+    $("th-win").addEventListener("input", function () {
+      if (winPending) return;
+      winPending = true;
+      requestAnimationFrame(function () { winPending = false; setWindow(+$("th-win").value); });
+    });
+    $("th-own").addEventListener("click", function () { setWindow(null); $("th-win").focus(); });
     window.addEventListener("hashchange", function () { fromHash(false); });
     var pending = false;
     window.addEventListener("resize", function () {
-      if (pending || !state.open) return;
+      if (pending) return;
       pending = true;
-      requestAnimationFrame(function () { pending = false; if (state.open) drawChart(); });
+      requestAnimationFrame(function () {
+        pending = false;
+        if (state.open) drawChart();
+        drawTradeoff(gridRows());
+      });
     });
   }
 
-  /* For later tasks: the bundle, the core, the state, and the two ways in. setPoint(i) moves both methods to
-     grid point i (the threshold control); openSpecimen(id) opens a timeline. */
+  function setPoint(i) {
+    state.point = Math.max(0, Math.min(B.grid.length - 1, i));
+    renderBoard();
+    if (state.open) { renderMoment(); loadBriefs(byId[state.open]); }
+    renderThreshold();
+  }
+
+  /* For later tasks and tests: the bundle, the core, the state, and the ways in. setPoint(i) moves both
+     methods to grid point i (the threshold control); setWindow(minutes or null) sets one stability window for
+     every specimen or restores their own; openSpecimen(id) opens a timeline. */
   window.TracerDemo = {
     core: C,
     state: state,
     bundle: function () { return B; },
     renderBoard: renderBoard,
     openSpecimen: function (id) { return openSpecimen(id, { focus: true }); },
-    setPoint: function (i) {
-      state.point = i;
-      renderBoard();
-      if (state.open) { renderMoment(); loadBriefs(byId[state.open]); }
-    }
+    setPoint: setPoint,
+    setWindow: setWindow
   };
 
   fetch("bundle.json").then(function (r) {

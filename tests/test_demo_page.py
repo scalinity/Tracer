@@ -1,9 +1,10 @@
-"""The public demo page, docs/demo/index.html (plan tasks P2 and P3).
+"""The public demo page, docs/demo/index.html (plan tasks P2 to P4).
 
 The page keeps its arithmetic in one <script id="core"> block that never touches the page. These tests slice
 that block out and run it under node, as tests/test_risk.py does with visuals/architecture.html, and hold it to
 the Python: the normal CDF to scipy, the risk to the bundle's arrays, the expected arrival to
-src/models/risk.arrival_quantile, and both alert rules to the bundle's alert minutes for every specimen.
+src/models/risk.arrival_quantile, both alert rules to the bundle's alert minutes for every specimen, and the
+threshold control's recomputation to the bundle's grid of 20 operating points.
 Static checks keep the page self-contained and honest, and a headless Chrome check loads it at phone and laptop
 widths. The browser check needs node, Playwright (from visuals/exhibit-3d/node_modules) and Google Chrome, and
 is skipped without them. Set TRACER_DEMO_SHOTS to a folder outside the repository to keep its screenshots.
@@ -226,6 +227,92 @@ def test_the_default_moment_is_the_first_that_meets_the_rule_stated_beside_it():
     assert got["rows"] >= 3 and got["tracerAlerted"] >= 1 and got["planQuiet"] >= 1
 
 
+# ---- the threshold control (P4) ----
+
+GRID_CTX = """
+var GRID_CTX = {points: B.grid.length, shifts: B.source.shifts,
+  windowOf: function (s) { return s._window; }, ticksOf: function (s) { return s._ticks; },
+  seriesOf: function (s) { return s._series || (s._series = C.riskSeries(s._ticks, mixOf(s), s._window)); },
+  weightOf: weightOf, theta: function (i) { return B.grid[i].model.harm_threshold; },
+  planThreshold: function (s, i) { return B.baselines.plan.threshold_min_by_group[s.group][i]; }};
+"""
+METRICS = ("breaches", "caught", "median_warning_min", "median_warning_all_breaches_min", "false_alerts")
+
+
+@needs_node
+def test_the_page_recomputes_both_methods_at_all_20_grid_points_as_the_evaluation_did(bundle):
+    got = run_core(GRID_CTX + "C.applyWindow(B.specimens, null, B.tick_min); out(C.operatingGrid(B.specimens, GRID_CTX));")
+    assert len(got) == len(bundle["grid"]) == 20
+    for mine, point in zip(got, bundle["grid"]):
+        for key, method in (("model", "model"), ("plan", "plan_baseline")):
+            want = point[method]
+            assert {k: mine[key][k] for k in METRICS} == {k: want[k] for k in METRICS}, (point["budget_per_shift"], key)
+            assert abs(mine[key]["alerts_per_shift"] - want["alerts_per_shift"]) < 6e-5  # the grid keeps four decimals
+
+
+@needs_node
+def test_a_miss_is_read_from_the_receipt_scan_as_the_evaluation_derives_it(bundle):
+    got = run_core("out(B.specimens.map(function (s) { return C.isMiss(s.received_min, s.window_min); }));")
+    assert got == [s["truth"]["breach"] for s in bundle["specimens"]]
+    assert run_core("var C = TracerCore; out([C.median([]), C.median([3]), C.median([4, 1, 3]), C.median([4, 1, 3, 2]), C.median([0, 0, 5, 7])]);",
+                    prelude=False) == [None, 3, 3, 2.5, 2.5]
+
+
+def threshold_sentence(model: dict, plan: dict, window: int | None) -> str:
+    def warn(v):
+        return "no" if v is None else str(round(v)) if abs(v - round(v)) < 1e-9 else f"{v:.1f}"
+
+    def part(who, m):
+        return f"{who} warns {warn(m['median_warning_all_breaches_min'])} min ahead and alerts {m['alerts_per_shift']:.1f} times a shift"
+    lead = "At this setting " if window is None else f"At this setting, with every window set to {window} min, "
+    return lead + part("Tracer", model) + "; " + part("the plan's rule", plan) + "."
+
+
+@needs_node
+def test_the_threshold_sentence_states_the_grid_numbers_at_every_point(bundle):
+    got = run_core("out(B.grid.map(function (g) { return C.thresholdSentence(g.model, g.plan_baseline, null); }));")
+    want = [threshold_sentence(g["model"], g["plan_baseline"], None) for g in bundle["grid"]]
+    assert got == want
+    assert len(set(got)) >= 15  # the sentence moves with the threshold
+    g = bundle["grid"][bundle["headline_index"]]
+    assert f"Tracer warns {g['model']['median_warning_all_breaches_min']:g} min ahead" in got[bundle["headline_index"]]
+    over = run_core("out(TracerCore.thresholdSentence({median_warning_all_breaches_min: 12.5, alerts_per_shift: 5.21},"
+                    " {median_warning_all_breaches_min: 0, alerts_per_shift: 1.04}, 90));", prelude=False)
+    assert over == ("At this setting, with every window set to 90 min, Tracer warns 12.5 min ahead and alerts 5.2 times a shift; "
+                    "the plan's rule warns 0 min ahead and alerts 1.0 times a shift.")
+
+
+@needs_node
+def test_one_window_for_every_specimen_recomputes_ticks_and_risk_and_drops_the_cached_series(bundle):
+    got = run_core(GRID_CTX + """
+      C.applyWindow(B.specimens, null, B.tick_min);
+      var s = B.specimens.filter(function (x) { return x.window_min === 120 && x.received_min == null; })[0];
+      var own = GRID_CTX.seriesOf(s).slice(), ownTicks = s._ticks.slice();
+      C.applyWindow(B.specimens, 90, B.tick_min);
+      var cleared = B.specimens.every(function (x) { return x._series === null && x._window === 90; });
+      var lastTick = Math.max.apply(null, B.specimens.map(function (x) { return x._ticks.length ? x._ticks[x._ticks.length - 1] : 0; }));
+      var at90 = GRID_CTX.seriesOf(s).slice(), ticks90 = s._ticks.slice();
+      var grid90 = C.operatingGrid(B.specimens, GRID_CTX)[H];
+      // a specimen silent at 100 minutes is past a 90-minute window and still inside a 120-minute one
+      var t = {_c: 0, window_min: 120, received_min: null, _window: 90};
+      var closed90 = C.outstanding([t], 100, 480, function (x) { return x._window; }).live[0].closed;
+      var closedOwn = C.outstanding([t], 100, 480).live[0].closed;
+      C.applyWindow(B.specimens, null, B.tick_min);
+      var back = GRID_CTX.seriesOf(s);
+      out({cleared: cleared, lastTick: lastTick, own: own, ownTicks: ownTicks, at90: at90, ticks90: ticks90,
+           back: back, stored: s.risk, grid90: grid90, closed90: closed90, closedOwn: closedOwn,
+           restored: B.specimens.every(function (x) { return x._window === x.window_min; })});
+    """)
+    assert got["cleared"] and got["restored"]
+    assert got["lastTick"] == 90 and got["ticks90"][-1] == 90 and got["ownTicks"][-1] == 120
+    # the same silence carries more risk when the window is shorter
+    assert all(a > o for a, o in zip(got["at90"], got["own"]))
+    assert max(abs(b - r) for b, r in zip(got["back"], got["stored"])) < 1e-9
+    headline = bundle["grid"][bundle["headline_index"]]["model"]
+    assert got["grid90"]["model"]["breaches"] != headline["breaches"]  # which specimens miss depends on the window
+    assert got["closed90"] is True and got["closedOwn"] is False
+
+
 # ---- the page itself ----
 
 def test_the_page_loads_nothing_from_another_origin():
@@ -319,6 +406,22 @@ const { chromium } = require(PLAYWRIGHT);
     run.truthShown = await page.isVisible("#tl-truth-line");
     run.overflowOpen = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     await page.screenshot({ path: SHOTS + "/timeline-" + width + ".png", fullPage: true });
+    // the threshold control: one step of the threshold, then one step of the window, then back to the own windows
+    const th = async () => ({ sentence: await page.textContent("#th-sentence"), note: await page.textContent("#th-note"),
+      numbers: await page.$$eval("#th-m-warn, #th-m-rate, #th-p-warn, #th-p-rate", (els) => els.map((e) => e.textContent)),
+      boardRisk: await page.textContent("#ro-risk") });
+    run.th0 = await th();
+    await page.focus("#th-point");
+    await page.keyboard.press("ArrowLeft");
+    run.th1 = await th();
+    await page.focus("#th-win");
+    await page.keyboard.press("ArrowRight");
+    await page.waitForFunction(() => document.getElementById("th-sentence").textContent.includes("every window set to 125 min"));
+    run.th2 = await th();
+    run.overflowThreshold = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    await page.locator("#threshold").screenshot({ path: SHOTS + "/threshold-" + width + ".png" });
+    await page.click("#th-own");
+    run.th3 = await th();
     result.runs.push(run);
     await context.close();
   }
@@ -369,7 +472,14 @@ def test_the_page_works_in_headless_chrome_at_phone_and_laptop_widths(tmp_path):
         assert run["hash"] == "#" + run["firstId"]
         assert run["riskBefore"] != run["riskAfterKey"] != run["riskAfterButton"], run
         assert run["truthShown"]
+        th0, th1, th2, th3 = run["th0"], run["th1"], run["th2"], run["th3"]
+        assert th0["sentence"].startswith("At this setting Tracer warns") and "Synthetic data, no clinical review." in th0["note"]
+        assert th1["sentence"] != th0["sentence"] and th1["numbers"] != th0["numbers"], run  # the threshold moved them
+        assert th2["sentence"] != th1["sentence"] and th2["numbers"] != th1["numbers"], run  # and so did the window
+        assert "Recomputed in this page for a 125-minute window" in th2["note"] and th2["boardRisk"] != th1["boardRisk"]
+        assert th3["sentence"] == th1["sentence"] and th3["numbers"] == th1["numbers"]  # own windows give the grid back
     phone = result["runs"][0]
     assert phone["width"] == 375 and phone["overflow"] <= 0 and phone["overflowOpen"] <= 0, phone
+    assert phone["overflowThreshold"] <= 0, phone
     assert "did not load" in result["blocked"] and "bundle.json" in result["blocked"]
     assert "python3 -m http.server" in result["blocked"]
