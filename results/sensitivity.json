@@ -1,0 +1,657 @@
+{
+ "policy_hash": "9594d7c019363261",
+ "source_sha256": "3cd25064e77828805ad20f31693f74fe27ee9ee08f42fb54b76d6061e31f9c64",
+ "budget_per_shift": 6,
+ "held_out_runs": "24 to 29",
+ "method_names": {
+  "plan_baseline": "the plan's quantile rule",
+  "window_baseline": "alert at a share of the window",
+  "model": "the risk model, weights 3, 2, 1"
+ },
+ "original_knobs": {
+  "plan_baseline": 0.610714,
+  "window_baseline": 0.166667,
+  "model": 0.13742
+ },
+ "note": "Reweighted held-out specimens: nothing about how a specimen travels changes. Synthetic data, no clinical review.",
+ "scenarios": [
+  {
+   "group": "as generated",
+   "name": "as generated",
+   "description": "The held-out runs as they are.",
+   "volume_factor": 1.0,
+   "fixed_knobs": {
+    "plan_baseline": {
+     "alerts_per_shift": 6.2698,
+     "breaches_per_shift": 0.7937,
+     "catch_rate": 1.0,
+     "median_warning_min": 30.0,
+     "median_warning_all_breaches_min": 30.0
+    },
+    "window_baseline": {
+     "alerts_per_shift": 5.3095,
+     "breaches_per_shift": 0.7937,
+     "catch_rate": 1.0,
+     "median_warning_min": 45.0,
+     "median_warning_all_breaches_min": 45.0
+    },
+    "model": {
+     "alerts_per_shift": 6.3968,
+     "breaches_per_shift": 0.7937,
+     "catch_rate": 1.0,
+     "median_warning_min": 55.0,
+     "median_warning_all_breaches_min": 55.0
+    }
+   },
+   "retuned_to_6_per_shift": {
+    "plan_baseline": {
+     "alerts_per_shift": 6.2698,
+     "breaches_per_shift": 0.7937,
+     "catch_rate": 1.0,
+     "median_warning_min": 30.0,
+     "median_warning_all_breaches_min": 30.0
+    },
+    "window_baseline": {
+     "alerts_per_shift": 5.3095,
+     "breaches_per_shift": 0.7937,
+     "catch_rate": 1.0,
+     "median_warning_min": 45.0,
+     "median_warning_all_breaches_min": 45.0
+    },
+    "model": {
+     "alerts_per_shift": 6.3968,
+     "breaches_per_shift": 0.7937,
+     "catch_rate": 1.0,
+     "median_warning_min": 55.0,
+     "median_warning_all_breaches_min": 55.0
+    }
+   },
+   "retuned_knobs": {
+    "plan_baseline": 0.610714,
+    "window_baseline": 0.166667,
+    "model": 0.13742
+   },
+   "specimens_per_shift": 18.87
+  },
+  {
+   "group": "arrival volume",
+   "name": "volume x0.5",
+   "description": "0.5 times as many specimens arrive, with the same mix and hours.",
+   "volume_factor": 0.5,
+   "fixed_knobs": {
+    "plan_baseline": {
+     "alerts_per_shift": 3.1349,
+     "breaches_per_shift": 0.3968,
+     "catch_rate": 1.0,
+     "median_warning_min": 30.0,
+     "median_warning_all_breaches_min": 30.0
+    },
+    "window_baseline": {
+     "alerts_per_shift": 2.6548,
+     "breaches_per_shift": 0.3968,
+     "catch_rate": 1.0,
+     "median_warning_min": 45.0,
+     "median_warning_all_breaches_min": 45.0
+    },
+    "model": {
+     "alerts_per_shift": 3.1984,
+     "breaches_per_shift": 0.3968,
+     "catch_rate": 1.0,
+     "median_warning_min": 55.0,
+     "median_warning_all_breaches_min": 55.0
+    }
+   },
+   "retuned_to_6_per_shift": {
+    "plan_baseline": {
+     "alerts_per_shift": 6.1468,
+     "breaches_per_shift": 0.3968,
+     "catch_rate": 1.0,
+     "median_warning_min": 45.0,
+     "median_warning_all_breaches_min": 45.0
+    },
+    "window_baseline": {
+     "alerts_per_shift": 5.6548,
+     "breaches_per_shift": 0.3968,
+     "catch_rate": 1.0,
+     "median_warning_min": 55.0,
+     "median_warning_all_breaches_min": 55.0
+    },
+    "model": {
+     "alerts_per_shift": 6.254,
+     "breaches_per_shift": 0.3968,
+     "catch_rate": 1.0,
+     "median_warning_min": 55.0,
+     "median_warning_all_breaches_min": 55.0
+    }
+   },
+   "retuned_knobs": {
+    "plan_baseline": 0.222222,
+    "window_baseline": 0.013889,
+    "model": 0.042531
+   },
+   "specimens_per_shift": 9.44
+  },
+  {
+   "group": "arrival volume",
+   "name": "volume x0.75",
+   "description": "0.75 times as many specimens arrive, with the same mix and hours.",
+   "volume_factor": 0.75,
+   "fixed_knobs": {
+    "plan_baseline": {
+     "alerts_per_shift": 4.7024,
+     "breaches_per_shift": 0.5952,
+     "catch_rate": 1.0,
+     "median_warning_min": 30.0,
+     "median_warning_all_breaches_min": 30.0
+    },
+    "window_baseline": {
+     "alerts_per_shift": 3.9821,
+     "breaches_per_shift": 0.5952,
+     "catch_rate": 1.0,
+     "median_warning_min": 45.0,
+     "median_warning_all_breaches_min": 45.0
+    },
+    "model": {
+     "alerts_per_shift": 4.7976,
+     "breaches_per_shift": 0.5952,
+     "catch_rate": 1.0,
+     "median_warning_min": 55.0,
+     "median_warning_all_breaches_min": 55.0
+    }
+   },
+   "retuned_to_6_per_shift": {
+    "plan_baseline": {
+     "alerts_per_shift": 6.256,
+     "breaches_per_shift": 0.5952,
+     "catch_rate": 1.0,
+     "median_warning_min": 40.0,
+     "median_warning_all_breaches_min": 40.0
+    },
+    "window_baseline": {
+     "alerts_per_shift": 6.3274,
+     "breaches_per_shift": 0.5952,
+     "catch_rate": 1.0,
+     "median_warning_min": 55.0,
+     "median_warning_all_breaches_min": 55.0
+    },
+    "model": {
+     "alerts_per_shift": 6.3095,
+     "breaches_per_shift": 0.5952,
+     "catch_rate": 1.0,
+     "median_warning_min": 55.0,
+     "median_warning_all_breaches_min": 55.0
+    }
+   },
+   "retuned_knobs": {
+    "plan_baseline": 0.446429,
+    "window_baseline": 0.045139,
+    "model": 0.098591
+   },
+   "specimens_per_shift": 14.15
+  },
+  {
+   "group": "arrival volume",
+   "name": "volume x1.5",
+   "description": "1.5 times as many specimens arrive, with the same mix and hours.",
+   "volume_factor": 1.5,
+   "fixed_knobs": {
+    "plan_baseline": {
+     "alerts_per_shift": 9.4048,
+     "breaches_per_shift": 1.1905,
+     "catch_rate": 1.0,
+     "median_warning_min": 30.0,
+     "median_warning_all_breaches_min": 30.0
+    },
+    "window_baseline": {
+     "alerts_per_shift": 7.9643,
+     "breaches_per_shift": 1.1905,
+     "catch_rate": 1.0,
+     "median_warning_min": 45.0,
+     "median_warning_all_breaches_min": 45.0
+    },
+    "model": {
+     "alerts_per_shift": 9.5952,
+     "breaches_per_shift": 1.1905,
+     "catch_rate": 1.0,
+     "median_warning_min": 55.0,
+     "median_warning_all_breaches_min": 55.0
+    }
+   },
+   "retuned_to_6_per_shift": {
+    "plan_baseline": {
+     "alerts_per_shift": 6.5476,
+     "breaches_per_shift": 1.1905,
+     "catch_rate": 1.0,
+     "median_warning_min": 25.0,
+     "median_warning_all_breaches_min": 25.0
+    },
+    "window_baseline": {
+     "alerts_per_shift": 5.7857,
+     "breaches_per_shift": 1.1905,
+     "catch_rate": 1.0,
+     "median_warning_min": 40.0,
+     "median_warning_all_breaches_min": 40.0
+    },
+    "model": {
+     "alerts_per_shift": 6.5476,
+     "breaches_per_shift": 1.1905,
+     "catch_rate": 1.0,
+     "median_warning_min": 40.0,
+     "median_warning_all_breaches_min": 40.0
+    }
+   },
+   "retuned_knobs": {
+    "plan_baseline": 0.752525,
+    "window_baseline": 0.25,
+    "model": 0.204708
+   },
+   "specimens_per_shift": 28.31
+  },
+  {
+   "group": "arrival volume",
+   "name": "volume x2",
+   "description": "2 times as many specimens arrive, with the same mix and hours.",
+   "volume_factor": 2.0,
+   "fixed_knobs": {
+    "plan_baseline": {
+     "alerts_per_shift": 12.5397,
+     "breaches_per_shift": 1.5873,
+     "catch_rate": 1.0,
+     "median_warning_min": 30.0,
+     "median_warning_all_breaches_min": 30.0
+    },
+    "window_baseline": {
+     "alerts_per_shift": 10.619,
+     "breaches_per_shift": 1.5873,
+     "catch_rate": 1.0,
+     "median_warning_min": 45.0,
+     "median_warning_all_breaches_min": 45.0
+    },
+    "model": {
+     "alerts_per_shift": 12.7937,
+     "breaches_per_shift": 1.5873,
+     "catch_rate": 1.0,
+     "median_warning_min": 55.0,
+     "median_warning_all_breaches_min": 55.0
+    }
+   },
+   "retuned_to_6_per_shift": {
+    "plan_baseline": {
+     "alerts_per_shift": 6.873,
+     "breaches_per_shift": 1.5873,
+     "catch_rate": 1.0,
+     "median_warning_min": 20.0,
+     "median_warning_all_breaches_min": 20.0
+    },
+    "window_baseline": {
+     "alerts_per_shift": 5.7143,
+     "breaches_per_shift": 1.5873,
+     "catch_rate": 1.0,
+     "median_warning_min": 35.0,
+     "median_warning_all_breaches_min": 35.0
+    },
+    "model": {
+     "alerts_per_shift": 6.6032,
+     "breaches_per_shift": 1.5873,
+     "catch_rate": 1.0,
+     "median_warning_min": 35.0,
+     "median_warning_all_breaches_min": 35.0
+    }
+   },
+   "retuned_knobs": {
+    "plan_baseline": 0.82397,
+    "window_baseline": 0.333333,
+    "model": 0.273737
+   },
+   "specimens_per_shift": 37.75
+  },
+  {
+   "group": "arrival profile",
+   "name": "flat day",
+   "description": "The same number of specimens, spread evenly over the 24 hours.",
+   "volume_factor": 1.0,
+   "fixed_knobs": {
+    "plan_baseline": {
+     "alerts_per_shift": 6.2565,
+     "breaches_per_shift": 0.7593,
+     "catch_rate": 1.0,
+     "median_warning_min": 30.0,
+     "median_warning_all_breaches_min": 30.0
+    },
+    "window_baseline": {
+     "alerts_per_shift": 5.2844,
+     "breaches_per_shift": 0.7593,
+     "catch_rate": 1.0,
+     "median_warning_min": 45.0,
+     "median_warning_all_breaches_min": 45.0
+    },
+    "model": {
+     "alerts_per_shift": 6.3511,
+     "breaches_per_shift": 0.7593,
+     "catch_rate": 1.0,
+     "median_warning_min": 55.0,
+     "median_warning_all_breaches_min": 55.0
+    }
+   },
+   "retuned_to_6_per_shift": {
+    "plan_baseline": {
+     "alerts_per_shift": 6.2565,
+     "breaches_per_shift": 0.7593,
+     "catch_rate": 1.0,
+     "median_warning_min": 30.0,
+     "median_warning_all_breaches_min": 30.0
+    },
+    "window_baseline": {
+     "alerts_per_shift": 5.2844,
+     "breaches_per_shift": 0.7593,
+     "catch_rate": 1.0,
+     "median_warning_min": 45.0,
+     "median_warning_all_breaches_min": 45.0
+    },
+    "model": {
+     "alerts_per_shift": 6.3511,
+     "breaches_per_shift": 0.7593,
+     "catch_rate": 1.0,
+     "median_warning_min": 55.0,
+     "median_warning_all_breaches_min": 55.0
+    }
+   },
+   "retuned_knobs": {
+    "plan_baseline": 0.610714,
+    "window_baseline": 0.166667,
+    "model": 0.13742
+   },
+   "specimens_per_shift": 18.87
+  },
+  {
+   "group": "arrival profile",
+   "name": "sharper morning peak",
+   "description": "Collections from 07:00 to 10:00 are 1.6 times as common, and the rest are scaled to keep the total.",
+   "volume_factor": 1.0,
+   "fixed_knobs": {
+    "plan_baseline": {
+     "alerts_per_shift": 6.2653,
+     "breaches_per_shift": 0.794,
+     "catch_rate": 1.0,
+     "median_warning_min": 30.0,
+     "median_warning_all_breaches_min": 30.0
+    },
+    "window_baseline": {
+     "alerts_per_shift": 5.3282,
+     "breaches_per_shift": 0.794,
+     "catch_rate": 1.0,
+     "median_warning_min": 45.0,
+     "median_warning_all_breaches_min": 45.0
+    },
+    "model": {
+     "alerts_per_shift": 6.3438,
+     "breaches_per_shift": 0.794,
+     "catch_rate": 1.0,
+     "median_warning_min": 55.0,
+     "median_warning_all_breaches_min": 55.0
+    }
+   },
+   "retuned_to_6_per_shift": {
+    "plan_baseline": {
+     "alerts_per_shift": 6.2653,
+     "breaches_per_shift": 0.794,
+     "catch_rate": 1.0,
+     "median_warning_min": 30.0,
+     "median_warning_all_breaches_min": 30.0
+    },
+    "window_baseline": {
+     "alerts_per_shift": 5.3282,
+     "breaches_per_shift": 0.794,
+     "catch_rate": 1.0,
+     "median_warning_min": 45.0,
+     "median_warning_all_breaches_min": 45.0
+    },
+    "model": {
+     "alerts_per_shift": 6.3438,
+     "breaches_per_shift": 0.794,
+     "catch_rate": 1.0,
+     "median_warning_min": 55.0,
+     "median_warning_all_breaches_min": 55.0
+    }
+   },
+   "retuned_knobs": {
+    "plan_baseline": 0.610714,
+    "window_baseline": 0.166667,
+    "model": 0.13742
+   },
+   "specimens_per_shift": 18.87
+  },
+  {
+   "group": "arrival profile",
+   "name": "night-heavy",
+   "description": "Collections from midnight to 06:00 are 3 times as common, like an intensive care unit.",
+   "volume_factor": 1.0,
+   "fixed_knobs": {
+    "plan_baseline": {
+     "alerts_per_shift": 6.1369,
+     "breaches_per_shift": 0.7703,
+     "catch_rate": 1.0,
+     "median_warning_min": 30.0,
+     "median_warning_all_breaches_min": 30.0
+    },
+    "window_baseline": {
+     "alerts_per_shift": 5.296,
+     "breaches_per_shift": 0.7703,
+     "catch_rate": 1.0,
+     "median_warning_min": 45.0,
+     "median_warning_all_breaches_min": 45.0
+    },
+    "model": {
+     "alerts_per_shift": 6.3038,
+     "breaches_per_shift": 0.7703,
+     "catch_rate": 1.0,
+     "median_warning_min": 55.0,
+     "median_warning_all_breaches_min": 55.0
+    }
+   },
+   "retuned_to_6_per_shift": {
+    "plan_baseline": {
+     "alerts_per_shift": 6.1048,
+     "breaches_per_shift": 0.7703,
+     "catch_rate": 1.0,
+     "median_warning_min": 30.0,
+     "median_warning_all_breaches_min": 30.0
+    },
+    "window_baseline": {
+     "alerts_per_shift": 5.296,
+     "breaches_per_shift": 0.7703,
+     "catch_rate": 1.0,
+     "median_warning_min": 45.0,
+     "median_warning_all_breaches_min": 45.0
+    },
+    "model": {
+     "alerts_per_shift": 6.3359,
+     "breaches_per_shift": 0.7703,
+     "catch_rate": 1.0,
+     "median_warning_min": 55.0,
+     "median_warning_all_breaches_min": 55.0
+    }
+   },
+   "retuned_knobs": {
+    "plan_baseline": 0.611111,
+    "window_baseline": 0.166667,
+    "model": 0.13491
+   },
+   "specimens_per_shift": 18.87
+  },
+  {
+   "group": "specimen mix",
+   "name": "more urine",
+   "description": "Urine specimens are 1.5 times as common compared with everything else (unpreserved room-temperature urine has the shortest window, 60 minutes).",
+   "volume_factor": 1.0,
+   "fixed_knobs": {
+    "plan_baseline": {
+     "alerts_per_shift": 6.3032,
+     "breaches_per_shift": 0.8356,
+     "catch_rate": 1.0,
+     "median_warning_min": 30.0,
+     "median_warning_all_breaches_min": 30.0
+    },
+    "window_baseline": {
+     "alerts_per_shift": 5.7925,
+     "breaches_per_shift": 0.8356,
+     "catch_rate": 1.0,
+     "median_warning_min": 45.0,
+     "median_warning_all_breaches_min": 45.0
+    },
+    "model": {
+     "alerts_per_shift": 6.4424,
+     "breaches_per_shift": 0.8356,
+     "catch_rate": 1.0,
+     "median_warning_min": 50.0,
+     "median_warning_all_breaches_min": 50.0
+    }
+   },
+   "retuned_to_6_per_shift": {
+    "plan_baseline": {
+     "alerts_per_shift": 6.3032,
+     "breaches_per_shift": 0.8356,
+     "catch_rate": 1.0,
+     "median_warning_min": 30.0,
+     "median_warning_all_breaches_min": 30.0
+    },
+    "window_baseline": {
+     "alerts_per_shift": 5.7925,
+     "breaches_per_shift": 0.8356,
+     "catch_rate": 1.0,
+     "median_warning_min": 45.0,
+     "median_warning_all_breaches_min": 45.0
+    },
+    "model": {
+     "alerts_per_shift": 6.3728,
+     "breaches_per_shift": 0.8356,
+     "catch_rate": 1.0,
+     "median_warning_min": 50.0,
+     "median_warning_all_breaches_min": 50.0
+    }
+   },
+   "retuned_knobs": {
+    "plan_baseline": 0.610714,
+    "window_baseline": 0.166667,
+    "model": 0.137786
+   },
+   "specimens_per_shift": 18.87
+  },
+  {
+   "group": "specimen mix",
+   "name": "more swabs",
+   "description": "Culture swabs and eSwabs are 1.5 times as common compared with everything else (windows of a day or more).",
+   "volume_factor": 1.0,
+   "fixed_knobs": {
+    "plan_baseline": {
+     "alerts_per_shift": 6.269,
+     "breaches_per_shift": 0.7275,
+     "catch_rate": 1.0,
+     "median_warning_min": 35.0,
+     "median_warning_all_breaches_min": 35.0
+    },
+    "window_baseline": {
+     "alerts_per_shift": 4.6887,
+     "breaches_per_shift": 0.7275,
+     "catch_rate": 1.0,
+     "median_warning_min": 45.0,
+     "median_warning_all_breaches_min": 45.0
+    },
+    "model": {
+     "alerts_per_shift": 5.8652,
+     "breaches_per_shift": 0.7275,
+     "catch_rate": 1.0,
+     "median_warning_min": 55.0,
+     "median_warning_all_breaches_min": 55.0
+    }
+   },
+   "retuned_to_6_per_shift": {
+    "plan_baseline": {
+     "alerts_per_shift": 6.269,
+     "breaches_per_shift": 0.7275,
+     "catch_rate": 1.0,
+     "median_warning_min": 35.0,
+     "median_warning_all_breaches_min": 35.0
+    },
+    "window_baseline": {
+     "alerts_per_shift": 5.8339,
+     "breaches_per_shift": 0.7275,
+     "catch_rate": 1.0,
+     "median_warning_min": 50.0,
+     "median_warning_all_breaches_min": 50.0
+    },
+    "model": {
+     "alerts_per_shift": 6.3873,
+     "breaches_per_shift": 0.7275,
+     "catch_rate": 1.0,
+     "median_warning_min": 55.0,
+     "median_warning_all_breaches_min": 55.0
+    }
+   },
+   "retuned_knobs": {
+    "plan_baseline": 0.610714,
+    "window_baseline": 0.125,
+    "model": 0.121658
+   },
+   "specimens_per_shift": 18.87
+  },
+  {
+   "group": "specimen mix",
+   "name": "more urgent specimens",
+   "description": "Tier 1 specimens (lavage and tissue) are twice as common compared with everything else.",
+   "volume_factor": 1.0,
+   "fixed_knobs": {
+    "plan_baseline": {
+     "alerts_per_shift": 6.2035,
+     "breaches_per_shift": 0.7738,
+     "catch_rate": 1.0,
+     "median_warning_min": 35.0,
+     "median_warning_all_breaches_min": 35.0
+    },
+    "window_baseline": {
+     "alerts_per_shift": 5.4029,
+     "breaches_per_shift": 0.7738,
+     "catch_rate": 1.0,
+     "median_warning_min": 45.0,
+     "median_warning_all_breaches_min": 45.0
+    },
+    "model": {
+     "alerts_per_shift": 6.8764,
+     "breaches_per_shift": 0.7738,
+     "catch_rate": 1.0,
+     "median_warning_min": 55.0,
+     "median_warning_all_breaches_min": 55.0
+    }
+   },
+   "retuned_to_6_per_shift": {
+    "plan_baseline": {
+     "alerts_per_shift": 6.2035,
+     "breaches_per_shift": 0.7738,
+     "catch_rate": 1.0,
+     "median_warning_min": 35.0,
+     "median_warning_all_breaches_min": 35.0
+    },
+    "window_baseline": {
+     "alerts_per_shift": 5.4029,
+     "breaches_per_shift": 0.7738,
+     "catch_rate": 1.0,
+     "median_warning_min": 45.0,
+     "median_warning_all_breaches_min": 45.0
+    },
+    "model": {
+     "alerts_per_shift": 6.4996,
+     "breaches_per_shift": 0.7738,
+     "catch_rate": 1.0,
+     "median_warning_min": 55.0,
+     "median_warning_all_breaches_min": 55.0
+    }
+   },
+   "retuned_knobs": {
+    "plan_baseline": 0.610714,
+    "window_baseline": 0.166667,
+    "model": 0.148686
+   },
+   "specimens_per_shift": 18.87
+  }
+ ]
+}

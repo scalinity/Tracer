@@ -62,3 +62,39 @@ def test_the_table_matches_the_snapshot():
         med, caught = H[budget]["median_warning_all_breaches_min"], H[budget]["breaches_caught_of_100"]
         for arm in ("plan_baseline", "window_baseline", "model_equal_weights", "model_3_2_1"):
             assert f"{n(med[arm])} ({caught[arm]})" in row, (budget, arm)
+
+
+# ---- the sensitivity section (plan task A2) ----
+
+SENS = json.loads((store.ROOT / "results" / "sensitivity.json").read_text(encoding="utf-8"))
+
+
+def sens_text():
+    return README.split("## Sensitivity (A2)")[1].split("## Files")[0]
+
+
+def test_the_sensitivity_paragraph_quotes_the_json():
+    text, rows = sens_text(), {r["name"]: r for r in SENS["scenarios"]}
+    warn = lambda name, label, m: rows[name][label][m]["median_warning_all_breaches_min"]
+    base, double = rows["as generated"], rows["volume x2"]
+    assert f"{base['fixed_knobs']['model']['alerts_per_shift']:.1f} becomes {double['fixed_knobs']['model']['alerts_per_shift']:.1f} at twice the volume" in text
+    assert (f"falls from {n(warn('as generated', 'retuned_to_6_per_shift', 'model'))} minutes to {n(warn('volume x1.5', 'retuned_to_6_per_shift', 'model'))} at 1.5 times the volume "
+            f"and {n(warn('volume x2', 'retuned_to_6_per_shift', 'model'))} at twice") in text
+    lead = warn("as generated", "retuned_to_6_per_shift", "model") - warn("as generated", "retuned_to_6_per_shift", "plan_baseline")
+    assert f"against {n(lead)} there" in text
+    leads = [warn(v, "retuned_to_6_per_shift", "model") - warn(v, "retuned_to_6_per_shift", "plan_baseline") for v in ("volume x0.5", "volume x0.75", "volume x1.5", "volume x2")]
+    assert min(leads) >= 10 and max(leads) <= 15  # "10 to 15 minutes at every volume but the original"
+    ties = [warn(v, "retuned_to_6_per_shift", "model") == warn(v, "retuned_to_6_per_shift", "window_baseline") for v in ("volume x0.5", "volume x0.75", "volume x1.5", "volume x2")]
+    assert all(ties) and "ties the model at every volume but the original" in text
+
+
+def test_the_sensitivity_section_keeps_its_caveats_and_a_table_that_matches():
+    text, rows = sens_text(), {r["name"]: r for r in SENS["scenarios"]}
+    for needle in ("not what congestion would do", "5-minute steps", "assumption", "synthetic", "no clinical review", "challenger has not been run", "not robust"):
+        assert needle in text, needle
+    for name, r in rows.items():
+        label = name.replace("volume x", "volume ×")
+        row = next(line for line in text.splitlines() if line.startswith(f"| {label} |"))
+        for m in ("plan_baseline", "window_baseline", "model"):
+            x = r["retuned_to_6_per_shift"][m]
+            assert f"{n(x['median_warning_all_breaches_min'])} ({x['alerts_per_shift']:.1f})" in row, (name, m)

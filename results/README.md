@@ -12,6 +12,26 @@ Median warning over all breaches in minutes, with breaches caught of 100 in brac
 | 4 | 25 (100) | 40 (100) | 40 (100) | 40 (100) |
 | 6 | 30 (100) | 45 (100) | 45 (100) | 55 (100) |
 
+## Sensitivity (A2)
+
+**Sensitivity to the arrival profile and the specimen mix (A2).** Reweighting the held-out specimens keeps each specimen's own timings, so it shows what a different crowd does and not what congestion would do, which the generator does not model. The arrival profile did not matter: a flat day, a sharper morning peak and a night-heavy day leave the alerts per shift within 0.4 of 6.4 and the risk model's median warning at 55 minutes. Volume matters. With the knobs left alone, alerts per shift scale with arrivals: the risk model's 6.4 becomes 12.8 at twice the volume and 3.2 at half. Retuned to hold 6 alerts per shift, the model's median warning falls from 55 minutes to 40 at 1.5 times the volume and 35 at twice, and the plan's rule falls from 30 to 25 and 20, while at 0.75 and half the volume the plan's rule gains (40 and 45 minutes) and the model stays at 55. The model's lead over the plan's rule is 10 to 15 minutes at every volume but the original, against 25 there. The window-aware rule ties the model at every volume but the original, so the 10-minute lead over it at the original volume, which comes from the weights 3, 2, 1, is not robust. The specimen mix moves the model's median warning by at most 5 minutes (50 with more urine, 55 with more swabs, 55 with more urgent specimens). Warning comes in 5-minute steps, every parameter and weight is an assumption, the data is synthetic with no clinical review, and the gradient-boosted challenger has not been run.
+
+Median warning over all breaches in minutes with the alerts per shift in brackets, each method retuned to 6 alerts per shift in the scenario (`python -m src.pipeline.sensitivity`, `sensitivity.json`):
+
+| Scenario | Plan's baseline | Window-aware baseline | Risk model, weights 3, 2, 1 |
+|---|---|---|---|
+| as generated | 30 (6.3) | 45 (5.3) | 55 (6.4) |
+| volume ×0.5 | 45 (6.1) | 55 (5.7) | 55 (6.3) |
+| volume ×0.75 | 40 (6.3) | 55 (6.3) | 55 (6.3) |
+| volume ×1.5 | 25 (6.5) | 40 (5.8) | 40 (6.5) |
+| volume ×2 | 20 (6.9) | 35 (5.7) | 35 (6.6) |
+| flat day | 30 (6.3) | 45 (5.3) | 55 (6.4) |
+| sharper morning peak | 30 (6.3) | 45 (5.3) | 55 (6.3) |
+| night-heavy | 30 (6.1) | 45 (5.3) | 55 (6.3) |
+| more urine | 30 (6.3) | 45 (5.8) | 50 (6.4) |
+| more swabs | 35 (6.3) | 50 (5.8) | 55 (6.4) |
+| more urgent specimens | 35 (6.2) | 45 (5.4) | 55 (6.5) |
+
 ## Files
 
 | File | What it holds | Made by |
@@ -21,4 +41,5 @@ Median warning over all breaches in minutes, with breaches caught of 100 in brac
 | `alerts.csv` | One row per alert at 6 per shift on the held-out runs: time, tier, most likely place, role, warning, closed time and outcome | `python -m src.pipeline.evaluate` |
 | `location-accuracy.json`, `location-calibration.svg` | Top-1 and top-3 place accuracy at 15, 30, 60 and 90 minutes of silence, and the calibration of the chance of lost | `python -m src.pipeline.location_eval` |
 | `parameter-recovery.json`, `parameter-recovery.svg` | Whether the fit recovers what the generator planted | `python -m src.pipeline.recovery` |
+| `sensitivity.json` | The headline reweighted for other arrival volumes, hours and specimen mixes, with the knobs fixed and retuned | `python -m src.pipeline.sensitivity` |
 | `interval_params.json` | The fitted transit-time distributions, with the policy hash and the dataset's SHA-256 | `python -m src.pipeline.intervals` |

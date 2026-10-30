@@ -61,21 +61,24 @@ def last_ticks(specs) -> np.ndarray:
     return np.array([s.ticks[-1] if len(s.ticks) else -np.inf for s in specs])
 
 
-def knob_counters(specs, harm: dict, quantiles: dict) -> dict:
-    """Alert counts as a function of each method's knob, over the given specimens."""
+def knob_counters(specs, harm: dict, quantiles: dict, weights: np.ndarray | None = None) -> dict:
+    """Alert counts as a function of each method's knob, over the given specimens. With `weights` (one per
+    specimen) the count is the weighted one, as when a scenario reweights the population."""
     last = last_ticks(specs)
     peak = np.array([harm[s.specimen_id][-1] if len(harm[s.specimen_id]) else -np.inf for s in specs])
     windows = np.array([s.window for s in specs], dtype=float)
     names = [next(n for n in s.chain if n in quantiles) for s in specs]
     unique = sorted(set(names))
     index = np.array([unique.index(n) for n in names])
+    w = np.ones(len(specs)) if weights is None else np.asarray(weights, dtype=float)
+    out = (lambda mask: int(np.sum(mask))) if weights is None else (lambda mask: float(np.sum(w[mask])))
 
-    def plan(q: float) -> int:
+    def plan(q: float):
         threshold = np.array([np.quantile(quantiles[n], q) for n in unique])
-        return int(np.sum(last > threshold[index]))
+        return out(last > threshold[index])
 
-    return {"model": lambda theta: int(np.sum(peak >= theta)), "plan_baseline": plan,
-            "window_baseline": lambda share: int(np.sum(last >= share * windows))}
+    return {"model": lambda theta: out(peak >= theta), "plan_baseline": plan,
+            "window_baseline": lambda share: out(last >= share * windows)}
 
 
 def metrics(specs, alerts: dict, shifts: float) -> dict:
