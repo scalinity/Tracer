@@ -41,4 +41,4 @@ routing:
   source: assumed
   tube: receiving technologist          # ASSUMED: a tube specimen that has not arrived is a question for the station at the lab end
   hand_carry: courier coordinator       # ASSUMED: a hand-carried specimen is on a runner's round, and the coordinator knows where the runner is
-  still_at_unit: charge nurse           # ASSUMED: a specimen the location estimate (M8) places still on the collecting unit is the unit's to send
+  still_at_unit: charge nurse           # ASSUMED: a specimen the location filter places still on the collecting unit is the unit's to send, whatever its route

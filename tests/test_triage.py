@@ -46,7 +46,14 @@ def test_the_operating_point_is_six_alerts_per_shift(loaded):
 def test_a_tube_specimen_goes_to_the_receiving_technologist_and_a_carried_one_to_the_courier_coordinator(loaded):
     assert triage.role_for(loaded, "tube") == "receiving technologist"
     assert triage.role_for(loaded, "hand_carry") == "courier coordinator"
+    assert triage.role_for(loaded, "tube", "in_tube") == "receiving technologist"
+    assert triage.role_for(loaded, "hand_carry", "hand_carry") == "courier coordinator"
+
+
+def test_a_specimen_the_filter_places_at_its_unit_goes_to_the_charge_nurse_whatever_its_route(loaded):
     assert loaded["routing"]["still_at_unit"] == "charge nurse"
+    for route in triage.ROUTES:
+        assert triage.role_for(loaded, route, "at_unit") == "charge nurse"
 
 
 def test_the_processing_bench_is_not_a_role_under_the_receipt_clock(loaded):
@@ -135,10 +142,11 @@ def test_the_window_baseline_does_not_alert_a_specimen_received_first():
 
 # ---- the alert list ----
 
-def rows_for(specs, alerts, cfg):
+def rows_for(specs, alerts, cfg, place="in_tube"):
     risk = {s.specimen_id: np.full(len(s.ticks), 0.25) for s in specs}
     harm = {s.specimen_id: 2 * risk[s.specimen_id] for s in specs}
-    return triage.alert_rows(specs, alerts, risk, harm, cfg)
+    places = {s.specimen_id: (place, 0.6) for s in specs}
+    return triage.alert_rows(specs, alerts, risk, harm, places, cfg)
 
 
 def test_there_is_one_row_per_alert_and_none_for_a_specimen_that_never_alerted(cfg):
@@ -153,10 +161,17 @@ def test_a_row_carries_time_tier_role_and_warning(cfg):
     assert row["alert_at"] == "2026-08-17T01:37"                   # 40 minutes after the collection scan
     assert row["collected_at"] == "2026-08-17T00:57"
     assert row["tier"] == 1 and row["role"] == "courier coordinator" and row["route"] == "hand_carry"
+    assert row["likely_place"] == "in_tube" and row["place_probability"] == 0.6
     assert row["minutes_since_collection"] == 40.0 and row["warning_min"] == 20.0 and row["window_min"] == 60
     assert row["risk"] == 0.25 and row["harm"] == 0.5
     assert row["outcome"] == "breach"
     assert list(row) == list(triage.ALERT_COLUMNS)
+
+
+def test_an_alert_for_a_specimen_placed_at_its_unit_goes_to_the_charge_nurse(cfg):
+    s = spec(None, 60, route="tube")
+    (row,) = rows_for([s], {s.specimen_id: 20.0}, cfg, place="at_unit")
+    assert row["role"] == "charge nurse" and row["likely_place"] == "at_unit" and row["route"] == "tube"
 
 
 def test_the_alert_closes_at_the_receipt_scan(cfg):
@@ -182,5 +197,25 @@ def test_the_risk_and_harm_in_a_row_are_those_at_the_tick_the_alert_fired(cfg):
     s = spec(None, 60)
     risk = {s.specimen_id: np.linspace(0.1, 1.0, len(s.ticks))}
     harm = {s.specimen_id: 3 * risk[s.specimen_id]}
-    (row,) = triage.alert_rows([s], {s.specimen_id: 15.0}, risk, harm, cfg)
+    (row,) = triage.alert_rows([s], {s.specimen_id: 15.0}, risk, harm, {s.specimen_id: ("in_tube", 0.5)}, cfg)
     assert row["risk"] == round(risk[s.specimen_id][2], 4) and row["harm"] == round(harm[s.specimen_id][2], 4)
+
+
+# ---- the likely place at the alert ----
+
+def test_the_likely_place_is_the_filters_best_guess_at_the_alert_tick():
+    import json
+    from src.models import location
+    from src.pipeline import intervals
+    params = json.loads(intervals.PARAMS_PATH.read_text(encoding="utf-8"))
+    gen = config.load()["config"]
+    group = "urine, unpreserved, room temp | 06-11 | routine"
+    tube = Spec("t", 24, group, (group,), 60, None, True, "none", 3, "tube", "2026-08-17T00:00:00", "urine")
+    hand = Spec("h", 24, group, (group,), 60, None, True, "none", 3, "hand_carry", "2026-08-17T00:00:00", "urine")
+    quiet = Spec("q", 24, group, (group,), 60, None, True, "none", 3, "tube", "2026-08-17T00:00:00", "urine")
+    out = triage.likely_places([tube, hand, quiet], {"t": 15.0, "h": 15.0, "q": None}, params, gen, 0.8)
+    assert set(out) == {"t", "h"}
+    names, post = location.filter_series(location.legs_for(params, gen, group, "tube", 0.8), 15)
+    places = location.place_series(names, post)
+    assert out["t"][0] == max(places, key=lambda p: places[p][15]) and out["t"][1] == pytest.approx(max(v[15] for v in places.values()))
+    assert out["h"][0] in ("at_unit", "hand_carry") and 0 < out["h"][1] <= 1

@@ -5,7 +5,7 @@ once its expected harm, the risk of missing the window times its urgency weight,
 Lowering the threshold can only move every alert earlier, so the lowest threshold that keeps alerts
 within the per-shift budget is the one with the longest warning that budget allows; that is how
 src/pipeline/evaluate.py sets it, on the fit runs. This module holds the pieces that need no scoring:
-the loader, the harm series, the window-aware baseline, the routing and the alert rows.
+the loader, the harm series, the window-aware baseline, the likely place, the routing and the alert rows.
 
 A specimen is anything with the attributes of evaluate.Spec; this module never touches the truth.
 """
@@ -18,13 +18,15 @@ from pathlib import Path
 import numpy as np
 
 from src.generator import config
+from src.models import location
 
 ROOT = Path(__file__).resolve().parents[2]
 TRIAGE_PATH = ROOT / "config" / "triage.yaml"
 TIERS = (1, 2, 3)
 ROUTES = ("tube", "hand_carry")
 SECTIONS = ("urgency_weights", "operating_point", "routing")
-ALERT_COLUMNS = ("specimen_id", "run", "specimen_type", "tier", "route", "role", "collected_at", "alert_at",
+ALERT_COLUMNS = ("specimen_id", "run", "specimen_type", "tier", "route", "likely_place", "place_probability", "role",
+                 "collected_at", "alert_at",
                  "minutes_since_collection", "window_min", "warning_min", "risk", "harm", "closed_at", "outcome")
 
 
@@ -80,15 +82,38 @@ def window_share_alerts(specs, share: float) -> dict[str, float | None]:
     return out
 
 
-def role_for(cfg: dict, route: str) -> str:
-    """The role that receives an alert for a specimen on this route."""
+def likely_places(specs, alerts: dict[str, float | None], params: dict, gen: dict,
+                  tube_share: float) -> dict[str, tuple[str, float]]:
+    """The most likely place of each alerted specimen at its alert tick, and its probability, from the
+    location filter (src/models/location.py) run for the specimen's group and route."""
+    wanted: dict[tuple, int] = {}
+    for s in specs:
+        if alerts[s.specimen_id] is not None:
+            key = (s.group, s.route)
+            wanted[key] = max(wanted.get(key, 0), int(alerts[s.specimen_id]))
+    series = {}
+    for (group, route), last in wanted.items():
+        legs = location.legs_for(params, gen, group, route, tube_share)
+        series[(group, route)] = location.place_series(*location.filter_series(legs, last))
+    out = {}
+    for s in specs:
+        if alerts[s.specimen_id] is not None:
+            places, i = series[(s.group, s.route)], int(alerts[s.specimen_id])
+            best = max(places, key=lambda p: places[p][i])
+            out[s.specimen_id] = (best, float(places[best][i]))
+    return out
+
+
+def role_for(cfg: dict, route: str, place: str | None = None) -> str:
+    """The role that receives an alert. A specimen the location filter places still at its unit is the
+    unit's to send, so it goes to the charge nurse; any other goes by its route."""
     if route not in ROUTES:
         raise config.PolicyError(f"unknown route {route!r}")
-    return cfg["routing"][route]
+    return cfg["routing"]["still_at_unit"] if place == "at_unit" else cfg["routing"][route]
 
 
 def alert_rows(specs, alerts: dict[str, float | None], risk: dict[str, np.ndarray],
-               harm: dict[str, np.ndarray], cfg: dict) -> list[dict]:
+               harm: dict[str, np.ndarray], places: dict[str, tuple[str, float]], cfg: dict) -> list[dict]:
     """One row per alert, earliest first. An alert opens at the tick it fires and closes at the receipt
     scan, so a specimen with no receipt stays open (closed_at is empty). `outcome` comes from the
     evaluation and is not something the alert knew."""
@@ -102,7 +127,9 @@ def alert_rows(specs, alerts: dict[str, float | None], risk: dict[str, np.ndarra
         at = lambda m: (start + timedelta(seconds=round(m * 60))).isoformat(timespec="minutes")
         rows.append({
             "specimen_id": s.specimen_id, "run": s.run, "specimen_type": s.kind, "tier": s.tier,
-            "route": s.route, "role": role_for(cfg, s.route), "collected_at": start.isoformat(timespec="minutes"),
+            "route": s.route, "likely_place": places[s.specimen_id][0],
+            "place_probability": round(places[s.specimen_id][1], 4),
+            "role": role_for(cfg, s.route, places[s.specimen_id][0]), "collected_at": start.isoformat(timespec="minutes"),
             "alert_at": at(minute), "minutes_since_collection": minute, "window_min": s.window,
             "warning_min": s.window - minute,
             "risk": round(float(risk[s.specimen_id][i]), 4), "harm": round(float(harm[s.specimen_id][i]), 4),
