@@ -676,7 +676,7 @@ const TASKS = [
 
 {id:"S2", tr:"data", day:[10,29], who:{D:0.5}, t:"Scaffold the project for building",
  why:"One clean layout now saves every later task from deciding where things go.",
- steps:["Partly done: `requirements.txt` has `pyyaml` and `pytest`. Add `anthropic`, `numpy`, `scipy`, `polars`, `duckdb` and `python-dotenv`.","Partly done: `config/`, `tests/` and `src/generator/` exist. Add an `__init__.py` to `src/pipeline/`, `src/models/` and `src/api/`.","Add `.env` to `.gitignore` and add `.env.example` containing only the variable name.","Run `pytest`. The nine policy tests should pass.","Commit this as one change."],
+ steps:["Done: `requirements.txt` lists `anthropic`, `numpy`, `scipy`, `polars`, `duckdb`, `pyyaml`, `pytest` and `python-dotenv`, each with a lower bound.","Done: `config/`, `tests/` and the packages `src/generator/`, `src/pipeline/`, `src/models/` and `src/api/` exist, each with an `__init__.py`. `pytest.ini` puts the repository root on the path, so a bare `pytest` finds `src`.","Done: `.env` is in `.gitignore` and `.env.example` holds only the variable name.","Done: `pytest` passes.","Done: committed as one change."],
  done:"`pytest` passes, and `git check-ignore .env` prints `.env`.", earns:["P4"]},
 
 {id:"K1", tr:"data", day:[10,29], who:{D:0.5, K:1}, t:"Policy first pass",
