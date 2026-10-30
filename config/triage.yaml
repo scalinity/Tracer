@@ -1,0 +1,44 @@
+# Alert triage settings (plan task M5; docs/architecture.md §5.2.1): how a risk becomes an alert,
+# how many alerts a shift can carry, and who receives each one.
+#
+# EVERY value below is an assumption, marked `source: assumed` and given a one-line reason. None is
+# fitted to data or taken from a workplace. A value that gains a citation replaces `assumed` with it.
+# These are drafts for the clinical lead to correct; a correction costs a rerun of
+# `python -m src.pipeline.evaluate`, not a code change.
+#
+# The loader (src/pipeline/triage.py) fails loudly when a weight is missing or not positive, when a
+# lower-urgency tier outweighs a higher one, or when a group has no source.
+
+version: 1
+
+# Expected harm of a specimen is the chance it misses its window times the weight of its urgency
+# tier. The tier comes from the policy table (`urgency_tier`), 1 the most urgent.
+urgency_weights:
+  source: assumed
+  default:                      # the weights the headline comparison uses
+    1: 3                        # ASSUMED: tissue and lavage cannot be collected again, so losing one costs the most
+    2: 2                        # ASSUMED: sterile body fluids are hard to collect again
+    3: 1                        # ASSUMED: urine and swabs can usually be collected again
+  checks:                       # reported beside the default so the weights cannot quietly change the result
+    equal:                      # ASSUMED: tiers ignored, which is the plain risk threshold
+      1: 1
+      2: 1
+      3: 1
+    steep:                      # ASSUMED: a much stronger preference for the urgent tiers
+      1: 9
+      2: 3
+      3: 1
+
+# Alerts per 8-hour shift the lab can act on. The threshold is set on the fit runs, from alert volume
+# alone, to the most aggressive value that stays within this budget.
+operating_point:
+  source: assumed
+  budget_per_shift: 6           # ASSUMED: the provisional budget in docs/architecture.md §5.2.1, about a third of all specimens
+
+# Who receives an alert. One open alert per specimen, closed at the receipt scan. Under the receipt
+# clock the processing bench never comes up: the clock stops before the specimen reaches it.
+routing:
+  source: assumed
+  tube: receiving technologist          # ASSUMED: a tube specimen that has not arrived is a question for the station at the lab end
+  hand_carry: courier coordinator       # ASSUMED: a hand-carried specimen is on a runner's round, and the coordinator knows where the runner is
+  still_at_unit: charge nurse           # ASSUMED: a specimen the location estimate (M8) places still on the collecting unit is the unit's to send
