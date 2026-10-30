@@ -323,6 +323,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .limits{max-width:74ch;padding-left:18px;list-style:disc;color:var(--ink-dim)}
 .limits li{margin-bottom:9px}
 .limits li::marker{color:var(--warn)}
+.why li::marker{color:var(--observed)}
 .limits b{color:var(--ink)}
 .prov{margin-top:18px;max-width:90ch;font-size:12.5px;color:var(--ink-mute);overflow-wrap:anywhere}
 footer{padding-top:20px;border-top:1px solid var(--hair);font-size:12.5px;color:var(--ink-mute)}
@@ -584,7 +585,50 @@ footer{padding-top:20px;border-top:1px solid var(--hair);font-size:12.5px;color:
     specimen's own window and Tracer's stored alerts, whatever the controls above are set to. Scores never leave
     this page. <b>Synthetic data, no clinical review.</b></p>
 </section>
-<section id="why" class="later" aria-label="Why it is built this way"><p>Why it is built this way: to come.</p></section>
+<section id="why" aria-labelledby="why-h">
+  <h2 id="why-h">Why it is built this way</h2>
+  <p class="lede">Each choice below follows from one fact: a specimen that goes missing makes no scan, so nothing in
+    the laboratory notices.</p>
+  <ul class="limits why">
+    <li><b>Silence is the signal.</b> Tracer does not wait for an event. Every 5 minutes it re-scores each specimen
+      that has not been received and asks how unusual its silence is for that kind of specimen.</li>
+    <li><b>A chance of missing the window, not a time limit.</b> The plan's rule alerts once a specimen has been
+      silent longer than a set share of similar past specimens took, whatever its window. Tracer weighs the silence
+      against the time left, so a specimen with a short window is flagged sooner. Most of the gain comes from using
+      the window: a simple rule that alerts once a set share of the window has passed comes close, and Tracer's lead
+      over that rule holds only at the original arrival volume.</li>
+    <li><b>A small model that can be read.</b> The risk is a short formula with a few fitted numbers per group of
+      specimens: how long a normal trip takes, how often a specimen stalls and still arrives, and how often it never
+      arrives. A laboratory scientist can check those numbers by eye. A more flexible gradient-boosted model is
+      planned as a challenger and has not been run.</li>
+    <li><b>Where to look, and who looks.</b> An alert that only says something is wrong is hard to act on. Tracer
+      estimates where the specimen probably is from the workflow map and sends the alert to the role that can check
+      there. An early version had no stalled state, so it could only explain a long silence as loss, and it sent
+      people to the tube station while believing the specimen was gone. The roles are assumptions.</li>
+    <li><b>The clock stops at receipt.</b> Where a window ends is a clinical judgement, so it was not decided in code.
+      Karissa's policy table stops it at lab receipt, the laboratory's standard measure. Tracer therefore does not
+      flag a delay at the bench, after receipt.</li>
+    <li><b>The policy table is a file, not code.</b> Windows, urgency tiers and the clock stop are read from the
+      table, and every fitted result carries the table's fingerprint, so the page refuses to score against a different
+      version. 10 of the table's 44 rows have no published source yet and say assumed.</li>
+    <li><b>Synthetic data, because no public record has these scans.</b> MIMIC-IV records collection and the final
+      result, days apart, with nothing in between. A 100-patient extract was checked for calibration and set aside
+      because it describes intensive care, not a general laboratory. So seeded code draws every timing, a language
+      model writes the scan trail around it, a validator checks each trail, and the dataset is frozen. The code sets
+      the timings because a language model left to itself makes long delays too rare.</li>
+    <li><b>Alerts set by what a shift can take.</b> Hospital alarms fail when there are too many of them, so the
+      threshold is chosen by alerts per shift rather than by a best score. The default, 6 per 8-hour shift, is an
+      assumption, which is why the threshold and window controls are on the page. At some window settings the plan's
+      rule warns sooner.</li>
+    <li><b>A game, because the idea is easier to feel than to read.</b> Beat Tracer makes the point that silence
+      carries information and that calling early risks calling wrong. Its rounds come from the held-out runs, never
+      invented.</li>
+    <li><b>One page, no server.</b> Everything is read or computed in the browser from two data files, so anyone in
+      class can open it on a phone. The 3D view puts one specimen's silence in a physical lab for people who think in
+      places. It is optional, and the page works without it.</li>
+  </ul>
+</section>
+
 
 <section id="limits" aria-labelledby="limits-h">
   <h2 id="limits-h">Limits</h2>
@@ -1013,7 +1057,7 @@ var TracerCore = (function () {
 <script>
 /* The page: loads bundle.json, draws the board and the timeline. Every number comes from the bundle or from
    TracerCore's recomputation of it. Later tasks use window.TracerDemo (end of this script) and fill the empty
-   sections #threshold, #beat and #why. */
+   sections #threshold and #beat. */
 (function () {
   "use strict";
   var C = window.TracerCore;

@@ -301,6 +301,13 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** nothing. The public demo address could not be reached from the agent's session, so the live-site claims rest on the P7 checks recorded above.
 - **Assumed:** "Why it is built this way" is left without an owner, as the build found it, rather than given a task.
 
+### Oct 30 · Why · Write the "Why it is built this way" section of the demo (this pull request)
+
+- **Agent:** read the demo page, `docs/architecture.md`, `results/README.md`, this log and the course guidelines, and drafted ten short points on why each part of Tracer is built the way it is, each tied to a claim the repository already makes. Replaced the one-line placeholder on `docs/demo/index.html` with them, in the Limits section's list style, and updated the two plan sentences that said no task owned the section.
+- **Daniel:** asked for the section, read the full draft and approved it for the public page as written.
+- **Went wrong:** the approved draft said Tracer does not flag a delay "between receipt and plating", and the page test that keeps any plating wording off the page caught it, so the line now says "at the bench, after receipt", the architecture notes' own words. On the agent's Linux machine three regeneration tests (evaluation, bundle, location) differ from the committed files in the last digits of a few floats, on `main` as well as on this branch; the page tests and the plan check pass.
+- **Assumed:** the section names Karissa in the point on where the clock stops, as the page already credits her, and leaves out the search briefs to stay short. It quotes no number the results do not hold; the stalled-state story is the location estimate's from §13.1 of the architecture notes.
+
 ## The Claude API jobs
 
 All jobs call `claude-haiku-5-5` at low effort with thinking off. The reply must match a JSON schema, so replies parse and retries stay rare. Bulk jobs run through the Batch API at half price, and every call is logged to `data/claude/usage.jsonl` (kept local). The order for each job is a token count, a pilot, then the batch, and a job's estimate must be under the plan's gate before it starts.
