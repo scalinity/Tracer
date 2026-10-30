@@ -42,7 +42,7 @@ The system map opens directly from disk and needs no server: `open visuals/archi
 | `docs/project-spec.md` | Problem, scope, evaluation plan, division of labor |
 | `docs/architecture.md` | Components, data model, models, simulator, interfaces, build order |
 | `docs/submissions/` | Each course milestone as `Milestone N - Title`, in `.docx` and `.pdf`; Milestones 2 and 3 also have a Markdown mirror. Milestone 4 is a LaTeX-built `.pdf` with its `.tex` source and a Markdown mirror |
-| `docs/course/` | Course guidelines and blank templates, unmodified; kept local, not in the repository |
+| `docs/course/` | Course guidelines and blank templates, unmodified. Only `ai-design-project-guidelines.pdf` (the revised project guidelines) is in the repository; the rest stays local |
 | `visuals/architecture.html` | Interactive system map; seed of the Week 15 demo |
 | `config/` | Karissa's policy table as exported (`policy_table.csv`), sources we added (`policy_sources.csv`), the compiled `breach_policy.yaml`, the workflow graph and the generator parameters (`config.yaml`) |
 | `datasets/` | The frozen synthetic dataset and its manifest (model, hashes, seed, counts, cost) |

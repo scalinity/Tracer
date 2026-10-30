@@ -2,8 +2,10 @@
 data/*
 !data/.gitkeep
 
-# Course materials are the instructor's work; notes hold private correspondence. Both stay local.
-docs/course/
+# Course materials are the instructor's work; notes hold private correspondence. Both stay local,
+# except the revised project guidelines, which the plan and the report are checked against.
+docs/course/*
+!docs/course/ai-design-project-guidelines.pdf
 notes/
 
 # Agent instructions and runtime state stay local.
