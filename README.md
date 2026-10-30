@@ -49,4 +49,4 @@ The system map opens directly from disk and needs no server: `open visuals/archi
 | `src/` | `generator/`, `simulator/`, `pipeline/`, `models/`, `api/` |
 | `tests/` | `pytest`; the policy and config loaders and their fail-loudly checks |
 | `notes/` | Working notes, questions, meeting capture; kept local, not in the repository |
-| `data/` | MIMIC extracts and simulator output (gitignored) |
+| `data/` | Claude output, the two-file store in `data/store/` and MIMIC extracts (gitignored) |

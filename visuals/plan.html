@@ -741,7 +741,7 @@ const TASKS = [
 
 {id:"M1", tr:"model", day:[11,4], who:{D:3}, t:"Load the data and split the runs", needs:["D9"],
  why:"The truth log must never reach a model. A test makes that a rule and not a habit.",
- steps:["Load the frozen dataset into DuckDB or Parquet under `data/store/`.","Split the 30 runs: 24 for fitting and 6 held out for testing, chosen by run number and never by specimen.","Keep the truth log in its own table that only `src/pipeline/evaluate.py` may read.","Write a test that imports every module under `src/models/` and fails if any touches the truth table."],
+ steps:["Done: `python -m src.pipeline.store` loads the frozen dataset into `data/store/observed.duckdb` (specimens and scans) and `data/store/truth.duckdb` (the planted fault, true timings, breach label and hidden path). It refuses a dataset that differs from its manifest.","Done: runs 0 to 23 are for fitting and runs 24 to 29 are held out, split by run number and never by specimen. That is 9,568 and 2,399 specimens, with 121 breaches to evaluate on.","Done: the truth log is a separate file, opened only through `open_truth()`, which only `src/pipeline/store.py` and `src/pipeline/evaluate.py` may use.","Done: tests that scan every module under `src/models/` for anything that could reach the truth or the raw dataset, and that only the store and the evaluation open the truth file."],
  done:"Row counts match the manifest and the truth-isolation test passes.", earns:["P1","P3"]},
 
 {id:"M2", tr:"model", day:[11,5], who:{D:3}, t:"Fit the transit-time distributions", needs:["M1"],
