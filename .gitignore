@@ -16,6 +16,9 @@ AGENTS.md
 __pycache__/
 .venv/
 
+# API key; .env.example names the variable
+.env
+
 # Notebooks
 .ipynb_checkpoints/
 
