@@ -293,6 +293,16 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;bac
 .chip.on{color:var(--observed);border-color:var(--observed-deep)}
 .chipbtn{cursor:pointer}
 .chipbtn:hover{border-color:var(--observed-deep);color:var(--ink)}
+.runorder{margin-top:22px;border:1px solid var(--hair);border-left:2px solid var(--infer);border-radius:2px;background:var(--panel);padding:12px 16px 14px}
+.runorder summary{cursor:pointer;font-family:var(--serif);font-size:18px;list-style:none}
+.runorder summary::-webkit-details-marker{display:none}
+.runorder > p{margin-top:8px}
+.runorder ol{counter-reset:r;display:grid;gap:6px;margin:12px 0}
+.runorder ol li{counter-increment:r;position:relative;padding-left:28px;font-size:14px;line-height:1.5;color:var(--ink-dim)}
+.runorder ol li::before{content:counter(r);position:absolute;left:0;top:0;font:12px/1.9 var(--mono);color:var(--ink-mute)}
+.runorder ol li b{color:var(--ink);font-weight:500}
+.runorder ol li.stop{color:var(--warn)}
+.runorder ol li.stop b{color:var(--warn)}
 .done-group{margin-top:30px;border-top:1px solid var(--hair);padding-top:14px}
 .done-group summary{cursor:pointer;font-family:var(--serif);font-size:18px;list-style:none}
 .done-group summary::-webkit-details-marker{display:none}
@@ -508,6 +518,27 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
         <span class="small" id="planCount"></span>
       </div>
       <div id="copyHost"></div>
+      <details class="runorder" open>
+        <summary>Run order from October 30, to get ahead of the plan</summary>
+        <p class="small">Claude Code works down this list without waiting for the planned days. The aim is the end-to-end gate by November 6 and the demo complete by November 10, so the last week goes to the talk. A line marked <b>Stops for Daniel</b> waits for his word; everything else just runs. Nothing is cut until Ben's revised guidelines are read (W7).</p>
+        <ol>
+          <li><b>M5</b> alert triage with the default weights and routing, plus the window-aware baseline.</li>
+          <li><b>M8</b> then <b>M8b</b>: port the location filter and score it against the truth.</li>
+          <li><b>V1</b> move the system map and the 3D exhibit to the receipt clock.</li>
+          <li><b>W6</b> bring the design documents up to date.</li>
+          <li><b>M7</b> draft the headline paragraph with its caveats.</li>
+          <li class="stop"><b>M6</b> tag <code>v0.1-mvp</code>. <b>Stops for Daniel</b>, after he reads Ben's guidelines.</li>
+          <li><b>D11</b> and <b>D12</b>: the bundle exporter, its metrics grid and schema.</li>
+          <li><b>M9</b> search briefs, template and Claude (about $0.50 by batch).</li>
+          <li><b>P2</b> and <b>P3</b>: the demo board and the specimen timeline, clock at receipt.</li>
+          <li><b>G3</b> showcase scenarios (about $0.30).</li>
+          <li><b>P4</b>, <b>P5</b> and <b>P6</b>: the threshold control, Beat Tracer and the 3D link.</li>
+          <li class="stop"><b>P7</b> GitHub Pages and the QR code. <b>Stops for Daniel</b> for the device tests.</li>
+          <li class="stop"><b>W3</b>, <b>W4</b> and <b>W5</b> drafted ahead. <b>Stops for Daniel</b> to check Canvas and submit.</li>
+          <li>Stretch: start the AI Teaming Log (A3) as a running file.</li>
+        </ol>
+        <p class="small">Daniel's own: W1 and W2 if not ticked, W7, the credit check in S1, accepting the code audit in D7, and the talk (T1 to T4). Karissa's tasks stay as they are; nothing new is asked of her.</p>
+      </details>
       <div id="ledger"></div>
       <div id="doneAlready"></div>
     </section>
@@ -516,7 +547,7 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
     <section id="api">
       <div class="head"><h2>What Claude generates, and what it costs</h2></div>
       <p class="prose">Claude writes the event trail for every synthetic specimen, a few showcase scenarios, and a search brief for every alert in the demo. Everything else, including fitting the models, is ordinary Python. The demo itself makes no live calls and holds no key: every Claude output is generated once, checked, and saved as a file.</p>
-      <p class="prose">The numbers below are estimates from token counts we have not measured yet. The 200-specimen pilot gives the real figures. Change a model, a count or the batch setting and the totals follow.</p>
+      <p class="prose">The pilots and the full run have reported real usage, about $2.37 so far, entered under Spent. The jobs still to run are estimates. Change a model, a count or the batch setting and the totals follow.</p>
       <div class="scroll-x" style="margin-top:20px"><table class="t jobs" id="jobs"></table></div>
       <div class="capfield">
         <label>Soft spend limit <input type="number" id="capUsd" min="1" step="1" value="50" aria-label="Soft spend limit in dollars"> $</label>
@@ -525,7 +556,7 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
       <div class="meter" id="meter"></div>
       <h3 class="sub">How we keep the spend small</h3>
       <ul class="rules">
-        <li><b>Pilot before scale.</b> 200 specimens cost about nine cents. The full run starts only after Karissa passes the pilot.</li>
+        <li><b>Pilot before scale.</b> The 200-specimen pilot cost seven cents, and the full run started only after it passed the validator and a code audit.</li>
         <li><b>Count first.</b> The script calls <code>count_tokens</code> (free) before every job and stops if the estimate is over the job's budget.</li>
         <li><b>Batch anything not interactive.</b> The Batch API is half price. The full dataset and all search briefs go through it.</li>
         <li><b>Use the small model for bulk.</b> Haiku 5.5 writes the trails. Sonnet 5.5 writes the few pieces Karissa and the class will read closely. Opus is not needed.</li>
@@ -629,7 +660,7 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
       <h3 class="sub">After November 18</h3>
       <ul class="after" id="after"></ul>
       <footer style="margin-top:56px">
-        <p>Updated October 30: Karissa's policy table is loaded and the clock stops at receipt, task K1 is done, S2 and D1 are partly done, and task W7 checks the plan against the revised course guidelines. Hour estimates are ours and can be edited in each task. Prices are Anthropic's list prices as of October 6, 2026. Weekly draft dates come from the course guidelines, which call them tentative, so check Canvas. Every number in the cost table is an estimate until the pilot reports real usage. The page stores ticks, spend and cuts in the shared store when it can reach one, and on this device otherwise.</p>
+        <p>Updated October 30, after the data and model run: the dataset is frozen at 11,967 specimens, M1 to M4 are done, and on held-out runs the risk model leads the simple rule by 10 to 15 minutes of median warning at 4 and 6 alerts per shift. The run order under The plan lists what comes next, and task W7 checks the plan against the revised course guidelines. Hour estimates are ours and can be edited in each task. Prices are Anthropic's list prices as of October 6, 2026. Weekly draft dates come from the course guidelines, which call them tentative, so check Canvas. The page stores ticks, spend and cuts in the shared store when it can reach one, and on this device otherwise.</p>
       </footer>
     </section>
 
@@ -671,8 +702,8 @@ const TASKS = [
 
 {id:"S1", tr:"data", day:[10,29], who:{D:1}, t:"Set up Claude API access with a hard cap",
  why:"Nothing else in the data track can run until this works, and the cap protects the credits.",
- steps:["Open the Anthropic Console, Billing. Read the promotional credit balance and its expiry date. The expiry must be after November 18. If it is earlier, tell Karissa today and switch to the fallback in the risks section.","No Console limit is set. The plan's soft limit is $50: stay under it, and go over only when a result needs it.","Create a workspace named tracer and an API key named tracer-gen. Save the key in `.env` as `ANTHROPIC_API_KEY=...`. Never paste it into a chat, the repo or the demo page.","Run `pip install anthropic python-dotenv`.","Smoke test: `python -c \"import anthropic; r=anthropic.Anthropic().messages.create(model='claude-haiku-5-5', max_tokens=50, messages=[{'role':'user','content':'Say ok'}]); print(r.stop_reason, r.usage)\"`"],
- done:"The call prints a stop reason and a usage line, and the plan shows the $50 soft limit.", earns:[]},
+ steps:["Open: only the credit expiry check is left. The API has already run both pilots and the full dataset, about $2.37 of the $50 soft limit. Tick this once the expiry is confirmed to be after November 18.","Open the Anthropic Console, Billing. Read the promotional credit balance and its expiry date. The expiry must be after November 18. If it is earlier, switch to the fallback in the risks section.","No Console limit is set. The plan's soft limit is $50: stay under it, and go over only when a result needs it.","Done: a workspace and an API key, kept only in `.env`. Never paste the key into a chat, the repo or the demo page.","Done: the smoke test and every later call printed a stop reason and usage."],
+ done:"The credit expiry is confirmed after November 18, and the plan shows the $50 soft limit.", earns:[]},
 
 {id:"S2", tr:"data", day:[10,29], who:{D:0.5}, t:"Scaffold the project for building",
  why:"One clean layout now saves every later task from deciding where things go.",
@@ -714,14 +745,14 @@ const TASKS = [
  steps:["Done: `python -m src.generator.run --seed 0 --runs 1 --n 200 --out data/claude/pilot --budget-usd 0.25`, after a `--dry-run` that estimated $0.10.","Done: 198 of 200 accepted (99.0 percent; 98.0 percent on the first attempt) at a real cost of $0.07.","Done: `python -m src.generator.show --n 20` writes `data/claude/pilot/review-sheet.md`, twenty timelines in plain language for Karissa. It has not been sent."],
  done:"At least 95 percent pass the validator, the actual cost is in `data/claude/usage.jsonl`, and the twenty-trail sheet exists.", earns:[]},
 
-{id:"K2", tr:"data", day:[11,2], who:{K:1}, t:"Review twenty pilot timelines", needs:["D6"],
- why:"You are the only one who can say whether these look like a real laboratory. This is the gate before any more money is spent.",
- steps:["Open the sheet of twenty specimen timelines Daniel sends.","For each, mark Plausible or Not plausible. If not, write one phrase, for example 'receipt too soon after dispatch'.","Count them. At least 17 of 20 plausible is a pass."],
- done:"The sheet is returned with a mark on all twenty.", earns:["P2"]},
+{id:"K2", tr:"data", day:[11,2], who:{K:0}, t:"Review twenty pilot timelines", needs:["D6"],
+ why:"A clinical eye on the pilot was the planned check on realism. It was skipped, and every Results text says so.",
+ steps:["Skipped at Daniel's request on October 30. The pilot was audited in code instead (see D7), and `datasets/manifest.json` records that no clinical review was done.","Nothing is asked of Karissa here, so it carries no hours."],
+ done:"Skipped. The manifest and the Results text say that no clinical review was done.", earns:["P2"]},
 
 {id:"D7", tr:"data", day:[11,2], who:{D:1}, t:"Fix what the review found", api:"J1b", needs:["K2"],
  why:"Group the notes by cause so one change fixes many trails.",
- steps:["Skipped at Daniel's request: Karissa's review (K2). The pilot was audited in code instead, so no plausibility count exists.","Done: the audit found that the notes on every stalled and misrouted trail (6 of 6) described the hidden path, one copying a worked example, and that most notes only restated the brief. The note rule in the prompt, the worked examples and validator check 8 changed.","Done: rerun of the pilot: 199 of 200 accepted, no leaking notes, 11 notes in all. A second pilot of 190 specimens with every fault, lost in tube included: 188 accepted. Cost $0.13.","Not done: the plausibility count from Karissa."],
+ steps:["Skipped at Daniel's request: Karissa's review (K2). The pilot was audited in code instead, so no plausibility count exists.","Done: the audit found that the notes on every stalled and misrouted trail (6 of 6) described the hidden path, one copying a worked example, and that most notes only restated the brief. The note rule in the prompt, the worked examples and validator check 8 changed.","Done: rerun of the pilot: 199 of 200 accepted, no leaking notes, 11 notes in all. A second pilot of 190 specimens with every fault, lost in tube included: 188 accepted. Cost $0.13.","Not done: the plausibility count from Karissa.","Open until Daniel accepts the code audit in place of the plausibility count. Then tick it."],
  done:"The pass rate and the plausibility count both meet the bar.", earns:[]},
 
 {id:"D8", tr:"data", day:[11,2], who:{D:1}, t:"Start the full run", api:"J2", needs:["D7"],
@@ -736,7 +767,7 @@ const TASKS = [
 
 {id:"W3", tr:"write", day:[11,4], who:{D:1}, t:"Draft of Results, if still due",
  why:"The guidelines list a Results draft on November 4. Check Canvas for the exact prompt.",
- steps:["Check Canvas to see whether it is still assigned and what it asks for.","Write what exists: the dataset numbers from the manifest (count, pass rate, cost) and the evaluation plan.","Say plainly that model results arrive on November 8."],
+ steps:["Check Canvas to see whether it is still assigned and what it asks for.","Claude Code drafts it ahead into `docs/submissions/drafts/`: the dataset numbers from the manifest (count, pass rate, cost), the M4 comparison with its caveats, and the line that no clinical review was done.","Submit it if it is still due."],
  done:"Submitted, with every claim traceable to a file in the repo.", earns:["M1","M2"]},
 
 {id:"M1", tr:"model", day:[11,4], who:{D:3}, t:"Load the data and split the runs", needs:["D9"],
@@ -759,24 +790,24 @@ const TASKS = [
  steps:["Done: the baseline alerts once time since collection passes a quantile of the group's observed times. Its quantile and the model's risk threshold are each set on the 24 fit runs, from alert volume alone, to a budget of alerts per shift, then applied unchanged to the held-out runs.","Done: on the 6 held-out runs the table reports alerts per 8-hour shift, breaches caught, median warning (alert to window close) among the caught, and calibration at 30 and 60 minutes of silence, at budgets of 1, 2, 4 and 6 alerts per shift. Two measures count misses as zero (median warning over all breaches, and the share caught with at least 15 minutes of warning), because median warning among the caught rewards a method that misses the hard cases. A paired bootstrap over the 6 runs gives intervals.","Done: `python -m src.pipeline.evaluate` prints one table, baseline against risk model, and writes `results/evaluation.json`. It is the only module that opens the truth store, and 21 specimens that were never collected have no clock and are set aside."],
  done:"The table prints and the numbers regenerate from the seed.", earns:["P1","F3"]},
 
-{id:"M5", tr:"model", day:[11,6], who:{D:2}, t:"Alert triage and the operating point", needs:["M4"],
+{id:"M5", tr:"model", day:[11,6], who:{D:3}, t:"Alert triage and the operating point", needs:["M4"],
  why:"Alert volume is what decides whether anyone would use this. The threshold is chosen by that, not by accuracy.",
- steps:["Expected harm is the chance of missing the window times the urgency weight from the policy.","Pick the threshold with the longest median warning while staying under 6 alerts per shift. Save it.","One open alert per specimen, routed to a role, closed when the receipt scan arrives."],
- done:"An alert list for the test runs, one row per alert, with time, likely location and warning minutes.", earns:["P2"]},
+ steps:["Expected harm is the chance of missing the window times an urgency weight. Default weights, marked assumed in `config/triage.yaml`: tier 1 is 3, tier 2 is 2, tier 3 is 1. Also report the result at equal weights and at 9, 3 and 1, and alerts by tier, so the weights cannot hide a change in the result. Most short-window breaches are tier 3 urine.","Operating point: the harm threshold with the longest median warning at no more than 6 alerts per shift, the provisional budget in `docs/architecture.md` section 5.2, set on the 24 fit runs. Report 2 and 4 per shift beside it, because 6 is about a third of all specimens.","One open alert per specimen, closed when the receipt scan arrives. Routing defaults, marked assumed: a tube specimen goes to the receiving technologist, a hand-carried one to the courier coordinator, and one the location filter (M8) places still at the unit to the charge nurse.","Add a second, window-aware baseline: alert once a fixed share of the stability window has passed, with the share set on the fit runs to the same alert budget. Report it beside the plan's baseline. The pre-registered comparison stays against the plan's baseline."],
+ done:"An alert list for the held-out runs, one row per alert, with time, tier, routed role and warning minutes, and both baselines in `results/evaluation.json`.", earns:["P2"]},
 
 {id:"M6", tr:"model", day:[11,7], who:{D:1.5}, t:"Run the comparison and tag the first prototype", needs:["M5"],
  why:"The course scores improvement between the midterm and final prototypes. This snapshot is the midterm.",
- steps:["Run the evaluation end to end from a clean checkout.","Save `results/mvp-nov8.json` and tag the commit `v0.1-mvp`.","Keep that file untouched. The December 2 results must be compared against it."],
+ steps:["Waits for Daniel: tag only after he has read Ben's revised guidelines and confirms the midterm-to-final comparison still counts. If it does, tag as soon as M5 is merged instead of waiting for November 7.","Run the evaluation end to end from a clean checkout.","Save `results/mvp-nov8.json` and tag the commit `v0.1-mvp`.","Keep that file untouched. The December 2 results must be compared against it."],
  done:"The tag is pushed and the results file is committed.", earns:["M2","P1","P5"]},
 
 {id:"K3", tr:"data", day:[11,7], who:{K:0.5}, t:"Cited policy table", needs:["K1"],
  why:"The windows become published facts instead of assumptions, which is the strongest thing the project can say about its labels.",
- steps:["Citations: done for 34 of 44 rows. The other 10 stay marked `assumed: true`; nothing more is asked of Karissa here.","Where the clock stops: answered, at receipt.","Confirm the alert budget and who is alerted for each failure type."],
+ steps:["Citations: done for 34 of 44 rows. The other 10 stay marked `assumed: true`; nothing more is asked of Karissa here.","Where the clock stops: answered, at receipt.","The alert budget and who is alerted are drafted as labeled assumptions in `config/triage.yaml` (M5), so nothing waits on this. A correction from Karissa costs a rerun."],
  done:"Every row has a citation, or says plainly 'not found, assumed'.", earns:["P2"]},
 
 {id:"M7", tr:"model", day:[11,8], who:{D:1.5}, t:"Does the risk model beat the simple rule?", needs:["M6"],
  why:"If it does not, that is the result, and the architecture says to report it that way.",
- steps:["Write one paragraph in `results/README.md` with the headline numbers and what they mean.","The bar set in advance: at least 5 more minutes of median warning at the same alerts per shift. If the model misses it, say so.","Send the paragraph to Karissa."],
+ steps:["Claude Code drafts it now from `results/evaluation.json` and switches every number to `results/mvp-nov8.json` once M6 tags it.","One paragraph in `results/README.md` with the headline numbers and what they mean.","The bar set in advance: at least 5 more minutes of median warning at the same alerts per shift. If the model misses it, say so.","Carry the caveats with the numbers: synthetic data with no clinical review, data and model that share assumptions, a baseline that ignores the window (the window-aware baseline is the check), a generous budget, a Brier score only slightly better than the base rate (0.109 against 0.119 at 30 minutes of silence), and 33 dropped specimens that lean toward long delays.","Daniel shares the paragraph with Karissa."],
  done:"The paragraph exists and quotes the numbers in `results/mvp-nov8.json`.", earns:["F3","T2","T3"]},
 
 {id:"W6", tr:"write", day:[11,8], who:{D:1}, t:"Bring the design documents up to date",
@@ -786,13 +817,18 @@ const TASKS = [
 
 {id:"M8", tr:"model", day:[11,9], who:{D:2}, t:"Location estimate, part 1: port the filter", needs:["M2"],
  why:"The board needs to say where to look, not only that something is wrong.",
- steps:["Port `locationSeries` from `visuals/architecture.html` to NumPy in `src/models/location.py`, taking leg durations from `interval_params.json`.","Test it against the JavaScript on the default parameters."],
+ steps:["Port `locationSeries` from `visuals/architecture.html` to NumPy in `src/models/location.py`, taking leg durations from `interval_params.json`.","Test it against the JavaScript on the default parameters.","Feed the most likely location into the alert type and routing from M5."],
  done:"The posterior sums to 1 at every minute and matches the JavaScript.", earns:[]},
 
 {id:"M8b", tr:"model", day:[11,10], who:{D:2}, t:"Location estimate, part 2: score it", needs:["M8"],
  why:"Accuracy against the hidden truth is the result that makes the location claim honest.",
  steps:["Compare the most likely location with the truth segments at 15, 30, 60 and 90 minutes of silence. Report top-1 and top-3 accuracy.","Plot the probability of lost against how often specimens were really lost."],
  done:"A table and a plot are saved in `results/`.", earns:["F3"]},
+
+{id:"V1", tr:"demo", day:[11,9], who:{D:2}, t:"Move the system map and the 3D exhibit to the receipt clock",
+ why:"The 3D bench opens the talk and the system map is the seed of the demo. Both still stop the clock at plating, which contradicts the policy table and the model.",
+ steps:["In `visuals/architecture.html`, stop the clock at receipt: drop the set-up step after receipt and the 'Plated, clock stops' label, and use the policy's 60-minute window for unpreserved urine (gap 6 in `visuals/README.md`).","Change `riskReceived` and the 3D exhibit's model and fixture in the same commit, as task M3 noted, then rebuild `visuals/exhibit-3d/dist/`.","Rerun the M3 parity test against the updated page. It should now hold on every state, not only on those before the scan.","Close gap 6 in `visuals/README.md`."],
+ done:"No page in the repo stops the clock at plating, and parity holds.", earns:["T3","D3"]},
 
 {id:"M9", tr:"model", day:[11,10], who:{D:3}, t:"Search brief: template and Claude", api:"J4", needs:["M5"],
  why:"The fourth module. Comparing it with a plain template is how we show the language model adds something.",
@@ -811,7 +847,7 @@ const TASKS = [
 
 {id:"W4", tr:"write", day:[11,11], who:{D:1}, t:"Draft of Discussion, if still due",
  why:"The guidelines list a Discussion draft on November 11. Check Canvas.",
- steps:["Check Canvas to see whether it is still assigned.","Use `docs/architecture.md` section 13 (the design notes) as the source material."],
+ steps:["Check Canvas to see whether it is still assigned.","Claude Code drafts it ahead into `docs/submissions/drafts/` from `docs/architecture.md` section 13 (the design notes) and the M4 caveats.","Submit it if it is still due."],
  done:"Submitted.", earns:["M1"]},
 
 {id:"D12", tr:"demo", day:[11,12], who:{D:2}, t:"Bundle exporter, part 2: metrics and schema", needs:["D11"],
@@ -891,7 +927,7 @@ const TASKS = [
 
 {id:"W5", tr:"write", day:[11,17], who:{D:0.75, K:1.5}, t:"Draft of the Responsible Deployment Plan, if still due",
  why:"The guidelines list this draft on November 18. Check Canvas.",
- steps:["Check Canvas for the prompt.","Cover who sees an alert, what happens when it is wrong, what the system cannot see (content failures), privacy (no patient data in this prototype), and how a lab would validate it on its own data."],
+ steps:["Check Canvas for the prompt.","Claude Code drafts the whole text ahead into `docs/submissions/drafts/`, so nobody starts from a blank page.","Cover who sees an alert, what happens when it is wrong, what the system cannot see (content failures), privacy (no patient data in this prototype), and how a lab would validate it on its own data."],
  done:"Submitted.", earns:["M1","F4"]},
 
 {id:"T4", tr:"story", day:[11,18], who:{D:0.5, K:0.5}, t:"Presentation day",
@@ -923,9 +959,9 @@ const DONE_ALREADY = [
 ];
 
 const GATES = [
- {id:"A", name:"Gate A", title:"The data is real", day:[11,3], need:"Policy first pass in, a 200-specimen pilot that Karissa passes, and the full dataset frozen with its manifest.", tasks:["K1","D1","D6","K2","D9"]},
+ {id:"A", name:"Gate A", title:"The data is real", day:[11,3], need:"Policy first pass in, a 200-specimen pilot that passes the validator and a code audit (Karissa's review was skipped), and the full dataset frozen with its manifest.", tasks:["K1","D1","D6","K2","D9"]},
  {id:"B", name:"Gate B", title:"The headline number", day:[11,8], need:"Risk model against the simple rule on held-out runs, tagged as the first prototype, and the cited policy table.", tasks:["M1","M2","M3","M4","M5","M6","M7","K3"]},
- {id:"C", name:"Gate C", title:"End to end", day:[11,13], need:"Location estimate, search briefs and the exported bundle, shown in a demo page with a real timeline.", tasks:["M8","M8b","M9","K4","D11","D12","P2","P3"]},
+ {id:"C", name:"Gate C", title:"End to end", day:[11,13], need:"Location estimate, search briefs and the exported bundle, shown in a demo page with a real timeline.", tasks:["M8","M8b","V1","M9","K4","D11","D12","P2","P3"]},
  {id:"F", name:"Freeze", title:"Demo complete", day:[11,16], need:"Everything on GitHub Pages and rehearsed once. After 6 PM only bug fixes.", tasks:["P4","P5","P6","P7","K5","K7","T1","T2","P8","G3","K6"]},
  {id:"P", name:"Present", title:"November 18", day:[11,18], need:"Second rehearsal, backups, and the day-of checklist.", tasks:["T3","W5","T4"]}
 ];
@@ -1007,7 +1043,7 @@ const BEATS = [
 ];
 
 const RISKS = [
- {r:"The generated trails are not realistic enough", watch:"Karissa marks fewer than 17 of 20 pilot timelines plausible, or the validator passes under 90 percent.", act:"Tighten the briefs and the prompt and rerun the pilot (about ten cents). If it still fails, render the trails from the briefs in code and let Claude write only the notes. The briefs already hold every timestamp, so this fallback costs nothing and cannot fail."},
+ {r:"The generated trails are not realistic enough", watch:"No clinical review was done, so the validator, the code audit and parameter recovery are the checks. The manifest and every Results text say so.", act:"Tighten the briefs and the prompt and rerun the pilot (about ten cents). If it still fails, render the trails from the briefs in code and let Claude write only the notes. The briefs already hold every timestamp, so this fallback costs nothing and cannot fail."},
  {r:"Ten policy rows are still assumptions", watch:"The 10 rows marked `assumed: true` in `config/breach_policy.yaml`.", act:"Every output that uses them says so, and the limits beat names them. A citation found later goes into `config/policy_sources.csv` and costs a recompile, not a code change."},
  {r:"The revised guidelines change what is graded", watch:"Task W7 on October 30.", act:"Prune the plan to what the revised guidelines ask for and move the freed hours to the board, the timeline and the rehearsals."},
  {r:"The risk model does not beat the simple rule", watch:"The Gate B comparison.", act:"Report it as the result, show both in the demo, and tell the story as a simple rule being good enough, with the evidence. The architecture already commits to this."},
