@@ -108,6 +108,20 @@ def load_specs(obs, truth, start: str, stop: str, split: str) -> tuple[list[Spec
     return specs, {"specimens": total, "with_a_clock": len(specs), "without_a_clock": total - len(specs)}
 
 
+def truth_places(split: str) -> dict[str, list[tuple[float, float | None, str]]]:
+    """Where each specimen of a split with a clock really was: (from, to, place) in minutes since the
+    collection scan, `to` empty while the stay never ends. For scoring the location filter
+    (src/pipeline/location_eval.py), which never opens the truth file itself."""
+    rows = store.open_truth().execute("""
+        select g.specimen_id, epoch(g.start - s.collected_at) / 60.0, epoch(g."end" - s.collected_at) / 60.0, g.state
+        from truth_segments g join truth_specimens s using (specimen_id)
+        where s.split = ? and s.clock_started order by g.specimen_id, g.seq""", [split]).fetchall()
+    out: dict[str, list] = {}
+    for sid, begin, end, state in rows:
+        out.setdefault(sid, []).append((float(begin), None if end is None else float(end), state))
+    return out
+
+
 def baseline_quantiles(fit_rows) -> dict[str, np.ndarray]:
     """Sorted collection-to-receipt times for every group and parent that has at least the minimum members."""
     out = {}

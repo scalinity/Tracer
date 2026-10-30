@@ -1,0 +1,385 @@
+{
+ "policy_hash": "9594d7c019363261",
+ "source_sha256": "3cd25064e77828805ad20f31693f74fe27ee9ee08f42fb54b76d6061e31f9c64",
+ "held_out_runs": "24 to 29",
+ "specimens_with_a_clock": 2378,
+ "tube_share_from_the_fit_runs": 0.8114357788522177,
+ "note": "synthetic data with no clinical review; the filter's structure and fault mix are assumptions the data was drawn with",
+ "landmarks": {
+  "15": {
+   "silent_specimens": 1811,
+   "top1": 0.4864715626725566,
+   "top3": 0.9734953064605191,
+   "most_common_place": "at_station",
+   "most_common_share": 0.3390392048591938,
+   "true_places": {
+    "at_unit": 586,
+    "hand_carry": 267,
+    "in_tube": 296,
+    "at_station": 614,
+    "stalled_at_station": 23,
+    "misrouted": 17,
+    "lost": 8
+   },
+   "confusion_true_by_predicted": {
+    "at_unit": {
+     "at_unit": 0,
+     "hand_carry": 111,
+     "in_tube": 0,
+     "at_station": 475,
+     "stalled_at_station": 0,
+     "misrouted": 0,
+     "lost": 0
+    },
+    "hand_carry": {
+     "at_unit": 0,
+     "hand_carry": 267,
+     "in_tube": 0,
+     "at_station": 0,
+     "stalled_at_station": 0,
+     "misrouted": 0,
+     "lost": 0
+    },
+    "in_tube": {
+     "at_unit": 0,
+     "hand_carry": 0,
+     "in_tube": 0,
+     "at_station": 296,
+     "stalled_at_station": 0,
+     "misrouted": 0,
+     "lost": 0
+    },
+    "at_station": {
+     "at_unit": 0,
+     "hand_carry": 0,
+     "in_tube": 0,
+     "at_station": 614,
+     "stalled_at_station": 0,
+     "misrouted": 0,
+     "lost": 0
+    },
+    "stalled_at_station": {
+     "at_unit": 0,
+     "hand_carry": 0,
+     "in_tube": 0,
+     "at_station": 23,
+     "stalled_at_station": 0,
+     "misrouted": 0,
+     "lost": 0
+    },
+    "misrouted": {
+     "at_unit": 0,
+     "hand_carry": 0,
+     "in_tube": 0,
+     "at_station": 17,
+     "stalled_at_station": 0,
+     "misrouted": 0,
+     "lost": 0
+    },
+    "lost": {
+     "at_unit": 0,
+     "hand_carry": 0,
+     "in_tube": 0,
+     "at_station": 8,
+     "stalled_at_station": 0,
+     "misrouted": 0,
+     "lost": 0
+    }
+   }
+  },
+  "30": {
+   "silent_specimens": 725,
+   "top1": 0.5462068965517242,
+   "top3": 0.8758620689655172,
+   "most_common_place": "at_station",
+   "most_common_share": 0.3820689655172414,
+   "true_places": {
+    "at_unit": 188,
+    "hand_carry": 119,
+    "in_tube": 55,
+    "at_station": 277,
+    "stalled_at_station": 50,
+    "misrouted": 24,
+    "lost": 12
+   },
+   "confusion_true_by_predicted": {
+    "at_unit": {
+     "at_unit": 0,
+     "hand_carry": 37,
+     "in_tube": 0,
+     "at_station": 151,
+     "stalled_at_station": 0,
+     "misrouted": 0,
+     "lost": 0
+    },
+    "hand_carry": {
+     "at_unit": 0,
+     "hand_carry": 119,
+     "in_tube": 0,
+     "at_station": 0,
+     "stalled_at_station": 0,
+     "misrouted": 0,
+     "lost": 0
+    },
+    "in_tube": {
+     "at_unit": 0,
+     "hand_carry": 0,
+     "in_tube": 0,
+     "at_station": 55,
+     "stalled_at_station": 0,
+     "misrouted": 0,
+     "lost": 0
+    },
+    "at_station": {
+     "at_unit": 0,
+     "hand_carry": 0,
+     "in_tube": 0,
+     "at_station": 277,
+     "stalled_at_station": 0,
+     "misrouted": 0,
+     "lost": 0
+    },
+    "stalled_at_station": {
+     "at_unit": 0,
+     "hand_carry": 0,
+     "in_tube": 0,
+     "at_station": 50,
+     "stalled_at_station": 0,
+     "misrouted": 0,
+     "lost": 0
+    },
+    "misrouted": {
+     "at_unit": 0,
+     "hand_carry": 0,
+     "in_tube": 0,
+     "at_station": 24,
+     "stalled_at_station": 0,
+     "misrouted": 0,
+     "lost": 0
+    },
+    "lost": {
+     "at_unit": 0,
+     "hand_carry": 0,
+     "in_tube": 0,
+     "at_station": 12,
+     "stalled_at_station": 0,
+     "misrouted": 0,
+     "lost": 0
+    }
+   }
+  },
+  "60": {
+   "silent_specimens": 218,
+   "top1": 0.38990825688073394,
+   "top3": 0.8440366972477065,
+   "most_common_place": "at_unit",
+   "most_common_share": 0.2981651376146789,
+   "true_places": {
+    "at_unit": 65,
+    "hand_carry": 26,
+    "in_tube": 4,
+    "at_station": 36,
+    "stalled_at_station": 59,
+    "misrouted": 15,
+    "lost": 13
+   },
+   "confusion_true_by_predicted": {
+    "at_unit": {
+     "at_unit": 0,
+     "hand_carry": 11,
+     "in_tube": 0,
+     "at_station": 0,
+     "stalled_at_station": 54,
+     "misrouted": 0,
+     "lost": 0
+    },
+    "hand_carry": {
+     "at_unit": 0,
+     "hand_carry": 26,
+     "in_tube": 0,
+     "at_station": 0,
+     "stalled_at_station": 0,
+     "misrouted": 0,
+     "lost": 0
+    },
+    "in_tube": {
+     "at_unit": 0,
+     "hand_carry": 0,
+     "in_tube": 0,
+     "at_station": 0,
+     "stalled_at_station": 4,
+     "misrouted": 0,
+     "lost": 0
+    },
+    "at_station": {
+     "at_unit": 0,
+     "hand_carry": 0,
+     "in_tube": 0,
+     "at_station": 0,
+     "stalled_at_station": 36,
+     "misrouted": 0,
+     "lost": 0
+    },
+    "stalled_at_station": {
+     "at_unit": 0,
+     "hand_carry": 0,
+     "in_tube": 0,
+     "at_station": 0,
+     "stalled_at_station": 59,
+     "misrouted": 0,
+     "lost": 0
+    },
+    "misrouted": {
+     "at_unit": 0,
+     "hand_carry": 0,
+     "in_tube": 0,
+     "at_station": 0,
+     "stalled_at_station": 15,
+     "misrouted": 0,
+     "lost": 0
+    },
+    "lost": {
+     "at_unit": 0,
+     "hand_carry": 0,
+     "in_tube": 0,
+     "at_station": 0,
+     "stalled_at_station": 13,
+     "misrouted": 0,
+     "lost": 0
+    }
+   }
+  },
+  "90": {
+   "silent_specimens": 132,
+   "top1": 0.4393939393939394,
+   "top3": 0.803030303030303,
+   "most_common_place": "stalled_at_station",
+   "most_common_share": 0.38636363636363635,
+   "true_places": {
+    "at_unit": 43,
+    "hand_carry": 3,
+    "in_tube": 2,
+    "at_station": 11,
+    "stalled_at_station": 51,
+    "misrouted": 9,
+    "lost": 13
+   },
+   "confusion_true_by_predicted": {
+    "at_unit": {
+     "at_unit": 7,
+     "hand_carry": 0,
+     "in_tube": 0,
+     "at_station": 0,
+     "stalled_at_station": 36,
+     "misrouted": 0,
+     "lost": 0
+    },
+    "hand_carry": {
+     "at_unit": 3,
+     "hand_carry": 0,
+     "in_tube": 0,
+     "at_station": 0,
+     "stalled_at_station": 0,
+     "misrouted": 0,
+     "lost": 0
+    },
+    "in_tube": {
+     "at_unit": 0,
+     "hand_carry": 0,
+     "in_tube": 0,
+     "at_station": 0,
+     "stalled_at_station": 2,
+     "misrouted": 0,
+     "lost": 0
+    },
+    "at_station": {
+     "at_unit": 0,
+     "hand_carry": 0,
+     "in_tube": 0,
+     "at_station": 0,
+     "stalled_at_station": 11,
+     "misrouted": 0,
+     "lost": 0
+    },
+    "stalled_at_station": {
+     "at_unit": 0,
+     "hand_carry": 0,
+     "in_tube": 0,
+     "at_station": 0,
+     "stalled_at_station": 51,
+     "misrouted": 0,
+     "lost": 0
+    },
+    "misrouted": {
+     "at_unit": 0,
+     "hand_carry": 0,
+     "in_tube": 0,
+     "at_station": 0,
+     "stalled_at_station": 9,
+     "misrouted": 0,
+     "lost": 0
+    },
+    "lost": {
+     "at_unit": 0,
+     "hand_carry": 0,
+     "in_tube": 0,
+     "at_station": 0,
+     "stalled_at_station": 13,
+     "misrouted": 0,
+     "lost": 0
+    }
+   }
+  }
+ },
+ "lost_calibration": {
+  "pooled_ticks": 14696,
+  "specimens_really_lost": 13,
+  "share_of_ticks_really_lost": 0.04014697876973326,
+  "brier": 0.03403126792973733,
+  "brier_of_the_base_rate": 0.038535198865395845,
+  "bins": [
+   {
+    "from": 0.0,
+    "to": 0.01,
+    "n": 8685,
+    "predicted": 0.0023747608786873304,
+    "observed": 0.0024179620034542313
+   },
+   {
+    "from": 0.01,
+    "to": 0.02,
+    "n": 1241,
+    "predicted": 0.014865866961295241,
+    "observed": 0.016116035455278
+   },
+   {
+    "from": 0.02,
+    "to": 0.05,
+    "n": 1459,
+    "predicted": 0.032881037880257445,
+    "observed": 0.03427004797806717
+   },
+   {
+    "from": 0.05,
+    "to": 0.1,
+    "n": 1085,
+    "predicted": 0.07128346993227262,
+    "observed": 0.07741935483870968
+   },
+   {
+    "from": 0.1,
+    "to": 0.2,
+    "n": 925,
+    "predicted": 0.14416722490629047,
+    "observed": 0.1254054054054054
+   },
+   {
+    "from": 0.2,
+    "to": 0.4,
+    "n": 1301,
+    "predicted": 0.30078506400007465,
+    "observed": 0.22982321291314373
+   }
+  ]
+ }
+}
