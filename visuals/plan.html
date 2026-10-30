@@ -520,24 +520,23 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
       <div id="copyHost"></div>
       <details class="runorder" open>
         <summary>Run order from October 30, to get ahead of the plan</summary>
-        <p class="small">Claude Code works down this list without waiting for the planned days. The aim is the end-to-end gate by November 6 and the demo complete by November 10, so the last week goes to the talk. A line marked <b>Stops for Daniel</b> waits for his word; everything else just runs. Nothing is cut until Ben's revised guidelines are read (W7).</p>
+        <p class="small">Claude Code works down this list without waiting for the planned days. The aim is the end-to-end gate by November 6 and the demo complete by November 10, so the last week goes to the talk. A line marked <b>Stops for Daniel</b> waits for his word; everything else just runs. W7 is done: the revised guidelines dropped the Results, Discussion and Responsible Deployment Plan drafts, so W3 to W5 are gone and their hours go to the demo.</p>
         <ol>
           <li><b>M5</b> alert triage with the default weights and routing, plus the window-aware baseline.</li>
+          <li><b>W8</b> start the AI Teaming Log, backfilled from the merged pull requests.</li>
           <li><b>M8</b> then <b>M8b</b>: port the location filter and score it against the truth.</li>
           <li><b>V1</b> move the system map and the 3D exhibit to the receipt clock.</li>
           <li><b>W6</b> bring the design documents up to date.</li>
           <li><b>M7</b> draft the headline paragraph with its caveats.</li>
-          <li class="stop"><b>M6</b> tag <code>v0.1-mvp</code>. <b>Stops for Daniel</b>, after he reads Ben's guidelines.</li>
+          <li class="stop"><b>M6</b> tag <code>v0.1-mvp</code>. <b>Stops for Daniel</b>. The midterm-to-final improvement is still worth 2 points, and M5 is merged, so it can be tagged now.</li>
           <li><b>D11</b> and <b>D12</b>: the bundle exporter, its metrics grid and schema.</li>
           <li><b>M9</b> search briefs, template and Claude (about $0.50 by batch).</li>
           <li><b>P2</b> and <b>P3</b>: the demo board and the specimen timeline, clock at receipt.</li>
           <li><b>G3</b> showcase scenarios (about $0.30).</li>
-          <li><b>P4</b>, <b>P5</b> and <b>P6</b>: the threshold control, Beat Tracer and the 3D link.</li>
+          <li><b>P4</b>, <b>P5</b> and <b>P6</b>: the threshold control, Beat Tracer with its activity card, and the 3D link.</li>
           <li class="stop"><b>P7</b> GitHub Pages and the QR code. <b>Stops for Daniel</b> for the device tests.</li>
-          <li class="stop"><b>W3</b>, <b>W4</b> and <b>W5</b> drafted ahead. <b>Stops for Daniel</b> to check Canvas and submit.</li>
-          <li>Stretch: start the AI Teaming Log (A3) as a running file.</li>
         </ol>
-        <p class="small">Daniel's own: W1 and W2 if not ticked, W7, the credit check in S1, accepting the code audit in D7, and the talk (T1 to T4). Karissa's tasks stay as they are; nothing new is asked of her.</p>
+        <p class="small">Daniel's own: W1 and W2 if not ticked, the credit check in S1, accepting the code audit in D7, and the talk (T1 to T4). Karissa's tasks stay as they are; nothing new is asked of her.</p>
       </details>
       <div id="ledger"></div>
       <div id="doneAlready"></div>
@@ -575,11 +574,11 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
     <!-- ───────── demo ───────── -->
     <section id="demo">
       <div class="head"><h2>The demo on November 18</h2></div>
-      <p class="prose">The course grades the talk on a clear story, a reason for each design choice, a correct picture of how the system works, and class engagement, which carries the most points. The run of show gives each of those a place. Pick the slot length to see the minutes.</p>
+      <p class="prose">The course grades the talk on a clear story, a reason for each design choice, a correct picture of how the system works, and class engagement, which carries the most points. The run of show gives each of those a place. The revised guidelines also ask for a hands-on activity of about 10 minutes, so the class has the demo in hand from the board to the threshold slider. Pick the slot length to see the minutes.</p>
       <div class="slot">
         <span>Slot length</span>
         <div class="seg2" role="group" aria-label="Slot length in minutes" id="slotSeg"></div>
-        <span class="small">The length is not confirmed. It is one of the questions for the instructor.</span>
+        <span class="small">The revised guidelines give each team about 15 minutes.</span>
       </div>
       <div class="show" id="show"></div>
       <div class="beat-detail" id="beatDetail"></div>
@@ -594,8 +593,9 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
           <li>The rounds come from the held-out test runs in the real bundle, never invented.</li>
           <li><code>?seed=18</code> in the link gives the whole room the same rounds, so people can compare answers out loud.</li>
           <li>It runs in the browser with no server. Scores stay on the phone.</li>
-          <li>One round takes under a minute. Three rounds fit in the two to three minutes the run of show allows.</li>
+          <li>One round takes under a minute. Three rounds and the reveal fit in the four to five minutes the run of show allows, with time to ask who beat Tracer and how.</li>
           <li>On a slow room, the presenter plays one round on the projector and asks for a show of hands.</li>
+          <li>An activity card at the top of the page lists three things to try and two questions to discuss, so the class can work through it in about 10 minutes.</li>
         </ul>
       </div>
 
@@ -647,7 +647,7 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
     <!-- ───────── rubric ───────── -->
     <section id="rubric">
       <div class="head"><h2>Where the points are</h2><span class="note" id="rubNote"></span></div>
-      <p class="prose">The course guidelines score the project out of 100. These lines come from the guidelines as they stood before Ben's October 28 revision, which reduces the deliverables, so task W7 checks them. Each line below lists the tasks that earn it, so nothing is left to chance. A tick means the task is done. The weekly milestones are worth the most and are the easiest to lose by skipping one.</p>
+      <p class="prose">The course guidelines score the project out of 100. These lines come from Ben's revised guidelines of October 28, in the repo at <code>docs/course/ai-design-project-guidelines.pdf</code>, which kept every line and point from the earlier version. Each line below lists the tasks that earn it, so nothing is left to chance. A tick means the task is done. The weekly milestones are worth the most and are the easiest to lose by skipping one.</p>
       <div class="scroll-x" style="margin-top:18px"><table class="t" id="rubTable" style="min-width:760px"></table></div>
     </section>
 
@@ -660,7 +660,7 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
       <h3 class="sub">After November 18</h3>
       <ul class="after" id="after"></ul>
       <footer style="margin-top:56px">
-        <p>Updated October 30, after the data and model run: the dataset is frozen at 11,967 synthetic specimens with no clinical review, M1 to M5 are done, and on held-out runs the risk model leads the plan's simple rule by 10 to 15 minutes of median warning at 4 and 6 alerts per shift (20 to 25 at 6 with the default urgency weights). A rule that alerts at a fixed share of the stability window closes most of that gap: at equal weights the model ties it at 4 and 6. The run order under The plan lists what comes next, and task W7 checks the plan against the revised course guidelines. Hour estimates are ours and can be edited in each task. Prices are Anthropic's list prices as of October 6, 2026. Weekly draft dates come from the course guidelines, which call them tentative, so check Canvas. The page stores ticks, spend and cuts in the shared store when it can reach one, and on this device otherwise.</p>
+        <p>Updated October 30, after the data and model run: the dataset is frozen at 11,967 synthetic specimens with no clinical review, M1 to M5 are done, and on held-out runs the risk model leads the plan's simple rule by 10 to 15 minutes of median warning at 4 and 6 alerts per shift (20 to 25 at 6 with the default urgency weights). A rule that alerts at a fixed share of the stability window closes most of that gap: at equal weights the model ties it at 4 and 6. The plan now follows Ben's revised guidelines (in the repo under <code>docs/course/</code>): no weekly drafts remain, the talk is about 15 minutes with a hands-on demo of about 10, and the final report is 2 to 4 pages, due December 9. The run order under The plan lists what comes next. Hour estimates are ours and can be edited in each task. Prices are Anthropic's list prices as of October 6, 2026. The page stores ticks, spend and cuts in the shared store when it can reach one, and on this device otherwise.</p>
       </footer>
     </section>
 
@@ -697,8 +697,13 @@ const TASKS = [
 
 {id:"W7", tr:"write", day:[10,30], who:{D:0.5}, t:"Read Ben's revised project guidelines and prune this plan",
  why:"Ben posted revised guidelines on October 28, after this plan was written. His announcement says the deliverables are greatly reduced and simplified, and teams now have much more freedom in the system, the talk and the final report. The 'if still due' drafts, the rubric below and some tasks may no longer be needed.",
- steps:["Open the updated guidelines document linked from Ben's Canvas announcement of October 28.","For W3, W4 and W5, and for each rubric line under Points, note whether the revised guidelines still ask for it and what it is worth.","Delete tasks that are no longer required, or add them to the cuts, and change the rubric points to match. Move the freed hours to the board, the timeline and the rehearsals.","Run `node visuals/plan.check.cjs` after editing."],
- done:"Every 'if still due' task and every rubric line is confirmed or removed against the revised guidelines.", earns:["M1"]},
+ steps:["Done: the revised guidelines are in the repo at `docs/course/ai-design-project-guidelines.pdf`.","Done: the rubric is unchanged, line for line and point for point.","Done: no Results, Discussion or Responsible Deployment Plan drafts are due, so W3, W4 and W5 are removed.","Done: each team has about 15 minutes and the hands-on demo should take about 10, so the run of show now gives the class most of the slot.","Done: the final report is due December 9, about 2 to 4 pages, with eight required parts (A7). The AI Teaming Log is still required, so W8 starts it now."],
+ done:"The plan matches the revised guidelines: drafts removed, run of show and report brief updated.", earns:["M1"]},
+
+{id:"W8", tr:"write", day:[10,31], who:{D:0.5}, t:"Start the AI Teaming Log",
+ why:"The guidelines ask each team to document and reflect on how AI agents contributed, in the AI Teaming Log, and the report must say how AI assisted. Writing it as the work happens is cheaper and more honest than rebuilding it in December.",
+ steps:["Claude Code creates `docs/ai-teaming-log.md` and backfills it from the merged pull requests and the commit history: one dated entry per piece of work, saying what the agent did, what Daniel checked or changed, and what went wrong.","Add a section on the Claude API jobs: which model, what it wrote, what it cost, and how the validator caught bad output.","From now on, each pull request adds its own entry before it merges.","Daniel reads it once and corrects anything that misstates his part."],
+ done:"The log covers every merged pull request so far, and the next pull request adds its own entry.", earns:["F1"]},
 
 {id:"S1", tr:"data", day:[10,29], who:{D:1}, t:"Set up Claude API access with a hard cap",
  why:"Nothing else in the data track can run until this works, and the cap protects the credits.",
@@ -765,10 +770,6 @@ const TASKS = [
  steps:["Done: `python -m src.generator.collect --batch-ids data/claude/batches.json --wait`. Each failed trail was retried once.","Done: `--freeze` wrote `datasets/tracer-synthetic-v1.jsonl.gz` and `datasets/manifest.json`: 11,967 of 12,000 accepted (99.7 percent; 99.4 percent on the first attempt), cost $2.16. The 33 dropped specimens skew toward long delays, and the manifest says so.","Done: the file is 1.3 MB, under the 25 MB limit, so it is committed directly.","Done: committed. The manifest records that clinical review was not done, because K2 was skipped."],
  done:"At least 11,000 specimens accepted, the manifest committed, and the cost recorded.", earns:["M2","P4","D4"]},
 
-{id:"W3", tr:"write", day:[11,4], who:{D:1}, t:"Draft of Results, if still due",
- why:"The guidelines list a Results draft on November 4. Check Canvas for the exact prompt.",
- steps:["Check Canvas to see whether it is still assigned and what it asks for.","Claude Code drafts it ahead into `docs/submissions/drafts/`: the dataset numbers from the manifest (count, pass rate, cost), the M4 comparison with its caveats, and the line that no clinical review was done.","Submit it if it is still due."],
- done:"Submitted, with every claim traceable to a file in the repo.", earns:["M1","M2"]},
 
 {id:"M1", tr:"model", day:[11,4], who:{D:3}, t:"Load the data and split the runs", needs:["D9"],
  why:"The truth log must never reach a model. A test makes that a rule and not a habit.",
@@ -845,10 +846,6 @@ const TASKS = [
  steps:["Daniel sends 20 alerts, each with two briefs labeled A and B in random order.","For each brief give 1 to 5 for 'tells me where to look' and mark any sentence that is unsafe or wrong.","Return the sheet. Daniel unblinds it and averages the scores."],
  done:"The sheet is returned and Daniel has the two averages.", earns:["D3","F3"]},
 
-{id:"W4", tr:"write", day:[11,11], who:{D:1}, t:"Draft of Discussion, if still due",
- why:"The guidelines list a Discussion draft on November 11. Check Canvas.",
- steps:["Check Canvas to see whether it is still assigned.","Claude Code drafts it ahead into `docs/submissions/drafts/` from `docs/architecture.md` section 13 (the design notes) and the M4 caveats.","Submit it if it is still due."],
- done:"Submitted.", earns:["M1"]},
 
 {id:"D12", tr:"demo", day:[11,12], who:{D:2}, t:"Bundle exporter, part 2: metrics and schema", needs:["D11"],
  why:"Precomputing the threshold grid means the slider in the demo needs no model run.",
@@ -887,7 +884,7 @@ const TASKS = [
 
 {id:"P5", tr:"demo", day:[11,14], who:{D:3}, t:"Beat Tracer, the class activity", needs:["P3"],
  why:"Class engagement and answering questions is the largest single line in the presentation score.",
- steps:["Read the Beat Tracer notes in the demo section. Rounds come from the held-out runs in the bundle.","Six specimens leave collection, one goes silent. A tap on Call it records the minute. A wrong call uses one of three alerts.","`?seed=18` gives everyone the same rounds.","The end screen shows the player's median warning next to Tracer's on the same rounds.","Playtest with three people. A full game must take under three minutes."],
+ steps:["Read the Beat Tracer notes in the demo section. Rounds come from the held-out runs in the bundle.","Six specimens leave collection, one goes silent. A tap on Call it records the minute. A wrong call uses one of three alerts.","`?seed=18` gives everyone the same rounds.","The end screen shows the player's median warning next to Tracer's on the same rounds.","Add an activity card at the top of the demo page: three things to try (follow one specimen on the board, move the threshold slider, play Beat Tracer) and two questions to discuss, so the class can work through the hands-on part in about 10 minutes, as the guidelines ask.","Playtest with three people. A full game must take under three minutes."],
  done:"Three people finish a game in under three minutes and understand the point without help.", earns:["D5","T4"]},
 
 {id:"P6", tr:"demo", day:[11,15], who:{D:2}, t:"Link the 3D view to each specimen", needs:["P3"],
@@ -925,10 +922,6 @@ const TASKS = [
  steps:["Run the talk once more, shorter.","Save an offline copy of `docs/demo/` on the laptop and open it from disk.","Record a five-minute screen capture as a backup.","Put the QR code on the last screen.","Test the phone hotspot."],
  done:"The offline copy opens, the recording plays, and the QR code scans.", earns:["D1","T4"]},
 
-{id:"W5", tr:"write", day:[11,17], who:{D:0.75, K:1.5}, t:"Draft of the Responsible Deployment Plan, if still due",
- why:"The guidelines list this draft on November 18. Check Canvas.",
- steps:["Check Canvas for the prompt.","Claude Code drafts the whole text ahead into `docs/submissions/drafts/`, so nobody starts from a blank page.","Cover who sees an alert, what happens when it is wrong, what the system cannot see (content failures), privacy (no patient data in this prototype), and how a lab would validate it on its own data."],
- done:"Submitted.", earns:["M1","F4"]},
 
 {id:"T4", tr:"story", day:[11,18], who:{D:0.5, K:0.5}, t:"Presentation day",
  why:"The checklist is short so nothing on it gets skipped.",
@@ -940,11 +933,11 @@ const TASKS = [
 const AFTER = [
  {id:"A1", when:"Nov 19 to 21", t:"Collect feedback from the class and the instructor and list the fixes.", earns:[]},
  {id:"A2", when:"Nov 22 and 23", t:"Sensitivity runs: vary the arrival profile and specimen mix across a plausible range and report the effect on alerts per shift and warning time. If time allows, run the gradient-boosted challenger under its pre-registered decision rule.", earns:["F3"]},
- {id:"A3", when:"Nov 25", t:"AI Teaming Log draft: how Claude Code and the Claude API were used, what worked, what to avoid.", earns:["M1"]},
+ {id:"A3", when:"Nov 25", t:"Finish the AI Teaming Log from the running file W8 started: the strategies that worked best, what to avoid, and a short reflection.", earns:["M1","F1"]},
  {id:"A4", when:"Nov 28 to 30", t:"Camera-ready: a clean-clone test (a fresh checkout reproduces the manifest check, the fit, the evaluation and the demo), the README, and demo polish.", earns:["P4","F1"]},
  {id:"A5", when:"Dec 1", t:"Final results snapshot, tagged, with a table that shows the improvement over the November 8 prototype.", earns:["P5"]},
  {id:"A6", when:"Dec 2", t:"Final prototype and interactive demo on GitHub. Last presentation day.", earns:["M1","P4","D4"]},
- {id:"A7", when:"Dec 3 to 8", t:"Write the final report: Abstract, Introduction, Methods, Results, Discussion, Responsible Deployment Plan, AI Teaming Log and contributions. Four to six pages, 11 point, single spaced, 1 inch margins.", earns:["F1","F2","F4","F5"]},
+ {id:"A7", when:"Dec 3 to 8", t:"Write the final report, about 2 to 4 pages, in any structure that covers the eight parts the guidelines require: the problem, its significance and how AI can help; what Tracer does, who would use it and how it changes current practice; the data, with how the synthetic data was made and where every source came from; the models and the Claude jobs; how we built it, setbacks included; the results with their metrics; how AI assisted; and each member's contributions. Everything describes the final version. Keep the limits and next steps, which the rubric scores.", earns:["F1","F2","F4","F5"]},
  {id:"A8", when:"Dec 9", t:"Submit the final report on Canvas.", earns:["M1","F1"]}
 ];
 
@@ -963,14 +956,14 @@ const GATES = [
  {id:"B", name:"Gate B", title:"The headline number", day:[11,8], need:"Risk model against the simple rule on held-out runs, tagged as the first prototype, and the cited policy table.", tasks:["M1","M2","M3","M4","M5","M6","M7","K3"]},
  {id:"C", name:"Gate C", title:"End to end", day:[11,13], need:"Location estimate, search briefs and the exported bundle, shown in a demo page with a real timeline.", tasks:["M8","M8b","V1","M9","K4","D11","D12","P2","P3"]},
  {id:"F", name:"Freeze", title:"Demo complete", day:[11,16], need:"Everything on GitHub Pages and rehearsed once. After 6 PM only bug fixes.", tasks:["P4","P5","P6","P7","K5","K7","T1","T2","P8","G3","K6"]},
- {id:"P", name:"Present", title:"November 18", day:[11,18], need:"Second rehearsal, backups, and the day-of checklist.", tasks:["T3","W5","T4"]}
+ {id:"P", name:"Present", title:"November 18", day:[11,18], need:"Second rehearsal, backups, and the day-of checklist.", tasks:["T3","T4"]}
 ];
 
 /* what-if cuts, in the order to take them */
 const CUTS = [
  {id:"C1", label:"Skip linking the 3D view to each specimen", note:"The standalone 3D bench stays in the talk.", saves:{P6:{D:2}}},
  {id:"C2", label:"Choose showcase specimens by hand, with no Claude-written stories", note:"Keeps the scenarios and drops one Claude job.", saves:{G3:{D:1}, K6:{K:0.5}}},
- {id:"C3", label:"Beat Tracer with three rounds and no replay", note:"Still fills the time the run of show gives it.", saves:{P5:{D:1.5}}},
+ {id:"C3", label:"Beat Tracer with three rounds and no replay", note:"Beat Tracer then fills less of the hands-on time, so the board and the slider take the rest.", saves:{P5:{D:1.5}}},
  {id:"C4", label:"Score the location estimate by overall top-1 only", note:"Drops the by-minute breakdown.", saves:{M8b:{D:1}}},
  {id:"C5", label:"Move the cited policy table to after the presentation", note:"The windows stay labeled as assumptions.", saves:{K3:{K:0.5}}},
  {id:"C6", label:"Ship the template search brief only", note:"Loses the language-model module and its comparison. Last resort.", saves:{M9:{D:2}, K4:{K:1.5}}}
@@ -1033,19 +1026,19 @@ const RUBRIC = [
 const BEATS = [
  {id:"hook", t:"The silent tube", w:0.5, who:"Karissa", screen:"The 3D bench with the truth hidden. A tube leaves the unit and nothing happens.", say:"A tube leaves the ward. Nothing beeps and nothing is logged. How long until you would worry? Show of hands: fifteen minutes, an hour?", earns:["T1","T4"]},
  {id:"problem", t:"Why it matters", w:1, who:"Karissa", screen:"The problem panel from the demo page.", say:"What a lab does today when a specimen goes missing, why a recollection hurts the patient, and why the stability window makes time the enemy.", earns:["T1","D2"]},
- {id:"gap", t:"The missing data", w:0.75, who:"Daniel", screen:"One panel: two timestamps with 80.1 hours between them.", say:"The only public microbiology data we found stamps a specimen twice and nothing in between. That is why we generated our own data, and why every number we show is an assumption we can vary.", earns:["T2","T3"]},
- {id:"how", t:"How Tracer works", w:1.5, who:"Daniel", screen:"The 3D bench, truth hidden, then shown.", say:"Silence is evidence. Tracer asks how unusual the silence is, where the specimen probably is, and whether an alert would still leave time to act.", earns:["T3","T2"]},
- {id:"board", t:"Board and timeline", w:2, who:"Daniel", screen:"The live board, then one specimen timeline with the scrubber.", say:"Pick a specimen. Drag the clock. Watch the risk climb, the likely place move to the tube station, and the alert fire with an hour to spare.", earns:["T3","D5"]},
- {id:"game", t:"Beat Tracer", w:2.5, who:"Both", screen:"The class activity on every phone and on the projector.", say:"Open the link. Three rounds. Tap the specimen you think is lost. Then compare your warning time with Tracer's.", earns:["T4","D5"]},
- {id:"why", t:"Why this design", w:1, who:"Daniel", screen:"The threshold slider, warning time against alerts per shift.", say:"We chose a simple survival model a clinician can inspect over a black box, and we judge it by minutes of warning at a tolerable number of alerts, not by accuracy.", earns:["T2"]},
- {id:"limits", t:"Limits and next steps", w:1, who:"Karissa", screen:"The limits panel.", say:"Tracer cannot see mislabeled or wrongly packed specimens. All the data here is synthetic. The next step is a test on a real laboratory log that has receipt timestamps.", earns:["T2","T1"]},
- {id:"qa", t:"Questions", w:2, who:"Both", screen:"Back to the 3D bench, so the room has something to look at.", say:"Use the prepared answers. Say what we do not know.", earns:["T4"], qa:true}
+ {id:"gap", t:"The missing data", w:0.5, who:"Daniel", screen:"One panel: two timestamps with 80.1 hours between them.", say:"The only public microbiology data we found stamps a specimen twice and nothing in between. That is why we generated our own data, and why every number we show is an assumption we can vary.", earns:["T2","T3"]},
+ {id:"how", t:"How Tracer works", w:1, who:"Daniel", screen:"The 3D bench, truth hidden, then shown.", say:"Silence is evidence. Tracer asks how unusual the silence is, where the specimen probably is, and whether an alert would still leave time to act.", earns:["T3","T2"]},
+ {id:"board", t:"Board and timeline", w:3, who:"Daniel", screen:"The live board, then one specimen timeline with the scrubber.", say:"Everyone open the link from the QR code now. Pick a specimen, drag the clock, and watch the risk climb, the likely place move to the tube station, and the alert fire with time to spare.", earns:["T3","D5"]},
+ {id:"game", t:"Beat Tracer", w:4.5, who:"Both", screen:"The class activity on every phone and on the projector.", say:"Three rounds: tap the specimen you think is lost, then compare your warning time with Tracer's. Who beat it, and what did you notice that made you call it?", earns:["T4","D5"]},
+ {id:"why", t:"Why this design", w:1, who:"Daniel", screen:"The threshold slider, warning time against alerts per shift.", say:"Drag the threshold slider yourself. Fewer alerts means less warning. We chose a simple survival model a clinician can inspect over a black box, and we judge it by minutes of warning at a tolerable number of alerts, not by accuracy.", earns:["T2"]},
+ {id:"limits", t:"Limits and next steps", w:0.75, who:"Karissa", screen:"The limits panel.", say:"Tracer cannot see mislabeled or wrongly packed specimens. All the data here is synthetic. The next step is a test on a real laboratory log that has receipt timestamps.", earns:["T2","T1"]},
+ {id:"qa", t:"Questions", w:2.75, who:"Both", screen:"Back to the 3D bench, so the room has something to look at.", say:"Use the prepared answers. Say what we do not know.", earns:["T4"], qa:true}
 ];
 
 const RISKS = [
  {r:"The generated trails are not realistic enough", watch:"No clinical review was done, so the validator, the code audit and parameter recovery are the checks. The manifest and every Results text say so.", act:"Tighten the briefs and the prompt and rerun the pilot (about ten cents). If it still fails, render the trails from the briefs in code and let Claude write only the notes. The briefs already hold every timestamp, so this fallback costs nothing and cannot fail."},
  {r:"Ten policy rows are still assumptions", watch:"The 10 rows marked `assumed: true` in `config/breach_policy.yaml`.", act:"Every output that uses them says so, and the limits beat names them. A citation found later goes into `config/policy_sources.csv` and costs a recompile, not a code change."},
- {r:"The revised guidelines change what is graded", watch:"Task W7 on October 30.", act:"Prune the plan to what the revised guidelines ask for and move the freed hours to the board, the timeline and the rehearsals."},
+ {r:"The hands-on part runs long, or phones cannot load the page", watch:"Rehearsal one (T2), against a timer, with three phones on the room's network.", act:"Keep the activity card to three steps, drop the replay (cut C3), and have the presenter drive one round on the projector."},
  {r:"The risk model does not beat the simple rule", watch:"The Gate B comparison.", act:"Report it as the result, show both in the demo, and tell the story as a simple rule being good enough, with the evidence. The architecture already commits to this."},
  {r:"We run out of hours", watch:"The schedule check at the top shows a gate short by more than two hours.", act:"Take the cuts in the order listed, starting with the 3D link-up. Never cut the board, the timeline or the rehearsals."},
  {r:"The credits expire or the API is down", watch:"Balance and expiry checked on October 29. Batch status on November 2.", act:"Every Claude output is saved as a file once generated, so the demo is unaffected. For missing data use the code fallback above."},
@@ -1056,11 +1049,7 @@ const RISKS = [
 ];
 
 const QUESTIONS = [
- {q:"What do Ben's revised guidelines of October 28 still require: which drafts, which deliverables, and how many points each?", who:"Daniel", by:"Oct 30"},
- {q:"Is a static GitHub Pages page an acceptable publicly accessible interactive web application?", who:"Instructor", by:"Nov 4"},
- {q:"How long is each presentation slot?", who:"Instructor", by:"Nov 4"},
- {q:"Are the weekly draft milestones (Results Nov 4, Discussion Nov 11, Responsible Deployment Plan Nov 18) still due, now that Milestone 4 replaced the Methods draft?", who:"Instructor", by:"Nov 1"},
- {q:"How much provenance does the report need for AI-generated synthetic data?", who:"Instructor", by:"Nov 11"},
+ {q:"Is the AI Teaming Log its own submission, or a part of the final report?", who:"Instructor", by:"Nov 18"},
  {q:"Do the promotional credits last past November 18, and what is the exact balance?", who:"Daniel", by:"Oct 29"},
  {q:"Is there instructor feedback on Milestones 2 and 3 that the next submission should answer?", who:"Daniel", by:"Oct 28"},
  {q:"How many alerts per shift would a laboratory tolerate, and who acts on each kind of failure?", who:"Karissa", by:"Nov 8"}
