@@ -61,6 +61,15 @@ def test_the_brief_is_last_and_is_the_only_message(briefs):
     assert list(sent) == ["specimen_id", "fixed", "planted_fault", "targets", "locations"]
 
 
+def test_a_retry_puts_the_validator_error_inside_the_brief(briefs):
+    plain, retry = prompt.build_request(briefs[0]), prompt.build_request(briefs[0], error="check 5: too long")
+    assert plain["system"] == retry["system"]
+    sent = json.loads(retry["messages"][0]["content"])
+    assert sent["validator_error"] == "check 5: too long" and list(sent)[-1] == "validator_error"
+    assert "validator_error" in prompt.system_text()
+    assert "validator_error" not in plain["messages"][0]["content"]
+
+
 def test_claude_never_sees_the_label(briefs):
     text = prompt.build_request(briefs[0])["messages"][0]["content"]
     assert "label" not in json.loads(text)

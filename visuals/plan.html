@@ -706,7 +706,7 @@ const TASKS = [
 
 {id:"D5", tr:"data", day:[10,31], who:{D:2}, t:"Write the validator", needs:["D4"],
  why:"The validator is what lets us trust cheap, fast generation. Without it we are only hoping.",
- steps:["Write `src/generator/validate.py` with the nine checks in the validator recipe.","Write one broken example per check and a test that each one is caught for the right reason.","On a failure, retry once with the error text added to the brief. On a second failure, drop the specimen and log it."],
+ steps:["Done: `src/generator/validate.py` has the nine checks in the validator recipe. Check 7 also holds the collected and received scans to the brief's timing.","Done: one broken example per check, and a test that each one is caught for the right reason. A trail rendered in code from 6,000 briefs passes, so the validator, the briefs and the prompt agree on all seven faults and both routes.","Done: on a failure `generate_valid` retries once with the error text added to the brief, and on a second failure it drops the specimen and logs it to `data/claude/dropped.jsonl`."],
  done:"Nine tests pass. A good trail passes and each broken trail fails.", earns:["P1"]},
 
 {id:"D6", tr:"data", day:[11,1], who:{D:1}, t:"Run the 200-specimen pilot", api:"J1", needs:["D5"],
