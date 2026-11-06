@@ -147,7 +147,9 @@ class ScriptPage(HTMLParser):
     def __init__(self):
         super().__init__()
         self.slide_tags, self.sections, self.answers, self.nav, self.directions = [], {}, [], [], []
+        self.qa, self.quiet = [], []  # each prepared answer as (question, speaker, answer); the quiet-room questions
         self._n, self._open = None, []  # the beat being read; captures as [kind, tag, depth, text]
+        self._in_answers = False
 
     def handle_starttag(self, tag, attrs):
         a, classes = dict(attrs), (dict(attrs).get("class") or "").split()
@@ -169,6 +171,13 @@ class ScriptPage(HTMLParser):
             self._open.append(["sd", tag, 0, []])
         if tag == "li" and "answer" in classes:
             self.answers.append(a.get("data-who"))
+            self.qa.append(["", a.get("data-who"), ""])
+        if tag == "p" and self.qa and ("q" in classes or "a" in classes):
+            self._open.append(["q" if "q" in classes else "a", tag, 0, []])
+        if tag == "section":
+            self._in_answers = a.get("id") == "answers"
+        if self._in_answers and tag == "li" and "answer" not in classes:
+            self._open.append(["quiet", tag, 0, []])
         if tag == "a" and "seg" in classes:
             self.nav.append((a.get("data-beat"), a.get("href")))
 
@@ -186,10 +195,16 @@ class ScriptPage(HTMLParser):
                 self.sections[self._n]["lines"].append(text)
             elif cap[0] == "window":
                 self.sections[self._n]["window"] = text
+            elif cap[0] == "q":
+                self.qa[-1][0] = text
+            elif cap[0] == "a":
+                self.qa[-1][2] = text
+            elif cap[0] == "quiet":
+                self.quiet.append(text)
             else:
                 self.directions.append(text)
         if tag == "section":
-            self._n = None
+            self._n, self._in_answers = None, False
 
     def handle_data(self, data):
         for cap in self._open:
@@ -199,6 +214,7 @@ class ScriptPage(HTMLParser):
 def script_page() -> ScriptPage:
     p = ScriptPage()
     p.feed(SCRIPT_PAGE.read_text(encoding="utf-8"))
+    p.qa = [tuple(entry) for entry in p.qa]
     return p
 
 
@@ -278,6 +294,15 @@ def test_the_script_page_shows_every_cell_of_the_run_of_show():
     assert len(readme) == 2 and readme[0][0][0] == "Clock" and len(readme[0]) == 11, "the run of show has a header and 10 beats"
     assert page.tables == readme, "a run-of-show or minute-by-minute cell on the script page differs from docs/talk/README.md"
 
+
+def test_the_script_page_keeps_every_prepared_question_and_answer():
+    section = SCRIPT.split("\n## Prepared answers\n")[1].split("\n## ")[0]
+    readme = [(f"{n} {md_plain(q)}", who, md_plain(a))
+              for n, q, who, a in re.findall(r"^(\d+)\. \*\*(.+?)\*\* \[(Daniel|Karissa)\] (.+)$", section, flags=re.M)]
+    quiet = [md_plain(q) for q in re.findall(r"^- (.+)$", section, flags=re.M)]
+    page = script_page()
+    assert len(readme) == 10 and page.qa == readme, "a prepared question or answer differs from docs/talk/README.md"
+    assert len(quiet) == 2 and page.quiet == quiet, "the questions for a quiet room differ from docs/talk/README.md"
 
 
 def test_stage_directions_are_only_directions():
