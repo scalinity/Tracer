@@ -227,6 +227,59 @@ def test_the_script_page_keeps_the_answers_and_run_of_show():
     assert page.nav == [(str(n), f"#beat-{n}") for n in range(10)]
 
 
+def md_plain(text: str) -> str:
+    """A markdown cell or line as the page shows it: bold, code and autolink markers removed."""
+    text = re.sub(r"\*\*(.+?)\*\*", r"\1", text)
+    text = re.sub(r"`([^`]*)`", r"\1", text)
+    return re.sub(r"\s+", " ", re.sub(r"<(https?://[^>]+)>", r"\1", text)).strip()
+
+
+class PageTables(HTMLParser):
+    """Every table inside the script page's timekeeping section, as rows of cell text."""
+
+    def __init__(self):
+        super().__init__()
+        self.tables, self._depth, self._cell = [], 0, None
+
+    def handle_starttag(self, tag, attrs):
+        if self._depth:
+            self._depth += tag == "section"
+        elif tag == "section" and dict(attrs).get("id") == "timekeeping":
+            self._depth = 1
+        if not self._depth:
+            return
+        if tag == "table":
+            self.tables.append([])
+        elif tag == "tr":
+            self.tables[-1].append([])
+        elif tag in ("th", "td"):
+            self._cell = []
+
+    def handle_endtag(self, tag):
+        if self._depth and tag in ("th", "td"):
+            self.tables[-1][-1].append(re.sub(r"\s+", " ", "".join(self._cell)).strip())
+            self._cell = None
+        if self._depth and tag == "section":
+            self._depth -= 1
+
+    def handle_data(self, data):
+        if self._cell is not None:
+            self._cell.append(data)
+
+
+def test_the_script_page_shows_every_cell_of_the_run_of_show():
+    section = SCRIPT.split("\n## Run of show\n")[1].split("\n## ")[0]
+    readme = []
+    for group in re.findall(r"(?:^\|.*\n?)+", section, flags=re.M):
+        rows = [[md_plain(c) for c in line.strip().strip("|").split("|")] for line in group.strip().split("\n")]
+        readme.append([r for r in rows if not all(re.fullmatch(r":?-+:?", c) for c in r)])
+    page = PageTables()
+    page.feed(SCRIPT_PAGE.read_text(encoding="utf-8"))
+    assert len(readme) == 2 and readme[0][0][0] == "Clock" and len(readme[0]) == 11, "the run of show has a header and 10 beats"
+    assert page.tables == readme, "a run-of-show or minute-by-minute cell on the script page differs from docs/talk/README.md"
+
+
+
 def test_stage_directions_are_only_directions():
     page, notes = script_page(), script_notes()
     assert page.directions and all(re.fullmatch(DIRECTION, d) for d in page.directions), page.directions

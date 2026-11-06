@@ -119,7 +119,8 @@ def secs(t: str) -> int:
 
 
 def run_of_show(body: str) -> tuple[list[dict], list[tuple[str, object]]]:
-    """The beats from the run-of-show table, and the blocks that follow it (the timekeeping)."""
+    """The beats from the run-of-show table, and the whole section's blocks for the timekeeping: the table
+    itself with every column, then the minute-by-minute table and the order of cuts."""
     items = blocks(body)
     at = next(k for k, (kind, _) in enumerate(items) if kind == "table")
     head, *rows = items[at][1]
@@ -137,7 +138,7 @@ def run_of_show(body: str) -> tuple[list[dict], list[tuple[str, object]]]:
             "who": row[col["who"]],
             "room": row[col["the room is"]],
         })
-    return beats, items[at + 1:]
+    return beats, items
 
 
 def slide_bodies(body: str) -> tuple[str, dict[int, dict]]:

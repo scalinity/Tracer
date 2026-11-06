@@ -180,6 +180,7 @@ ol.list li{position:relative;padding-left:28px;counter-increment:item}
 ol.list li::before{content:counter(item);position:absolute;left:0;color:var(--ink-mute);font-variant-numeric:tabular-nums;font-weight:500}
 .table-wrap{max-width:66ch;overflow-x:auto}
 table{border-collapse:collapse;width:100%;font:400 15.5px/1.5 var(--sans);color:var(--ink-dim)}
+@media (max-width:700px){table:has(th:nth-child(5)){min-width:46rem}} /* on a phone, wide tables scroll in their box instead of squeezing */
 th{text-align:left;font-weight:600;color:var(--ink-mute);font-size:14px;padding:0 16px 8px 0;border-bottom:1px solid var(--hair)}
 td{padding:9px 16px 9px 0;border-bottom:1px solid var(--hair-soft);vertical-align:top}
 td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5em;white-space:nowrap}

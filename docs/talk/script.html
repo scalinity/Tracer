@@ -180,6 +180,7 @@ ol.list li{position:relative;padding-left:28px;counter-increment:item}
 ol.list li::before{content:counter(item);position:absolute;left:0;color:var(--ink-mute);font-variant-numeric:tabular-nums;font-weight:500}
 .table-wrap{max-width:66ch;overflow-x:auto}
 table{border-collapse:collapse;width:100%;font:400 15.5px/1.5 var(--sans);color:var(--ink-dim)}
+@media (max-width:700px){table:has(th:nth-child(5)){min-width:46rem}} /* on a phone, wide tables scroll in their box instead of squeezing */
 th{text-align:left;font-weight:600;color:var(--ink-mute);font-size:14px;padding:0 16px 8px 0;border-bottom:1px solid var(--hair)}
 td{padding:9px 16px 9px 0;border-bottom:1px solid var(--hair-soft);vertical-align:top}
 td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5em;white-space:nowrap}
@@ -543,6 +544,22 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
 
 <section class="after" id="timekeeping" aria-labelledby="timekeeping-h">
 <h2 class="t-h2" id="timekeeping-h">Timekeeping</h2>
+<p class="prose">The beats and their lengths are the run of show in <code>visuals/plan.html</code> at a 15-minute slot. Hands-on time is the board, Beat Tracer and the threshold slider: 8.5 minutes, plus the discussion in the questions.</p>
+<div class="table-wrap"><table>
+<thead><tr><th scope="col">Clock</th><th scope="col">Slide</th><th scope="col">Beat</th><th scope="col">Who</th><th scope="col">On the screen</th><th scope="col">The room is</th></tr></thead>
+<tbody>
+<tr><td>before 0:00</td><td>0</td><td>Title</td><td></td><td>Title slide; demo, 3D bench and the specimen link open in tabs behind it</td><td>settling in</td></tr>
+<tr><td>0:00 to 0:30</td><td>1</td><td>The silent tube</td><td>Karissa</td><td>The 3D bench with the truth hidden</td><td>voting with hands</td></tr>
+<tr><td>0:30 to 1:30</td><td>2</td><td>Why it matters</td><td>Karissa</td><td>Problem slide</td><td>listening</td></tr>
+<tr><td>1:30 to 2:00</td><td>3</td><td>The missing data</td><td>Daniel</td><td>Two timestamps, 80.1 hours apart</td><td>listening</td></tr>
+<tr><td>2:00 to 3:00</td><td>4</td><td>How Tracer works</td><td>Daniel</td><td>Three questions, then the 3D bench with the truth shown</td><td>listening</td></tr>
+<tr><td>3:00 to 6:00</td><td>5</td><td>Board and timeline</td><td>Daniel</td><td>QR code, then one specimen's timeline on the projector</td><td>on phones</td></tr>
+<tr><td>6:00 to 10:30</td><td>6</td><td>Beat Tracer</td><td>Daniel, then Karissa</td><td>Seeded QR code, then the game on the projector</td><td>playing</td></tr>
+<tr><td>10:30 to 11:30</td><td>7</td><td>Why this design</td><td>Daniel</td><td>The threshold slider, then the numbers slide</td><td>dragging the slider</td></tr>
+<tr><td>11:30 to 12:15</td><td>8</td><td>Limits and next steps</td><td>Karissa</td><td>Limits slide</td><td>listening</td></tr>
+<tr><td>12:15 to 15:00</td><td>9</td><td>Questions</td><td>Both</td><td>Closing slide with the QR code and the repo</td><td>asking</td></tr>
+</tbody>
+</table></div>
 <p class="prose">Minute by minute, for whoever keeps time:</p>
 <div class="table-wrap"><table>
 <thead><tr><th scope="col">Minute</th><th scope="col">What should be happening</th></tr></thead>
