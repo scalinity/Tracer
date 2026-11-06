@@ -19,7 +19,7 @@ SPEAKERS = ("Daniel", "Karissa")
 DIRECTION = re.compile(r"\[[^\]]*\]")
 TOKEN = re.compile(r"<(https?://[^>\s]+)>|`([^`]+)`")
 PLACEHOLDERS = ("HEADING", "LEDE", "RUN_OF_SHOW_NAV", "SLIDES_NOTE", "BEATS", "ANSWERS_NOTE",
-                "PREPARED_ANSWERS", "QUIET_ROOM", "TIMEKEEPING", "BEFORE_THE_TALK")
+                "PREPARED_ANSWERS", "QUIET_ROOM", "TIMEKEEPING", "BEFORE_THE_TALK", "TOTAL")
 
 
 def esc(text: str) -> str:
@@ -285,6 +285,7 @@ def render(markdown: str) -> str:
         "QUIET_ROOM": quiet,
         "TIMEKEEPING": blocks_html(timekeeping),
         "BEFORE_THE_TALK": blocks_html(blocks(parts["Before the talk"])),
+        "TOTAL": esc(beats[-1]["end"]),  # the talk's length is where its last beat ends
     }
     page = TEMPLATE.read_text(encoding="utf-8")
     for name in PLACEHOLDERS:

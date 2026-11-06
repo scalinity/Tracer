@@ -13,6 +13,8 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+LENGTH = "16:15"  # the run of show at its own lengths, 1:15 over the 15-minute slot by choice
+SLIDES = 12
 TALK = ROOT / "docs" / "talk"
 SCRIPT = (TALK / "README.md").read_text(encoding="utf-8")
 DECK = (TALK / "index.html").read_text(encoding="utf-8")
@@ -87,14 +89,15 @@ def secs(t: str) -> int:
 
 def test_the_slides_carry_the_scripts_lines_word_for_word():
     slides, notes = parsed().slides, script_notes()
-    assert len(slides) == len(notes) == 10
+    assert len(slides) == len(notes) == SLIDES
     for i, slide in enumerate(slides):
         assert slide["notes"] == notes[i], f"slide {i}: the notes and docs/talk/README.md differ"
 
 
-def test_the_run_of_show_fills_fifteen_minutes_with_no_gap():
+def test_the_run_of_show_runs_its_length_with_no_gap():
     timed = [s["data"] for s in parsed().slides if s["data"].get("data-start")]
-    assert secs(timed[0]["data-start"]) == 0 and secs(timed[-1]["data-end"]) == 15 * 60
+    assert secs(timed[0]["data-start"]) == 0 and timed[-1]["data-end"] == LENGTH
+    assert f"It runs {LENGTH}" in SCRIPT, "the script must say how long the talk runs"
     for a, b in zip(timed, timed[1:]):
         assert a["data-end"] == b["data-start"], (a["data-beat"], b["data-beat"])
     for d in timed:
@@ -119,6 +122,22 @@ def test_the_slides_that_show_the_demo_or_its_numbers_say_it_is_synthetic():
         demo = re.search(r'(href|src)="\.\./demo/(?!exhibit)', visible) is not None
         if demo or "min</span>" in visible:
             assert "Synthetic data, no clinical review" in visible, plain(visible)[:60]
+
+
+def test_the_two_speakers_split_the_words_evenly_and_trade_often():
+    """The script says the words are split about evenly and the talk changes speaker eight times."""
+    words, order = {"Daniel": 0, "Karissa": 0}, []
+    for n, lines in sorted(script_notes().items()):
+        who = None
+        for line in lines:
+            if line in words:
+                who = line
+                order.append(who)
+            elif who and not re.fullmatch(r"\[[^\]]*\]", line):
+                words[who] += len(re.sub(r"\[[^\]]*\]", " ", line).split())
+    assert 0.45 <= words["Daniel"] / sum(words.values()) <= 0.55, words
+    assert sum(a != b for a, b in zip(order, order[1:])) == 8, order
+    assert "changes speaker eight times" in SCRIPT
 
 
 def test_the_talk_never_says_the_clock_stops_at_plating():
@@ -225,7 +244,7 @@ def test_the_script_page_is_built_from_the_current_script():
 
 def test_the_script_page_carries_every_line():
     page, notes, deck = script_page(), script_notes(), parsed().slides
-    assert sorted(n for _, n in page.slide_tags) == list(range(10))
+    assert sorted(n for _, n in page.slide_tags) == list(range(SLIDES))
     assert {tag for tag, _ in page.slide_tags} == {"section"}, "only the beats carry data-slide"
     for n, section in page.sections.items():
         assert section["items"] == notes[n], f"beat {n}: the script page and docs/talk/README.md differ"
@@ -240,7 +259,7 @@ def test_the_script_page_keeps_the_answers_and_run_of_show():
     page = script_page()
     tags = re.findall(r"^\d+\. \*\*.+?\*\* \[(Daniel|Karissa)\]", SCRIPT, flags=re.M)
     assert len(tags) == 10 and page.answers == tags
-    assert page.nav == [(str(n), f"#beat-{n}") for n in range(10)]
+    assert page.nav == [(str(n), f"#beat-{n}") for n in range(SLIDES)]
 
 
 def md_plain(text: str) -> str:
@@ -291,7 +310,7 @@ def test_the_script_page_shows_every_cell_of_the_run_of_show():
         readme.append([r for r in rows if not all(re.fullmatch(r":?-+:?", c) for c in r)])
     page = PageTables()
     page.feed(SCRIPT_PAGE.read_text(encoding="utf-8"))
-    assert len(readme) == 2 and readme[0][0][0] == "Clock" and len(readme[0]) == 11, "the run of show has a header and 10 beats"
+    assert len(readme) == 2 and readme[0][0][0] == "Clock" and len(readme[0]) == SLIDES + 1, "the run of show has a header and a row per slide"
     assert page.tables == readme, "a run-of-show or minute-by-minute cell on the script page differs from docs/talk/README.md"
 
 

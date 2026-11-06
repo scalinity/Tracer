@@ -24,7 +24,9 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 DECK = (ROOT / "docs" / "talk" / "index.html").read_text(encoding="utf-8")
 NODE = shutil.which("node")
-SYNTHETIC = {0, 5, 6, 7, 9}  # the slides that show the demo or its numbers
+SYNTHETIC = {0, 7, 8, 9, 11}  # the slides that show the demo or its numbers
+LENGTH = "16:15"  # the talk's length, where its last beat ends
+SLIDES = 12
 SMALLEST_PX = 24  # the shortest line of text allowed on the 1280 by 800 screen
 
 
@@ -66,8 +68,8 @@ const { chromium } = require(PLAYWRIGHT);
     const errors = [];
     watch(page, errors);
     await page.goto(BASE + "/talk/index.html#0", { waitUntil: "load" });
-    const slides = [];
-    for (let i = 0; i < 10; i++) {
+    const slides = [], count = await page.evaluate(() => document.querySelectorAll(".slide").length);
+    for (let i = 0; i < count; i++) {
       await page.evaluate((n) => { location.hash = "#" + n; }, i);
       await page.waitForFunction((n) => document.querySelectorAll(".slide")[n].classList.contains("on"), i);
       await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))));
@@ -269,6 +271,7 @@ def browser_result(tmp_path_factory):
 def test_every_slide_fits_and_reads_from_the_back_of_the_room(browser_result):
     for size in browser_result["sizes"]:
         assert size["errors"] == [], size["errors"]
+        assert len(size["slides"]) == SLIDES, "every slide is measured"
         for i, s in enumerate(size["slides"]):
             where = f"slide {i} at {size['width']} by {size['height']}"
             assert s["shrink"] >= 0.9, (where, "the type was shrunk to fit", s)
@@ -288,11 +291,11 @@ def test_the_presenter_keys_work(browser_result):
     assert k["themeAtLoad"] == "dark", "the deck must open dark even when the system setting is light"
     assert (k["themeAfterL"], k["themeAfterLL"]) == ("light", "dark"), "L must switch the theme on its first press"
     assert k["notesOn"] and k["notesOff"], "N must show and hide the notes"
-    assert "of 15:00" in k["clock"], "S must start the talk clock"
+    assert f"of {LENGTH}" in k["clock"], "S must start the talk clock"
     assert "?presenter" in k["popupUrl"], "P must open the presenter window"
     first_note = re.search(r'<aside class="notes-src"><p>(.*?)</p>', DECK).group(1)
     assert k["popupFirstLine"] == first_note
-    assert "of 15:00" in k["popupClock"], "the presenter window takes the clock from the slides"
+    assert f"of {LENGTH}" in k["popupClock"], "the presenter window takes the clock from the slides"
     assert k["popupBeat"] == "1. The silent tube", "the presenter window follows the slides"
     assert k["popupSpeakerBlocks"] == ["Karissa"]
     assert k["scriptLink"] == {"target": "_blank", "shown": True}
@@ -305,7 +308,7 @@ def test_the_presenter_keys_work(browser_result):
 def test_the_script_page_opens_on_one_speakers_lines(browser_result):
     s = browser_result["script"]
     assert s["errors"] == [], s["errors"]
-    assert s["sections"] == 10
+    assert s["sections"] == SLIDES
     assert s["karissaLines"] > 0 and s["karissaLinesShown"] == s["karissaLines"], s
     assert s["danielLinesShown"] == 0 and s["danielCuesShown"] == s["danielBlocks"] > 0, s
     assert s["overflow"] <= 0, "the script page scrolls sideways on a phone"
