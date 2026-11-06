@@ -7,7 +7,7 @@ The in-class presentation for CAI 5724: the run of show, the slides and every li
 - **Demo:** <https://scalinity.github.io/Tracer/demo/>. The class uses it on their phones for about 8 and a half minutes of the 15.
 - **Speakers:** Daniel Escalante and Karissa Kocourek. Karissa's lines are written out below in full, so she has nothing to prepare beyond reading them. If she cannot be there, Daniel reads them as written.
 
-Every number in the talk comes from synthetic data that had no clinical review, and the slides say so on each screen that shows one.
+The numbers from the demo and its results come from synthetic data that had no clinical review, and the slides say so on each screen that shows one. The others are not synthetic: the 61.9% comes from a published audit, the 60-minute urine window and the 44 policy rows from Karissa's policy table and the guidelines it cites, and the 80.1 hours from the public MIMIC-IV demo extract. "Where the numbers come from" below gives the source of each.
 
 ## What the course asks for
 
@@ -102,9 +102,9 @@ A tube leaves the ward. Nothing beeps, and nothing gets logged. Nobody knows yet
 
 **Karissa:**
 
-Most lab errors don't happen during testing. In one stat laboratory's audit, about sixty-two percent of errors happened before the specimen was ever analyzed. And a microbiology specimen is on a clock. Unpreserved urine at room temperature has about an hour before bacteria overgrow and the colony count stops meaning anything. Spinal fluid has to come straight to the lab, and it must not be refrigerated. When a specimen misses its window, it's often rejected and has to be collected again. For the patient, that's another needle stick or another lumbar puncture, hours of delay, and sometimes longer on broad antibiotics while the team waits for a result. And the lab has no record of where a specimen is between collection and receipt, so a missing one often isn't noticed until someone calls asking for the result.
+Most lab errors don't happen during testing. In one stat laboratory's audit, about sixty-two percent of errors happened before the specimen was ever analyzed. And a microbiology specimen is on a clock. Unpreserved urine at room temperature has about an hour before bacteria overgrow and the colony count stops meaning anything. Spinal fluid has to come straight to the lab, and it must not be refrigerated. When a specimen misses its window, it's often rejected and has to be collected again. For the patient, that's another needle stick or another lumbar puncture, and hours of delay. And the lab has no record of where a specimen is between collection and receipt, so a missing one often isn't noticed until someone calls asking for the result.
 
-[About 135 words.]
+[About 125 words.]
 
 ### Slide 3 · The missing data · 1:30 to 2:00 · Daniel
 
@@ -162,7 +162,7 @@ Now you get to compete with it. Scan this second code. It gives everyone in the 
 
 **Daniel:**
 
-That trade is the threshold. Scroll down to Set the threshold and drag it both ways. Lower, and Tracer warns earlier but alerts on specimens that would have arrived anyway. Higher, fewer alerts, less warning. So we judge Tracer by minutes of warning at a number of alerts a shift can handle, not by accuracy. [Switch to the numbers.] At six alerts a shift, Tracer gave fifty-five minutes of median warning, against thirty for a simple time limit. But a rule that alerts once a set share of the window has passed gets forty-five, and with equal weights Tracer only ties it. Most of the gain comes from using the window.
+That trade is the threshold. Scroll down to Set the threshold and drag it both ways. Lower, and Tracer warns earlier but alerts on specimens that would have arrived anyway. Higher, fewer alerts, less warning. So we judge Tracer by minutes of warning at a number of alerts a shift can handle, not by accuracy. [Switch to the numbers.] At six alerts a shift, Tracer gave fifty-five minutes of median warning, against thirty for a simple time limit. But a rule that alerts once a set share of the window has passed gets forty-five. With equal weights, Tracer only ties it. Most of the gain comes from using the window.
 
 [About 105 words, over the room dragging the slider.]
 
