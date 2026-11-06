@@ -3,7 +3,8 @@
 Loads the deck in headless Chrome at a 1920 by 1080 projector and a 1280 by 800 laptop. On every slide nothing
 runs into the footer, the type is not shrunk to fit, nothing projected is too small to read from the back of a
 room, and the slides that show the demo or its numbers say on screen that the data is synthetic. Then it presses
-the keys the presenter uses (L, N, S, P and the arrows) and opens the script page from the presenter window.
+the keys the presenter uses (L, N, S, P and the arrows), opens the script page from the presenter window, and
+opens the script page on one speaker's lines at phone width.
 Needs node, Playwright (from visuals/exhibit-3d/node_modules) and Google Chrome, and is skipped without them.
 """
 
@@ -143,6 +144,28 @@ const { chromium } = require(PLAYWRIGHT);
   k.mainStillOnDeck = page.url().includes("/talk/index.html");
   k.errors = errors;
   await ctx.close();
+
+  // The script page opened on Karissa's lines: hers in full, Daniel's down to one cue each.
+  const sctx = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
+  const sp = await sctx.newPage();
+  const serrors = [];
+  watch(sp, serrors);
+  await sp.goto(BASE + "/talk/script.html?who=karissa", { waitUntil: "load" });
+  out.script = await sp.evaluate(() => {
+    const shown = (e) => e.getClientRects().length > 0;
+    const of = (sel) => [...document.querySelectorAll(sel)];
+    return {
+      sections: of("section[data-slide]").length,
+      karissaLines: of('.block[data-who="Karissa"] .line').length,
+      karissaLinesShown: of('.block[data-who="Karissa"] .line').filter(shown).length,
+      danielLinesShown: of('.block[data-who="Daniel"] .line').filter(shown).length,
+      danielBlocks: of('.block[data-who="Daniel"]').length,
+      danielCuesShown: of('.block[data-who="Daniel"] .cue').filter(shown).length,
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    };
+  });
+  out.script.errors = serrors;
+  await sctx.close();
   await browser.close();
   console.log(JSON.stringify(out));
 })();
@@ -211,3 +234,12 @@ def test_the_presenter_keys_work(browser_result):
     assert k["popupSpeakerBlocks"] == ["Karissa"]
     assert k["scriptLink"] == {"target": "_blank", "shown": True}
     assert k["scriptTitle"] == "Tracer talk script" and k["mainStillOnDeck"]
+
+
+def test_the_script_page_opens_on_one_speakers_lines(browser_result):
+    s = browser_result["script"]
+    assert s["errors"] == [], s["errors"]
+    assert s["sections"] == 10
+    assert s["karissaLines"] > 0 and s["karissaLinesShown"] == s["karissaLines"], s
+    assert s["danielLinesShown"] == 0 and s["danielCuesShown"] == s["danielBlocks"] > 0, s
+    assert s["overflow"] <= 0, "the script page scrolls sideways on a phone"
