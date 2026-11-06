@@ -3,6 +3,7 @@
 The in-class presentation for CAI 5724: the run of show, the slides and every line we say, timed to 15 minutes.
 
 - **Slides:** `docs/talk/index.html`, published at <https://scalinity.github.io/Tracer/talk/>. It opens from disk too, with no server.
+- **Script:** `docs/talk/script.html`, published at <https://scalinity.github.io/Tracer/talk/script.html>. It is this file as a reading page for rehearsals and the day: a talk clock that lights the current beat, a speaker filter (`script.html?who=karissa` opens on Karissa's lines) and a print view of one speaker's lines. It opens from disk too, and the presenter window links to it.
 - **Demo:** <https://scalinity.github.io/Tracer/demo/>. The class uses it on their phones for about 8 and a half minutes of the 15.
 - **Speakers:** Daniel Escalante and Karissa Kocourek. Karissa's lines are written out below in full, so she has nothing to prepare beyond reading them. If she cannot be there, Daniel reads them as written.
 
@@ -223,6 +224,8 @@ Questions to ask the room if it goes quiet:
 ## Keeping the slides and this file together
 
 `docs/talk/index.html` carries the same speaker lines as this file, word for word, and `tests/test_talk.py` fails if they drift apart, if the slide times stop adding up to 15 minutes, or if a link on the slides points at a file that isn't there. Change the lines here and on the slides in the same commit.
+
+`docs/talk/script.html` is built from this file. After any change here, run `python scripts/build_talk_script.py` and commit the page with it; `tests/test_talk.py` fails if the page and this file differ. `tests/test_talk_browser.py` opens the slides in Chrome at 1920 by 1080 and 1280 by 800 and fails if a slide runs into its footer, shrinks its type to fit, or shows text too small to read from the back of a room, or if the L, N, S and P keys stop working.
 
 The QR code for Beat Tracer is `docs/talk/qr-beat.png`, for <https://scalinity.github.io/Tracer/demo/?seed=18#beat>. To write it again:
 

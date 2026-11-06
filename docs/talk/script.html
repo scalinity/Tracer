@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en" data-filter="both">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tracer talk script</title>
+<meta name="description" content="Every line of the Tracer talk, CAI 5724, November 18, with the run of show and a talk clock. Built from docs/talk/README.md by scripts/build_talk_script.py; do not edit by hand.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='5' fill='none' stroke='%2363C4D3' stroke-width='2'/%3E%3C/svg%3E">
+<style>
+/* The deck's tokens (docs/talk/index.html). Cyan is the clock and the current beat; each speaker has a colour.
+   Dark is the default whatever the OS says; L or the button switches. Keys: S starts or resets the clock, L theme. */
+:root{ color-scheme:dark;
+  --canvas:#0C1417; --panel:#111C20; --raised:#16242A; --hair:#22343A; --hair-soft:#1A2A2F;
+  --ink:#E4EDEF; --ink-dim:#A8BEC4; --ink-mute:#7A939A;
+  --observed:#63C4D3; --infer:#9D8DF1; --warn:#E3A33C; --alarm:#D05A4A; --ok:#69B08A;
+  --daniel:#63C4D3; --karissa:#E8A0C8;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI","Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --ease-out:cubic-bezier(0.22,1,0.36,1); }
+:root[data-theme="light"]{ color-scheme:light;
+  --canvas:#F4F7F6; --panel:#FFFFFF; --raised:#ECF2F0; --hair:#CFDAD7; --hair-soft:#E2EAE8;
+  --ink:#14201D; --ink-dim:#3D4D49; --ink-mute:#5B6C68;
+  --observed:#0F6E7C; --infer:#5543BF; --warn:#8F5A06; --alarm:#B0402B; --ok:#2B7048;
+  --daniel:#0F6E7C; --karissa:#A3407A; }
+
+/* Each speaker's colour rides on --c, so chips, dots, rules and cues share one rule. */
+[data-chip="Daniel"],[data-who="Daniel"]{--c:var(--daniel)}
+[data-chip="Karissa"],[data-who="Karissa"]{--c:var(--karissa)}
+
+/* ── type scale: each class sets size, weight, line-height and tracking together ── */
+.t-title{font:400 clamp(30px,24px + 1.6vw,44px)/1.1 var(--serif);letter-spacing:-.015em}
+.t-beat{font:400 clamp(27px,21px + 1vw,36px)/1.12 var(--serif);letter-spacing:-.01em}
+.t-h2{font:400 clamp(26px,21px + .8vw,32px)/1.15 var(--serif);letter-spacing:-.01em}
+.t-line,.line{font:400 clamp(22px,14px + 1vw,28px)/1.55 var(--serif);letter-spacing:0}
+.t-answer{font:400 clamp(19px,15px + .4vw,21px)/1.55 var(--serif);letter-spacing:0}
+.t-question{font:600 17px/1.35 var(--sans);letter-spacing:-.005em}
+.t-clock{font:600 22px/1 var(--sans);letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.t-label{font:650 14.5px/1.3 var(--sans);letter-spacing:.005em}
+.t-meta{font:500 14px/1.4 var(--sans);letter-spacing:0;font-variant-numeric:tabular-nums}
+.t-small{font:400 15px/1.5 var(--sans);letter-spacing:0}
+.t-note{font:italic 400 17px/1.5 var(--sans);letter-spacing:0}
+.t-ui{font:550 14px/1 var(--sans);letter-spacing:0}
+.t-num{font-variant-numeric:tabular-nums}
+
+/* ── base ── */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--canvas);color:var(--ink);font:400 16px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+h1,h2,h3,p,ul,ol,figure{margin:0;padding:0}
+h1,h2,h3{text-wrap:balance}
+ul,ol{list-style:none}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+a{color:var(--observed);text-underline-offset:3px;text-decoration-thickness:1px;transition:color 150ms ease}
+:focus-visible{outline:2px solid var(--observed);outline-offset:2px;border-radius:3px}
+code,.url{font-family:var(--mono);font-size:.88em;overflow-wrap:anywhere}
+code{background:var(--raised);border:1px solid var(--hair-soft);border-radius:3px;padding:0 .3em}
+strong{font-weight:650}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:16px;top:-60px;z-index:40;background:var(--panel);border:1px solid var(--hair);padding:10px 14px;color:var(--ink)}
+.skip:focus{top:10px}
+.print-only{display:none}
+
+/* ── top bar ── */
+.bar{position:sticky;top:0;z-index:30;background:var(--canvas);border-bottom:1px solid var(--hair)}
+.bar-in{display:flex;flex-wrap:wrap;align-items:center;gap:10px 28px;padding:10px max(24px,env(safe-area-inset-right,0px)) 10px max(24px,env(safe-area-inset-left,0px))}
+.clock-group{display:flex;align-items:center;gap:8px}
+.clock-read{display:flex;align-items:baseline;gap:14px;margin-left:8px;min-width:0}
+.clock-read .t-clock{color:var(--ink);white-space:nowrap}
+.clock-read .of{color:var(--ink-mute);font-weight:500}
+.beat-left{color:var(--ink-dim);white-space:nowrap}
+.clock-read.over .t-clock,.clock-read.over .beat-left{color:var(--alarm)}
+.btn{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border-radius:6px;border:1px solid var(--hair);color:var(--ink-dim);background:var(--canvas);transition:color 150ms ease,background-color 150ms ease,border-color 150ms ease}
+.btn:hover{color:var(--ink);border-color:var(--ink-mute)}
+.btn:active{background:var(--raised)}
+.btn-primary{background:var(--observed);border-color:var(--observed);color:var(--canvas);min-width:68px;justify-content:center}
+.btn-primary:hover{color:var(--canvas);border-color:var(--ink)}
+.btn-primary:active{background:var(--ink)}
+.btn[aria-pressed]::before{content:"";width:9px;height:9px;border-radius:2px;border:1.5px solid currentColor;transition:background-color 150ms ease}
+.btn[aria-pressed="true"]{color:var(--ink)}
+.btn[aria-pressed="true"]::before{background:var(--observed);border-color:var(--observed)}
+.filter{display:inline-flex;padding:2px;gap:2px;border:1px solid var(--hair);border-radius:8px}
+.filter button{display:inline-flex;align-items:center;gap:7px;height:28px;padding:0 11px;border-radius:6px;color:var(--ink-mute);transition:color 150ms ease,background-color 150ms ease}
+.filter button:hover{color:var(--ink)}
+.filter button[aria-pressed="true"]{background:var(--raised);color:var(--ink)}
+.filter .dot{width:7px;height:7px;border-radius:50%;background:var(--c)}
+.actions{display:flex;gap:6px;margin-left:auto}
+
+/* ── frame: the run-of-show rail beside the reading column ── */
+.frame{display:grid;grid-template-columns:clamp(236px,19vw,288px) minmax(0,1fr)}
+.rail{position:sticky;top:var(--bar-h,53px);align-self:start;height:calc(100vh - var(--bar-h,53px));height:calc(100dvh - var(--bar-h,53px));
+  display:flex;flex-direction:column;gap:14px;padding:22px 14px 18px 24px;border-right:1px solid var(--hair-soft)}
+.rail-title{color:var(--ink-mute)}
+.segs{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;gap:2px}
+.seg-item{display:flex;flex:var(--secs) 1 0;min-height:36px}
+.seg-item.title{flex:0 0 38px}
+.seg{position:relative;flex:1;display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:auto auto 1fr;column-gap:8px;align-content:start;
+  padding:4px 8px 4px 15px;border-radius:0 6px 6px 0;color:var(--ink-dim);text-decoration:none;overflow:hidden;
+  transition:background-color 220ms ease,color 220ms ease}
+.seg:hover{background:var(--panel);color:var(--ink)}
+.seg-track{--t:var(--hair);position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:2px;background:var(--t);transition:background-color 220ms ease}
+.hands-on .seg-track{width:5px;background:repeating-linear-gradient(180deg,var(--t) 0 6px,var(--canvas) 6px 9px)}
+.seg-time{grid-column:1;font:500 12px/1.35 var(--sans);color:var(--ink-mute);white-space:nowrap}
+.seg-dots{grid-column:3;grid-row:1;display:flex;gap:4px;align-items:center;height:16px}
+.seg-dots .dot{width:6px;height:6px;border-radius:50%;background:var(--c)}
+.seg-name{grid-column:1/-1;grid-row:2;font:500 13.5px/1.25 var(--sans)}
+.seg-tag{display:inline-block;margin-left:4px;padding:0 6px;border:1px solid var(--hair);border-radius:999px;font:500 11.5px/1.45 var(--sans);color:var(--ink-mute);vertical-align:1px}
+.seg-item.past .seg{color:var(--ink-mute)}
+.seg-item.past .seg-time,.seg-item.past .seg-dots{opacity:.6}
+.seg-item.past .seg-track{--t:var(--hair-soft)}
+.seg-item.current .seg{background:var(--raised);color:var(--ink)}
+.seg-item.current .seg-track{--t:var(--observed)}
+.seg-item.current .seg-time{color:var(--observed)}
+.playhead{position:absolute;left:-5px;top:0;width:16px;height:2px;border-radius:1px;background:var(--ink);opacity:0;pointer-events:none;transition:transform 250ms linear,opacity 220ms ease}
+.playhead.on{opacity:1}
+.rail-more{display:flex;flex-direction:column;gap:2px;padding-top:12px;border-top:1px solid var(--hair-soft)}
+.rail-more a{display:block;padding:4px 8px 4px 15px;border-radius:0 6px 6px 0;color:var(--ink-dim);text-decoration:none;font:500 13.5px/1.3 var(--sans);transition:background-color 150ms ease,color 150ms ease}
+.rail-more a:hover{background:var(--panel);color:var(--ink)}
+
+/* ── reading column ── */
+.read{padding:44px clamp(24px,5vw,72px) 140px clamp(28px,4vw,64px);max-width:1040px}
+.page-head{padding-bottom:36px}
+.lede{margin-top:14px;max-width:62ch;color:var(--ink-dim);font:400 17px/1.55 var(--sans)}
+.prose{max-width:66ch;color:var(--ink-dim);font:400 16px/1.6 var(--sans)}
+.page-head .prose{margin-top:12px;font-size:15px;color:var(--ink-mute)}
+
+.beat{position:relative;padding:44px 0 40px 36px;border-top:1px solid var(--hair-soft);scroll-margin-top:calc(var(--stick,53px) + 4px)}
+.gutter{position:absolute;left:0;top:48px;bottom:40px;width:3px;border-radius:2px;background:var(--hair-soft);overflow:hidden;transition:background-color 220ms ease}
+.fill{position:absolute;inset:0;background:var(--observed);transform:scaleY(0);transform-origin:top;transition:transform 250ms linear}
+.beat > :not(.gutter){transition:opacity 220ms ease}
+.beat.past > :not(.gutter){opacity:.62}
+.beat.past .gutter{background:var(--hair)}
+.beat-meta{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;color:var(--ink-mute)}
+.window{color:var(--ink-dim);font-weight:600;transition:color 220ms ease}
+.beat.current .window{color:var(--observed)}
+.tag-hands{padding:0 8px;border-radius:999px;border:1px solid var(--hair);color:var(--ink-dim);font-size:13px}
+.beat-name{margin-top:8px}
+.beat-who{display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;margin-top:12px;color:var(--ink-mute)}
+.who-list{display:block}
+.chip{display:inline-block;padding:1px 10px;border-radius:999px;font:600 13.5px/1.5 var(--sans);color:var(--c);
+  border:1px solid color-mix(in srgb,var(--c) 45%,var(--canvas));background:color-mix(in srgb,var(--c) 10%,var(--canvas))}
+.screen{margin-top:16px;max-width:68ch;color:var(--ink-mute)}
+.screen-label{color:var(--ink-dim);font-weight:600;margin-right:.35em}
+
+.block{margin-top:30px;padding-left:22px;border-left:2px solid var(--c)}
+.block .who{color:var(--c);margin-bottom:8px}
+.block.notes{--c:var(--hair)}
+.block.notes .who{color:var(--ink-mute)}
+.line{max-width:62ch;color:var(--ink)}
+.line + .line{margin-top:.75em}
+.line.t-note{color:var(--ink-dim)}
+.sd{font-family:var(--sans);font-style:italic;font-weight:400;font-size:.7em;letter-spacing:0;color:var(--ink-mute)}
+p.line.sd{font:italic 400 15.5px/1.5 var(--sans)}
+.line + p.line.sd,p.line.sd + .line{margin-top:1em}
+.cue{display:none;font:italic 400 16px/1.5 var(--sans);color:var(--ink-mute);max-width:62ch}
+.cue-who{font-style:normal;font-weight:650;color:var(--c);margin-right:.25em}
+
+/* Single-speaker mode: the other speaker's blocks fold to their cue line. */
+[data-filter="daniel"] .block[data-who="Karissa"],[data-filter="karissa"] .block[data-who="Daniel"]{margin-top:22px;border-left-color:color-mix(in srgb,var(--c) 35%,var(--canvas))}
+[data-filter="daniel"] .block[data-who="Karissa"] > :not(.cue),[data-filter="karissa"] .block[data-who="Daniel"] > :not(.cue){display:none}
+[data-filter="daniel"] .block[data-who="Karissa"] > .cue,[data-filter="karissa"] .block[data-who="Daniel"] > .cue{display:block}
+[data-filter="daniel"] .answer[data-who="Karissa"],[data-filter="karissa"] .answer[data-who="Daniel"]{display:none}
+
+/* ── after the beats ── */
+.after{padding:56px 0 8px 36px;border-top:1px solid var(--hair-soft);scroll-margin-top:calc(var(--stick,53px) + 4px)}
+.after > * + *{margin-top:18px}
+.after h3{font:600 17px/1.35 var(--sans);color:var(--ink);margin-top:40px}
+.filter-note:empty{display:none}
+.filter-note{color:var(--ink-mute);font:italic 400 15px/1.5 var(--sans)}
+.answers{display:flex;flex-direction:column;gap:30px;max-width:66ch;margin-top:28px}
+.q-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px}
+.q{position:relative;padding-left:2.1em;color:var(--ink)}
+.q-num{position:absolute;left:0;color:var(--ink-mute);font-weight:500}
+.a{margin-top:8px;padding-left:calc(17px * 2.1);color:var(--ink)}
+.list{display:flex;flex-direction:column;gap:8px;max-width:66ch;color:var(--ink-dim);font:400 16px/1.55 var(--sans)}
+ul.list li{position:relative;padding-left:20px}
+ul.list li::before{content:"";position:absolute;left:4px;top:.72em;width:6px;height:0;border-top:1.5px solid var(--ink-mute)}
+ol.list{counter-reset:item}
+ol.list li{position:relative;padding-left:28px;counter-increment:item}
+ol.list li::before{content:counter(item);position:absolute;left:0;color:var(--ink-mute);font-variant-numeric:tabular-nums;font-weight:500}
+.table-wrap{max-width:66ch;overflow-x:auto}
+table{border-collapse:collapse;width:100%;font:400 15.5px/1.5 var(--sans);color:var(--ink-dim)}
+@media (max-width:700px){table:has(th:nth-child(5)){min-width:46rem}} /* on a phone, wide tables scroll in their box instead of squeezing */
+th{text-align:left;font-weight:600;color:var(--ink-mute);font-size:14px;padding:0 16px 8px 0;border-bottom:1px solid var(--hair)}
+td{padding:9px 16px 9px 0;border-bottom:1px solid var(--hair-soft);vertical-align:top}
+td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5em;white-space:nowrap}
+.code{max-width:66ch;margin-top:14px;padding:12px 16px;background:var(--panel);border:1px solid var(--hair);border-radius:6px;overflow-x:auto}
+.code code{background:none;border:0;padding:0;font:400 14px/1.55 var(--mono);color:var(--ink)}
+
+/* ── phone: the rail becomes a strip under the top bar ── */
+@media (max-width:860px){
+  .bar-in{padding:8px 16px;gap:8px 10px}
+  .clock-group{width:100%}
+  .clock-read{flex:1 1 auto;min-width:0;flex-direction:column;align-items:flex-start;gap:3px;margin-left:6px}
+  .clock-read .t-clock{font-size:19px}
+  .clock-read .beat-left{font-size:12.5px;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  #b-follow{margin-left:auto}
+  .btn{height:30px;padding:0 10px}
+  .btn-primary{min-width:62px}
+  .filter button{padding:0 9px;height:26px}
+  .frame{display:block}
+  .rail{top:var(--bar-h,96px);z-index:20;height:auto;flex-direction:row;align-items:stretch;gap:12px;padding:8px 16px 8px;
+    background:var(--canvas);border-right:0;border-bottom:1px solid var(--hair);overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none}
+  .rail::-webkit-scrollbar{display:none}
+  .rail-title{display:none}
+  .segs{flex:none;flex-direction:row;gap:3px;min-height:0}
+  .seg-item{flex:0 0 calc(var(--secs) * .8px);min-width:116px;min-height:0}
+  .seg-item.title{flex:0 0 88px;min-width:88px}
+  .seg{grid-template-columns:auto 1fr;grid-template-rows:auto auto;padding:9px 6px 3px;border-radius:0 0 6px 6px}
+  .seg-track{left:0;right:0;top:0;bottom:auto;width:auto;height:3px}
+  .hands-on .seg-track{width:auto;height:4px;background:repeating-linear-gradient(90deg,var(--t) 0 6px,var(--canvas) 6px 9px)}
+  .seg-dots{grid-column:2;justify-content:flex-end}
+  .seg-name{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .seg-tag{display:none}
+  .playhead{left:0;top:-3px;width:2px;height:13px}
+  .rail-more{flex-direction:row;flex:none;padding:0 0 0 12px;border-top:0;border-left:1px solid var(--hair-soft);align-items:center}
+  .rail-more a{white-space:nowrap;padding:6px 8px;border-radius:6px}
+  .read{padding:28px 16px 100px}
+  .beat{padding:32px 0 32px 18px}
+  .gutter{top:36px;bottom:32px}
+  .block{padding-left:14px;margin-top:24px}
+  .after{padding:44px 0 8px 18px}
+  .a{padding-left:0}
+  .q{padding-left:1.8em}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition:none !important;animation:none !important}
+}
+
+/* ── print: what the current filter shows, in black serif on white ── */
+@media print{
+  :root,:root[data-theme="light"]{ color-scheme:light;
+    --canvas:#FFFFFF; --panel:#FFFFFF; --raised:#FFFFFF; --hair:#9A9A9A; --hair-soft:#C8C8C8;
+    --ink:#000000; --ink-dim:#222222; --ink-mute:#5A5A5A;
+    --observed:#000000; --alarm:#000000; --daniel:#000000; --karissa:#000000; }
+  @page{margin:16mm 18mm}
+  body{font:400 11pt/1.45 var(--serif)}
+  .bar,.rail,.gutter,.skip,.filter-note{display:none !important}
+  .print-only{display:block}
+  .frame{display:block}
+  .read{padding:0;max-width:none}
+  .page-head{padding-bottom:10pt}
+  .t-title{font-size:20pt}
+  .lede,.page-head .prose{font-size:10pt;margin-top:4pt}
+  .print-who{margin-top:8pt;font:700 13pt/1.3 var(--serif)}
+  .print-who:empty{display:none}
+  .beat,.after{padding:0;border:0;margin-top:14pt}
+  .beat > :not(.gutter){opacity:1 !important}
+  .beat-head{border-top:1.5pt solid var(--ink);padding-top:6pt;break-inside:avoid;page-break-inside:avoid;break-after:avoid;page-break-after:avoid}
+  .beat-meta{font-size:10pt;color:var(--ink-dim)}
+  .window{color:var(--ink) !important;font-weight:700}
+  .beat-name{font:700 15pt/1.2 var(--serif);margin-top:2pt}
+  .beat-who{margin-top:3pt;font-size:10pt}
+  .chip{padding:0;border:0;background:none;font:700 10pt/1.4 var(--sans)}
+  .tag-hands{border:0;padding:0;font-style:italic}
+  .screen{margin-top:4pt;font-size:9.5pt}
+  .block{margin-top:9pt;padding-left:9pt;border-left:1pt solid var(--hair);break-inside:avoid;page-break-inside:avoid}
+  .block .who{font:700 10.5pt/1.3 var(--sans);margin-bottom:2pt;break-after:avoid}
+  .line{font:400 12pt/1.45 var(--serif);max-width:none}
+  .line + .line{margin-top:5pt}
+  p.line.sd{font:italic 400 9.5pt/1.4 var(--sans)}
+  .sd{color:var(--ink-dim)}
+  .cue{font:italic 400 10.5pt/1.4 var(--sans);color:var(--ink-mute)}
+  .cue-who{color:var(--ink-mute)}
+  [data-filter="daniel"] .block[data-who="Karissa"],[data-filter="karissa"] .block[data-who="Daniel"]{border-left:0;padding-left:9pt;margin-top:6pt}
+  .after h2{font:700 15pt/1.2 var(--serif);border-top:1.5pt solid var(--ink);padding-top:6pt;break-after:avoid}
+  .after > * + *{margin-top:7pt}
+  .answers{gap:8pt;margin-top:8pt;max-width:none}
+  .answer{break-inside:avoid;page-break-inside:avoid}
+  .t-question{font-size:10.5pt}
+  .t-answer{font-size:11pt}
+  .a{padding-left:2.1em;margin-top:2pt}
+  .prose,.list,table{font-size:10pt;max-width:none}
+  .table-wrap{max-width:none}
+  a{color:var(--ink);text-decoration:none}
+  .code{max-width:none}
+  .code code{font-size:9pt}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the script</a>
+
+<header class="bar" id="bar">
+<div class="bar-in">
+  <div class="clock-group" role="group" aria-label="Talk clock">
+    <button type="button" class="btn btn-primary t-ui" id="b-start" title="Start the clock (S)">Start</button>
+    <button type="button" class="btn t-ui" id="b-reset" title="Reset the clock (S while it runs)">Reset</button>
+    <p class="clock-read" id="clock-read"><span class="t-clock"><span id="elapsed">0:00</span> <span class="of">of 15:00</span></span> <span class="beat-left t-meta" id="beat-left">Press S or Start</span></p>
+    <button type="button" class="btn t-ui" id="b-follow" aria-pressed="true" title="Scroll to each beat as the clock reaches it">Follow</button>
+  </div>
+  <div class="filter t-ui" role="group" aria-label="Show lines for">
+    <button type="button" data-filter-btn="both" aria-pressed="true">Both</button>
+    <button type="button" data-filter-btn="daniel" data-chip="Daniel" aria-pressed="false"><span class="dot" aria-hidden="true"></span>Daniel</button>
+    <button type="button" data-filter-btn="karissa" data-chip="Karissa" aria-pressed="false"><span class="dot" aria-hidden="true"></span>Karissa</button>
+  </div>
+  <div class="actions">
+    <button type="button" class="btn t-ui" id="b-theme" title="Switch the theme (L)">Light</button>
+    <button type="button" class="btn t-ui" id="b-print">Print</button>
+  </div>
+</div>
+</header>
+
+<div class="frame">
+<nav class="rail" id="rail" aria-label="Run of show">
+  <p class="rail-title t-label">Run of show</p>
+  <ol class="segs" id="segs">
+<li class="seg-item title" style="--secs:0"><a class="seg" href="#beat-0" data-beat="0"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">Before 0:00</span><span class="seg-dots" aria-hidden="true"></span><span class="seg-name">Title</span></a></li>
+<li class="seg-item" style="--secs:30"><a class="seg" href="#beat-1" data-beat="1"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">0:00 to 0:30</span><span class="seg-dots" aria-hidden="true"><span class="dot" data-chip="Karissa"></span></span><span class="seg-name">The silent tube<span class="vh">, Karissa</span></span></a></li>
+<li class="seg-item" style="--secs:60"><a class="seg" href="#beat-2" data-beat="2"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">0:30 to 1:30</span><span class="seg-dots" aria-hidden="true"><span class="dot" data-chip="Karissa"></span></span><span class="seg-name">Why it matters<span class="vh">, Karissa</span></span></a></li>
+<li class="seg-item" style="--secs:30"><a class="seg" href="#beat-3" data-beat="3"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">1:30 to 2:00</span><span class="seg-dots" aria-hidden="true"><span class="dot" data-chip="Daniel"></span></span><span class="seg-name">The missing data<span class="vh">, Daniel</span></span></a></li>
+<li class="seg-item" style="--secs:60"><a class="seg" href="#beat-4" data-beat="4"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">2:00 to 3:00</span><span class="seg-dots" aria-hidden="true"><span class="dot" data-chip="Daniel"></span></span><span class="seg-name">How Tracer works<span class="vh">, Daniel</span></span></a></li>
+<li class="seg-item hands-on" style="--secs:180"><a class="seg" href="#beat-5" data-beat="5"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">3:00 to 6:00</span><span class="seg-dots" aria-hidden="true"><span class="dot" data-chip="Daniel"></span></span><span class="seg-name">Board and timeline<span class="vh">, Daniel</span> <span class="seg-tag">Hands-on</span></span></a></li>
+<li class="seg-item hands-on" style="--secs:270"><a class="seg" href="#beat-6" data-beat="6"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">6:00 to 10:30</span><span class="seg-dots" aria-hidden="true"><span class="dot" data-chip="Daniel"></span><span class="dot" data-chip="Karissa"></span></span><span class="seg-name">Beat Tracer<span class="vh">, Daniel, then Karissa</span> <span class="seg-tag">Hands-on</span></span></a></li>
+<li class="seg-item hands-on" style="--secs:60"><a class="seg" href="#beat-7" data-beat="7"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">10:30 to 11:30</span><span class="seg-dots" aria-hidden="true"><span class="dot" data-chip="Daniel"></span></span><span class="seg-name">Why this design<span class="vh">, Daniel</span> <span class="seg-tag">Hands-on</span></span></a></li>
+<li class="seg-item" style="--secs:45"><a class="seg" href="#beat-8" data-beat="8"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">11:30 to 12:15</span><span class="seg-dots" aria-hidden="true"><span class="dot" data-chip="Karissa"></span></span><span class="seg-name">Limits and next steps<span class="vh">, Karissa</span></span></a></li>
+<li class="seg-item" style="--secs:165"><a class="seg" href="#beat-9" data-beat="9"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">12:15 to 15:00</span><span class="seg-dots" aria-hidden="true"><span class="dot" data-chip="Daniel"></span><span class="dot" data-chip="Karissa"></span></span><span class="seg-name">Questions<span class="vh">, Both</span></span></a></li>
+  <li class="playhead" id="playhead" aria-hidden="true"></li>
+  </ol>
+  <ul class="rail-more">
+    <li><a href="#answers">Prepared answers</a></li>
+    <li><a href="#timekeeping">Timekeeping</a></li>
+    <li><a href="#before">Before the talk</a></li>
+  </ul>
+</nav>
+
+<main class="read" id="main">
+<header class="page-head">
+<h1 class="t-title">The Tracer talk, November 18</h1>
+<p class="lede">The in-class presentation for CAI 5724: the run of show, the slides and every line we say, timed to 15 minutes.</p>
+<p class="prose">Words in brackets are stage directions, not lines. The word counts assume about 130 words a minute, a classroom pace with pauses.</p>
+<p class="print-who print-only" id="print-who"></p>
+</header>
+
+<section class="beat" data-slide="0" id="beat-0" aria-labelledby="beat-0-name">
+<div class="gutter" aria-hidden="true"><span class="fill"></span></div>
+<header class="beat-head">
+<p class="beat-meta t-meta"><span class="window">Before 0:00</span> <span class="slide-no">Slide 0</span></p>
+<h2 class="beat-name t-beat" id="beat-0-name">Title</h2>
+<p class="beat-who t-meta"><span class="room">The room is: settling in</span></p>
+<p class="screen t-small"><span class="screen-label">On screen</span> Tracer. Predictive specimen tracking for the clinical microbiology laboratory. Daniel Escalante and Karissa Kocourek, CAI 5724, University of Florida. Synthetic data, no clinical review.</p>
+</header>
+<div class="block notes">
+<p class="who t-label">Notes</p>
+<p class="line t-note">Nothing is said. Switch to the 3D bench tab with the truth hidden when the instructor hands over.</p>
+</div>
+</section>
+
+<section class="beat" data-slide="1" id="beat-1" data-start="0:00" data-end="0:30" aria-labelledby="beat-1-name">
+<div class="gutter" aria-hidden="true"><span class="fill"></span></div>
+<header class="beat-head">
+<p class="beat-meta t-meta"><span class="window">0:00 to 0:30</span> <span class="slide-no">Slide 1</span></p>
+<h2 class="beat-name t-beat" id="beat-1-name">The silent tube</h2>
+<p class="beat-who t-meta"><span class="who-list"><span class="chip" data-chip="Karissa">Karissa</span></span><span class="room">The room is: voting with hands</span></p>
+<p class="screen t-small"><span class="screen-label">On screen</span> The 3D bench, with the truth hidden. The slide behind it reads &quot;A tube leaves the ward.&quot; and holds the bench's link.</p>
+</header>
+<div class="block" data-who="Karissa">
+<p class="who t-label">Karissa</p>
+<p class="line">A tube leaves the ward. Nothing beeps, and nothing gets logged. Nobody knows yet if it's late. So, raise your hand if you'd start to worry after fifteen minutes. Thirty? An hour? Hold on to that number, because that's the guess Tracer has to make, for every specimen, all day.</p>
+<p class="line sd">[About 50 words. Pause for each show of hands.]</p>
+</div>
+</section>
+
+<section class="beat" data-slide="2" id="beat-2" data-start="0:30" data-end="1:30" aria-labelledby="beat-2-name">
+<div class="gutter" aria-hidden="true"><span class="fill"></span></div>
+<header class="beat-head">
+<p class="beat-meta t-meta"><span class="window">0:30 to 1:30</span> <span class="slide-no">Slide 2</span></p>
+<h2 class="beat-name t-beat" id="beat-2-name">Why it matters</h2>
+<p class="beat-who t-meta"><span class="who-list"><span class="chip" data-chip="Karissa">Karissa</span></span><span class="room">The room is: listening</span></p>
+<p class="screen t-small"><span class="screen-label">On screen</span> Three facts. 61.9% of errors in one stat laboratory's audit happened before analysis (Carraro and Plebani, Clin Chem 2007). Unpreserved urine at room temperature: a 60-minute window in our policy table, from the IDSA and ASM 2024 guide. A missed window usually means a new specimen: another needle stick or lumbar puncture, and hours of delay.</p>
+</header>
+<div class="block" data-who="Karissa">
+<p class="who t-label">Karissa</p>
+<p class="line">Most lab errors don't happen during testing. In one stat laboratory's audit, about sixty-two percent of errors happened before the specimen was ever analyzed. And a microbiology specimen is on a clock. Unpreserved urine at room temperature has about an hour before bacteria overgrow and the colony count stops meaning anything. Spinal fluid has to come straight to the lab, and it must not be refrigerated. When a specimen misses its window, it's often rejected and has to be collected again. For the patient, that's another needle stick or another lumbar puncture, hours of delay, and sometimes longer on broad antibiotics while the team waits for a result. And the lab has no record of where a specimen is between collection and receipt, so a missing one often isn't noticed until someone calls asking for the result.</p>
+<p class="line sd">[About 135 words.]</p>
+</div>
+</section>
+
+<section class="beat" data-slide="3" id="beat-3" data-start="1:30" data-end="2:00" aria-labelledby="beat-3-name">
+<div class="gutter" aria-hidden="true"><span class="fill"></span></div>
+<header class="beat-head">
+<p class="beat-meta t-meta"><span class="window">1:30 to 2:00</span> <span class="slide-no">Slide 3</span></p>
+<h2 class="beat-name t-beat" id="beat-3-name">The missing data</h2>
+<p class="beat-who t-meta"><span class="who-list"><span class="chip" data-chip="Daniel">Daniel</span></span><span class="room">The room is: listening</span></p>
+<p class="screen t-small"><span class="screen-label">On screen</span> Two dots on a line, &quot;Collected&quot; and &quot;Result filed&quot;, with nothing between them. Median 80.1 hours apart, across 1,291 specimens in the public MIMIC-IV demo extract. No receipt scan, no transport record.</p>
+</header>
+<div class="block" data-who="Daniel">
+<p class="who t-label">Daniel</p>
+<p class="line">So why not learn this from hospital data? The best-known public one, MIMIC-IV, stamps a microbiology specimen twice: when it's collected and when the result is filed. Those stamps are a median of eighty hours apart, with nothing in between. There's no field for the journey at all. So we generated our own data, and every number you'll see is an assumption we can change.</p>
+<p class="line sd">[About 65 words.]</p>
+</div>
+</section>
+
+<section class="beat" data-slide="4" id="beat-4" data-start="2:00" data-end="3:00" aria-labelledby="beat-4-name">
+<div class="gutter" aria-hidden="true"><span class="fill"></span></div>
+<header class="beat-head">
+<p class="beat-meta t-meta"><span class="window">2:00 to 3:00</span> <span class="slide-no">Slide 4</span></p>
+<h2 class="beat-name t-beat" id="beat-4-name">How Tracer works</h2>
+<p class="beat-who t-meta"><span class="who-list"><span class="chip" data-chip="Daniel">Daniel</span></span><span class="room">The room is: listening</span></p>
+<p class="screen t-small"><span class="screen-label">On screen</span> &quot;Silence is evidence.&quot; Three questions Tracer asks every 5 minutes about every specimen not yet received: How unusual is this much silence for this kind of specimen? Where is it most likely to be? Would an alert now still leave time to act? Then: an alert, routed to the role that can check that place. Switch to the 3D bench for the second half.</p>
+</header>
+<div class="block" data-who="Daniel">
+<p class="who t-label">Daniel</p>
+<p class="line">Here's the idea. Silence is evidence. Every five minutes, Tracer asks three questions about every specimen the lab hasn't received. How unusual is this much silence, for this kind of specimen? Where is it most likely to be right now: still on the unit, in the tube, or sitting at the tube station? And if we alert now, is there still time to act before its window closes? <span class="sd">[Switch to the 3D bench.]</span> This is a tube bench built from the same model. The light along the tube is what Tracer infers. <span class="sd">[Press T to show the truth.]</span> And this carrier is where the specimen really was. When the risk crosses a threshold, Tracer alerts the person who can check the likely place. It's a small model you can read, not a black box.</p>
+<p class="line sd">[About 125 words.]</p>
+</div>
+</section>
+
+<section class="beat" data-slide="5" id="beat-5" data-start="3:00" data-end="6:00" aria-labelledby="beat-5-name">
+<div class="gutter" aria-hidden="true"><span class="fill"></span></div>
+<header class="beat-head">
+<p class="beat-meta t-meta"><span class="window">3:00 to 6:00</span> <span class="slide-no">Slide 5</span> <span class="tag-hands">Hands-on</span></p>
+<h2 class="beat-name t-beat" id="beat-5-name">Board and timeline</h2>
+<p class="beat-who t-meta"><span class="who-list"><span class="chip" data-chip="Daniel">Daniel</span></span><span class="room">The room is: on phones</span></p>
+<p class="screen t-small"><span class="screen-label">On screen</span> The QR code for the demo, the address, and three steps: tap a row, drag the scrubber, tap Show the truth. Then the projector switches to the specimen tab.</p>
+</header>
+<div class="block" data-who="Daniel">
+<p class="who t-label">Daniel</p>
+<p class="line">Phones out. Scan this code, or type the address. <span class="sd">[Wait about 20 seconds, and watch the room.]</span> You're on the board. Every row is a specimen that's been collected and not received yet, ranked by expected harm. Tap any row to open its timeline, then drag the scrubber slowly to the right. Watch three things: the risk climbing while no scan comes, where Tracer thinks it is, and the moment the alert fires and who it goes to.</p>
+<p class="line sd">[Switch the projector to the specimen tab. Give the room about a minute on their own first.]</p>
+<p class="line">Here's one on the screen. A stat tissue specimen from the emergency department. It sat at the lab's tube station for almost an hour. Tracer alerted at minute twenty, with a hundred minutes of its window left, and put it most likely at the tube station. It was received inside its window. Now tap Show the truth on yours, and see where your specimen really was.</p>
+<p class="line sd">[About 135 words over three minutes, with the rest left for the room.]</p>
+</div>
+</section>
+
+<section class="beat" data-slide="6" id="beat-6" data-start="6:00" data-end="10:30" aria-labelledby="beat-6-name">
+<div class="gutter" aria-hidden="true"><span class="fill"></span></div>
+<header class="beat-head">
+<p class="beat-meta t-meta"><span class="window">6:00 to 10:30</span> <span class="slide-no">Slide 6</span> <span class="tag-hands">Hands-on</span></p>
+<h2 class="beat-name t-beat" id="beat-6-name">Beat Tracer</h2>
+<p class="beat-who t-meta"><span class="who-list"><span class="chip" data-chip="Daniel">Daniel</span>, then <span class="chip" data-chip="Karissa">Karissa</span></span><span class="room">The room is: playing</span></p>
+<p class="screen t-small"><span class="screen-label">On screen</span> The QR code for the seeded game, so everyone plays the same three rounds, and the rules in three lines: one of six specimens will miss its window; tap it and press Call it; a wrong call uses one of your three alerts. Then the projector shows the game.</p>
+</header>
+<div class="block" data-who="Daniel">
+<p class="who t-label">Daniel</p>
+<p class="line">Now you get to compete with it. Scan this second code. It gives everyone in the room the same three rounds. Six specimens leave collection, and one of them will miss its window. Watch the receipt scans come in, tap the one you think is in trouble, and press Call it. Call too early and you might be wrong, and a wrong call uses one of your three alerts. Call too late, and you've given no warning. Ready? Start round one.</p>
+<p class="line sd">[About 80 words. Three rounds take about three minutes. Walk the room. If phones struggle, play one round on the projector and ask for a show of hands.]</p>
+</div>
+<div class="block" data-who="Karissa">
+<p class="who t-label">Karissa</p>
+<p class="line"><span class="sd">[When most end screens are up.]</span> Okay, look at your end screen. It puts your warning next to Tracer's, on the same rounds. Raise your hand if you beat Tracer. <span class="sd">[Pause.]</span> What did you notice that made you call it? <span class="sd">[Take one or two answers.]</span> That's the whole idea. The silence itself was telling you something. And the people who called early, some of you called the wrong one. That trade is what Daniel's going to show you next.</p>
+<p class="line sd">[About 65 words, plus the answers. About a minute.]</p>
+</div>
+</section>
+
+<section class="beat" data-slide="7" id="beat-7" data-start="10:30" data-end="11:30" aria-labelledby="beat-7-name">
+<div class="gutter" aria-hidden="true"><span class="fill"></span></div>
+<header class="beat-head">
+<p class="beat-meta t-meta"><span class="window">10:30 to 11:30</span> <span class="slide-no">Slide 7</span> <span class="tag-hands">Hands-on</span></p>
+<h2 class="beat-name t-beat" id="beat-7-name">Why this design</h2>
+<p class="beat-who t-meta"><span class="who-list"><span class="chip" data-chip="Daniel">Daniel</span></span><span class="room">The room is: dragging the slider</span></p>
+<p class="screen t-small"><span class="screen-label">On screen</span> First the demo's &quot;Set the threshold&quot; section on the projector, while the room drags it on their phones. Then the numbers slide: median warning at 6 alerts per 8-hour shift on the held-out synthetic runs. The plan's time-limit rule 30 minutes, a rule that alerts at a fixed share of the window 45, Tracer 55 (45 with equal tier weights).</p>
+</header>
+<div class="block" data-who="Daniel">
+<p class="who t-label">Daniel</p>
+<p class="line">That trade is the threshold. Scroll down to Set the threshold and drag it both ways. Lower, and Tracer warns earlier but alerts on specimens that would have arrived anyway. Higher, fewer alerts, less warning. So we judge Tracer by minutes of warning at a number of alerts a shift can handle, not by accuracy. <span class="sd">[Switch to the numbers.]</span> At six alerts a shift, Tracer gave fifty-five minutes of median warning, against thirty for a simple time limit. But a rule that alerts once a set share of the window has passed gets forty-five, and with equal weights Tracer only ties it. Most of the gain comes from using the window.</p>
+<p class="line sd">[About 105 words, over the room dragging the slider.]</p>
+</div>
+</section>
+
+<section class="beat" data-slide="8" id="beat-8" data-start="11:30" data-end="12:15" aria-labelledby="beat-8-name">
+<div class="gutter" aria-hidden="true"><span class="fill"></span></div>
+<header class="beat-head">
+<p class="beat-meta t-meta"><span class="window">11:30 to 12:15</span> <span class="slide-no">Slide 8</span></p>
+<h2 class="beat-name t-beat" id="beat-8-name">Limits and next steps</h2>
+<p class="beat-who t-meta"><span class="who-list"><span class="chip" data-chip="Karissa">Karissa</span></span><span class="room">The room is: listening</span></p>
+<p class="screen t-small"><span class="screen-label">On screen</span> What Tracer cannot see: a mislabeled or leaking specimen. Every specimen is synthetic, with no clinical review. 10 of the 44 policy rows are still assumed. At twice the volume, a simple window rule matches it. Next step: a real laboratory log with receipt scans.</p>
+</header>
+<div class="block" data-who="Karissa">
+<p class="who t-label">Karissa</p>
+<p class="line">Some honest limits. Tracer only watches time and place, so it can't see a mislabeled or leaking specimen. Every specimen you saw is synthetic, and there's been no clinical review of the data or the model. I wrote the policy table behind the stability windows, and ten of its forty-four rows still have no published source, so they're marked as assumptions. Tracer's lead also depends on the setting: at twice the volume, the simple window rule matches it. The real next step is to test it on a real laboratory log with receipt scans.</p>
+<p class="line sd">[About 95 words.]</p>
+</div>
+</section>
+
+<section class="beat" data-slide="9" id="beat-9" data-start="12:15" data-end="15:00" aria-labelledby="beat-9-name">
+<div class="gutter" aria-hidden="true"><span class="fill"></span></div>
+<header class="beat-head">
+<p class="beat-meta t-meta"><span class="window">12:15 to 15:00</span> <span class="slide-no">Slide 9</span></p>
+<h2 class="beat-name t-beat" id="beat-9-name">Questions</h2>
+<p class="beat-who t-meta"><span class="who-list"><span class="chip" data-chip="Daniel">Daniel</span> and <span class="chip" data-chip="Karissa">Karissa</span></span><span class="room">The room is: asking</span></p>
+<p class="screen t-small"><span class="screen-label">On screen</span> &quot;Questions?&quot; The demo's QR code, the demo address, the repository address, both names.</p>
+</header>
+<div class="block" data-who="Daniel">
+<p class="who t-label">Daniel</p>
+<p class="line">That's Tracer. The demo stays up at this address, and everything is on GitHub: the code, the data, and how we made it. We'd love your questions.</p>
+<p class="line sd">[About 30 words. Then the questions below. Stop at 15:00.]</p>
+</div>
+</section>
+
+<section class="after" id="answers" aria-labelledby="answers-h">
+<h2 class="t-h2" id="answers-h">Prepared answers</h2>
+<p class="prose">The suggested speaker is in brackets. Either of us can take any of them. Keep each answer to two or three sentences, and say what we don't know.</p>
+<p class="filter-note" id="answers-note"></p>
+<ol class="answers">
+<li class="answer" data-who="Daniel" id="answer-1">
+<div class="q-row"><p class="q t-question"><span class="q-num t-num">1</span> What if a scanner just misses a scan?</p><span class="chip" data-chip="Daniel">Daniel</span></div>
+<p class="a t-answer">We didn't plant missed scans in the data, so that's a gap. A missed receipt scan would look like a late specimen, so Tracer would raise its risk and someone would check, which costs one alert.</p>
+</li>
+<li class="answer" data-who="Daniel" id="answer-2">
+<div class="q-row"><p class="q t-question"><span class="q-num t-num">2</span> Why not just alert on everything after 30 minutes?</p><span class="chip" data-chip="Daniel">Daniel</span></div>
+<p class="a t-answer">That's close to the simple rule we compared against. It ignores the window, and the windows in our table run from 60 minutes for unpreserved urine to days for a swab in transport medium, so one time limit is too late for some and far too early for others.</p>
+</li>
+<li class="answer" data-who="Karissa" id="answer-3">
+<div class="q-row"><p class="q t-question"><span class="q-num t-num">3</span> What would someone actually do with an alert?</p><span class="chip" data-chip="Karissa">Karissa</span></div>
+<p class="a t-answer">Go to the place Tracer names, like the tube station or the collecting unit, and look for it. Who gets which alert is an assumption we made, and a real lab would set it.</p>
+</li>
+<li class="answer" data-who="Daniel" id="answer-4">
+<div class="q-row"><p class="q t-question"><span class="q-num t-num">4</span> Isn't it circular to test on data you generated?</p><span class="chip" data-chip="Daniel">Daniel</span></div>
+<p class="a t-answer">Partly, yes. The data and the model share our assumptions, so a good result shows the method behaves as designed, not that it works in a real lab. That's why the next step is a real log with receipt scans.</p>
+</li>
+<li class="answer" data-who="Daniel" id="answer-5">
+<div class="q-row"><p class="q t-question"><span class="q-num t-num">5</span> Why a simple model and not deep learning?</p><span class="chip" data-chip="Daniel">Daniel</span></div>
+<p class="a t-answer">A lab scientist can read its numbers: how long a normal trip takes, how often a specimen stalls and still arrives, how often it never does. A gradient-boosted challenger is planned and hasn't been run.</p>
+</li>
+<li class="answer" data-who="Daniel" id="answer-6">
+<div class="q-row"><p class="q t-question"><span class="q-num t-num">6</span> How often is it right about where the specimen is?</p><span class="chip" data-chip="Daniel">Daniel</span></div>
+<p class="a t-answer">At 30 minutes of silence, the true place is in its top three about 88% of the time and its first guess about 55%, on synthetic data. So an alert says something is off more reliably than it says where.</p>
+</li>
+<li class="answer" data-who="Daniel" id="answer-7">
+<div class="q-row"><p class="q t-question"><span class="q-num t-num">7</span> How many false alarms?</p><span class="chip" data-chip="Daniel">Daniel</span></div>
+<p class="a t-answer">Plenty, by design. At 6 alerts a shift about a third of all specimens get an alert, and most of them arrive in time. Its risk scores are only slightly sharper than guessing the average rate, so the gain is in timing, not in sorting.</p>
+</li>
+<li class="answer" data-who="Karissa" id="answer-8">
+<div class="q-row"><p class="q t-question"><span class="q-num t-num">8</span> Why does the clock stop at receipt?</p><span class="chip" data-chip="Karissa">Karissa</span></div>
+<p class="a t-answer">Where a window ends is a clinical judgement, and receipt in the lab is the standard measure. That's what the policy table uses, so a delay at the bench after receipt is outside what Tracer watches.</p>
+</li>
+<li class="answer" data-who="Karissa" id="answer-9">
+<div class="q-row"><p class="q t-question"><span class="q-num t-num">9</span> Is any real patient or hospital data in this?</p><span class="chip" data-chip="Karissa">Karissa</span></div>
+<p class="a t-answer">No. We checked a public 100-patient MIMIC-IV extract and set it aside because it describes intensive care, not a general lab. No workplace data is used anywhere.</p>
+</li>
+<li class="answer" data-who="Daniel" id="answer-10">
+<div class="q-row"><p class="q t-question"><span class="q-num t-num">10</span> How did you use AI to build it?</p><span class="chip" data-chip="Daniel">Daniel</span></div>
+<p class="a t-answer">Claude Code, a coding agent, wrote the code and tests under rules I set, and I made the calls the repo couldn't. A small Claude model wrote the scan trails: 12,000 requested, 11,967 passed a nine-check validator, for about two dollars. It's all in the AI teaming log in the repo.</p>
+</li>
+</ol>
+<h3>Questions to ask the room if it goes quiet</h3>
+<ul class="list">
+<li>If you were the tech getting these alerts, how many a shift would you answer before you stopped looking?</li>
+<li>Which specimen would you want flagged first: a urine with an hour left, or a spinal fluid with two?</li>
+</ul>
+</section>
+
+<section class="after" id="timekeeping" aria-labelledby="timekeeping-h">
+<h2 class="t-h2" id="timekeeping-h">Timekeeping</h2>
+<p class="prose">The beats and their lengths are the run of show in <code>visuals/plan.html</code> at a 15-minute slot. Hands-on time is the board, Beat Tracer and the threshold slider: 8.5 minutes, plus the discussion in the questions.</p>
+<div class="table-wrap"><table>
+<thead><tr><th scope="col">Clock</th><th scope="col">Slide</th><th scope="col">Beat</th><th scope="col">Who</th><th scope="col">On the screen</th><th scope="col">The room is</th></tr></thead>
+<tbody>
+<tr><td>before 0:00</td><td>0</td><td>Title</td><td></td><td>Title slide; demo, 3D bench and the specimen link open in tabs behind it</td><td>settling in</td></tr>
+<tr><td>0:00 to 0:30</td><td>1</td><td>The silent tube</td><td>Karissa</td><td>The 3D bench with the truth hidden</td><td>voting with hands</td></tr>
+<tr><td>0:30 to 1:30</td><td>2</td><td>Why it matters</td><td>Karissa</td><td>Problem slide</td><td>listening</td></tr>
+<tr><td>1:30 to 2:00</td><td>3</td><td>The missing data</td><td>Daniel</td><td>Two timestamps, 80.1 hours apart</td><td>listening</td></tr>
+<tr><td>2:00 to 3:00</td><td>4</td><td>How Tracer works</td><td>Daniel</td><td>Three questions, then the 3D bench with the truth shown</td><td>listening</td></tr>
+<tr><td>3:00 to 6:00</td><td>5</td><td>Board and timeline</td><td>Daniel</td><td>QR code, then one specimen's timeline on the projector</td><td>on phones</td></tr>
+<tr><td>6:00 to 10:30</td><td>6</td><td>Beat Tracer</td><td>Daniel, then Karissa</td><td>Seeded QR code, then the game on the projector</td><td>playing</td></tr>
+<tr><td>10:30 to 11:30</td><td>7</td><td>Why this design</td><td>Daniel</td><td>The threshold slider, then the numbers slide</td><td>dragging the slider</td></tr>
+<tr><td>11:30 to 12:15</td><td>8</td><td>Limits and next steps</td><td>Karissa</td><td>Limits slide</td><td>listening</td></tr>
+<tr><td>12:15 to 15:00</td><td>9</td><td>Questions</td><td>Both</td><td>Closing slide with the QR code and the repo</td><td>asking</td></tr>
+</tbody>
+</table></div>
+<p class="prose">Minute by minute, for whoever keeps time:</p>
+<div class="table-wrap"><table>
+<thead><tr><th scope="col">Minute</th><th scope="col">What should be happening</th></tr></thead>
+<tbody>
+<tr><td>0</td><td>Karissa opens on the 3D bench. The hand vote.</td></tr>
+<tr><td>1</td><td>Karissa on the problem slide.</td></tr>
+<tr><td>2</td><td>Daniel on the missing data, then the three questions.</td></tr>
+<tr><td>3</td><td>QR code up. Phones out. Everyone on the board by about 3:20.</td></tr>
+<tr><td>4</td><td>The room is scrubbing a timeline. Daniel walks one specimen on the projector.</td></tr>
+<tr><td>5</td><td>&quot;Show the truth&quot; on their own specimen.</td></tr>
+<tr><td>6</td><td>Seeded QR code up. Daniel explains Beat Tracer in 30 seconds. Round 1 by 6:40.</td></tr>
+<tr><td>7</td><td>Round 1 or 2.</td></tr>
+<tr><td>8</td><td>Round 2 or 3.</td></tr>
+<tr><td>9</td><td>Round 3 ends. End screens up.</td></tr>
+<tr><td>10</td><td>Karissa: who beat Tracer, and what made you call it.</td></tr>
+<tr><td>11</td><td>Daniel on the threshold slider, then the numbers.</td></tr>
+<tr><td>12</td><td>Karissa on the limits. Daniel's closing line at about 12:15.</td></tr>
+<tr><td>13</td><td>Questions.</td></tr>
+<tr><td>14</td><td>Questions. Stop at 15:00 even mid-question, and offer to talk after.</td></tr>
+</tbody>
+</table></div>
+<p class="prose">If the hands-on part runs long, cut in this order: the projector walkthrough on slide 5 (the room keeps exploring alone), then the numbers slide in beat 7 (say the one headline sentence and stay on the slider). The game shows its end screen only after round 3, so if the room is still on round 2 at 9:30, Karissa asks for hands from the round result screens instead: who called it before Tracer did. Never cut the board, the game or the limits.</p>
+</section>
+
+<section class="after" id="before" aria-labelledby="before-h">
+<h2 class="t-h2" id="before-h">Before the talk</h2>
+<p class="prose">Open these on the presenting laptop, each in its own tab, in this order:</p>
+<ol class="list">
+<li>The slides: <a class="url" href="https://scalinity.github.io/Tracer/talk/">https://scalinity.github.io/Tracer/talk/</a>. Press <strong>F</strong> for full screen. Press <strong>P</strong> for the presenter window, with these notes and the clock, on the laptop screen.</li>
+<li>The 3D bench with the truth hidden: <a class="url" href="https://scalinity.github.io/Tracer/demo/exhibit/?truth=0">https://scalinity.github.io/Tracer/demo/exhibit/?truth=0</a>. This address skips the opening tour and starts with the carrier hidden; <strong>T</strong> shows it on slide 4.</li>
+<li>The demo board: <a class="url" href="https://scalinity.github.io/Tracer/demo/">https://scalinity.github.io/Tracer/demo/</a>.</li>
+<li>The specimen for slide 5: <a class="url" href="https://scalinity.github.io/Tracer/demo/#SP-r27-000368">https://scalinity.github.io/Tracer/demo/#SP-r27-000368</a>. The address opens that specimen's timeline.</li>
+<li>Beat Tracer with the room's rounds: <a class="url" href="https://scalinity.github.io/Tracer/demo/?seed=18#beat">https://scalinity.github.io/Tracer/demo/?seed=18#beat</a>.</li>
+</ol>
+<p class="prose">Slide keys: right arrow, space or click for next; left arrow for back; <strong>F</strong> full screen; <strong>P</strong> presenter window; <strong>N</strong> notes on this screen (for rehearsal, not for the projector); <strong>S</strong> starts or resets the talk clock; the number keys 0 to 9 jump to a slide. The presenter window and the slides follow each other when both are open from the same address. From disk, use <strong>N</strong> instead.</p>
+<p class="prose">The backups are the plan's: the five-minute screen recording, <code>?lite=1</code> on the demo if the 3D view is blank, the phone hotspot, and an offline copy of <code>docs/</code> on the laptop. The slides open straight from disk. The demo does not, because the browser blocks it from reading its data files there, so serve the copy first and open <a class="url" href="http://localhost:8000/demo/">http://localhost:8000/demo/</a>:</p>
+<pre class="code"><code data-lang="sh">cd docs &amp;&amp; python3 -m http.server 8000</code></pre>
+</section>
+</main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var root = document.documentElement;
+  var TOTAL = 15 * 60;
+  var NAMES = { daniel: "Daniel", karissa: "Karissa" };
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+  var strip = window.matchMedia("(max-width: 860px)");
+  var beats = Array.prototype.map.call(document.querySelectorAll("section[data-slide]"), function (el, k) {
+    return { el: el, seg: document.querySelectorAll("#segs .seg-item")[k], fill: el.querySelector(".fill"),
+             name: el.querySelector(".beat-name").textContent,
+             start: secs(el.dataset.start), end: secs(el.dataset.end) };
+  });
+  var clock = { acc: 0, since: null };
+  var follow = true, current = -1;
+  var $ = function (id) { return document.getElementById(id); };
+
+  function secs(t) { if (!t) return null; var p = t.split(":"); return +p[0] * 60 + +p[1]; }
+  function fmt(s) { s = Math.max(0, Math.floor(s)); return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2); }
+  function elapsed() { return (clock.acc + (clock.since ? Date.now() - clock.since : 0)) / 1000; }
+  function started() { return clock.since !== null || clock.acc > 0; }
+  function behavior() { return reduce.matches ? "auto" : "smooth"; }
+
+  /* Before 0:00 the current beat is the title; past 15:00 it stays on the last beat. */
+  function beatAt(e) {
+    if (!started()) return 0;
+    for (var k = 1; k < beats.length; k++) if (e < beats[k].end) return k;
+    return beats.length - 1;
+  }
+
+  function update() {
+    var e = elapsed(), on = started(), k = beatAt(e), b = beats[k];
+    if (k !== current) {
+      var first = current === -1;
+      current = k;
+      beats.forEach(function (x, j) {
+        var past = on && j < k;
+        x.el.classList.toggle("current", j === k);
+        x.el.classList.toggle("past", past);
+        x.seg.classList.toggle("current", j === k);
+        x.seg.classList.toggle("past", past);
+        if (j !== k) x.fill.style.transform = "scaleY(0)";
+      });
+      if (!first && follow) b.el.scrollIntoView({ behavior: behavior(), block: "start" });
+      if (strip.matches) $("rail").scrollTo({ left: Math.max(0, b.seg.offsetLeft - 24), behavior: first ? "auto" : behavior() });
+    }
+    var frac = b.start === null ? 0 : Math.min(1, Math.max(0, (e - b.start) / (b.end - b.start)));
+    b.fill.style.transform = "scaleY(" + frac + ")";
+    var head = $("playhead");
+    head.classList.toggle("on", on);
+    head.style.transform = strip.matches
+      ? "translateX(" + (b.seg.offsetLeft + frac * b.seg.offsetWidth) + "px)"
+      : "translateY(" + (b.seg.offsetTop + frac * b.seg.offsetHeight) + "px)";
+    $("elapsed").textContent = fmt(e);
+    var over = e >= TOTAL;
+    $("clock-read").classList.toggle("over", over);
+    $("beat-left").textContent = !on ? "Press S or Start"
+      : over ? fmt(e - TOTAL) + " over"
+      : fmt(Math.ceil(b.end - e)) + " left in " + b.name;
+    $("b-start").textContent = clock.since ? "Pause" : clock.acc ? "Resume" : "Start";
+  }
+
+  function startPause() {
+    if (clock.since) { clock.acc += Date.now() - clock.since; clock.since = null; }
+    else clock.since = Date.now();
+    update();
+  }
+  function reset() { clock.acc = 0; clock.since = null; update(); }
+
+  function setFilter(f, write) {
+    root.setAttribute("data-filter", f);
+    Array.prototype.forEach.call(document.querySelectorAll("[data-filter-btn]"), function (btn) {
+      btn.setAttribute("aria-pressed", String(btn.dataset.filterBtn === f));
+    });
+    var who = NAMES[f];
+    $("print-who").textContent = who ? who + "’s lines" : "";
+    var shown = who ? document.querySelectorAll('.answer[data-who="' + who + '"]').length : 0;
+    $("answers-note").textContent = who ? "Showing the " + shown + " answers suggested for " + who + ". Choose Both to see all " +
+      document.querySelectorAll(".answer").length + "." : "";
+    if (!write) return;
+    try {
+      var url = new URL(location.href);
+      if (who) url.searchParams.set("who", f); else url.searchParams.delete("who");
+      history.replaceState(null, "", url.pathname + url.search + url.hash);
+    } catch (err) { /* a file:// page may refuse; the filter still applies */ }
+  }
+
+  function toggleTheme() {
+    var cur = root.getAttribute("data-theme");
+    var next = cur !== "light" ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    $("b-theme").textContent = next === "light" ? "Dark" : "Light";
+  }
+
+  /* Cues are built here, not in the HTML, so the page's markup holds only real lines. Each cue is the last
+     sentence of the speaker's last spoken paragraph with every bracket removed. */
+  Array.prototype.forEach.call(document.querySelectorAll(".block[data-who]"), function (block) {
+    var spoken = Array.prototype.filter.call(block.querySelectorAll(".line"), function (p) { return !p.classList.contains("sd"); });
+    if (!spoken.length) return;
+    var text = spoken[spoken.length - 1].textContent.replace(/\[[^\]]*\]/g, " ").replace(/\s+/g, " ").trim();
+    var m = text.match(/[^.?!]*[.?!]+["'”’)]*$/);
+    var cue = document.createElement("p"), who = document.createElement("span");
+    cue.className = "cue";
+    who.className = "cue-who";
+    who.textContent = block.dataset.who + ":";
+    cue.appendChild(who);
+    cue.appendChild(document.createTextNode("… " + (m ? m[0].trim() : text)));
+    block.appendChild(cue);
+  });
+
+  function measure() {
+    var bar = $("bar").offsetHeight;
+    root.style.setProperty("--bar-h", bar + "px");
+    root.style.setProperty("--stick", (bar + (strip.matches ? $("rail").offsetHeight : 0)) + "px");
+    update();
+  }
+
+  $("b-start").addEventListener("click", startPause);
+  $("b-reset").addEventListener("click", reset);
+  $("b-follow").addEventListener("click", function () {
+    follow = !follow;
+    this.setAttribute("aria-pressed", String(follow));
+  });
+  $("b-theme").addEventListener("click", toggleTheme);
+  $("b-print").addEventListener("click", function () { window.print(); });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-filter-btn]"), function (btn) {
+    btn.addEventListener("click", function () { setFilter(btn.dataset.filterBtn, true); });
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === "s" || e.key === "S") { if (started()) reset(); else startPause(); }
+    else if (e.key === "l" || e.key === "L") toggleTheme();
+  });
+  window.addEventListener("resize", measure);
+
+  var asked = new URLSearchParams(location.search).get("who");
+  setFilter(NAMES[asked] ? asked : "both", false);
+  measure();
+  setInterval(update, 250);
+})();
+</script>
+</body>
+</html>
