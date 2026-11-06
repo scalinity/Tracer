@@ -124,3 +124,114 @@ def test_the_slides_that_show_the_demo_or_its_numbers_say_it_is_synthetic():
 def test_the_talk_never_says_the_clock_stops_at_plating():
     for text in (SCRIPT.lower(), DECK.lower()):
         assert "plated" not in text and "plating" not in text
+
+
+# ── the script page (docs/talk/script.html), built from the script by scripts/build_talk_script.py ──
+
+SCRIPT_PAGE = TALK / "script.html"
+DIRECTION = r"\[[^\]]*\]"
+
+
+def generator():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("build_talk_script", ROOT / "scripts" / "build_talk_script.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class ScriptPage(HTMLParser):
+    """Reads the script page on its own terms: beats, speaker blocks, lines, directions, answers and nav."""
+
+    def __init__(self):
+        super().__init__()
+        self.slide_tags, self.sections, self.answers, self.nav, self.directions = [], {}, [], [], []
+        self._n, self._open = None, []  # the beat being read; captures as [kind, tag, depth, text]
+
+    def handle_starttag(self, tag, attrs):
+        a, classes = dict(attrs), (dict(attrs).get("class") or "").split()
+        for cap in self._open:
+            if cap[1] == tag:
+                cap[2] += 1
+        if "data-slide" in a:
+            self.slide_tags.append((tag, int(a["data-slide"])))
+            if tag == "section":
+                self._n = int(a["data-slide"])
+                self.sections[self._n] = {"items": [], "lines": [], "window": None}
+        if self._n is not None and "block" in classes and a.get("data-who"):
+            self.sections[self._n]["items"].append(a["data-who"])
+        if self._n is not None and tag == "p" and "line" in classes:
+            self._open.append(["line", tag, 0, []])
+        if self._n is not None and "window" in classes and self.sections[self._n]["window"] is None:
+            self._open.append(["window", tag, 0, []])
+        if "sd" in classes:
+            self._open.append(["sd", tag, 0, []])
+        if tag == "li" and "answer" in classes:
+            self.answers.append(a.get("data-who"))
+        if tag == "a" and "seg" in classes:
+            self.nav.append((a.get("data-beat"), a.get("href")))
+
+    def handle_endtag(self, tag):
+        for cap in list(self._open):
+            if cap[1] != tag:
+                continue
+            if cap[2]:
+                cap[2] -= 1
+                continue
+            self._open.remove(cap)
+            text = re.sub(r"\s+", " ", "".join(cap[3])).strip()
+            if cap[0] == "line":
+                self.sections[self._n]["items"].append(text)
+                self.sections[self._n]["lines"].append(text)
+            elif cap[0] == "window":
+                self.sections[self._n]["window"] = text
+            else:
+                self.directions.append(text)
+        if tag == "section":
+            self._n = None
+
+    def handle_data(self, data):
+        for cap in self._open:
+            cap[3].append(data)
+
+
+def script_page() -> ScriptPage:
+    p = ScriptPage()
+    p.feed(SCRIPT_PAGE.read_text(encoding="utf-8"))
+    return p
+
+
+def test_the_script_page_is_built_from_the_current_script():
+    same = generator().render(SCRIPT).encode("utf-8") == SCRIPT_PAGE.read_bytes()
+    assert same, "docs/talk/script.html differs from docs/talk/README.md: run python scripts/build_talk_script.py"
+
+
+def test_the_script_page_carries_every_line():
+    page, notes, deck = script_page(), script_notes(), parsed().slides
+    assert sorted(n for _, n in page.slide_tags) == list(range(10))
+    assert {tag for tag, _ in page.slide_tags} == {"section"}, "only the beats carry data-slide"
+    for n, section in page.sections.items():
+        assert section["items"] == notes[n], f"beat {n}: the script page and docs/talk/README.md differ"
+        d = deck[n]["data"]
+        if d.get("data-start"):
+            assert section["window"] == f"{d['data-start']} to {d['data-end']}", f"beat {n}: its time window"
+        else:
+            assert section["window"] and " to " not in section["window"], f"beat {n} is before the clock starts"
+
+
+def test_the_script_page_keeps_the_answers_and_run_of_show():
+    page = script_page()
+    tags = re.findall(r"^\d+\. \*\*.+?\*\* \[(Daniel|Karissa)\]", SCRIPT, flags=re.M)
+    assert len(tags) == 10 and page.answers == tags
+    assert page.nav == [(str(n), f"#beat-{n}") for n in range(10)]
+
+
+def test_stage_directions_are_only_directions():
+    page, notes = script_page(), script_notes()
+    assert page.directions and all(re.fullmatch(DIRECTION, d) for d in page.directions), page.directions
+    spoken = [line for n in sorted(notes) for line in notes[n] if line not in ("Daniel", "Karissa")]
+    assert len(page.directions) == sum(len(re.findall(DIRECTION, line)) for line in spoken)
+    for n, section in page.sections.items():
+        readme = [line for line in notes[n] if line not in ("Daniel", "Karissa")]
+        assert " ".join(section["lines"]) == " ".join(readme), f"beat {n}: spoken text was lost"
