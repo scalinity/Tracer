@@ -269,7 +269,7 @@ Questions to ask the room if it goes quiet:
 
 `docs/talk/index.html` carries the same speaker lines as this file, word for word, and `tests/test_talk.py` fails if they drift apart, if the slide times stop adding up to the run of show's 17:00, or if a link on the slides points at a file that isn't there. Change the lines here and on the slides in the same commit.
 
-`docs/talk/script.html` is built from this file. After any change here, run `python scripts/build_talk_script.py` and commit the page with it; `tests/test_talk.py` fails if the page and this file differ. `tests/test_talk_browser.py` opens the slides in Chrome at 1920 by 1080 and 1280 by 800 and fails if a slide runs into its footer, shrinks its type to fit, or shows text too small to read from the back of a room, or if the L, N, S and P keys stop working.
+`docs/talk/script.html` is built from this file. After any change here, run `python scripts/build_talk_script.py` and commit the page with it; `tests/test_talk.py` fails if the page and this file differ. `tests/test_talk_browser.py` opens the slides in Chrome at 1920 by 1080 and 1280 by 800 and fails if a slide runs into its footer, shrinks its type to fit, or shows text too small to read from the back of a room, or if the N, S and P keys stop working.
 
 The QR code for Beat Tracer is `docs/talk/qr-beat.png`, for <https://scalinity.github.io/Tracer/demo/?seed=18#beat>. To write it again:
 
