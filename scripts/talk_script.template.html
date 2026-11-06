@@ -287,7 +287,7 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
   <div class="clock-group" role="group" aria-label="Talk clock">
     <button type="button" class="btn btn-primary t-ui" id="b-start" title="Start the clock (S)">Start</button>
     <button type="button" class="btn t-ui" id="b-reset" title="Reset the clock (S while it runs)">Reset</button>
-    <p class="clock-read" id="clock-read"><span class="t-clock"><span id="elapsed">0:00</span> <span class="of">of 15:00</span></span> <span class="beat-left t-meta" id="beat-left">Press S or Start</span></p>
+    <p class="clock-read" id="clock-read"><span class="t-clock"><span id="elapsed">0:00</span> <span class="of">of {{TOTAL}}</span></span> <span class="beat-left t-meta" id="beat-left">Press S or Start</span></p>
     <button type="button" class="btn t-ui" id="b-follow" aria-pressed="true" title="Scroll to each beat as the clock reaches it">Follow</button>
   </div>
   <div class="filter t-ui" role="group" aria-label="Show lines for">
@@ -352,7 +352,6 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
 (function () {
   "use strict";
   var root = document.documentElement;
-  var TOTAL = 15 * 60;
   var NAMES = { daniel: "Daniel", karissa: "Karissa" };
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
   var strip = window.matchMedia("(max-width: 860px)");
@@ -361,6 +360,7 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
              name: el.querySelector(".beat-name").textContent,
              start: secs(el.dataset.start), end: secs(el.dataset.end) };
   });
+  var TOTAL = beats[beats.length - 1].end;  /* the talk's length, where its last beat ends */
   var clock = { acc: 0, since: null };
   /* The slides, the presenter window and this page share one clock over the "tracer-talk-2" channel when they are
      open in the same browser from the same address. This page sends only the clock, never a slide number. */
@@ -385,7 +385,7 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
   function started() { return clock.since !== null || clock.acc > 0; }
   function behavior() { return reduce.matches ? "auto" : "smooth"; }
 
-  /* Before 0:00 the current beat is the title; past 15:00 it stays on the last beat. */
+  /* Before 0:00 the current beat is the title; past the end it stays on the last beat. */
   function beatAt(e) {
     if (!started()) return 0;
     for (var k = 1; k < beats.length; k++) if (e < beats[k].end) return k;
