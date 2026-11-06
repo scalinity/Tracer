@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tracer talk</title>
+<meta name="description" content="The slides for the Tracer talk, CAI 5724, November 18. Synthetic data with no clinical review.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='5' fill='none' stroke='%2363C4D3' stroke-width='2'/%3E%3C/svg%3E">
+<style>
+/* The demo page's colour grammar: cyan is observed (scans, the clock), violet is inferred (risk, places, the
+   silent interval), amber is an alert, red is the window closing. Keys: arrows, space, F, P, N, S, L, 0 to 9. */
+:root{
+  color-scheme: dark;
+  --canvas:#0C1417; --panel:#111C20; --raised:#16242A;
+  --hair:#22343A; --hair-soft:#1A2A2F;
+  --ink:#E4EDEF; --ink-dim:#A8BEC4; --ink-mute:#7A939A;
+  --observed:#63C4D3; --infer:#9D8DF1; --warn:#E3A33C; --alarm:#D05A4A; --ok:#69B08A;
+  --inf-wash:rgba(157,141,241,.16); --warn-wash:rgba(227,163,60,.12);
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI","Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --u:min(1vw,1.78vh);
+}
+:root[data-theme="light"]{
+  color-scheme: light;
+  --canvas:#F4F7F6; --panel:#FFFFFF; --raised:#ECF2F0;
+  --hair:#CFDAD7; --hair-soft:#E2EAE8;
+  --ink:#14201D; --ink-dim:#3D4D49; --ink-mute:#5B6C68;
+  --observed:#0F6E7C; --infer:#5543BF; --warn:#8F5A06; --alarm:#B0402B; --ok:#2B7048;
+  --inf-wash:rgba(85,67,191,.11); --warn-wash:rgba(143,90,6,.10);
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    color-scheme: light;
+    --canvas:#F4F7F6; --panel:#FFFFFF; --raised:#ECF2F0;
+    --hair:#CFDAD7; --hair-soft:#E2EAE8;
+    --ink:#14201D; --ink-dim:#3D4D49; --ink-mute:#5B6C68;
+    --observed:#0F6E7C; --infer:#5543BF; --warn:#8F5A06; --alarm:#B0402B; --ok:#2B7048;
+    --inf-wash:rgba(85,67,191,.11); --warn-wash:rgba(143,90,6,.10);
+  }
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--canvas);color:var(--ink);font:16px/1.4 var(--sans);-webkit-font-smoothing:antialiased;overflow:hidden}
+h1,h2,h3,p,ul,ol,figure{margin:0;padding:0}
+ul,ol{list-style:none}
+a{color:var(--observed)}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--observed);outline-offset:3px;border-radius:2px}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.notes-src{display:none}
+
+/* ── slides ── */
+.slide{position:fixed;inset:0;display:none;flex-direction:column;justify-content:center;
+  padding:calc(var(--u)*5) calc(var(--u)*7);gap:calc(var(--u)*2.2)}
+.slide:has(.foot){padding-bottom:calc(var(--u)*10)}
+.slide.on{display:flex}
+.kicker{font:600 calc(var(--u)*1.5)/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-mute)}
+.slide h1{font:400 calc(var(--u)*9)/1 var(--serif);letter-spacing:-.02em}
+.slide h2{font:400 calc(var(--u)*5)/1.08 var(--serif);letter-spacing:-.01em;max-width:28ch}
+.slide h2.h2s{font-size:calc(var(--u)*3.8);max-width:40ch}
+.lede{font-size:calc(var(--u)*2.6);color:var(--ink-dim);max-width:46ch}
+.small{font-size:calc(var(--u)*1.6);color:var(--ink-mute);max-width:90ch}
+.caveat{font:600 calc(var(--u)*1.5)/1.3 var(--mono);color:var(--warn);letter-spacing:.02em}
+.foot{position:absolute;left:calc(var(--u)*7);right:calc(var(--u)*7);bottom:calc(var(--u)*3.4);display:flex;justify-content:space-between;gap:2em;align-items:flex-end}
+.btn{display:inline-flex;align-items:center;gap:.5em;font-size:calc(var(--u)*1.8);border:1px solid var(--hair);background:var(--panel);
+  padding:.55em .9em;border-radius:3px;text-decoration:none;color:var(--ink)}
+.btn:hover{border-color:var(--observed)}
+
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:calc(var(--u)*2.4);margin-top:calc(var(--u)*1)}
+.fact{border-top:1px solid var(--hair);padding-top:calc(var(--u)*1.6)}
+.fact b{display:block;font:400 calc(var(--u)*6)/1 var(--serif);color:var(--observed);margin-bottom:calc(var(--u)*1.2)}
+.fact.alarm b{color:var(--alarm)}
+.fact.warn b{color:var(--warn)}
+.fact p{font-size:calc(var(--u)*2);color:var(--ink-dim)}
+.fact .small{margin-top:calc(var(--u)*.9);font-size:calc(var(--u)*1.35)}
+
+.gap{width:100%;max-width:calc(var(--u)*84);height:auto;overflow:visible}
+.gap text{font-family:var(--sans)}
+
+.qs{counter-reset:q;display:grid;gap:calc(var(--u)*1.4);max-width:calc(var(--u)*96)}
+.qs li{counter-increment:q;display:grid;grid-template-columns:calc(var(--u)*5) 1fr;align-items:baseline;font-size:calc(var(--u)*2.5)}
+.qs li::before{content:counter(q);font:400 calc(var(--u)*4)/1 var(--serif);color:var(--infer)}
+.then{font-size:calc(var(--u)*2.6);color:var(--warn);border-left:3px solid var(--warn);padding-left:.8em}
+
+.hands{display:grid;grid-template-columns:auto 1fr;gap:calc(var(--u)*5);align-items:center}
+.qr{background:#fff;padding:calc(var(--u)*1.2);border-radius:4px;line-height:0}
+.qr img{width:calc(var(--u)*30);height:calc(var(--u)*30);image-rendering:pixelated}
+.addr{font:500 calc(var(--u)*2.2)/1.3 var(--mono);color:var(--observed);word-break:break-all}
+.steps{counter-reset:s;display:grid;gap:calc(var(--u)*1.2);margin-top:calc(var(--u)*2)}
+.steps li{counter-increment:s;font-size:calc(var(--u)*2.6)}
+.steps li::before{content:counter(s) ". ";color:var(--ink-mute);font-family:var(--mono)}
+
+.bars{display:grid;gap:calc(var(--u)*1.5);max-width:calc(var(--u)*92);width:100%}
+.bar{display:grid;grid-template-columns:calc(var(--u)*34) 1fr calc(var(--u)*9);align-items:center;gap:calc(var(--u)*1.6);font-size:calc(var(--u)*2.1)}
+.bar .track{height:calc(var(--u)*2.6);background:var(--raised);border:1px solid var(--hair-soft);position:relative}
+.bar .fill{position:absolute;inset:0 auto 0 0;background:var(--ink-mute)}
+.bar.tracer .fill{background:var(--infer)}
+.bar.tracer.eq .fill{background:var(--inf-wash);border:1px solid var(--infer)}
+.bar.window .fill{background:var(--observed)}
+.bar .v{font:500 calc(var(--u)*2.4)/1 var(--mono);text-align:right}
+
+.limits{display:grid;gap:calc(var(--u)*1.4);max-width:calc(var(--u)*96)}
+.limits li{font-size:calc(var(--u)*2.4);padding-left:1.1em;position:relative}
+.limits li::before{content:"";position:absolute;left:0;top:.55em;width:.45em;height:.45em;border:2px solid var(--warn);border-radius:50%}
+.limits li.next::before{border-color:var(--ok);background:var(--ok)}
+
+/* ── chrome ── */
+.chrome{position:fixed;right:calc(var(--u)*2);top:calc(var(--u)*2);display:flex;gap:6px;opacity:.0;transition:opacity .2s;z-index:5}
+body:hover .chrome,.chrome:focus-within{opacity:.85}
+.chrome button{border:1px solid var(--hair);background:var(--panel);padding:6px 10px;border-radius:3px;font-size:13px}
+.count{position:fixed;right:calc(var(--u)*2);bottom:calc(var(--u)*1.6);font:12px var(--mono);color:var(--ink-mute);z-index:4}
+
+/* ── notes (N) and presenter (P) ── */
+.notes{position:fixed;left:0;right:0;bottom:0;max-height:46vh;overflow:auto;background:var(--panel);border-top:1px solid var(--hair);
+  padding:14px 20px 18px;z-index:6;display:none;font-size:15px;line-height:1.5}
+body.shownotes .notes{display:block}
+.nhead{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;margin-bottom:8px;font:13px var(--mono);color:var(--ink-mute)}
+.nhead .beat{font:600 15px var(--sans);color:var(--ink)}
+.nhead .clk{font-size:18px;color:var(--ink)}
+.nhead .late{color:var(--alarm)} .nhead .early{color:var(--ok)}
+.nbody p{margin:0 0 8px;max-width:80ch}
+.nbody .who{font-weight:600;color:var(--observed)}
+.nbody em{color:var(--ink-mute)}
+
+body.presenter{overflow:auto}
+body.presenter .slide,body.presenter .chrome,body.presenter .count{display:none !important}
+body.presenter .notes{display:block;position:static;max-height:none;border:0;background:var(--canvas);padding:24px 28px;font-size:19px}
+body.presenter .nhead{font-size:16px}
+body.presenter .nhead .clk{font-size:44px;width:100%}
+body.presenter .nhead .beat{font-size:24px}
+.pnav{display:none;gap:10px;margin:0 0 14px}
+body.presenter .pnav{display:flex}
+.pnav button{border:1px solid var(--hair);background:var(--panel);padding:10px 16px;border-radius:3px}
+.nextup{margin-top:14px;font:14px var(--mono);color:var(--ink-mute)}
+
+@media (max-width:700px){
+  .facts{grid-template-columns:1fr}
+  .hands{grid-template-columns:1fr}
+  .bar{grid-template-columns:1fr calc(var(--u)*14);}
+  .bar .label{grid-column:1 / -1}
+}
+@media print{body{overflow:visible}.slide{display:flex;position:relative;height:100vh;page-break-after:always}.chrome,.count,.notes{display:none !important}}
+</style>
+</head>
+<body>
+
+<div class="chrome" aria-label="Slide controls">
+  <button type="button" id="b-prev" aria-label="Previous slide">←</button>
+  <button type="button" id="b-next" aria-label="Next slide">→</button>
+  <button type="button" id="b-notes">Notes</button>
+  <button type="button" id="b-presenter">Presenter</button>
+  <button type="button" id="b-theme">Light or dark</button>
+</div>
+<p class="count num" id="count" aria-live="polite"></p>
+
+<main id="deck">
+
+<!-- 0 -->
+<section class="slide" data-beat="Title" data-who="">
+  <p class="kicker">CAI 5724 · AI in Health Design Studio I · November 18</p>
+  <h1>Tracer</h1>
+  <p class="lede">Predictive specimen tracking for the clinical microbiology laboratory: which specimens will miss their stability window, while there is still time to find them.</p>
+  <div class="foot">
+    <p class="small">Daniel Escalante and Karissa Kocourek · University of Florida</p>
+    <p class="caveat">Synthetic data, no clinical review</p>
+  </div>
+  <aside class="notes-src"><p>Nothing is said. Switch to the 3D bench tab with the truth hidden when the instructor hands over.</p></aside>
+</section>
+
+<!-- 1 -->
+<section class="slide" data-beat="The silent tube" data-who="Karissa" data-start="0:00" data-end="0:30">
+  <p class="kicker">The silent tube</p>
+  <h2>A tube leaves the ward.</h2>
+  <p class="lede">Nothing beeps. Nothing is logged. How long until you would worry?</p>
+  <p><a class="btn" href="../demo/exhibit/index.html" target="_blank" rel="noopener">Open the 3D bench ↗</a></p>
+  <p class="small">On the bench: T hides or shows the truth, H is the compact view, L is the guided lesson.</p>
+  <aside class="notes-src"><p class="who">Karissa</p><p>A tube leaves the ward. Nothing beeps, and nothing gets logged. Nobody knows yet if it's late. So, raise your hand if you'd start to worry after fifteen minutes. Thirty? An hour? Hold on to that number, because that's the guess Tracer has to make, for every specimen, all day.</p><p><em>[About 50 words. Pause for each show of hands.]</em></p></aside>
+</section>
+
+<!-- 2 -->
+<section class="slide" data-beat="Why it matters" data-who="Karissa" data-start="0:30" data-end="1:30">
+  <p class="kicker">Why it matters</p>
+  <h2>Most lab errors happen before the test, and the specimen is on a clock.</h2>
+  <div class="facts">
+    <div class="fact">
+      <b class="num">61.9%</b>
+      <p>of errors in one stat laboratory's audit happened before analysis.</p>
+      <p class="small">Carraro and Plebani, Clin Chem 2007. One centre.</p>
+    </div>
+    <div class="fact warn">
+      <b class="num">60 min</b>
+      <p>for unpreserved urine at room temperature before the colony count stops meaning anything.</p>
+      <p class="small">Our policy table, from the IDSA and ASM 2024 guide.</p>
+    </div>
+    <div class="fact alarm">
+      <b>Again</b>
+      <p>A missed window often means a new specimen: another needle stick or lumbar puncture, and hours of delay.</p>
+      <p class="small">Spinal fluid must not be refrigerated. IDSA and ASM 2018.</p>
+    </div>
+  </div>
+  <aside class="notes-src"><p class="who">Karissa</p><p>Most lab errors don't happen during testing. In one stat laboratory's audit, about sixty-two percent of errors happened before the specimen was ever analyzed. And a microbiology specimen is on a clock. Unpreserved urine at room temperature has about an hour before bacteria overgrow and the colony count stops meaning anything. Spinal fluid has to come straight to the lab, and it must not be refrigerated. When a specimen misses its window, it's often rejected and has to be collected again. For the patient, that's another needle stick or another lumbar puncture, hours of delay, and sometimes longer on broad antibiotics while the team waits for a result. And the lab has no record of where a specimen is between collection and receipt, so a missing one often isn't noticed until someone calls asking for the result.</p><p><em>[About 135 words.]</em></p></aside>
+</section>
+
+<!-- 3 -->
+<section class="slide" data-beat="The missing data" data-who="Daniel" data-start="1:30" data-end="2:00">
+  <p class="kicker">The missing data</p>
+  <h2>Public records stamp a specimen twice, with nothing in between.</h2>
+  <svg class="gap" viewBox="0 0 840 170" role="img" aria-label="A line from Collected to Result filed, median 80.1 hours apart, with no receipt scan and no transport record between them">
+    <line x1="60" y1="80" x2="780" y2="80" stroke="var(--infer)" stroke-width="3" stroke-dasharray="2 10" stroke-linecap="round"/>
+    <circle cx="60" cy="80" r="14" fill="var(--observed)"/>
+    <circle cx="780" cy="80" r="14" fill="var(--observed)"/>
+    <text x="60" y="130" text-anchor="middle" fill="var(--ink)" font-size="22">Collected</text>
+    <text x="780" y="130" text-anchor="middle" fill="var(--ink)" font-size="22">Result filed</text>
+    <text x="420" y="58" text-anchor="middle" fill="var(--infer)" font-size="30" font-family="var(--mono)">median 80.1 hours</text>
+    <text x="420" y="118" text-anchor="middle" fill="var(--ink-mute)" font-size="19">no receipt scan · no transport record · no field for either</text>
+  </svg>
+  <p class="small">1,291 specimens in the public MIMIC-IV demo extract (Johnson et al., PhysioNet 2023). So the data here is generated: every timing is drawn by seeded code from published assumptions, and a language model writes the scan trail around it.</p>
+  <aside class="notes-src"><p class="who">Daniel</p><p>So why not learn this from hospital data? The best-known public one, MIMIC-IV, stamps a microbiology specimen twice: when it's collected and when the result is filed. Those stamps are a median of eighty hours apart, with nothing in between. There's no field for the journey at all. So we generated our own data, and every number you'll see is an assumption we can change.</p><p><em>[About 65 words.]</em></p></aside>
+</section>
+
+<!-- 4 -->
+<section class="slide" data-beat="How Tracer works" data-who="Daniel" data-start="2:00" data-end="3:00">
+  <p class="kicker">How Tracer works · every 5 minutes, every specimen not yet received</p>
+  <h2>Silence is evidence.</h2>
+  <ol class="qs" aria-label="Every 5 minutes, for every specimen not yet received">
+    <li>How unusual is this much silence, for this kind of specimen?</li>
+    <li>Where is it most likely to be: on the unit, in the tube, at the station?</li>
+    <li>Would an alert now still leave time to act before its window closes?</li>
+  </ol>
+  <p class="then">Then an alert, sent to the role that can check that place.</p>
+  <aside class="notes-src"><p class="who">Daniel</p><p>Here's the idea. Silence is evidence. Every five minutes, Tracer asks three questions about every specimen the lab hasn't received. How unusual is this much silence, for this kind of specimen? Where is it most likely to be right now: still on the unit, in the tube, or sitting at the tube station? And if we alert now, is there still time to act before its window closes? <em>[Switch to the 3D bench.]</em> This is a tube bench built from the same model. The light along the tube is what Tracer infers. <em>[Press T to show the truth.]</em> And this carrier is where the specimen really was. When the risk crosses a threshold, Tracer alerts the person who can check the likely place. It's a small model you can read, not a black box.</p><p><em>[About 125 words.]</em></p></aside>
+</section>
+
+<!-- 5 -->
+<section class="slide" data-beat="Board and timeline" data-who="Daniel" data-start="3:00" data-end="6:00">
+  <p class="kicker">Your turn · about 3 minutes</p>
+  <div class="hands">
+    <div class="qr"><img src="../demo/qr.png" alt="QR code for the Tracer demo"></div>
+    <div>
+      <h2>Phones out.</h2>
+      <p class="addr">scalinity.github.io/Tracer/demo</p>
+      <ol class="steps">
+        <li>Tap any row on the board.</li>
+        <li>Drag the scrubber slowly to the right.</li>
+        <li>Tap Show the truth.</li>
+      </ol>
+      <p style="margin-top:calc(var(--u)*2.4)"><a class="btn" href="../demo/index.html#SP-r27-000368" target="_blank" rel="noopener">The specimen on the projector ↗</a></p>
+    </div>
+  </div>
+  <div class="foot"><span></span><p class="caveat">Synthetic data, no clinical review</p></div>
+  <aside class="notes-src"><p class="who">Daniel</p><p>Phones out. Scan this code, or type the address. <em>[Wait about 20 seconds, and watch the room.]</em> You're on the board. Every row is a specimen that's been collected and not received yet, ranked by expected harm. Tap any row to open its timeline, then drag the scrubber slowly to the right. Watch three things: the risk climbing while no scan comes, where Tracer thinks it is, and the moment the alert fires and who it goes to.</p><p><em>[Switch the projector to the specimen tab. Give the room about a minute on their own first.]</em></p><p>Here's one on the screen. A stat tissue specimen from the emergency department. It sat at the lab's tube station for almost an hour. Tracer alerted at minute twenty, with a hundred minutes of its window left, and put it most likely at the tube station. It was received inside its window. Now tap Show the truth on yours, and see where your specimen really was.</p><p><em>[About 135 words over three minutes, with the rest left for the room.]</em></p></aside>
+</section>
+
+<!-- 6 -->
+<section class="slide" data-beat="Beat Tracer" data-who="Daniel, then Karissa" data-start="6:00" data-end="10:30">
+  <p class="kicker">Beat Tracer · three rounds</p>
+  <div class="hands">
+    <div class="qr"><img src="qr-beat.png" alt="QR code for Beat Tracer with the room's shared rounds"></div>
+    <div>
+      <h2>Call it before Tracer does.</h2>
+      <p class="addr">scalinity.github.io/Tracer/demo/?seed=18#beat</p>
+      <ol class="steps">
+        <li>Six specimens leave. One will miss its window.</li>
+        <li>Tap the one in trouble and press Call it.</li>
+        <li>A wrong call uses one of your three alerts.</li>
+      </ol>
+      <p style="margin-top:calc(var(--u)*2.4)"><a class="btn" href="../demo/index.html?seed=18#beat" target="_blank" rel="noopener">Open the game ↗</a></p>
+    </div>
+  </div>
+  <div class="foot"><p class="small">Everyone who scans this code plays the same rounds, taken from held-out test runs.</p><p class="caveat">Synthetic data, no clinical review</p></div>
+  <aside class="notes-src"><p class="who">Daniel</p><p>Now you get to compete with it. Scan this second code. It gives everyone in the room the same three rounds. Six specimens leave collection, and one of them will miss its window. Watch the receipt scans come in, tap the one you think is in trouble, and press Call it. Call too early and you might be wrong, and a wrong call uses one of your three alerts. Call too late, and you've given no warning. Ready? Start round one.</p><p><em>[About 80 words. Three rounds take about three minutes. Walk the room. If phones struggle, play one round on the projector and ask for a show of hands.]</em></p><p class="who">Karissa</p><p><em>[When most end screens are up.]</em> Okay, look at your end screen. It puts your warning next to Tracer's, on the same rounds. Raise your hand if you beat Tracer. <em>[Pause.]</em> What did you notice that made you call it? <em>[Take one or two answers.]</em> That's the whole idea. The silence itself was telling you something. And the people who called early, some of you called the wrong one. That trade is what Daniel's going to show you next.</p><p><em>[About 65 words, plus the answers. About a minute.]</em></p></aside>
+</section>
+
+<!-- 7 -->
+<section class="slide" data-beat="Why this design" data-who="Daniel" data-start="10:30" data-end="11:30">
+  <p class="kicker">Why this design</p>
+  <h2 class="h2s">Judged by minutes of warning, at alerts a shift can take.</h2>
+  <p><a class="btn" href="../demo/index.html#threshold" target="_blank" rel="noopener">The threshold slider ↗</a></p>
+  <div class="bars" role="img" aria-label="Median warning at 6 alerts per 8-hour shift: plan's time-limit rule 30 minutes, window-share rule 45, Tracer with equal tier weights 45, Tracer with weights 3, 2, 1 55">
+    <div class="bar"><span class="label">Time-limit rule</span><span class="track"><span class="fill" style="width:50%"></span></span><span class="v">30 min</span></div>
+    <div class="bar window"><span class="label">Alert at a share of the window</span><span class="track"><span class="fill" style="width:75%"></span></span><span class="v">45 min</span></div>
+    <div class="bar tracer eq"><span class="label">Tracer, equal tier weights</span><span class="track"><span class="fill" style="width:75%"></span></span><span class="v">45 min</span></div>
+    <div class="bar tracer"><span class="label">Tracer, weights 3, 2, 1</span><span class="track"><span class="fill" style="width:91.67%"></span></span><span class="v">55 min</span></div>
+  </div>
+  <p class="small">Median warning over all 100 breaches, at 6 alerts per 8-hour shift, on 6 held-out runs (2,378 specimens). Most of the gain comes from using the window. The data and the model share our assumptions, so these are best-case figures.</p>
+  <div class="foot"><span></span><p class="caveat">Synthetic data, no clinical review</p></div>
+  <aside class="notes-src"><p class="who">Daniel</p><p>That trade is the threshold. Scroll down to Set the threshold and drag it both ways. Lower, and Tracer warns earlier but alerts on specimens that would have arrived anyway. Higher, fewer alerts, less warning. So we judge Tracer by minutes of warning at a number of alerts a shift can handle, not by accuracy. <em>[Switch to the numbers.]</em> At six alerts a shift, Tracer gave fifty-five minutes of median warning, against thirty for a simple time limit. But a rule that alerts once a set share of the window has passed gets forty-five, and with equal weights Tracer only ties it. Most of the gain comes from using the window.</p><p><em>[About 105 words, over the room dragging the slider.]</em></p></aside>
+</section>
+
+<!-- 8 -->
+<section class="slide" data-beat="Limits and next steps" data-who="Karissa" data-start="11:30" data-end="12:15">
+  <p class="kicker">Limits and next steps</p>
+  <h2>What Tracer cannot tell you.</h2>
+  <ul class="limits">
+    <li>A mislabeled or leaking specimen is invisible to it.</li>
+    <li>Every specimen is synthetic, with no clinical review.</li>
+    <li>10 of the 44 policy rows have no published source yet.</li>
+    <li>At twice the volume, the window-share rule matches it.</li>
+    <li class="next">Next: test it on a real laboratory log with receipt scans.</li>
+  </ul>
+  <aside class="notes-src"><p class="who">Karissa</p><p>Some honest limits. Tracer only watches time and place, so it can't see a mislabeled or leaking specimen. Every specimen you saw is synthetic, and there's been no clinical review of the data or the model. I wrote the policy table behind the stability windows, and ten of its forty-four rows still have no published source, so they're marked as assumptions. Tracer's lead also depends on the setting: at twice the volume, the simple window rule matches it. The real next step is to test it on a real laboratory log with receipt scans.</p><p><em>[About 95 words.]</em></p></aside>
+</section>
+
+<!-- 9 -->
+<section class="slide" data-beat="Questions" data-who="Both" data-start="12:15" data-end="15:00">
+  <p class="kicker">Thank you</p>
+  <div class="hands">
+    <div class="qr"><img src="../demo/qr.png" alt="QR code for the Tracer demo"></div>
+    <div>
+      <h2>Questions?</h2>
+      <p class="addr">scalinity.github.io/Tracer/demo</p>
+      <p class="addr" style="color:var(--ink-dim);margin-top:.4em">github.com/scalinity/Tracer</p>
+      <p class="lede" style="margin-top:calc(var(--u)*2.4)">The code, the data and how we made it, including how AI helped, are all in the repository.</p>
+    </div>
+  </div>
+  <div class="foot"><p class="small">Daniel Escalante and Karissa Kocourek · CAI 5724 · University of Florida</p><p class="caveat">Synthetic data, no clinical review</p></div>
+  <aside class="notes-src"><p class="who">Daniel</p><p>That's Tracer. The demo stays up at this address, and everything is on GitHub: the code, the data, and how we made it. We'd love your questions.</p><p><em>[About 30 words. Then the questions below. Stop at 15:00.]</em></p></aside>
+</section>
+
+</main>
+
+<div class="notes" id="notes" aria-live="polite">
+  <div class="pnav"><button type="button" id="p-prev">← Back</button><button type="button" id="p-next">Next →</button><button type="button" id="p-clock">Start the clock</button></div>
+  <div class="nhead" id="nhead"></div>
+  <div class="nbody" id="nbody"></div>
+  <p class="nextup" id="nextup"></p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var PRESENTER = /[?&]presenter(=1)?(&|#|$)/.test(location.search);
+  var state = { i: 0, start: null };
+  var chan = null;
+  try { chan = new BroadcastChannel("tracer-talk"); } catch (e) { chan = null; }
+
+  function secs(t) { if (!t) return null; var p = t.split(":"); return +p[0] * 60 + +p[1]; }
+  function clock(s) { s = Math.max(0, Math.floor(s)); return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+
+  function fromHash() {
+    var n = parseInt(location.hash.slice(1), 10);
+    return isNaN(n) ? 0 : Math.max(0, Math.min(slides.length - 1, n));
+  }
+
+  function show(i, quiet) {
+    state.i = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach(function (s, k) {
+      var on = k === state.i;
+      s.classList.toggle("on", on);
+      s.setAttribute("aria-hidden", on ? "false" : "true");
+    });
+    if (location.hash !== "#" + state.i) history.replaceState(null, "", location.pathname + location.search + "#" + state.i);
+    document.getElementById("count").textContent = state.i + " / " + (slides.length - 1);
+    fit(slides[state.i]);
+    renderNotes();
+    if (!quiet && chan) chan.postMessage({ i: state.i, start: state.start });
+  }
+
+  /* Shrink a slide's type until it fits the screen; every size on a slide is a multiple of --u. */
+  function fit(s) {
+    s.style.removeProperty("--u");
+    if (PRESENTER || !s.clientHeight) return;
+    var u = Math.min(window.innerWidth / 100, window.innerHeight * 1.78 / 100);
+    for (var k = 0; k < 10 && s.scrollHeight > s.clientHeight + 1; k++) {
+      u *= 0.94;
+      s.style.setProperty("--u", u + "px");
+    }
+  }
+
+  function renderNotes() {
+    var s = slides[state.i], d = s.dataset;
+    var head = '<span class="beat">' + state.i + ". " + esc(d.beat) + "</span>";
+    if (d.who) head += "<span>" + esc(d.who) + "</span>";
+    if (d.start) head += "<span>planned " + d.start + " to " + d.end + "</span>";
+    else head += "<span>before the clock starts</span>";
+    if (state.start) {
+      var el = (Date.now() - state.start) / 1000, end = secs(d.end), begin = secs(d.start), cls = "", note = "";
+      if (end !== null && el > end) { cls = "late"; note = " · over this beat by " + clock(el - end); }
+      else if (begin !== null && el < begin - 15) { cls = "early"; note = " · ahead by " + clock(begin - el); }
+      head += '<span class="clk num ' + cls + '">' + clock(el) + " of 15:00" + note + "</span>";
+    } else {
+      head += '<span class="clk num">clock not started · press S</span>';
+    }
+    document.getElementById("nhead").innerHTML = head;
+    var src = s.querySelector(".notes-src");
+    document.getElementById("nbody").innerHTML = src ? src.innerHTML : "";
+    var nx = slides[state.i + 1];
+    document.getElementById("nextup").textContent = nx ? "Next: " + nx.dataset.beat + (nx.dataset.who ? ", " + nx.dataset.who : "") : "Last slide. Stop at 15:00.";
+    document.getElementById("p-clock").textContent = state.start ? "Reset the clock" : "Start the clock";
+  }
+
+  function toggleClock() {
+    state.start = state.start ? null : Date.now();
+    renderNotes();
+    if (chan) chan.postMessage({ i: state.i, start: state.start });
+  }
+
+  function next() { show(state.i + 1); }
+  function prev() { show(state.i - 1); }
+
+  function toggleTheme() {
+    var root = document.documentElement, cur = root.getAttribute("data-theme");
+    var dark = cur ? cur === "dark" : !window.matchMedia("(prefers-color-scheme: light)").matches;
+    root.setAttribute("data-theme", dark ? "light" : "dark");
+  }
+
+  function fullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+  }
+
+  function presenter() {
+    window.open(location.pathname + "?presenter#" + state.i, "tracer-presenter", "width=900,height=720");
+  }
+
+  document.addEventListener("keydown", function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    var k = e.key;
+    if (k === "ArrowRight" || k === "PageDown" || k === " ") { e.preventDefault(); next(); }
+    else if (k === "ArrowLeft" || k === "PageUp") { e.preventDefault(); prev(); }
+    else if (k === "Home") show(0);
+    else if (k === "End") show(slides.length - 1);
+    else if (/^[0-9]$/.test(k)) show(+k);
+    else if (k === "n" || k === "N") document.body.classList.toggle("shownotes");
+    else if (k === "s" || k === "S") toggleClock();
+    else if (k === "f" || k === "F") fullscreen();
+    else if (k === "p" || k === "P") presenter();
+    else if (k === "l" || k === "L") toggleTheme();
+  });
+  document.getElementById("deck").addEventListener("click", function (e) {
+    if (e.target.closest("a,button")) return;
+    if (window.getSelection && String(window.getSelection())) return;
+    next();
+  });
+  document.getElementById("b-prev").addEventListener("click", prev);
+  document.getElementById("b-next").addEventListener("click", next);
+  document.getElementById("b-notes").addEventListener("click", function () { document.body.classList.toggle("shownotes"); });
+  document.getElementById("b-presenter").addEventListener("click", presenter);
+  document.getElementById("b-theme").addEventListener("click", toggleTheme);
+  document.getElementById("p-prev").addEventListener("click", prev);
+  document.getElementById("p-next").addEventListener("click", next);
+  document.getElementById("p-clock").addEventListener("click", toggleClock);
+  window.addEventListener("hashchange", function () { show(fromHash()); });
+  window.addEventListener("resize", function () { fit(slides[state.i]); });
+  if (chan) chan.onmessage = function (m) {
+    if (!m.data) return;
+    state.start = m.data.start || null;
+    show(m.data.i, true);
+  };
+
+  if (PRESENTER) { document.body.classList.add("presenter"); document.title = "Tracer talk · presenter"; }
+  setInterval(function () { if (state.start) renderNotes(); }, 1000);
+  show(fromHash(), true);
+})();
+</script>
+</body>
+</html>
