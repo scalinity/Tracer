@@ -55,6 +55,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .t-lead{font:400 calc(var(--u)*3)/1.32 var(--sans);color:var(--ink-dim)}
 .t-h3{font:400 calc(var(--u)*4)/1.08 var(--serif);letter-spacing:-.01em}
 .t-h2{font:400 calc(var(--u)*6)/1.04 var(--serif);letter-spacing:-.015em}
+.t-h2,.t-h3,.qs3 p{text-wrap:balance} .t-lead,.t-body,.t-cap,.t-step{text-wrap:pretty}
 .t-fig{font:400 calc(var(--u)*6)/1 var(--serif);font-variant-numeric:lining-nums;letter-spacing:-.01em}
 .t-url{font:500 calc(var(--u)*2.33)/1.3 var(--mono);color:var(--observed);overflow-wrap:normal;word-break:normal}
 .t-url span{white-space:nowrap}
@@ -88,21 +89,34 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .fact{display:grid;grid-row:span 3;grid-template-rows:subgrid;row-gap:calc(var(--u)*.8);border-top:1px solid var(--hair);padding-top:calc(var(--u)*1.3)}
 .fig-observed{color:var(--observed)} .fig-warn{color:var(--warn)} .fig-alarm{color:var(--alarm)}
 
+/* Drawn figures share one vocabulary: a scan is a cyan dot, silence a dotted violet line, inference violet,
+   an alert amber, the window closing red. */
+.diagram{width:100%;height:auto;overflow:visible}
+.diagram text{font-family:var(--sans)}
+.diagram .silent{stroke:var(--infer)} .diagram .stamp{fill:var(--observed)}
+.diagram .ghost{fill:var(--canvas);stroke:var(--ink-mute)}
+.diagram .lab-ink{fill:var(--ink)} .diagram .lab-dim{fill:var(--ink-dim)} .diagram .lab-infer{fill:var(--infer)}
+.diagram .axis{stroke:var(--hair);stroke-width:2}
+.diagram .mark line{stroke:var(--warn);stroke-width:3} .diagram .mark text{fill:var(--ink)}
+.diagram .usual{fill:var(--ink-mute);opacity:.35}
+.diagram .now,.diagram .place{fill:var(--infer)}
+.diagram .alert{fill:var(--warn)} .diagram .close{stroke:var(--alarm);stroke-width:3}
+.diagram .time-left{fill:var(--ok);opacity:.45}
+
+/* The silent tube: the hand vote, drawn */
+.vote{margin:calc(var(--u)*.6) 0 calc(var(--u)*.4)}
+
 /* The missing data: the record, with ghost markers where the missing scans would be */
-.gap{width:100%;height:auto;overflow:visible;margin:calc(var(--u)*1) 0 0}
-.gap text{font-family:var(--sans)}
-.gap .silent{stroke:var(--infer)} .gap .stamp{fill:var(--observed)}
-.gap .ghost{fill:var(--canvas);stroke:var(--ink-mute)}
-.gap .lab-ink{fill:var(--ink)} .gap .lab-dim{fill:var(--ink-dim)} .gap .lab-infer{fill:var(--infer)}
+.gap{margin:calc(var(--u)*1) 0 0}
 
 /* Meet Tracer: what it reads (observed, cyan) and what it gives the lab (inferred, violet; the alert, amber) */
-.flow{display:grid;grid-template-columns:minmax(0,1fr) calc(var(--u)*11) minmax(0,1fr);column-gap:calc(var(--u)*2.4);align-items:start;width:100%;margin-top:calc(var(--u)*.6)}
+.flow{display:grid;grid-template-columns:max-content minmax(calc(var(--u)*11),1fr) max-content;column-gap:calc(var(--u)*2.4);align-items:start;width:100%;margin-top:calc(var(--u)*.6)}
 .flow-head{margin-bottom:calc(var(--u)*1.2)}
 .flow-list{display:grid;gap:calc(var(--u)*1.1)}
-.flow-list li{display:grid;grid-template-columns:calc(var(--u)*2.4) 1fr;align-items:baseline}
-.flow-list li::before{content:"";width:.46em;height:.46em;border-radius:50%;background:var(--observed)}
-.flow-list li.inferred::before{background:var(--infer)}
-.flow-list li.alert::before{background:var(--warn)}
+.flow-list li{display:grid;grid-template-columns:calc(var(--u)*3.6) 1fr;align-items:center}
+.ico{width:1.05em;height:1.05em;fill:none;stroke:var(--observed);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.flow-list li.inferred .ico{stroke:var(--infer)}
+.flow-list li.alert .ico{stroke:var(--warn)}
 .flow-mid{display:grid;justify-items:center;row-gap:calc(var(--u)*.9);align-self:center;padding-top:calc(var(--u)*2.4)}
 .flow-name{font:italic 400 calc(var(--u)*4)/1 var(--serif);color:var(--observed)}
 .flow-arrow{position:relative;width:100%;height:2px;background:var(--ink-mute)}
@@ -122,7 +136,21 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .why{position:relative;padding-left:calc(var(--u)*3.4);margin-top:calc(var(--u)*.6)}
 .why::before{content:"";position:absolute;left:0;top:.42em;width:.5em;height:.5em;border-radius:50%;background:var(--ok)}
 
-/* How Tracer works: the three questions, then the alert */
+/* How Tracer works: each question with its picture, then the alert */
+.qs3{counter-reset:q;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:calc(var(--u)*3.4);width:100%}
+.qs3 li{counter-increment:q;display:grid;align-content:start;row-gap:calc(var(--u)*1.2)}
+.qs3 p{font:400 calc(var(--u)*3)/1.25 var(--sans);color:var(--ink)}
+.qs3 p::before{content:counter(q);font-family:var(--serif);color:var(--infer);margin-right:.45em}
+
+/* How we built it: the data, then the model, and the truth kept apart from the model */
+.pipe .node rect{fill:var(--panel);stroke:var(--hair);stroke-width:1.5}
+.pipe .node .tick{stroke:none}
+.pipe .node.data .tick{fill:var(--observed)} .pipe .node.model .tick{fill:var(--infer)}
+.pipe .flow-line{stroke:var(--ink-mute);stroke-width:2}
+.pipe .head{fill:var(--ink-mute)}
+.pipe .step{fill:var(--ink-mute);font-family:var(--serif)}
+.pipe .truth{stroke:var(--ink-dim);stroke-width:2}
+.pipe{margin-top:calc(var(--u)*.6)}
 .qs{counter-reset:q;display:grid;gap:calc(var(--u)*1.2);max-width:calc(var(--u)*86)}
 .qs li{counter-increment:q;display:grid;grid-template-columns:calc(var(--u)*4.4) 1fr;align-items:baseline}
 .qs li::before{content:counter(q);font:400 calc(var(--u)*3.5)/1 var(--serif);color:var(--infer)}
@@ -195,7 +223,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 
 /* ── chrome ── */
 .chrome{position:fixed;right:calc(var(--u)*2);top:calc(var(--u)*2);display:flex;gap:6px;opacity:0;transition:opacity .15s ease;z-index:5}
-body:hover .chrome,.chrome:focus-within{opacity:.9}
+body.pointer .chrome,.chrome:focus-within{opacity:.9}
+body:not(.pointer):not(.presenter){cursor:none}
 .chrome button{border:1px solid var(--hair);background:var(--panel);padding:6px 10px;border-radius:6px;font-size:13px;transition:border-color .15s ease}
 .chrome button:hover{border-color:var(--observed)}
 
@@ -238,7 +267,7 @@ body.presenter .pnav{display:flex}
   .slide.on .chart .bar,.slide.on .chart .gain{animation:none}
 }
 @media (max-width:700px){
-  .flow,.fix-row{grid-template-columns:1fr}
+  .flow,.fix-row,.qs3{grid-template-columns:1fr}
   .facts{grid-template-columns:1fr}
   .fact{grid-row:auto}
   .hands{grid-template-columns:1fr;row-gap:calc(var(--u)*3)}
@@ -283,6 +312,14 @@ body.presenter .pnav{display:flex}
 <section class="slide" data-beat="The silent tube" data-who="Karissa" data-start="0:00" data-end="0:30">
   <h2 class="t-h2">A tube leaves the ward.</h2>
   <p class="t-lead">Nothing beeps. Nothing is logged. How long until you would worry?</p>
+  <svg class="diagram vote" viewBox="0 0 860 120" role="img" aria-label="A timeline from the moment the tube leaves the ward, marked at 15 minutes, 30 minutes and 1 hour">
+    <line class="silent" x1="22" y1="70" x2="850" y2="70" stroke-width="4" stroke-dasharray="1 11" stroke-linecap="round"/>
+    <circle class="stamp" cx="22" cy="70" r="13"/>
+    <text class="lab-dim" x="4" y="114" font-size="21">The tube leaves the ward</text>
+    <g class="mark"><line x1="198" y1="52" x2="198" y2="88"/><text x="198" y="36" text-anchor="middle" font-size="30">15 min</text></g>
+    <g class="mark"><line x1="374" y1="52" x2="374" y2="88"/><text x="374" y="36" text-anchor="middle" font-size="30">30 min</text></g>
+    <g class="mark"><line x1="726" y1="52" x2="726" y2="88"/><text x="726" y="36" text-anchor="middle" font-size="30">1 hour</text></g>
+  </svg>
   <p><a class="btn" href="../demo/exhibit/index.html?truth=0" target="_blank" rel="noopener">Open the 3D bench <span aria-hidden="true">↗</span></a></p>
   <p class="t-cap">The bench opens with the truth hidden. On the bench, T shows or hides it.</p>
   <aside class="notes-src"><p class="who">Karissa</p><p>A tube leaves the ward. Nothing beeps, and nothing gets logged. Nobody knows yet if it's late. So, raise your hand if you'd start to worry after fifteen minutes. Thirty? An hour? Hold on to that number, because that's the guess Tracer has to make, for every specimen, all day.</p><p><em>[About 50 words. Pause for each show of hands.]</em></p></aside>
@@ -314,7 +351,7 @@ body.presenter .pnav{display:flex}
 <!-- 3 -->
 <section class="slide" data-beat="The missing data" data-who="Daniel" data-start="1:30" data-end="2:00">
   <h2 class="t-h3">Public records stamp a specimen twice, with nothing in between.</h2>
-  <svg class="gap" viewBox="0 0 860 170" role="img" aria-label="A line from Collected to Result filed, median 80.1 hours apart. Where a transport record and a receipt scan would be, there is nothing.">
+  <svg class="diagram gap" viewBox="0 0 860 170" role="img" aria-label="A line from Collected to Result filed, median 80.1 hours apart. Where a transport record and a receipt scan would be, there is nothing.">
     <line class="silent" x1="40" y1="96" x2="820" y2="96" stroke-width="4" stroke-dasharray="1 11" stroke-linecap="round"/>
     <circle class="stamp" cx="40" cy="96" r="14"/>
     <circle class="stamp" cx="820" cy="96" r="14"/>
@@ -338,18 +375,18 @@ body.presenter .pnav{display:flex}
     <div>
       <p class="t-cap flow-head">What it reads</p>
       <ul class="flow-list t-step">
-        <li>When it was collected</li>
-        <li>What kind, and from where</li>
-        <li>How long it can wait</li>
+        <li><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>When it was collected</li>
+        <li><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 3.5h5M10.5 3.5v13a1.5 1.5 0 0 0 3 0v-13M10.5 11h3"/></svg>What kind, and from where</li>
+        <li><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h10M7 20.5h10M8 3.5c0 4.5 8 5 8 8.5s-8 4-8 8.5M16 3.5c0 4.5-8 5-8 8.5s8 4 8 8.5"/></svg>How long it can wait</li>
       </ul>
     </div>
     <div class="flow-mid" aria-hidden="true"><span class="flow-name">Tracer</span><span class="flow-arrow"></span></div>
     <div>
       <p class="t-cap flow-head">Every 5 minutes, it gives the lab</p>
       <ul class="flow-list t-step">
-        <li class="inferred">Who is at risk, ranked</li>
-        <li class="inferred">Where each one likely is</li>
-        <li class="alert">Who should go and look</li>
+        <li class="inferred"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5h14M5 12h10M5 17.5h6"/></svg>Who is at risk, ranked</li>
+        <li class="inferred"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-6-5.6-6-10.2a6 6 0 0 1 12 0c0 4.6-6 10.2-6 10.2z"/><circle cx="12" cy="10.3" r="2.2"/></svg>Where each one likely is</li>
+        <li class="alert"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 16.5v-5a5.5 5.5 0 0 1 11 0v5l1.5 1.8h-14zM10 20.5a2 2 0 0 0 4 0"/></svg>Who should go and look</li>
       </ul>
     </div>
   </div>
@@ -375,10 +412,42 @@ body.presenter .pnav{display:flex}
 <section class="slide" data-beat="How Tracer works" data-who="Daniel" data-start="3:30" data-end="4:15">
   <h2 class="t-h2">Silence is evidence.</h2>
   <p class="t-lead">Every 5 minutes, for every specimen not yet received, Tracer asks:</p>
-  <ol class="qs t-step" aria-label="Every 5 minutes, for every specimen not yet received">
-    <li>How unusual is this much silence, for this kind of specimen?</li>
-    <li>Where is it most likely to be: on the unit, in the tube, at the station?</li>
-    <li>Would an alert now still leave time to act before its window closes?</li>
+  <ol class="qs3" aria-label="Every 5 minutes, for every specimen not yet received">
+    <li>
+      <svg class="diagram q-art" viewBox="0 0 260 112" aria-hidden="true">
+        <path class="usual" d="M30 80 C 46 80, 52 24, 72 24 C 96 24, 112 70, 164 79 L 164 80 Z"/>
+        <line class="silent" x1="22" y1="80" x2="212" y2="80" stroke-width="4" stroke-dasharray="1 9" stroke-linecap="round"/>
+        <circle class="stamp" cx="12" cy="80" r="8"/>
+        <circle class="now" cx="222" cy="80" r="9"/>
+        <text class="lab-dim" x="84" y="106" text-anchor="middle" font-size="20">usual arrival</text>
+        <text class="lab-infer" x="222" y="58" text-anchor="middle" font-size="20">now</text>
+      </svg>
+      <p>How unusual is this silence?</p>
+    </li>
+    <li>
+      <svg class="diagram q-art" viewBox="0 0 260 112" aria-hidden="true">
+        <line class="axis" x1="40" y1="54" x2="220" y2="54"/>
+        <circle class="place" cx="40" cy="54" r="11"/>
+        <circle class="place" cx="130" cy="54" r="8.6"/>
+        <circle class="place" cx="220" cy="54" r="16"/>
+        <text class="lab-dim" x="40" y="106" text-anchor="middle" font-size="20">unit</text>
+        <text class="lab-dim" x="130" y="106" text-anchor="middle" font-size="20">tube</text>
+        <text class="lab-dim" x="220" y="106" text-anchor="middle" font-size="20">station</text>
+      </svg>
+      <p>Where is it most likely?</p>
+    </li>
+    <li>
+      <svg class="diagram q-art" viewBox="0 0 260 112" aria-hidden="true">
+        <line class="axis" x1="10" y1="66" x2="242" y2="66"/>
+        <rect class="time-left" x="70" y="58" width="164" height="16" rx="3"/>
+        <circle class="alert" cx="62" cy="66" r="9"/>
+        <line class="close" x1="242" y1="46" x2="242" y2="86"/>
+        <text class="lab-dim" x="152" y="42" text-anchor="middle" font-size="20">time left to act</text>
+        <text class="lab-dim" x="62" y="106" text-anchor="middle" font-size="20">alert</text>
+        <text class="lab-dim" x="246" y="106" text-anchor="end" font-size="20">window closes</text>
+      </svg>
+      <p>Is there still time to act?</p>
+    </li>
   </ol>
   <p class="then t-lead">Then an alert, sent to the role that can check that place.</p>
   <aside class="notes-src"><p class="who">Daniel</p><p>So how does it know? Silence is evidence. Under the hood, Tracer asks three questions. How unusual is this much silence, for this kind of specimen? Where is it most likely to be right now: still on the unit, in the tube, or sitting at the tube station? And if we alert now, is there still time to act before its window closes? <em>[Switch to the 3D bench.]</em> This is a tube bench built from the same model. The light along the tube is what Tracer infers. <em>[Press T to show the truth.]</em> And this carrier is where the specimen really was. It's a small model you can read, not a black box.</p><p><em>[About 100 words.]</em></p></aside>
@@ -451,7 +520,33 @@ body.presenter .pnav{display:flex}
 </section>
 
 <!-- 10 -->
-<section class="slide" data-beat="Limits and next steps" data-who="Karissa" data-start="12:45" data-end="13:30">
+<section class="slide" data-beat="How we built it" data-who="Karissa, then Daniel" data-start="12:45" data-end="13:30">
+  <h2 class="t-h3">How we built and tested Tracer.</h2>
+  <svg class="diagram pipe" viewBox="0 0 860 330" role="img" aria-label="The data: code draws 12,000 specimen briefs with planted faults, Claude writes each scan trail and its hidden true path, and a validator with nine checks keeps 11,967 and freezes them, for 2.16 dollars. The model: it learns trip times, stalls and losses from 24 runs, is tested on 6 runs it never saw, with 2,378 specimens and 100 missed windows, and its numbers go to the demo. The hidden truth goes only to the test.">
+    <defs><marker id="pipe-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0 0L10 5L0 10z"/></marker></defs>
+    <text class="lab-dim" x="0" y="18" font-size="20">The data</text>
+    <text class="lab-dim" x="0" y="198" font-size="20">The model</text>
+    <g class="node data"><rect x="0" y="30" width="260" height="100" rx="8"/><rect class="tick" x="0" y="30" width="260" height="5" rx="2"/><text class="step" x="244" y="120" text-anchor="end" font-size="20">1</text><text class="lab-ink" x="16" y="68" font-size="24">Briefs drawn by code</text><text class="lab-dim" x="16" y="96" font-size="20">12,000 specimens with</text><text class="lab-dim" x="16" y="120" font-size="20">planted faults</text></g>
+    <g class="node data"><rect x="300" y="30" width="260" height="100" rx="8"/><rect class="tick" x="300" y="30" width="260" height="5" rx="2"/><text class="step" x="544" y="120" text-anchor="end" font-size="20">2</text><text class="lab-ink" x="316" y="68" font-size="24">Claude writes scans</text><text class="lab-dim" x="316" y="96" font-size="20">each trail, plus its</text><text class="lab-dim" x="316" y="120" font-size="20">hidden true path</text></g>
+    <g class="node data"><rect x="600" y="30" width="260" height="100" rx="8"/><rect class="tick" x="600" y="30" width="260" height="5" rx="2"/><text class="step" x="844" y="120" text-anchor="end" font-size="20">3</text><text class="lab-ink" x="616" y="68" font-size="24">A validator checks</text><text class="lab-dim" x="616" y="96" font-size="20">nine checks: 11,967 kept</text><text class="lab-dim" x="616" y="120" font-size="20">frozen; $2.16 in all</text></g>
+    <g class="node model"><rect x="600" y="210" width="260" height="100" rx="8"/><rect class="tick" x="600" y="210" width="260" height="5" rx="2"/><text class="step" x="844" y="300" text-anchor="end" font-size="20">4</text><text class="lab-ink" x="616" y="248" font-size="24">The model learns</text><text class="lab-dim" x="616" y="276" font-size="20">trip times, stalls and</text><text class="lab-dim" x="616" y="300" font-size="20">losses, from 24 runs</text></g>
+    <g class="node model"><rect x="300" y="210" width="260" height="100" rx="8"/><rect class="tick" x="300" y="210" width="260" height="5" rx="2"/><text class="step" x="544" y="300" text-anchor="end" font-size="20">5</text><text class="lab-ink" x="316" y="248" font-size="24">Tested on 6 runs</text><text class="lab-dim" x="316" y="276" font-size="20">it never saw: 2,378</text><text class="lab-dim" x="316" y="300" font-size="20">specimens, 100 misses</text></g>
+    <g class="node model"><rect x="0" y="210" width="260" height="100" rx="8"/><rect class="tick" x="0" y="210" width="260" height="5" rx="2"/><text class="step" x="244" y="300" text-anchor="end" font-size="20">6</text><text class="lab-ink" x="16" y="248" font-size="24">The demo you used</text><text class="lab-dim" x="16" y="276" font-size="20">every number in two</text><text class="lab-dim" x="16" y="300" font-size="20">files, no server</text></g>
+    <line class="flow-line" x1="262" y1="80" x2="296" y2="80" marker-end="url(#pipe-head)"/>
+    <line class="flow-line" x1="562" y1="80" x2="596" y2="80" marker-end="url(#pipe-head)"/>
+    <line class="flow-line" x1="730" y1="132" x2="730" y2="206" marker-end="url(#pipe-head)"/>
+    <line class="flow-line" x1="598" y1="260" x2="564" y2="260" marker-end="url(#pipe-head)"/>
+    <line class="flow-line" x1="298" y1="260" x2="264" y2="260" marker-end="url(#pipe-head)"/>
+    <line class="truth" x1="430" y1="132" x2="430" y2="206" stroke-dasharray="5 6"/>
+    <text class="lab-dim" x="742" y="176" font-size="20">frozen data</text>
+    <text class="lab-dim" x="442" y="176" font-size="20">hidden truth, test only</text>
+  </svg>
+  <div class="foot"><p class="caveat">Synthetic data, no clinical review</p></div>
+  <aside class="notes-src"><p class="who">Karissa</p><p>Here's how we built it. No public data has these scans, so we wrote our own. Code draws twelve thousand specimens from assumed timings and my policy table. Claude writes each one's scans and its hidden true path, and a validator keeps the ones that pass nine checks.</p><p><em>[About 50 words.]</em></p><p class="who">Daniel</p><p>Then the model learns from twenty-four of the thirty runs: how long a normal trip takes for each kind of specimen and time of day, how often one stalls and still arrives, and how often one never does. We test it on the other six, and only that test sees the hidden truth.</p><p><em>[About 55 words.]</em></p></aside>
+</section>
+
+<!-- 11 -->
+<section class="slide" data-beat="Limits and next steps" data-who="Karissa" data-start="13:30" data-end="14:15">
   <h2 class="t-h2">What Tracer cannot tell you.</h2>
   <ul class="limits t-lead" style="color:var(--ink)">
     <li>A mislabeled or leaking specimen is invisible to it.</li>
@@ -463,8 +558,8 @@ body.presenter .pnav{display:flex}
   <aside class="notes-src"><p class="who">Karissa</p><p>Some honest limits. Tracer only watches time and place, so it can't see a mislabeled or leaking specimen. Every specimen you saw is synthetic, and there's been no clinical review of the data or the model. I wrote the policy table behind the stability windows, and ten of its forty-four rows still have no published source, so they're marked as assumptions. Tracer's lead also depends on the setting: at twice the volume, the simple window rule matches it. The real next step is to test it on a real laboratory log with receipt scans.</p><p><em>[About 95 words.]</em></p></aside>
 </section>
 
-<!-- 11 -->
-<section class="slide" data-beat="Questions" data-who="Both" data-start="13:30" data-end="16:15" data-layout="hands">
+<!-- 12 -->
+<section class="slide" data-beat="Questions" data-who="Both" data-start="14:15" data-end="17:00" data-layout="hands">
   <div class="hands">
     <div>
       <div class="qr"><img src="../demo/qr.png" alt="QR code for the Tracer demo"></div>
@@ -481,7 +576,7 @@ body.presenter .pnav{display:flex}
     </div>
   </div>
   <div class="foot"><p class="caveat">Synthetic data, no clinical review</p></div>
-  <aside class="notes-src"><p class="who">Karissa</p><p>That's Tracer. The demo stays up at this address, and everything is on GitHub: the code, the data, and how we made it. We'd love your questions.</p><p><em>[About 30 words. Then the questions below. Stop at 16:15.]</em></p></aside>
+  <aside class="notes-src"><p class="who">Karissa</p><p>That's Tracer. The demo stays up at this address, and everything is on GitHub: the code, the data, and how we made it. We'd love your questions.</p><p><em>[About 30 words. Then the questions below. Stop at 17:00.]</em></p></aside>
 </section>
 
 </main>
@@ -545,7 +640,7 @@ body.presenter .pnav{display:flex}
       li.classList.toggle("past", k < state.i);
       li.classList.toggle("now", k === state.i);
     });
-    document.getElementById("where").textContent = state.i === 0 ? clock(TOTAL) + " in all" : slides[state.i].dataset.beat;
+    document.getElementById("where").textContent = state.i === 0 ? "" : slides[state.i].dataset.beat;
   }
 
   function show(i, quiet) {
@@ -665,6 +760,13 @@ body.presenter .pnav{display:flex}
   document.getElementById("p-prev").addEventListener("click", prev);
   document.getElementById("p-next").addEventListener("click", next);
   document.getElementById("p-clock").addEventListener("click", toggleClock);
+  /* The controls and the pointer show while the mouse moves and hide 2 seconds after it rests, so neither sits on a slide. */
+  var idle = null;
+  document.addEventListener("mousemove", function () {
+    document.body.classList.add("pointer");
+    clearTimeout(idle);
+    idle = setTimeout(function () { document.body.classList.remove("pointer"); }, 2000);
+  });
   window.addEventListener("hashchange", function () { show(fromHash()); });
   window.addEventListener("resize", function () { fit(slides[state.i]); });
   /* The slides and the presenter window send the slide and the clock; the script page sends only the clock. */
