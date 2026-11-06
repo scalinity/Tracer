@@ -8,8 +8,8 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='5' fill='none' stroke='%2363C4D3' stroke-width='2'/%3E%3C/svg%3E">
 <style>
 /* The demo page's colour grammar: cyan is observed (scans, the clock), violet is inferred (risk, places, the
-   silent interval), amber is an alert, red is the window closing. Dark is the default whatever the system
-   setting; L switches to light. Keys: arrows, space, F, P, N, S, L, 0 to 9.
+   silent interval), amber is an alert, red is the window closing. The deck stays dark whatever the system
+   setting. Keys: arrows, space, F, P, N, S, 0 to 9.
    Every size on a slide is a multiple of --u, and the type follows one scale (2, 2.33, 2.67, 3, 4, 6, 10 u),
    so nothing projected is smaller than 2u: 26 px on a 1280 by 800 screen, 38 px at 1920 by 1080. */
 :root{
@@ -26,16 +26,6 @@
   --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
   --ease-out:cubic-bezier(.22,1,.36,1); --ease-panel:cubic-bezier(.32,.72,0,1); --ease-in:cubic-bezier(.55,0,.9,.35);
   --u:min(1vw,1.78vh);
-}
-:root[data-theme="light"]{
-  color-scheme: light;
-  --canvas:#F4F7F6; --panel:#FFFFFF; --raised:#ECF2F0;
-  --hair:#CFDAD7; --hair-soft:#E2EAE8;
-  --ink:#14201D; --ink-dim:#3D4D49; --ink-mute:#5B6C68;
-  --observed:#0F6E7C; --infer:#5543BF; --warn:#8F5A06; --alarm:#B0402B; --ok:#2B7048;
-  --inf-wash:rgba(85,67,191,.11);
-  --bar-base:#6F827E;
-  --daniel:#0F6E7C; --karissa:#A3407A;
 }
 *{box-sizing:border-box}
 html,body{height:100%}
@@ -290,7 +280,6 @@ body.presenter .pnav{display:flex}
   <button type="button" id="b-next" aria-label="Next slide">→</button>
   <button type="button" id="b-notes">Notes</button>
   <button type="button" id="b-presenter">Presenter</button>
-  <button type="button" id="b-theme">Light or dark</button>
 </div>
 <p class="count sr" id="count" aria-live="polite"></p>
 <nav class="rail" aria-hidden="true"><ol class="track" id="track"></ol><p class="where" id="where"></p></nav>
@@ -458,7 +447,7 @@ body.presenter .pnav{display:flex}
 <section class="slide" data-beat="Board and timeline" data-who="Daniel, then Karissa" data-start="4:15" data-end="7:15" data-hands="1" data-layout="hands">
   <div class="hands">
     <div>
-      <div class="qr"><img src="../demo/qr.png" alt="QR code for the Tracer demo"></div>
+      <div class="qr"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAlAAAAJQAQAAAABpmWfoAAAD4UlEQVR4nO2dgW6rMBRDidX//+VMhbYkBWY7agXvzUdaR8EcUZCuQghQ6vQp8DHTFJUOjCwhKh0YWUJUOjCyhKh0YGQJUenAyBKi0oGRJUSlAyNLiEoHRpYQlQ6MLCEqHRhZQlQ6MLKEqHTwv6tuz4nSza7z9+VznXeUvfIPRFQy0KOMqHRgZP+66nZUj54V6/7tfcm0W7uu+QMRlQz0KCMqHRjZv666tV+W2tPWoqU29fVrP3vVH4ioZKBHGVHpwMj+ddXtaMG9Vi01qTTfS1ehvrZViEoGepQRlQ6MLCGqD9Sr6XWm1/Zi1V9U2e06MLKEqHRgZAlRnd++qm8L75Vq+ZvmttXaf7VXuXIEdWBkCVHpwMgSojq7XpXDarX2Y9XuHPFrW4WoZKBHGVHpwMgSohqoV3WzaDvCoR5m72S368DIEqLSgZElRHXKvirP2vOsRmsbav2/N3fajHbIEdSBkSVEpQMjS4jq3PPBOn+2/VXr/L5C1df3vgWWI6gDI0uISgdGlhDV2ePba9PG2lal8pjzXLa2y76wVYhKBnqUEZUOjCwhqoHzwTvt+d86tfaz13nuWrv6udntOjCyhKh0YGQJUV1jPEPpequ2lLc7ctZ6lyOoAyNLiEoHRpYQ1XX621fe73qur7kraV/5YGCdA6LSgZElRHVuvZqa+5v3ntBQX/3wbc9V25OVI6gDI0uISgdGlhDVFfrbp+bq4Fqd9nre69uVwxxBB1jpX4lKB0aWENX54xnqPNW2q9oxWFPX2mrX+/hWISoZ6FFGVDowsoSoBvuvymO678E67r+quT44CEZX3BKVDowsIaorjBet8+f7CPZ+qmzGOXx8qxCVDPQoIyodGFlCVMPPkynz5/EY99K1qvpRD9ntOjCyhKh0YGQJUZ09nuFO32Zqe96ngye65/rgCBhaa5eodGBkCVGdPZ6h53jMaH0tb//nCDrASv9KVDowsoSozh7P0NI+k2FvXEPtWl4LOYI6MLKEqHRgZAlRXe/9OKW5x7k8Mv0TRtN/NQYG19shKh0YWUJU598/WDZPltne6Tx1raxcHxwDg+vtEJUOjCwhqmu9H6duntFXd97q9aWtQlQy0KOMqHRgZAlRfeT9OPU11Y5lmHaefLWQ3a4DI0uISgdGlhDV9d6PU7p3TkzN2yb23lefI6gDI0uISgdGlhDVtd6PUx69U30Nq5s3euX+wREwtNYuUenAyBKiutb4Kx8MrHNAVDowsoSodGBkCVHpwMgSotKBkSVEpQMjS4hKB0aWEJUOjCwhKh0YWUJUOjCyhKh0YGQJUenAyBKi0oGR/SdVP8gFtr8q5MJBAAAAAElFTkSuQmCC" alt="QR code for the Tracer demo"></div>
     </div>
     <div class="hands-text">
       <p class="lead-in">Your turn, for about 3 minutes</p>
@@ -480,7 +469,7 @@ body.presenter .pnav{display:flex}
 <section class="slide" data-beat="Beat Tracer" data-who="Daniel, then Karissa" data-start="7:15" data-end="11:45" data-hands="1" data-layout="hands">
   <div class="hands">
     <div>
-      <div class="qr"><img src="qr-beat.png" alt="QR code for Beat Tracer with the room's shared rounds"></div>
+      <div class="qr"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAApAAAAKQAQAAAAAAznf9AAADSUlEQVR4nO3d0Y7jIAyFYbPq+78ye9Fx7AOkK6RBLM1vaTptk36CGwtiQkq1344/vy5CQkJCQkJCQkJCQkJCQkJCQkJCPpJ8+ZsiX9f0TbVy/eVvRr9Z1EpISEjI/eQr3kblp1yf33mxXv/fR8t1bvubRa2EhISE3E++8ofIk5H/fFyZx5iRSfU3y1oJCQkJuZ983R+qV06saURpg5m4xhkdh4SEhJyMD/my/PzV611+vV+3eUbHISEhISdD8qXmQB9Hxtgyaj715jdmp3QcEhIScjJSvuzn2HHNUmfkfmw8Lz+j45CQkJCTUe7m1ZEJva4Tq4g+30N5RschISEhJ6P0c22zXAH3+Xeui7frMamPQ0JCPoC85uNRCc8V8Jwt9XOswIy60LJWQkJCQu4nb8aXlio77aizPVpN6+VndBwSEhJyMqTeE+PGYqMVl8XqII+2NZ8zOg4JCQk5Gc183EzvhrSfDFktrl7GkX6+vqiVkJCQkPvJNB/3iKpOZNH72o9ZzrCLWgkJCQm5n5R8qTsQ9e/iPH2na4zO6DgkJCTkZAzm47nyPV5zWWT23q5lP6PjkJCQkJMh+1/q7Drv4fb+Pq5i6nhUM+oZHYeEhIScjGY+bjKebMeW9+uNKvkSEhLy28lm/WVtRpdtnad241Az1l9CQkI+gix6XTKPFHV0qftr6Aoi/25ZKyEhISH3k8P1RP2o0s9pr2b2u6uf0nFISEjIyZDn98T4UtcQ5ZXr7dlxpznjS0hIyK8mm/3V8+4Zea/g9p4erZyz/hISEvIBZPc8Cq3l6PVLv6t8tIZ9aSshISEh95NFr0228/D+bnI/d7RX5rJWQkJCQu4nu/0vPfo7yP1Vnz2en7W7rJWQkJCQ+0m5vyeiWq7n6FPO4vO4cn5GxyEhISEnQ+rjHrnmE5mzdGsuR1cvT+k4JCQk5GRIvadfTRl3kevqdc2erL+EhIR8ANnVx3P47sC1m4PnnYvY/xISEvIR5Id82T5v3K9m+hy93zd4WSshISEh95OSL/uZeP+sM5+J1/S6vJWQkJCQ+0l53lmOfKVydK+PVsipj0NCQn49Weq/z5mMMzoOCQkJCQkJCQkJCQkJCQkJCQkJ+d+TfwEyPQJB4jQ0BwAAAABJRU5ErkJggg==" alt="QR code for Beat Tracer with the room's shared rounds"></div>
       <p class="t-cap qr-note">Three rounds. Everyone who scans this code plays the same ones, taken from held-out test runs.</p>
     </div>
     <div class="hands-text">
@@ -564,7 +553,7 @@ body.presenter .pnav{display:flex}
 <section class="slide" data-beat="Questions" data-who="Both" data-start="14:15" data-end="17:00" data-layout="hands">
   <div class="hands">
     <div>
-      <div class="qr"><img src="../demo/qr.png" alt="QR code for the Tracer demo"></div>
+      <div class="qr"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAlAAAAJQAQAAAABpmWfoAAAD4UlEQVR4nO2dgW6rMBRDidX//+VMhbYkBWY7agXvzUdaR8EcUZCuQghQ6vQp8DHTFJUOjCwhKh0YWUJUOjCyhKh0YGQJUenAyBKi0oGRJUSlAyNLiEoHRpYQlQ6MLCEqHRhZQlQ6MLKEqHTwv6tuz4nSza7z9+VznXeUvfIPRFQy0KOMqHRgZP+66nZUj54V6/7tfcm0W7uu+QMRlQz0KCMqHRjZv666tV+W2tPWoqU29fVrP3vVH4ioZKBHGVHpwMj+ddXtaMG9Vi01qTTfS1ehvrZViEoGepQRlQ6MLCGqD9Sr6XWm1/Zi1V9U2e06MLKEqHRgZAlRnd++qm8L75Vq+ZvmttXaf7VXuXIEdWBkCVHpwMgSojq7XpXDarX2Y9XuHPFrW4WoZKBHGVHpwMgSohqoV3WzaDvCoR5m72S368DIEqLSgZElRHXKvirP2vOsRmsbav2/N3fajHbIEdSBkSVEpQMjS4jq3PPBOn+2/VXr/L5C1df3vgWWI6gDI0uISgdGlhDV2ePba9PG2lal8pjzXLa2y76wVYhKBnqUEZUOjCwhqoHzwTvt+d86tfaz13nuWrv6udntOjCyhKh0YGQJUV1jPEPpequ2lLc7ctZ6lyOoAyNLiEoHRpYQ1XX621fe73qur7kraV/5YGCdA6LSgZElRHVuvZqa+5v3ntBQX/3wbc9V25OVI6gDI0uISgdGlhDVFfrbp+bq4Fqd9nre69uVwxxBB1jpX4lKB0aWENX54xnqPNW2q9oxWFPX2mrX+/hWISoZ6FFGVDowsoSoBvuvymO678E67r+quT44CEZX3BKVDowsIaorjBet8+f7CPZ+qmzGOXx8qxCVDPQoIyodGFlCVMPPkynz5/EY99K1qvpRD9ntOjCyhKh0YGQJUZ09nuFO32Zqe96ngye65/rgCBhaa5eodGBkCVGdPZ6h53jMaH0tb//nCDrASv9KVDowsoSozh7P0NI+k2FvXEPtWl4LOYI6MLKEqHRgZAlRXe/9OKW5x7k8Mv0TRtN/NQYG19shKh0YWUJU598/WDZPltne6Tx1raxcHxwDg+vtEJUOjCwhqmu9H6duntFXd97q9aWtQlQy0KOMqHRgZAlRfeT9OPU11Y5lmHaefLWQ3a4DI0uISgdGlhDV9d6PU7p3TkzN2yb23lefI6gDI0uISgdGlhDVtd6PUx69U30Nq5s3euX+wREwtNYuUenAyBKiutb4Kx8MrHNAVDowsoSodGBkCVHpwMgSotKBkSVEpQMjS4hKB0aWEJUOjCwhKh0YWUJUOjCyhKh0YGQJUenAyBKi0oGR/SdVP8gFtr8q5MJBAAAAAElFTkSuQmCC" alt="QR code for the Tracer demo"></div>
     </div>
     <div class="hands-text">
       <p class="lead-in">Thank you</p>
@@ -721,11 +710,6 @@ body.presenter .pnav{display:flex}
   function next() { show(state.i + 1); }
   function prev() { show(state.i - 1); }
 
-  function toggleTheme() {
-    var root = document.documentElement;
-    root.setAttribute("data-theme", root.getAttribute("data-theme") !== "light" ? "light" : "dark");
-  }
-
   function fullscreen() {
     if (document.fullscreenElement) document.exitFullscreen();
     else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
@@ -747,7 +731,6 @@ body.presenter .pnav{display:flex}
     else if (k === "s" || k === "S") toggleClock();
     else if (k === "f" || k === "F") fullscreen();
     else if (k === "p" || k === "P") presenter();
-    else if (k === "l" || k === "L") toggleTheme();
   });
   document.getElementById("deck").addEventListener("click", function (e) {
     if (e.target.closest("a,button")) return;
@@ -758,7 +741,6 @@ body.presenter .pnav{display:flex}
   document.getElementById("b-next").addEventListener("click", next);
   document.getElementById("b-notes").addEventListener("click", function () { document.body.classList.toggle("shownotes"); });
   document.getElementById("b-presenter").addEventListener("click", presenter);
-  document.getElementById("b-theme").addEventListener("click", toggleTheme);
   document.getElementById("p-prev").addEventListener("click", prev);
   document.getElementById("p-next").addEventListener("click", next);
   document.getElementById("p-clock").addEventListener("click", toggleClock);

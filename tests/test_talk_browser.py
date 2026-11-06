@@ -3,7 +3,7 @@
 Loads the deck in headless Chrome at a 1920 by 1080 projector and a 1280 by 800 laptop. On every slide nothing
 runs into the footer, the type is not shrunk to fit, nothing projected is too small to read from the back of a
 room, and the slides that show the demo or its numbers say on screen that the data is synthetic. Then it presses
-the keys the presenter uses (L, N, S, P and the arrows), opens the script page from the presenter window and checks
+the keys the presenter uses (N, S, P and the arrows), opens the script page from the presenter window and checks
 that the three share one talk clock, and opens the script page on one speaker's lines at phone width.
 Needs node, Playwright (from visuals/exhibit-3d/node_modules) and Google Chrome, and is skipped without them.
 """
@@ -114,6 +114,7 @@ const { chromium } = require(PLAYWRIGHT);
   watch(page, errors);
   await page.goto(BASE + "/talk/index.html#0", { waitUntil: "load" });
   const k = out.keys;
+  k.themeButtonCount = await page.locator("#b-theme").count();
   k.themeAtLoad = await page.evaluate(() => document.documentElement.getAttribute("data-theme"));
   await page.keyboard.press("l");
   k.themeAfterL = await page.evaluate(() => document.documentElement.getAttribute("data-theme"));
@@ -289,7 +290,8 @@ def test_the_presenter_keys_work(browser_result):
     k = browser_result["keys"]
     assert k["errors"] == [], k["errors"]
     assert k["themeAtLoad"] == "dark", "the deck must open dark even when the system setting is light"
-    assert (k["themeAfterL"], k["themeAfterLL"]) == ("light", "dark"), "L must switch the theme on its first press"
+    assert k["themeButtonCount"] == 0, "the deck has no theme switch"
+    assert (k["themeAfterL"], k["themeAfterLL"]) == ("dark", "dark"), "the deck stays dark"
     assert k["notesOn"] and k["notesOff"], "N must show and hide the notes"
     assert f"of {LENGTH}" in k["clock"], "S must start the talk clock"
     assert "?presenter" in k["popupUrl"], "P must open the presenter window"
