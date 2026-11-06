@@ -372,8 +372,8 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
 </header>
 <div class="block" data-who="Karissa">
 <p class="who t-label">Karissa</p>
-<p class="line">Most lab errors don't happen during testing. In one stat laboratory's audit, about sixty-two percent of errors happened before the specimen was ever analyzed. And a microbiology specimen is on a clock. Unpreserved urine at room temperature has about an hour before bacteria overgrow and the colony count stops meaning anything. Spinal fluid has to come straight to the lab, and it must not be refrigerated. When a specimen misses its window, it's often rejected and has to be collected again. For the patient, that's another needle stick or another lumbar puncture, hours of delay, and sometimes longer on broad antibiotics while the team waits for a result. And the lab has no record of where a specimen is between collection and receipt, so a missing one often isn't noticed until someone calls asking for the result.</p>
-<p class="line sd">[About 135 words.]</p>
+<p class="line">Most lab errors don't happen during testing. In one stat laboratory's audit, about sixty-two percent of errors happened before the specimen was ever analyzed. And a microbiology specimen is on a clock. Unpreserved urine at room temperature has about an hour before bacteria overgrow and the colony count stops meaning anything. Spinal fluid has to come straight to the lab, and it must not be refrigerated. When a specimen misses its window, it's often rejected and has to be collected again. For the patient, that's another needle stick or another lumbar puncture, and hours of delay. And the lab has no record of where a specimen is between collection and receipt, so a missing one often isn't noticed until someone calls asking for the result.</p>
+<p class="line sd">[About 125 words.]</p>
 </div>
 </section>
 
@@ -454,7 +454,7 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
 </header>
 <div class="block" data-who="Daniel">
 <p class="who t-label">Daniel</p>
-<p class="line">That trade is the threshold. Scroll down to Set the threshold and drag it both ways. Lower, and Tracer warns earlier but alerts on specimens that would have arrived anyway. Higher, fewer alerts, less warning. So we judge Tracer by minutes of warning at a number of alerts a shift can handle, not by accuracy. <span class="sd">[Switch to the numbers.]</span> At six alerts a shift, Tracer gave fifty-five minutes of median warning, against thirty for a simple time limit. But a rule that alerts once a set share of the window has passed gets forty-five, and with equal weights Tracer only ties it. Most of the gain comes from using the window.</p>
+<p class="line">That trade is the threshold. Scroll down to Set the threshold and drag it both ways. Lower, and Tracer warns earlier but alerts on specimens that would have arrived anyway. Higher, fewer alerts, less warning. So we judge Tracer by minutes of warning at a number of alerts a shift can handle, not by accuracy. <span class="sd">[Switch to the numbers.]</span> At six alerts a shift, Tracer gave fifty-five minutes of median warning, against thirty for a simple time limit. But a rule that alerts once a set share of the window has passed gets forty-five. With equal weights, Tracer only ties it. Most of the gain comes from using the window.</p>
 <p class="line sd">[About 105 words, over the room dragging the slider.]</p>
 </div>
 </section>
@@ -594,7 +594,7 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
 <li>The specimen for slide 5: <a class="url" href="https://scalinity.github.io/Tracer/demo/#SP-r27-000368">https://scalinity.github.io/Tracer/demo/#SP-r27-000368</a>. The address opens that specimen's timeline.</li>
 <li>Beat Tracer with the room's rounds: <a class="url" href="https://scalinity.github.io/Tracer/demo/?seed=18#beat">https://scalinity.github.io/Tracer/demo/?seed=18#beat</a>.</li>
 </ol>
-<p class="prose">Slide keys: right arrow, space or click for next; left arrow for back; <strong>F</strong> full screen; <strong>P</strong> presenter window; <strong>N</strong> notes on this screen (for rehearsal, not for the projector); <strong>S</strong> starts or resets the talk clock; the number keys 0 to 9 jump to a slide. The presenter window and the slides follow each other when both are open from the same address. From disk, use <strong>N</strong> instead.</p>
+<p class="prose">Slide keys: right arrow, space or click for next; left arrow for back; <strong>F</strong> full screen; <strong>P</strong> presenter window; <strong>N</strong> notes on this screen (for rehearsal, not for the projector); <strong>S</strong> starts or resets the talk clock; the number keys 0 to 9 jump to a slide. The presenter window and the slides follow each other when both are open from the same address. The script page shares their talk clock when it is open in the same browser too: <strong>S</strong> on the slides or the script page starts or resets it everywhere, and Pause on the script page pauses it everywhere. From disk, use <strong>N</strong> instead.</p>
 <p class="prose">The backups are the plan's: the five-minute screen recording, <code>?lite=1</code> on the demo if the 3D view is blank, the phone hotspot, and an offline copy of <code>docs/</code> on the laptop. The slides open straight from disk. The demo does not, because the browser blocks it from reading its data files there, so serve the copy first and open <a class="url" href="http://localhost:8000/demo/">http://localhost:8000/demo/</a>:</p>
 <pre class="code"><code data-lang="sh">cd docs &amp;&amp; python3 -m http.server 8000</code></pre>
 </section>
@@ -615,6 +615,20 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
              start: secs(el.dataset.start), end: secs(el.dataset.end) };
   });
   var clock = { acc: 0, since: null };
+  /* The slides, the presenter window and this page share one clock over the "tracer-talk-2" channel when they are
+     open in the same browser from the same address. This page sends only the clock, never a slide number. */
+  var chan = null;
+  /* The channel's second version: pages from before the shared clock listen on "tracer-talk" and read every
+     message as a slide change, so a clock-only message must never reach them. */
+  try { chan = new BroadcastChannel("tracer-talk-2"); } catch (err) { chan = null; }
+  function share() { if (chan) chan.postMessage({ clock: { acc: clock.acc, since: clock.since } }); }
+  /* A clock from another window is taken only when it is well formed: banked milliseconds that are finite and not
+     negative, and a start that is a finite timestamp or null. Anything else leaves this window as it was. */
+  function validClock(c) {
+    if (!c || typeof c !== "object" || typeof c.acc !== "number" || !isFinite(c.acc) || c.acc < 0) return null;
+    if (c.since !== null && (typeof c.since !== "number" || !isFinite(c.since))) return null;
+    return { acc: c.acc, since: c.since };
+  }
   var follow = true, current = -1;
   var $ = function (id) { return document.getElementById(id); };
 
@@ -667,8 +681,9 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
     if (clock.since) { clock.acc += Date.now() - clock.since; clock.since = null; }
     else clock.since = Date.now();
     update();
+    share();
   }
-  function reset() { clock.acc = 0; clock.since = null; update(); }
+  function reset() { clock.acc = 0; clock.since = null; update(); share(); }
 
   function setFilter(f, write) {
     root.setAttribute("data-filter", f);
@@ -740,6 +755,21 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
   setFilter(NAMES[asked] ? asked : "both", false);
   measure();
   setInterval(update, 250);
+  /* Take the clock from any slides already open; answer a window that opens later only if this clock runs, so a
+     page opened mid-talk never resets it. */
+  if (chan) {
+    chan.onmessage = function (m) {
+      var d = m.data;
+      if (!d || typeof d !== "object") return;
+      if (d.ask) { if (started()) share(); return; }
+      var c = validClock(d.clock);
+      if (!c) return;
+      clock.acc = c.acc;
+      clock.since = c.since;
+      update();
+    };
+    chan.postMessage({ ask: true });
+  }
 })();
 </script>
 </body>

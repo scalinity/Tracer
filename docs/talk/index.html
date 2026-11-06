@@ -182,7 +182,7 @@ body.shownotes .notes{display:block}
 .nhead .clk{width:100%;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;color:var(--ink-dim)}
 .nhead .clk b{font:500 22px/1 var(--sans);font-variant-numeric:tabular-nums;color:var(--ink)}
 .nhead .clk.idle{color:var(--ink-mute)}
-.nhead .late{color:var(--alarm)} .nhead .early{color:var(--ok)}
+.nhead .late{color:var(--alarm)} .nhead .early{color:var(--ok)} .nhead .paused{color:var(--warn)}
 .nbody .say{border-left:3px solid var(--ink-mute);padding:2px 0 2px 16px;margin:0 0 14px}
 .nbody .say[data-who="Daniel"]{border-color:var(--daniel)} .nbody .say[data-who="Karissa"]{border-color:var(--karissa)}
 .nbody p{margin:0 0 8px;max-width:68ch;font-family:var(--serif);font-size:1.12em;line-height:1.55}
@@ -280,7 +280,7 @@ body.presenter .pnav{display:flex}
       <p class="t-cap">Spinal fluid must not be refrigerated. IDSA and ASM 2018.</p>
     </div>
   </div>
-  <aside class="notes-src"><p class="who">Karissa</p><p>Most lab errors don't happen during testing. In one stat laboratory's audit, about sixty-two percent of errors happened before the specimen was ever analyzed. And a microbiology specimen is on a clock. Unpreserved urine at room temperature has about an hour before bacteria overgrow and the colony count stops meaning anything. Spinal fluid has to come straight to the lab, and it must not be refrigerated. When a specimen misses its window, it's often rejected and has to be collected again. For the patient, that's another needle stick or another lumbar puncture, hours of delay, and sometimes longer on broad antibiotics while the team waits for a result. And the lab has no record of where a specimen is between collection and receipt, so a missing one often isn't noticed until someone calls asking for the result.</p><p><em>[About 135 words.]</em></p></aside>
+  <aside class="notes-src"><p class="who">Karissa</p><p>Most lab errors don't happen during testing. In one stat laboratory's audit, about sixty-two percent of errors happened before the specimen was ever analyzed. And a microbiology specimen is on a clock. Unpreserved urine at room temperature has about an hour before bacteria overgrow and the colony count stops meaning anything. Spinal fluid has to come straight to the lab, and it must not be refrigerated. When a specimen misses its window, it's often rejected and has to be collected again. For the patient, that's another needle stick or another lumbar puncture, and hours of delay. And the lab has no record of where a specimen is between collection and receipt, so a missing one often isn't noticed until someone calls asking for the result.</p><p><em>[About 125 words.]</em></p></aside>
 </section>
 
 <!-- 3 -->
@@ -378,7 +378,7 @@ body.presenter .pnav{display:flex}
   </div>
   <p class="t-cap" style="max-width:96ch">Using the window adds 15 minutes, and weighting the tiers 3, 2, 1 adds 10. Median warning over all 100 breaches, at 6 alerts per 8-hour shift, on 6 held-out runs (2,378 specimens). The data and the model share our assumptions, so these are best-case figures.</p>
   <div class="foot"><p class="caveat">Synthetic data, no clinical review</p></div>
-  <aside class="notes-src"><p class="who">Daniel</p><p>That trade is the threshold. Scroll down to Set the threshold and drag it both ways. Lower, and Tracer warns earlier but alerts on specimens that would have arrived anyway. Higher, fewer alerts, less warning. So we judge Tracer by minutes of warning at a number of alerts a shift can handle, not by accuracy. <em>[Switch to the numbers.]</em> At six alerts a shift, Tracer gave fifty-five minutes of median warning, against thirty for a simple time limit. But a rule that alerts once a set share of the window has passed gets forty-five, and with equal weights Tracer only ties it. Most of the gain comes from using the window.</p><p><em>[About 105 words, over the room dragging the slider.]</em></p></aside>
+  <aside class="notes-src"><p class="who">Daniel</p><p>That trade is the threshold. Scroll down to Set the threshold and drag it both ways. Lower, and Tracer warns earlier but alerts on specimens that would have arrived anyway. Higher, fewer alerts, less warning. So we judge Tracer by minutes of warning at a number of alerts a shift can handle, not by accuracy. <em>[Switch to the numbers.]</em> At six alerts a shift, Tracer gave fifty-five minutes of median warning, against thirty for a simple time limit. But a rule that alerts once a set share of the window has passed gets forty-five. With equal weights, Tracer only ties it. Most of the gain comes from using the window.</p><p><em>[About 105 words, over the room dragging the slider.]</em></p></aside>
 </section>
 
 <!-- 8 -->
@@ -429,13 +429,29 @@ body.presenter .pnav{display:flex}
   "use strict";
   var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
   var PRESENTER = /[?&]presenter(=1)?(&|#|$)/.test(location.search);
-  var state = { i: 0, start: null };
+  var state = { i: 0, clock: { acc: 0, since: null }, clockKnown: false };
   var chan = null;
-  try { chan = new BroadcastChannel("tracer-talk"); } catch (e) { chan = null; }
+  /* The channel's second version: pages from before the shared clock listen on "tracer-talk" and read every
+     message as a slide change, so a clock-only message must never reach them. */
+  try { chan = new BroadcastChannel("tracer-talk-2"); } catch (e) { chan = null; }
 
   function secs(t) { if (!t) return null; var p = t.split(":"); return +p[0] * 60 + +p[1]; }
   function clock(s) { s = Math.max(0, Math.floor(s)); return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2); }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  /* One talk clock for every window on the "tracer-talk-2" channel: the slides, the presenter window and the script
+     page. It is the time banked by pauses (acc, in ms) plus the moment it last started running (since). */
+  function elapsed() { return (state.clock.acc + (state.clock.since ? Date.now() - state.clock.since : 0)) / 1000; }
+  function started() { return state.clock.since !== null || state.clock.acc > 0; }
+  /* The clock goes out only once this window knows it, from S here or from another window, so a window that has
+     just opened never sends its blank clock and resets a running talk. */
+  function share() { if (chan) chan.postMessage(state.clockKnown ? { i: state.i, clock: state.clock } : { i: state.i }); }
+  /* A clock from another window is taken only when it is well formed: banked milliseconds that are finite and not
+     negative, and a start that is a finite timestamp or null. Anything else leaves this window as it was. */
+  function validClock(c) {
+    if (!c || typeof c !== "object" || typeof c.acc !== "number" || !isFinite(c.acc) || c.acc < 0) return null;
+    if (c.since !== null && (typeof c.since !== "number" || !isFinite(c.since))) return null;
+    return { acc: c.acc, since: c.since };
+  }
   function speakers(s) { return esc(s).replace(/Daniel|Karissa/g, function (n) { return '<span class="sp-' + n.toLowerCase() + '">' + n + "</span>"; }); }
 
   function fromHash() {
@@ -475,7 +491,7 @@ body.presenter .pnav{display:flex}
     updateRail();
     fit(slides[state.i]);
     renderNotes();
-    if (!quiet && chan) chan.postMessage({ i: state.i, start: state.start });
+    if (!quiet) share();
   }
 
   /* Shrink a slide's type until it fits the screen; every size on a slide is a multiple of --u. */
@@ -502,10 +518,10 @@ body.presenter .pnav{display:flex}
     if (d.who) head += "<span>" + speakers(d.who) + "</span>";
     if (d.start) head += "<span>planned " + d.start + " to " + d.end + "</span>";
     else head += "<span>before the clock starts</span>";
-    if (state.start) {
-      var el = (Date.now() - state.start) / 1000, end = secs(d.end), begin = secs(d.start), note = "";
-      if (end !== null && el > end) note = '<span class="late">over this beat by ' + clock(el - end) + "</span>";
-      else if (begin !== null && el < begin - 15) note = '<span class="early">ahead by ' + clock(begin - el) + "</span>";
+    if (started()) {
+      var el = elapsed(), end = secs(d.end), begin = secs(d.start), note = state.clock.since ? "" : '<span class="paused">paused</span>';
+      if (end !== null && el > end) note += '<span class="late">over this beat by ' + clock(el - end) + "</span>";
+      else if (begin !== null && el < begin - 15) note += '<span class="early">ahead by ' + clock(begin - el) + "</span>";
       head += '<span class="clk"><b>' + clock(el) + "</b><span>of 15:00</span>" + note + "</span>";
     } else {
       head += '<span class="clk idle">Clock not started. Press S to start it.</span>';
@@ -525,13 +541,14 @@ body.presenter .pnav{display:flex}
     });
     var nx = slides[state.i + 1];
     document.getElementById("nextup").textContent = nx ? "Next: " + nx.dataset.beat + (nx.dataset.who ? ", " + nx.dataset.who : "") : "Last slide. Stop at 15:00.";
-    document.getElementById("p-clock").textContent = state.start ? "Reset the clock" : "Start the clock";
+    document.getElementById("p-clock").textContent = started() ? "Reset the clock" : "Start the clock";
   }
 
   function toggleClock() {
-    state.start = state.start ? null : Date.now();
+    state.clock = started() ? { acc: 0, since: null } : { acc: 0, since: Date.now() };
+    state.clockKnown = true;
     renderNotes();
-    if (chan) chan.postMessage({ i: state.i, start: state.start });
+    share();
   }
 
   function next() { show(state.i + 1); }
@@ -580,15 +597,19 @@ body.presenter .pnav{display:flex}
   document.getElementById("p-clock").addEventListener("click", toggleClock);
   window.addEventListener("hashchange", function () { show(fromHash()); });
   window.addEventListener("resize", function () { fit(slides[state.i]); });
+  /* The slides and the presenter window send the slide and the clock; the script page sends only the clock. */
   if (chan) chan.onmessage = function (m) {
-    if (!m.data) return;
-    if (m.data.ask) { chan.postMessage({ i: state.i, start: state.start }); return; }
-    state.start = m.data.start || null;
-    show(m.data.i, true);
+    var d = m.data;
+    if (!d || typeof d !== "object") return;
+    if (d.ask) { share(); return; }
+    var c = validClock(d.clock);
+    if (c) { state.clock = c; state.clockKnown = true; }
+    if (typeof d.i === "number" && d.i % 1 === 0 && d.i >= 0 && d.i < slides.length) show(d.i, true);
+    else if (c) renderNotes();
   };
 
   if (PRESENTER) { document.body.classList.add("presenter"); document.title = "Tracer talk, presenter"; }
-  setInterval(function () { if (state.start) renderNotes(); }, 1000);
+  setInterval(function () { if (state.clock.since) renderNotes(); }, 1000);
   show(fromHash(), true);
   /* A window opened or reloaded mid-talk takes the slide and the clock from the one already open. */
   if (chan) chan.postMessage({ ask: true });

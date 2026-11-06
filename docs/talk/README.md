@@ -3,11 +3,11 @@
 The in-class presentation for CAI 5724: the run of show, the slides and every line we say, timed to 15 minutes.
 
 - **Slides:** `docs/talk/index.html`, published at <https://scalinity.github.io/Tracer/talk/>. It opens from disk too, with no server.
-- **Script:** `docs/talk/script.html`, published at <https://scalinity.github.io/Tracer/talk/script.html>. It is this file as a reading page for rehearsals and the day: a talk clock that lights the current beat, a speaker filter (`script.html?who=karissa` opens on Karissa's lines) and a print view of one speaker's lines. It opens from disk too, and the presenter window links to it.
+- **Script:** `docs/talk/script.html`, published at <https://scalinity.github.io/Tracer/talk/script.html>. It is this file as a reading page for rehearsals and the day: a talk clock that lights the current beat and runs with the slides' clock, a speaker filter (`script.html?who=karissa` opens on Karissa's lines) and a print view of one speaker's lines. It opens from disk too, and the presenter window links to it.
 - **Demo:** <https://scalinity.github.io/Tracer/demo/>. The class uses it on their phones for about 8 and a half minutes of the 15.
 - **Speakers:** Daniel Escalante and Karissa Kocourek. Karissa's lines are written out below in full, so she has nothing to prepare beyond reading them. If she cannot be there, Daniel reads them as written.
 
-Every number in the talk comes from synthetic data that had no clinical review, and the slides say so on each screen that shows one.
+The numbers from the demo and its results come from synthetic data that had no clinical review, and the slides say so on each screen that shows one. The others are not synthetic: the 61.9% comes from a published audit, the 60-minute urine window and the 44 policy rows from Karissa's policy table and the guidelines it cites, and the 80.1 hours from the public MIMIC-IV demo extract. "Where the numbers come from" below gives the source of each.
 
 ## What the course asks for
 
@@ -68,7 +68,7 @@ Open these on the presenting laptop, each in its own tab, in this order:
 4. The specimen for slide 5: <https://scalinity.github.io/Tracer/demo/#SP-r27-000368>. The address opens that specimen's timeline.
 5. Beat Tracer with the room's rounds: <https://scalinity.github.io/Tracer/demo/?seed=18#beat>.
 
-Slide keys: right arrow, space or click for next; left arrow for back; **F** full screen; **P** presenter window; **N** notes on this screen (for rehearsal, not for the projector); **S** starts or resets the talk clock; the number keys 0 to 9 jump to a slide. The presenter window and the slides follow each other when both are open from the same address. From disk, use **N** instead.
+Slide keys: right arrow, space or click for next; left arrow for back; **F** full screen; **P** presenter window; **N** notes on this screen (for rehearsal, not for the projector); **S** starts or resets the talk clock; the number keys 0 to 9 jump to a slide. The presenter window and the slides follow each other when both are open from the same address. The script page shares their talk clock when it is open in the same browser too: **S** on the slides or the script page starts or resets it everywhere, and Pause on the script page pauses it everywhere. From disk, use **N** instead.
 
 The backups are the plan's: the five-minute screen recording, `?lite=1` on the demo if the 3D view is blank, the phone hotspot, and an offline copy of `docs/` on the laptop. The slides open straight from disk. The demo does not, because the browser blocks it from reading its data files there, so serve the copy first and open <http://localhost:8000/demo/>:
 
@@ -102,9 +102,9 @@ A tube leaves the ward. Nothing beeps, and nothing gets logged. Nobody knows yet
 
 **Karissa:**
 
-Most lab errors don't happen during testing. In one stat laboratory's audit, about sixty-two percent of errors happened before the specimen was ever analyzed. And a microbiology specimen is on a clock. Unpreserved urine at room temperature has about an hour before bacteria overgrow and the colony count stops meaning anything. Spinal fluid has to come straight to the lab, and it must not be refrigerated. When a specimen misses its window, it's often rejected and has to be collected again. For the patient, that's another needle stick or another lumbar puncture, hours of delay, and sometimes longer on broad antibiotics while the team waits for a result. And the lab has no record of where a specimen is between collection and receipt, so a missing one often isn't noticed until someone calls asking for the result.
+Most lab errors don't happen during testing. In one stat laboratory's audit, about sixty-two percent of errors happened before the specimen was ever analyzed. And a microbiology specimen is on a clock. Unpreserved urine at room temperature has about an hour before bacteria overgrow and the colony count stops meaning anything. Spinal fluid has to come straight to the lab, and it must not be refrigerated. When a specimen misses its window, it's often rejected and has to be collected again. For the patient, that's another needle stick or another lumbar puncture, and hours of delay. And the lab has no record of where a specimen is between collection and receipt, so a missing one often isn't noticed until someone calls asking for the result.
 
-[About 135 words.]
+[About 125 words.]
 
 ### Slide 3 · The missing data · 1:30 to 2:00 · Daniel
 
@@ -162,7 +162,7 @@ Now you get to compete with it. Scan this second code. It gives everyone in the 
 
 **Daniel:**
 
-That trade is the threshold. Scroll down to Set the threshold and drag it both ways. Lower, and Tracer warns earlier but alerts on specimens that would have arrived anyway. Higher, fewer alerts, less warning. So we judge Tracer by minutes of warning at a number of alerts a shift can handle, not by accuracy. [Switch to the numbers.] At six alerts a shift, Tracer gave fifty-five minutes of median warning, against thirty for a simple time limit. But a rule that alerts once a set share of the window has passed gets forty-five, and with equal weights Tracer only ties it. Most of the gain comes from using the window.
+That trade is the threshold. Scroll down to Set the threshold and drag it both ways. Lower, and Tracer warns earlier but alerts on specimens that would have arrived anyway. Higher, fewer alerts, less warning. So we judge Tracer by minutes of warning at a number of alerts a shift can handle, not by accuracy. [Switch to the numbers.] At six alerts a shift, Tracer gave fifty-five minutes of median warning, against thirty for a simple time limit. But a rule that alerts once a set share of the window has passed gets forty-five. With equal weights, Tracer only ties it. Most of the gain comes from using the window.
 
 [About 105 words, over the room dragging the slider.]
 

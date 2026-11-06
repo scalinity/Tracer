@@ -3,8 +3,8 @@
 Loads the deck in headless Chrome at a 1920 by 1080 projector and a 1280 by 800 laptop. On every slide nothing
 runs into the footer, the type is not shrunk to fit, nothing projected is too small to read from the back of a
 room, and the slides that show the demo or its numbers say on screen that the data is synthetic. Then it presses
-the keys the presenter uses (L, N, S, P and the arrows), opens the script page from the presenter window, and
-opens the script page on one speaker's lines at phone width.
+the keys the presenter uses (L, N, S, P and the arrows), opens the script page from the presenter window and checks
+that the three share one talk clock, and opens the script page on one speaker's lines at phone width.
 Needs node, Playwright (from visuals/exhibit-3d/node_modules) and Google Chrome, and is skipped without them.
 """
 
@@ -54,6 +54,7 @@ const { chromium } = require(PLAYWRIGHT);
   try { browser = await chromium.launch({ channel: "chrome", headless: true }); }
   catch (e) { console.log(JSON.stringify({ skip: "Google Chrome did not start: " + String(e.message).split("\\n")[0] })); return; }
   const out = { sizes: [], keys: {}, script: {} };
+  const until = async (p, fn) => { try { await p.waitForFunction(fn, null, { timeout: 5000 }); return true; } catch (e) { return false; } };
   const watch = (page, list) => {
     page.on("pageerror", (e) => list.push(String(e)));
     page.on("console", (m) => { if (m.type() === "error") list.push(m.text()); });
@@ -141,9 +142,71 @@ const { chromium } = require(PLAYWRIGHT);
   watch(script, errors);
   await script.waitForLoadState("load");
   k.scriptTitle = await script.title();
+  // One clock: the script page opens on the clock S started, its Pause and Reset reach the slides and the
+  // presenter window, and S on the slides reaches it.
+  const link = k.clockLink = {};
+  link.scriptOpensRunning = await until(script, () => document.getElementById("b-start").textContent === "Pause");
+  await script.click("#b-start");
+  link.pauseReachesSlides = await until(page, () => /paused/.test(document.getElementById("nhead").textContent));
+  link.pauseReachesPresenter = await until(popup, () => /paused/.test(document.getElementById("nhead").textContent));
+  link.slidesStayOnTheirSlide = await page.evaluate(() => location.hash === "#1");
+  await script.click("#b-reset");
+  link.resetReachesSlides = await until(page, () => /Clock not started/.test(document.getElementById("nhead").textContent));
+  await page.keyboard.press("s");
+  link.slidesStartReachesScript = await until(script, () => document.getElementById("b-start").textContent === "Pause");
   k.mainStillOnDeck = page.url().includes("/talk/index.html");
   k.errors = errors;
   await ctx.close();
+
+  // The channel on its own, in a context of its own: a probe page listens on the old channel and plays a
+  // stranger on the new one.
+  const qctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" });
+  const deck = await qctx.newPage(), reader = await qctx.newPage(), probe = await qctx.newPage();
+  const q = out.protocol = { errors: [] };
+  watch(deck, q.errors);
+  watch(reader, q.errors);
+  await probe.goto(BASE + "/talk/qr-beat.png");
+  await probe.evaluate(() => {
+    window.old = [];
+    window.replies = [];
+    new BroadcastChannel("tracer-talk").onmessage = (m) => window.old.push(m.data);
+    window.ch = new BroadcastChannel("tracer-talk-2");
+    window.ch.onmessage = (m) => window.replies.push(m.data);
+  });
+  await deck.goto(BASE + "/talk/index.html#3", { waitUntil: "load" });
+  await reader.goto(BASE + "/talk/script.html", { waitUntil: "load" });
+  const state = async () => ({
+    hash: await deck.evaluate(() => location.hash),
+    deckClock: await deck.evaluate(() => document.getElementById("p-clock").textContent),
+    scriptClock: await reader.evaluate(() => document.getElementById("b-start").textContent),
+  });
+  const askDeck = async () => {
+    await probe.evaluate(() => { window.replies = []; window.ch.postMessage({ ask: true }); });
+    await probe.waitForFunction(() => window.replies.some((r) => r && typeof r.i === "number"));
+    return probe.evaluate(() => window.replies.filter((r) => r && typeof r.i === "number").map((r) => "clock" in r));
+  };
+  // A window that has just opened answers with its slide but not its blank clock.
+  q.freshReplyHasClock = await askDeck();
+  q.before = await state();
+  // Malformed messages change nothing and throw nothing; the ask after them returns once the deck has read them all.
+  await probe.evaluate(() => {
+    for (const msg of [{ i: 0.5 }, { i: NaN }, { i: 99 }, { i: -1 }, { i: "2" }, { clock: { acc: 1n, since: null } },
+      { clock: { acc: "5", since: null } }, { clock: { acc: -5, since: null } }, { clock: { acc: Infinity, since: null } },
+      { clock: { acc: 0, since: "now" } }, { clock: { acc: 0 } }, { clock: null }, "text", 7, null]) window.ch.postMessage(msg);
+  });
+  await askDeck();
+  q.afterMalformed = await state();
+  // A well-formed clock after them still reaches both pages.
+  await probe.evaluate(() => window.ch.postMessage({ clock: { acc: 0, since: Date.now() } }));
+  q.validAccepted = await until(reader, () => document.getElementById("b-start").textContent === "Pause")
+    && await until(deck, () => document.getElementById("p-clock").textContent === "Reset the clock");
+  // S, Pause and Reset never reach the old channel, where pages from before the shared clock listen.
+  await deck.keyboard.press("s");
+  await reader.click("#b-start");
+  await reader.click("#b-reset");
+  await askDeck();
+  q.oldChannel = await probe.evaluate(() => window.old.length);
+  await qctx.close();
 
   // The script page opened on Karissa's lines: hers in full, Daniel's down to one cue each.
   const sctx = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
@@ -234,6 +297,9 @@ def test_the_presenter_keys_work(browser_result):
     assert k["popupSpeakerBlocks"] == ["Karissa"]
     assert k["scriptLink"] == {"target": "_blank", "shown": True}
     assert k["scriptTitle"] == "Tracer talk script" and k["mainStillOnDeck"]
+    assert k["clockLink"] == {"scriptOpensRunning": True, "pauseReachesSlides": True, "pauseReachesPresenter": True,
+                              "slidesStayOnTheirSlide": True, "resetReachesSlides": True, "slidesStartReachesScript": True}, \
+        "the slides, the presenter window and the script page must share one clock"
 
 
 def test_the_script_page_opens_on_one_speakers_lines(browser_result):
@@ -243,3 +309,13 @@ def test_the_script_page_opens_on_one_speakers_lines(browser_result):
     assert s["karissaLines"] > 0 and s["karissaLinesShown"] == s["karissaLines"], s
     assert s["danielLinesShown"] == 0 and s["danielCuesShown"] == s["danielBlocks"] > 0, s
     assert s["overflow"] <= 0, "the script page scrolls sideways on a phone"
+
+
+
+def test_the_shared_clock_ignores_old_pages_bad_messages_and_blank_clocks(browser_result):
+    q = browser_result["protocol"]
+    assert q["errors"] == [], q["errors"]
+    assert q["freshReplyHasClock"] == [False], "a window that has just opened must not send its blank clock"
+    assert q["afterMalformed"] == q["before"], ("a malformed message changed a window", q)
+    assert q["validAccepted"], "a well-formed clock must still reach the slides and the script page"
+    assert q["oldChannel"] == 0, "the pages must not write to the old channel, where older pages would crash"
