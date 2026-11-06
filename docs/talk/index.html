@@ -182,7 +182,7 @@ body.shownotes .notes{display:block}
 .nhead .clk{width:100%;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;color:var(--ink-dim)}
 .nhead .clk b{font:500 22px/1 var(--sans);font-variant-numeric:tabular-nums;color:var(--ink)}
 .nhead .clk.idle{color:var(--ink-mute)}
-.nhead .late{color:var(--alarm)} .nhead .early{color:var(--ok)}
+.nhead .late{color:var(--alarm)} .nhead .early{color:var(--ok)} .nhead .paused{color:var(--warn)}
 .nbody .say{border-left:3px solid var(--ink-mute);padding:2px 0 2px 16px;margin:0 0 14px}
 .nbody .say[data-who="Daniel"]{border-color:var(--daniel)} .nbody .say[data-who="Karissa"]{border-color:var(--karissa)}
 .nbody p{margin:0 0 8px;max-width:68ch;font-family:var(--serif);font-size:1.12em;line-height:1.55}
@@ -429,13 +429,18 @@ body.presenter .pnav{display:flex}
   "use strict";
   var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
   var PRESENTER = /[?&]presenter(=1)?(&|#|$)/.test(location.search);
-  var state = { i: 0, start: null };
+  var state = { i: 0, clock: { acc: 0, since: null } };
   var chan = null;
   try { chan = new BroadcastChannel("tracer-talk"); } catch (e) { chan = null; }
 
   function secs(t) { if (!t) return null; var p = t.split(":"); return +p[0] * 60 + +p[1]; }
   function clock(s) { s = Math.max(0, Math.floor(s)); return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2); }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  /* One talk clock for every window on the "tracer-talk" channel: the slides, the presenter window and the script
+     page. It is the time banked by pauses (acc, in ms) plus the moment it last started running (since). */
+  function elapsed() { return (state.clock.acc + (state.clock.since ? Date.now() - state.clock.since : 0)) / 1000; }
+  function started() { return state.clock.since !== null || state.clock.acc > 0; }
+  function share() { if (chan) chan.postMessage({ i: state.i, clock: state.clock }); }
   function speakers(s) { return esc(s).replace(/Daniel|Karissa/g, function (n) { return '<span class="sp-' + n.toLowerCase() + '">' + n + "</span>"; }); }
 
   function fromHash() {
@@ -475,7 +480,7 @@ body.presenter .pnav{display:flex}
     updateRail();
     fit(slides[state.i]);
     renderNotes();
-    if (!quiet && chan) chan.postMessage({ i: state.i, start: state.start });
+    if (!quiet) share();
   }
 
   /* Shrink a slide's type until it fits the screen; every size on a slide is a multiple of --u. */
@@ -502,10 +507,10 @@ body.presenter .pnav{display:flex}
     if (d.who) head += "<span>" + speakers(d.who) + "</span>";
     if (d.start) head += "<span>planned " + d.start + " to " + d.end + "</span>";
     else head += "<span>before the clock starts</span>";
-    if (state.start) {
-      var el = (Date.now() - state.start) / 1000, end = secs(d.end), begin = secs(d.start), note = "";
-      if (end !== null && el > end) note = '<span class="late">over this beat by ' + clock(el - end) + "</span>";
-      else if (begin !== null && el < begin - 15) note = '<span class="early">ahead by ' + clock(begin - el) + "</span>";
+    if (started()) {
+      var el = elapsed(), end = secs(d.end), begin = secs(d.start), note = state.clock.since ? "" : '<span class="paused">paused</span>';
+      if (end !== null && el > end) note += '<span class="late">over this beat by ' + clock(el - end) + "</span>";
+      else if (begin !== null && el < begin - 15) note += '<span class="early">ahead by ' + clock(begin - el) + "</span>";
       head += '<span class="clk"><b>' + clock(el) + "</b><span>of 15:00</span>" + note + "</span>";
     } else {
       head += '<span class="clk idle">Clock not started. Press S to start it.</span>';
@@ -525,13 +530,13 @@ body.presenter .pnav{display:flex}
     });
     var nx = slides[state.i + 1];
     document.getElementById("nextup").textContent = nx ? "Next: " + nx.dataset.beat + (nx.dataset.who ? ", " + nx.dataset.who : "") : "Last slide. Stop at 15:00.";
-    document.getElementById("p-clock").textContent = state.start ? "Reset the clock" : "Start the clock";
+    document.getElementById("p-clock").textContent = started() ? "Reset the clock" : "Start the clock";
   }
 
   function toggleClock() {
-    state.start = state.start ? null : Date.now();
+    state.clock = started() ? { acc: 0, since: null } : { acc: 0, since: Date.now() };
     renderNotes();
-    if (chan) chan.postMessage({ i: state.i, start: state.start });
+    share();
   }
 
   function next() { show(state.i + 1); }
@@ -580,15 +585,17 @@ body.presenter .pnav{display:flex}
   document.getElementById("p-clock").addEventListener("click", toggleClock);
   window.addEventListener("hashchange", function () { show(fromHash()); });
   window.addEventListener("resize", function () { fit(slides[state.i]); });
+  /* The slides and the presenter window send the slide and the clock; the script page sends only the clock. */
   if (chan) chan.onmessage = function (m) {
-    if (!m.data) return;
-    if (m.data.ask) { chan.postMessage({ i: state.i, start: state.start }); return; }
-    state.start = m.data.start || null;
-    show(m.data.i, true);
+    var d = m.data;
+    if (!d) return;
+    if (d.ask) { share(); return; }
+    if (d.clock) state.clock = { acc: +d.clock.acc || 0, since: d.clock.since == null ? null : +d.clock.since };
+    if (typeof d.i === "number") show(d.i, true); else renderNotes();
   };
 
   if (PRESENTER) { document.body.classList.add("presenter"); document.title = "Tracer talk, presenter"; }
-  setInterval(function () { if (state.start) renderNotes(); }, 1000);
+  setInterval(function () { if (state.clock.since) renderNotes(); }, 1000);
   show(fromHash(), true);
   /* A window opened or reloaded mid-talk takes the slide and the clock from the one already open. */
   if (chan) chan.postMessage({ ask: true });

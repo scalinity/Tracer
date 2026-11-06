@@ -362,6 +362,11 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
              start: secs(el.dataset.start), end: secs(el.dataset.end) };
   });
   var clock = { acc: 0, since: null };
+  /* The slides, the presenter window and this page share one clock over the "tracer-talk" channel when they are
+     open in the same browser from the same address. This page sends only the clock, never a slide number. */
+  var chan = null;
+  try { chan = new BroadcastChannel("tracer-talk"); } catch (err) { chan = null; }
+  function share() { if (chan) chan.postMessage({ clock: { acc: clock.acc, since: clock.since } }); }
   var follow = true, current = -1;
   var $ = function (id) { return document.getElementById(id); };
 
@@ -414,8 +419,9 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
     if (clock.since) { clock.acc += Date.now() - clock.since; clock.since = null; }
     else clock.since = Date.now();
     update();
+    share();
   }
-  function reset() { clock.acc = 0; clock.since = null; update(); }
+  function reset() { clock.acc = 0; clock.since = null; update(); share(); }
 
   function setFilter(f, write) {
     root.setAttribute("data-filter", f);
@@ -487,6 +493,20 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
   setFilter(NAMES[asked] ? asked : "both", false);
   measure();
   setInterval(update, 250);
+  /* Take the clock from any slides already open; answer a window that opens later only if this clock runs, so a
+     page opened mid-talk never resets it. */
+  if (chan) {
+    chan.onmessage = function (m) {
+      var d = m.data;
+      if (!d) return;
+      if (d.ask) { if (started()) share(); return; }
+      if (!d.clock) return;
+      clock.acc = +d.clock.acc || 0;
+      clock.since = d.clock.since == null ? null : +d.clock.since;
+      update();
+    };
+    chan.postMessage({ ask: true });
+  }
 })();
 </script>
 </body>

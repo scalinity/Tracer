@@ -3,8 +3,8 @@
 Loads the deck in headless Chrome at a 1920 by 1080 projector and a 1280 by 800 laptop. On every slide nothing
 runs into the footer, the type is not shrunk to fit, nothing projected is too small to read from the back of a
 room, and the slides that show the demo or its numbers say on screen that the data is synthetic. Then it presses
-the keys the presenter uses (L, N, S, P and the arrows), opens the script page from the presenter window, and
-opens the script page on one speaker's lines at phone width.
+the keys the presenter uses (L, N, S, P and the arrows), opens the script page from the presenter window and checks
+that the three share one talk clock, and opens the script page on one speaker's lines at phone width.
 Needs node, Playwright (from visuals/exhibit-3d/node_modules) and Google Chrome, and is skipped without them.
 """
 
@@ -141,6 +141,19 @@ const { chromium } = require(PLAYWRIGHT);
   watch(script, errors);
   await script.waitForLoadState("load");
   k.scriptTitle = await script.title();
+  // One clock: the script page opens on the clock S started, its Pause and Reset reach the slides and the
+  // presenter window, and S on the slides reaches it.
+  const until = async (p, fn) => { try { await p.waitForFunction(fn, null, { timeout: 5000 }); return true; } catch (e) { return false; } };
+  const link = k.clockLink = {};
+  link.scriptOpensRunning = await until(script, () => document.getElementById("b-start").textContent === "Pause");
+  await script.click("#b-start");
+  link.pauseReachesSlides = await until(page, () => /paused/.test(document.getElementById("nhead").textContent));
+  link.pauseReachesPresenter = await until(popup, () => /paused/.test(document.getElementById("nhead").textContent));
+  link.slidesStayOnTheirSlide = await page.evaluate(() => location.hash === "#1");
+  await script.click("#b-reset");
+  link.resetReachesSlides = await until(page, () => /Clock not started/.test(document.getElementById("nhead").textContent));
+  await page.keyboard.press("s");
+  link.slidesStartReachesScript = await until(script, () => document.getElementById("b-start").textContent === "Pause");
   k.mainStillOnDeck = page.url().includes("/talk/index.html");
   k.errors = errors;
   await ctx.close();
@@ -234,6 +247,9 @@ def test_the_presenter_keys_work(browser_result):
     assert k["popupSpeakerBlocks"] == ["Karissa"]
     assert k["scriptLink"] == {"target": "_blank", "shown": True}
     assert k["scriptTitle"] == "Tracer talk script" and k["mainStillOnDeck"]
+    assert k["clockLink"] == {"scriptOpensRunning": True, "pauseReachesSlides": True, "pauseReachesPresenter": True,
+                              "slidesStayOnTheirSlide": True, "resetReachesSlides": True, "slidesStartReachesScript": True}, \
+        "the slides, the presenter window and the script page must share one clock"
 
 
 def test_the_script_page_opens_on_one_speakers_lines(browser_result):
