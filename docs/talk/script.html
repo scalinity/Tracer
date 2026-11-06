@@ -287,7 +287,7 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
   <div class="clock-group" role="group" aria-label="Talk clock">
     <button type="button" class="btn btn-primary t-ui" id="b-start" title="Start the clock (S)">Start</button>
     <button type="button" class="btn t-ui" id="b-reset" title="Reset the clock (S while it runs)">Reset</button>
-    <p class="clock-read" id="clock-read"><span class="t-clock"><span id="elapsed">0:00</span> <span class="of">of 16:15</span></span> <span class="beat-left t-meta" id="beat-left">Press S or Start</span></p>
+    <p class="clock-read" id="clock-read"><span class="t-clock"><span id="elapsed">0:00</span> <span class="of">of 17:00</span></span> <span class="beat-left t-meta" id="beat-left">Press S or Start</span></p>
     <button type="button" class="btn t-ui" id="b-follow" aria-pressed="true" title="Scroll to each beat as the clock reaches it">Follow</button>
   </div>
   <div class="filter t-ui" role="group" aria-label="Show lines for">
@@ -316,8 +316,9 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
 <li class="seg-item hands-on" style="--secs:180"><a class="seg" href="#beat-7" data-beat="7"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">4:15 to 7:15</span><span class="seg-dots" aria-hidden="true"><span class="dot" data-chip="Daniel"></span><span class="dot" data-chip="Karissa"></span></span><span class="seg-name">Board and timeline<span class="vh">, Daniel, then Karissa</span> <span class="seg-tag">Hands-on</span></span></a></li>
 <li class="seg-item hands-on" style="--secs:270"><a class="seg" href="#beat-8" data-beat="8"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">7:15 to 11:45</span><span class="seg-dots" aria-hidden="true"><span class="dot" data-chip="Daniel"></span><span class="dot" data-chip="Karissa"></span></span><span class="seg-name">Beat Tracer<span class="vh">, Daniel, then Karissa</span> <span class="seg-tag">Hands-on</span></span></a></li>
 <li class="seg-item hands-on" style="--secs:60"><a class="seg" href="#beat-9" data-beat="9"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">11:45 to 12:45</span><span class="seg-dots" aria-hidden="true"><span class="dot" data-chip="Daniel"></span></span><span class="seg-name">Why this design<span class="vh">, Daniel</span> <span class="seg-tag">Hands-on</span></span></a></li>
-<li class="seg-item" style="--secs:45"><a class="seg" href="#beat-10" data-beat="10"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">12:45 to 13:30</span><span class="seg-dots" aria-hidden="true"><span class="dot" data-chip="Karissa"></span></span><span class="seg-name">Limits and next steps<span class="vh">, Karissa</span></span></a></li>
-<li class="seg-item" style="--secs:165"><a class="seg" href="#beat-11" data-beat="11"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">13:30 to 16:15</span><span class="seg-dots" aria-hidden="true"><span class="dot" data-chip="Daniel"></span><span class="dot" data-chip="Karissa"></span></span><span class="seg-name">Questions<span class="vh">, Both</span></span></a></li>
+<li class="seg-item" style="--secs:45"><a class="seg" href="#beat-10" data-beat="10"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">12:45 to 13:30</span><span class="seg-dots" aria-hidden="true"><span class="dot" data-chip="Karissa"></span><span class="dot" data-chip="Daniel"></span></span><span class="seg-name">How we built it<span class="vh">, Karissa, then Daniel</span></span></a></li>
+<li class="seg-item" style="--secs:45"><a class="seg" href="#beat-11" data-beat="11"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">13:30 to 14:15</span><span class="seg-dots" aria-hidden="true"><span class="dot" data-chip="Karissa"></span></span><span class="seg-name">Limits and next steps<span class="vh">, Karissa</span></span></a></li>
+<li class="seg-item" style="--secs:165"><a class="seg" href="#beat-12" data-beat="12"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">14:15 to 17:00</span><span class="seg-dots" aria-hidden="true"><span class="dot" data-chip="Daniel"></span><span class="dot" data-chip="Karissa"></span></span><span class="seg-name">Questions<span class="vh">, Both</span></span></a></li>
   <li class="playhead" id="playhead" aria-hidden="true"></li>
   </ol>
   <ul class="rail-more">
@@ -330,7 +331,7 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
 <main class="read" id="main">
 <header class="page-head">
 <h1 class="t-title">The Tracer talk, November 18</h1>
-<p class="lede">The in-class presentation for CAI 5724: the run of show, the slides and every line we say. It runs 16:15, 1:15 over the 15-minute slot by choice, so there is time to say what Tracer is and what it is built to fix.</p>
+<p class="lede">The in-class presentation for CAI 5724: the run of show, the slides and every line we say. It runs 17:00, 2 minutes over the 15-minute slot by choice, so there is time to say what Tracer is, what it is built to fix, and how we built and tested it.</p>
 <p class="prose">Words in brackets are stage directions, not lines. The word counts assume about 130 words a minute, a classroom pace with pauses.</p>
 <p class="print-who print-only" id="print-who"></p>
 </header>
@@ -355,7 +356,7 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
 <p class="beat-meta t-meta"><span class="window">0:00 to 0:30</span> <span class="slide-no">Slide 1</span></p>
 <h2 class="beat-name t-beat" id="beat-1-name">The silent tube</h2>
 <p class="beat-who t-meta"><span class="who-list"><span class="chip" data-chip="Karissa">Karissa</span></span><span class="room">The room is: voting with hands</span></p>
-<p class="screen t-small"><span class="screen-label">On screen</span> The 3D bench, with the truth hidden. The slide behind it reads &quot;A tube leaves the ward.&quot; and holds the bench's link.</p>
+<p class="screen t-small"><span class="screen-label">On screen</span> The 3D bench, with the truth hidden. The slide behind it reads &quot;A tube leaves the ward.&quot;, draws the hand vote as a timeline marked at 15 minutes, 30 minutes and 1 hour, and holds the bench's link.</p>
 </header>
 <div class="block" data-who="Karissa">
 <p class="who t-label">Karissa</p>
@@ -430,7 +431,7 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
 <p class="beat-meta t-meta"><span class="window">3:30 to 4:15</span> <span class="slide-no">Slide 6</span></p>
 <h2 class="beat-name t-beat" id="beat-6-name">How Tracer works</h2>
 <p class="beat-who t-meta"><span class="who-list"><span class="chip" data-chip="Daniel">Daniel</span></span><span class="room">The room is: listening</span></p>
-<p class="screen t-small"><span class="screen-label">On screen</span> &quot;Silence is evidence.&quot; Three questions Tracer asks every 5 minutes about every specimen not yet received: How unusual is this much silence for this kind of specimen? Where is it most likely to be? Would an alert now still leave time to act? Then: an alert, routed to the role that can check that place. Switch to the 3D bench for the second half.</p>
+<p class="screen t-small"><span class="screen-label">On screen</span> &quot;Silence is evidence.&quot; Every 5 minutes, for every specimen not yet received, three questions, each with a picture. How unusual is this silence: a dotted silence running past where trips like it usually arrive. Where is it most likely: the unit, the tube and the station, each sized by how likely it is. Is there still time to act: the time left between an alert and the window closing. Then: an alert, routed to the role that can check that place. Switch to the 3D bench for the second half.</p>
 </header>
 <div class="block" data-who="Daniel">
 <p class="who t-label">Daniel</p>
@@ -498,7 +499,27 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
 <div class="gutter" aria-hidden="true"><span class="fill"></span></div>
 <header class="beat-head">
 <p class="beat-meta t-meta"><span class="window">12:45 to 13:30</span> <span class="slide-no">Slide 10</span></p>
-<h2 class="beat-name t-beat" id="beat-10-name">Limits and next steps</h2>
+<h2 class="beat-name t-beat" id="beat-10-name">How we built it</h2>
+<p class="beat-who t-meta"><span class="who-list"><span class="chip" data-chip="Karissa">Karissa</span>, then <span class="chip" data-chip="Daniel">Daniel</span></span><span class="room">The room is: listening</span></p>
+<p class="screen t-small"><span class="screen-label">On screen</span> &quot;How we built and tested Tracer,&quot; in two rows. The data: briefs drawn by code (12,000 specimens, faults planted on purpose), then Claude writes the scans (each trail and its hidden true path), then a validator checks them (nine checks, 11,967 kept and frozen, $2.16 in all). The model: a three-part survival model is fit on 24 runs (normal trip times by type, hour and priority; trips that run far longer but arrive; specimens that never arrive), it is tested on 6 runs it never saw (2,378 specimens, 100 missed windows), and its numbers go to the demo you used (two files, no server). The hidden truth goes only to the test, never to the model.</p>
+</header>
+<div class="block" data-who="Karissa">
+<p class="who t-label">Karissa</p>
+<p class="line">Here's how we built it. We couldn't find public data with these scans, so we wrote our own. Code draws twelve thousand specimens from assumed timings and my policy table. Claude writes each one's scans and its hidden true path, and a validator keeps the ones that pass nine checks.</p>
+<p class="line sd">[About 50 words.]</p>
+</div>
+<div class="block" data-who="Daniel">
+<p class="who t-label">Daniel</p>
+<p class="line">Then a small survival model learns from twenty-four of the thirty runs: how long a normal trip takes for each kind of specimen and time of day, how often a trip runs far longer and still arrives, and how often one never does. We test it on the other six, and only that test sees the hidden truth.</p>
+<p class="line sd">[About 60 words.]</p>
+</div>
+</section>
+
+<section class="beat" data-slide="11" id="beat-11" data-start="13:30" data-end="14:15" aria-labelledby="beat-11-name">
+<div class="gutter" aria-hidden="true"><span class="fill"></span></div>
+<header class="beat-head">
+<p class="beat-meta t-meta"><span class="window">13:30 to 14:15</span> <span class="slide-no">Slide 11</span></p>
+<h2 class="beat-name t-beat" id="beat-11-name">Limits and next steps</h2>
 <p class="beat-who t-meta"><span class="who-list"><span class="chip" data-chip="Karissa">Karissa</span></span><span class="room">The room is: listening</span></p>
 <p class="screen t-small"><span class="screen-label">On screen</span> What Tracer cannot see: a mislabeled or leaking specimen. Every specimen is synthetic, with no clinical review. 10 of the 44 policy rows are still assumed. At twice the volume, a simple window rule matches it. Next step: a real laboratory log with receipt scans.</p>
 </header>
@@ -509,18 +530,18 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
 </div>
 </section>
 
-<section class="beat" data-slide="11" id="beat-11" data-start="13:30" data-end="16:15" aria-labelledby="beat-11-name">
+<section class="beat" data-slide="12" id="beat-12" data-start="14:15" data-end="17:00" aria-labelledby="beat-12-name">
 <div class="gutter" aria-hidden="true"><span class="fill"></span></div>
 <header class="beat-head">
-<p class="beat-meta t-meta"><span class="window">13:30 to 16:15</span> <span class="slide-no">Slide 11</span></p>
-<h2 class="beat-name t-beat" id="beat-11-name">Questions</h2>
+<p class="beat-meta t-meta"><span class="window">14:15 to 17:00</span> <span class="slide-no">Slide 12</span></p>
+<h2 class="beat-name t-beat" id="beat-12-name">Questions</h2>
 <p class="beat-who t-meta"><span class="who-list"><span class="chip" data-chip="Daniel">Daniel</span> and <span class="chip" data-chip="Karissa">Karissa</span></span><span class="room">The room is: asking</span></p>
 <p class="screen t-small"><span class="screen-label">On screen</span> &quot;Questions?&quot; The demo's QR code, the demo address, the repository address, both names.</p>
 </header>
 <div class="block" data-who="Karissa">
 <p class="who t-label">Karissa</p>
 <p class="line">That's Tracer. The demo stays up at this address, and everything is on GitHub: the code, the data, and how we made it. We'd love your questions.</p>
-<p class="line sd">[About 30 words. Then the questions below. Stop at 16:15.]</p>
+<p class="line sd">[About 30 words. Then the questions below. Stop at 17:00.]</p>
 </div>
 </section>
 
@@ -579,7 +600,7 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
 
 <section class="after" id="timekeeping" aria-labelledby="timekeeping-h">
 <h2 class="t-h2" id="timekeeping-h">Timekeeping</h2>
-<p class="prose">The beats come from the run of show in <code>visuals/plan.html</code>, whose lengths are weights the plan scales to any slot; here they run at their own lengths, 16:15 in all. Hands-on time is the board, Beat Tracer and the threshold slider: 8.5 minutes, plus the discussion in the questions.</p>
+<p class="prose">The beats come from the run of show in <code>visuals/plan.html</code>, whose lengths are weights the plan scales to any slot; here they run at their own lengths, 17:00 in all. Hands-on time is the board, Beat Tracer and the threshold slider: 8.5 minutes, plus the discussion in the questions.</p>
 <div class="table-wrap"><table>
 <thead><tr><th scope="col">Clock</th><th scope="col">Slide</th><th scope="col">Beat</th><th scope="col">Who</th><th scope="col">On the screen</th><th scope="col">The room is</th></tr></thead>
 <tbody>
@@ -593,8 +614,9 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
 <tr><td>4:15 to 7:15</td><td>7</td><td>Board and timeline</td><td>Daniel, then Karissa</td><td>QR code, then one specimen's timeline on the projector</td><td>on phones</td></tr>
 <tr><td>7:15 to 11:45</td><td>8</td><td>Beat Tracer</td><td>Daniel, then Karissa</td><td>Seeded QR code, then the game on the projector</td><td>playing</td></tr>
 <tr><td>11:45 to 12:45</td><td>9</td><td>Why this design</td><td>Daniel</td><td>The threshold slider, then the numbers slide</td><td>dragging the slider</td></tr>
-<tr><td>12:45 to 13:30</td><td>10</td><td>Limits and next steps</td><td>Karissa</td><td>Limits slide</td><td>listening</td></tr>
-<tr><td>13:30 to 16:15</td><td>11</td><td>Questions</td><td>Both</td><td>Closing slide with the QR code and the repo</td><td>asking</td></tr>
+<tr><td>12:45 to 13:30</td><td>10</td><td>How we built it</td><td>Karissa, then Daniel</td><td>The data and the model, from briefs to the demo</td><td>listening</td></tr>
+<tr><td>13:30 to 14:15</td><td>11</td><td>Limits and next steps</td><td>Karissa</td><td>Limits slide</td><td>listening</td></tr>
+<tr><td>14:15 to 17:00</td><td>12</td><td>Questions</td><td>Both</td><td>Closing slide with the QR code and the repo</td><td>asking</td></tr>
 </tbody>
 </table></div>
 <p class="prose">Minute by minute, for whoever keeps time:</p>
@@ -613,13 +635,14 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
 <tr><td>9</td><td>Round 2 or 3.</td></tr>
 <tr><td>10</td><td>Round 3 ends. End screens up by about 10:50.</td></tr>
 <tr><td>11</td><td>Karissa: who beat Tracer, and what made you call it. Daniel on the threshold slider at 11:45.</td></tr>
-<tr><td>12</td><td>Daniel on the numbers. Karissa on the limits at 12:45.</td></tr>
-<tr><td>13</td><td>Karissa's closing line at about 13:30, then questions.</td></tr>
-<tr><td>14</td><td>Questions.</td></tr>
-<tr><td>15</td><td>Questions. Stop at 16:15 even mid-question, and offer to talk after.</td></tr>
+<tr><td>12</td><td>Daniel on the numbers. At 12:45 Karissa on how we built the data, then Daniel on the model.</td></tr>
+<tr><td>13</td><td>Karissa on the limits at 13:30.</td></tr>
+<tr><td>14</td><td>Karissa's closing line at about 14:15, then questions.</td></tr>
+<tr><td>15</td><td>Questions.</td></tr>
+<tr><td>16</td><td>Questions. Stop at 17:00 even mid-question, and offer to talk after.</td></tr>
 </tbody>
 </table></div>
-<p class="prose">If the hands-on part runs long, cut in this order: Karissa's projector walkthrough on slide 7 (the room keeps exploring alone), then the numbers slide in beat 9 (say the one headline sentence and stay on the slider). The game shows its end screen only after round 3, so if the room is still on round 2 at 10:45, Karissa asks for hands from the round result screens instead: who called it before Tracer did. Never cut the board, the game or the limits. If the instructor holds us to 15:00, keep every beat and give the questions 1:30 instead of 2:45.</p>
+<p class="prose">If the hands-on part runs long, cut in this order: Karissa's projector walkthrough on slide 7 (the room keeps exploring alone), then the numbers slide in beat 9 (say the one headline sentence and stay on the slider). The game shows its end screen only after round 3, so if the room is still on round 2 at 10:45, Karissa asks for hands from the round result screens instead: who called it before Tracer did. Never cut the board, the game or the limits. If the instructor holds us to 15:00, skip slide 10 (how we built it) and give the questions 1:30 instead of 2:45.</p>
 </section>
 
 <section class="after" id="before" aria-labelledby="before-h">

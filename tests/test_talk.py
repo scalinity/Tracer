@@ -13,8 +13,8 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-LENGTH = "16:15"  # the run of show at its own lengths, 1:15 over the 15-minute slot by choice
-SLIDES = 12
+LENGTH = "17:00"  # the run of show at its own lengths, 2 minutes over the 15-minute slot by choice
+SLIDES = 13
 TALK = ROOT / "docs" / "talk"
 SCRIPT = (TALK / "README.md").read_text(encoding="utf-8")
 DECK = (TALK / "index.html").read_text(encoding="utf-8")
@@ -125,7 +125,7 @@ def test_the_slides_that_show_the_demo_or_its_numbers_say_it_is_synthetic():
 
 
 def test_the_two_speakers_split_the_words_evenly_and_trade_often():
-    """The script says the words are split about evenly and the talk changes speaker eight times."""
+    """The script says the words are split about evenly and the talk changes speaker ten times."""
     words, order = {"Daniel": 0, "Karissa": 0}, []
     for n, lines in sorted(script_notes().items()):
         who = None
@@ -136,8 +136,8 @@ def test_the_two_speakers_split_the_words_evenly_and_trade_often():
             elif who and not re.fullmatch(r"\[[^\]]*\]", line):
                 words[who] += len(re.sub(r"\[[^\]]*\]", " ", line).split())
     assert 0.45 <= words["Daniel"] / sum(words.values()) <= 0.55, words
-    assert sum(a != b for a, b in zip(order, order[1:])) == 8, order
-    assert "changes speaker eight times" in SCRIPT
+    assert sum(a != b for a, b in zip(order, order[1:])) == 10, order
+    assert "changes speaker ten times" in SCRIPT
 
 
 def test_the_talk_never_says_the_clock_stops_at_plating():

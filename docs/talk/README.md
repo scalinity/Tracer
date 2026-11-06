@@ -1,11 +1,11 @@
 # The Tracer talk, November 18
 
-The in-class presentation for CAI 5724: the run of show, the slides and every line we say. It runs 16:15, 1:15 over the 15-minute slot by choice, so there is time to say what Tracer is and what it is built to fix.
+The in-class presentation for CAI 5724: the run of show, the slides and every line we say. It runs 17:00, 2 minutes over the 15-minute slot by choice, so there is time to say what Tracer is, what it is built to fix, and how we built and tested it.
 
 - **Slides:** `docs/talk/index.html`, published at <https://scalinity.github.io/Tracer/talk/>. It opens from disk too, with no server.
 - **Script:** `docs/talk/script.html`, published at <https://scalinity.github.io/Tracer/talk/script.html>. It is this file as a reading page for rehearsals and the day: a talk clock that lights the current beat and runs with the slides' clock, a speaker filter (`script.html?who=karissa` opens on Karissa's lines) and a print view of one speaker's lines. It opens from disk too, and the presenter window links to it.
-- **Demo:** <https://scalinity.github.io/Tracer/demo/>. The class uses it on their phones for about 8 and a half minutes of the 16.
-- **Speakers:** Daniel Escalante and Karissa Kocourek. Karissa's lines are written out below in full, so she has nothing to prepare beyond reading them. If she cannot be there, Daniel reads them as written. The words are split about evenly between the two of us, and the talk changes speaker eight times, so neither voice runs long.
+- **Demo:** <https://scalinity.github.io/Tracer/demo/>. The class uses it on their phones for about 8 and a half minutes of the 17.
+- **Speakers:** Daniel Escalante and Karissa Kocourek. Karissa's lines are written out below in full, so she has nothing to prepare beyond reading them. If she cannot be there, Daniel reads them as written. The words are split about evenly between the two of us, and the talk changes speaker ten times, so neither voice runs long.
 
 The numbers from the demo and its results come from synthetic data that had no clinical review, and the slides say so on each screen that shows one. The others are not synthetic: the 61.9% comes from a published audit, the 60-minute urine window and the 44 policy rows from Karissa's policy table and the guidelines it cites, and the 80.1 hours from the public MIMIC-IV demo extract. "Where the numbers come from" below gives the source of each.
 
@@ -21,7 +21,7 @@ The rubric gives the talk 10 points: a clear narrative for a mixed audience (2),
 
 ## Run of show
 
-The beats come from the run of show in `visuals/plan.html`, whose lengths are weights the plan scales to any slot; here they run at their own lengths, 16:15 in all. Hands-on time is the board, Beat Tracer and the threshold slider: 8.5 minutes, plus the discussion in the questions.
+The beats come from the run of show in `visuals/plan.html`, whose lengths are weights the plan scales to any slot; here they run at their own lengths, 17:00 in all. Hands-on time is the board, Beat Tracer and the threshold slider: 8.5 minutes, plus the discussion in the questions.
 
 | Clock | Slide | Beat | Who | On the screen | The room is |
 |---|---|---|---|---|---|
@@ -35,8 +35,9 @@ The beats come from the run of show in `visuals/plan.html`, whose lengths are we
 | 4:15 to 7:15 | 7 | Board and timeline | Daniel, then Karissa | QR code, then one specimen's timeline on the projector | on phones |
 | 7:15 to 11:45 | 8 | Beat Tracer | Daniel, then Karissa | Seeded QR code, then the game on the projector | playing |
 | 11:45 to 12:45 | 9 | Why this design | Daniel | The threshold slider, then the numbers slide | dragging the slider |
-| 12:45 to 13:30 | 10 | Limits and next steps | Karissa | Limits slide | listening |
-| 13:30 to 16:15 | 11 | Questions | Both | Closing slide with the QR code and the repo | asking |
+| 12:45 to 13:30 | 10 | How we built it | Karissa, then Daniel | The data and the model, from briefs to the demo | listening |
+| 13:30 to 14:15 | 11 | Limits and next steps | Karissa | Limits slide | listening |
+| 14:15 to 17:00 | 12 | Questions | Both | Closing slide with the QR code and the repo | asking |
 
 Minute by minute, for whoever keeps time:
 
@@ -54,12 +55,13 @@ Minute by minute, for whoever keeps time:
 | 9 | Round 2 or 3. |
 | 10 | Round 3 ends. End screens up by about 10:50. |
 | 11 | Karissa: who beat Tracer, and what made you call it. Daniel on the threshold slider at 11:45. |
-| 12 | Daniel on the numbers. Karissa on the limits at 12:45. |
-| 13 | Karissa's closing line at about 13:30, then questions. |
-| 14 | Questions. |
-| 15 | Questions. Stop at 16:15 even mid-question, and offer to talk after. |
+| 12 | Daniel on the numbers. At 12:45 Karissa on how we built the data, then Daniel on the model. |
+| 13 | Karissa on the limits at 13:30. |
+| 14 | Karissa's closing line at about 14:15, then questions. |
+| 15 | Questions. |
+| 16 | Questions. Stop at 17:00 even mid-question, and offer to talk after. |
 
-If the hands-on part runs long, cut in this order: Karissa's projector walkthrough on slide 7 (the room keeps exploring alone), then the numbers slide in beat 9 (say the one headline sentence and stay on the slider). The game shows its end screen only after round 3, so if the room is still on round 2 at 10:45, Karissa asks for hands from the round result screens instead: who called it before Tracer did. Never cut the board, the game or the limits. If the instructor holds us to 15:00, keep every beat and give the questions 1:30 instead of 2:45.
+If the hands-on part runs long, cut in this order: Karissa's projector walkthrough on slide 7 (the room keeps exploring alone), then the numbers slide in beat 9 (say the one headline sentence and stay on the slider). The game shows its end screen only after round 3, so if the room is still on round 2 at 10:45, Karissa asks for hands from the round result screens instead: who called it before Tracer did. Never cut the board, the game or the limits. If the instructor holds us to 15:00, skip slide 10 (how we built it) and give the questions 1:30 instead of 2:45.
 
 ## Before the talk
 
@@ -91,7 +93,7 @@ Words in brackets are stage directions, not lines. The word counts assume about 
 
 ### Slide 1 · The silent tube · 0:00 to 0:30 · Karissa
 
-**Screen:** The 3D bench, with the truth hidden. The slide behind it reads "A tube leaves the ward." and holds the bench's link.
+**Screen:** The 3D bench, with the truth hidden. The slide behind it reads "A tube leaves the ward.", draws the hand vote as a timeline marked at 15 minutes, 30 minutes and 1 hour, and holds the bench's link.
 
 **Karissa:**
 
@@ -141,7 +143,7 @@ So what does that change in the lab? Today, the lab's screens only show what's b
 
 ### Slide 6 · How Tracer works · 3:30 to 4:15 · Daniel
 
-**Screen:** "Silence is evidence." Three questions Tracer asks every 5 minutes about every specimen not yet received: How unusual is this much silence for this kind of specimen? Where is it most likely to be? Would an alert now still leave time to act? Then: an alert, routed to the role that can check that place. Switch to the 3D bench for the second half.
+**Screen:** "Silence is evidence." Every 5 minutes, for every specimen not yet received, three questions, each with a picture. How unusual is this silence: a dotted silence running past where trips like it usually arrive. Where is it most likely: the unit, the tube and the station, each sized by how likely it is. Is there still time to act: the time left between an alert and the window closing. Then: an alert, routed to the role that can check that place. Switch to the 3D bench for the second half.
 
 **Daniel:**
 
@@ -191,7 +193,23 @@ That trade is the threshold. Scroll down to Set the threshold and drag it both w
 
 [About 105 words, over the room dragging the slider.]
 
-### Slide 10 · Limits and next steps · 12:45 to 13:30 · Karissa
+### Slide 10 · How we built it · 12:45 to 13:30 · Karissa, then Daniel
+
+**Screen:** "How we built and tested Tracer," in two rows. The data: briefs drawn by code (12,000 specimens, faults planted on purpose), then Claude writes the scans (each trail and its hidden true path), then a validator checks them (nine checks, 11,967 kept and frozen, $2.16 in all). The model: a three-part survival model is fit on 24 runs (normal trip times by type, hour and priority; trips that run far longer but arrive; specimens that never arrive), it is tested on 6 runs it never saw (2,378 specimens, 100 missed windows), and its numbers go to the demo you used (two files, no server). The hidden truth goes only to the test, never to the model.
+
+**Karissa:**
+
+Here's how we built it. We couldn't find public data with these scans, so we wrote our own. Code draws twelve thousand specimens from assumed timings and my policy table. Claude writes each one's scans and its hidden true path, and a validator keeps the ones that pass nine checks.
+
+[About 50 words.]
+
+**Daniel:**
+
+Then a small survival model learns from twenty-four of the thirty runs: how long a normal trip takes for each kind of specimen and time of day, how often a trip runs far longer and still arrives, and how often one never does. We test it on the other six, and only that test sees the hidden truth.
+
+[About 60 words.]
+
+### Slide 11 · Limits and next steps · 13:30 to 14:15 · Karissa
 
 **Screen:** What Tracer cannot see: a mislabeled or leaking specimen. Every specimen is synthetic, with no clinical review. 10 of the 44 policy rows are still assumed. At twice the volume, a simple window rule matches it. Next step: a real laboratory log with receipt scans.
 
@@ -201,7 +219,7 @@ Some honest limits. Tracer only watches time and place, so it can't see a mislab
 
 [About 95 words.]
 
-### Slide 11 · Questions · 13:30 to 16:15 · Both
+### Slide 12 · Questions · 14:15 to 17:00 · Both
 
 **Screen:** "Questions?" The demo's QR code, the demo address, the repository address, both names.
 
@@ -209,7 +227,7 @@ Some honest limits. Tracer only watches time and place, so it can't see a mislab
 
 That's Tracer. The demo stays up at this address, and everything is on GitHub: the code, the data, and how we made it. We'd love your questions.
 
-[About 30 words. Then the questions below. Stop at 16:15.]
+[About 30 words. Then the questions below. Stop at 17:00.]
 
 ## Prepared answers
 
@@ -243,12 +261,13 @@ Questions to ask the room if it goes quiet:
 | Twice the volume: the window rule ties | `results/README.md`, Sensitivity |
 | Top-3 88% and top-1 55% at 30 minutes | `results/location-accuracy.json` |
 | About a third of specimens alerted; Brier 0.109 against 0.119 | `results/README.md` |
-| 12,000 requested, 11,967 accepted, $2.16 | `datasets/manifest.json` |
+| 12,000 requested, 11,967 accepted, $2.16; 30 runs; nine checks | `datasets/manifest.json`, `src/generator/` |
+| Fit on runs 0 to 23 (9,514 specimens); 6 held-out runs, 2,378 specimens, 100 breaches | `docs/demo/bundle.json` (model), `results/README.md` |
 | The specimen on slide 7 | `docs/demo/heroes.json`, `SP-r27-000368` |
 
 ## Keeping the slides and this file together
 
-`docs/talk/index.html` carries the same speaker lines as this file, word for word, and `tests/test_talk.py` fails if they drift apart, if the slide times stop adding up to the run of show's 16:15, or if a link on the slides points at a file that isn't there. Change the lines here and on the slides in the same commit.
+`docs/talk/index.html` carries the same speaker lines as this file, word for word, and `tests/test_talk.py` fails if they drift apart, if the slide times stop adding up to the run of show's 17:00, or if a link on the slides points at a file that isn't there. Change the lines here and on the slides in the same commit.
 
 `docs/talk/script.html` is built from this file. After any change here, run `python scripts/build_talk_script.py` and commit the page with it; `tests/test_talk.py` fails if the page and this file differ. `tests/test_talk_browser.py` opens the slides in Chrome at 1920 by 1080 and 1280 by 800 and fails if a slide runs into its footer, shrinks its type to fit, or shows text too small to read from the back of a room, or if the L, N, S and P keys stop working.
 
