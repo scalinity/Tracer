@@ -131,11 +131,11 @@ With that data, we built Tracer. Think of package tracking with no scans along t
 
 ### Slide 5 · What Tracer is built to fix · 2:45 to 3:30 · Karissa
 
-**Screen:** Today and with Tracer, side by side. Today a missing specimen makes no noise; Tracer scores each one every 5 minutes. Today it is found when someone calls for it; Tracer alerts while there is still time. Today one time limit covers every specimen; Tracer judges each by its own window. Tracking tags would need readers in every hallway; Tracer uses only the scans the lab records. For patients, fewer repeat collections and results sooner; for the lab, less time chasing specimens.
+**Screen:** Today and with Tracer, side by side. Today a missing specimen makes no noise; Tracer scores each one every 5 minutes. Today it is found when someone calls for it; Tracer alerts while there is still time. Today one time limit covers every specimen; Tracer judges each by its own window. Tracking tags would need readers in every hallway; Tracer uses only the scans the lab records. The aim: fewer repeat collections and quicker results for patients, and less time chasing specimens for the lab.
 
 **Karissa:**
 
-So what does that change in the lab? Today, the lab's screens only show what's been scanned, so a missing specimen stays silent until someone calls asking for the result. A fixed time limit is too late for urine and too early for a swab. And tracking tags would need a tag on every tube and a reader in every hallway. Tracer is built to close those gaps with data the lab already has. For the patient, that means fewer repeat collections and results sooner. For the lab, less time chasing.
+So what does that change in the lab? Today, the lab's screens only show what's been scanned, so a missing specimen stays silent until someone calls asking for the result. A fixed time limit is too late for urine and too early for a swab. And tracking tags would need a tag on every tube and a reader in every hallway. Tracer is built to close those gaps with data the lab already has. The aim is fewer repeat collections and quicker results for the patient, and less time chasing for the lab.
 
 [About 90 words.]
 
