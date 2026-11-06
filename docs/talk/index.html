@@ -173,8 +173,8 @@ body.presenter .pnav{display:flex}
   <p class="kicker">The silent tube</p>
   <h2>A tube leaves the ward.</h2>
   <p class="lede">Nothing beeps. Nothing is logged. How long until you would worry?</p>
-  <p><a class="btn" href="../demo/exhibit/index.html" target="_blank" rel="noopener">Open the 3D bench ↗</a></p>
-  <p class="small">On the bench: T hides or shows the truth, H is the compact view, L is the guided lesson.</p>
+  <p><a class="btn" href="../demo/exhibit/index.html?truth=0" target="_blank" rel="noopener">Open the 3D bench ↗</a></p>
+  <p class="small">The bench opens with the truth hidden. On the bench, T shows or hides it.</p>
   <aside class="notes-src"><p class="who">Karissa</p><p>A tube leaves the ward. Nothing beeps, and nothing gets logged. Nobody knows yet if it's late. So, raise your hand if you'd start to worry after fifteen minutes. Thirty? An hour? Hold on to that number, because that's the guess Tracer has to make, for every specimen, all day.</p><p><em>[About 50 words. Pause for each show of hands.]</em></p></aside>
 </section>
 
@@ -447,6 +447,7 @@ body.presenter .pnav{display:flex}
   window.addEventListener("resize", function () { fit(slides[state.i]); });
   if (chan) chan.onmessage = function (m) {
     if (!m.data) return;
+    if (m.data.ask) { chan.postMessage({ i: state.i, start: state.start }); return; }
     state.start = m.data.start || null;
     show(m.data.i, true);
   };
@@ -454,6 +455,8 @@ body.presenter .pnav{display:flex}
   if (PRESENTER) { document.body.classList.add("presenter"); document.title = "Tracer talk · presenter"; }
   setInterval(function () { if (state.start) renderNotes(); }, 1000);
   show(fromHash(), true);
+  /* A window opened or reloaded mid-talk takes the slide and the clock from the one already open. */
+  if (chan) chan.postMessage({ ask: true });
 })();
 </script>
 </body>

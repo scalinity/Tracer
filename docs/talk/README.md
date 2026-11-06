@@ -55,21 +55,25 @@ Minute by minute, for whoever keeps time:
 | 13 | Questions. |
 | 14 | Questions. Stop at 15:00 even mid-question, and offer to talk after. |
 
-If the hands-on part runs long, cut in this order: the projector walkthrough on slide 5 (the room keeps exploring alone), then round 3 of Beat Tracer (end screens show after any finished round count; the presenter can tell the room to stop after two), then the numbers slide in beat 7 (say the one headline sentence and stay on the slider). Never cut the board, the game or the limits.
+If the hands-on part runs long, cut in this order: the projector walkthrough on slide 5 (the room keeps exploring alone), then the numbers slide in beat 7 (say the one headline sentence and stay on the slider). The game shows its end screen only after round 3, so if the room is still on round 2 at 9:30, Karissa asks for hands from the round result screens instead: who called it before Tracer did. Never cut the board, the game or the limits.
 
 ## Before the talk
 
 Open these on the presenting laptop, each in its own tab, in this order:
 
 1. The slides: <https://scalinity.github.io/Tracer/talk/>. Press **F** for full screen. Press **P** for the presenter window, with these notes and the clock, on the laptop screen.
-2. The 3D bench: <https://scalinity.github.io/Tracer/demo/exhibit/>. Press **T** to hide the truth before the talk starts.
+2. The 3D bench with the truth hidden: <https://scalinity.github.io/Tracer/demo/exhibit/?truth=0>. This address skips the opening tour and starts with the carrier hidden; **T** shows it on slide 4.
 3. The demo board: <https://scalinity.github.io/Tracer/demo/>.
 4. The specimen for slide 5: <https://scalinity.github.io/Tracer/demo/#SP-r27-000368>. The address opens that specimen's timeline.
 5. Beat Tracer with the room's rounds: <https://scalinity.github.io/Tracer/demo/?seed=18#beat>.
 
 Slide keys: right arrow, space or click for next; left arrow for back; **F** full screen; **P** presenter window; **N** notes on this screen (for rehearsal, not for the projector); **S** starts or resets the talk clock; the number keys 0 to 9 jump to a slide. The presenter window and the slides follow each other when both are open from the same address. From disk, use **N** instead.
 
-The backups are the plan's: an offline copy of `docs/demo/` and `docs/talk/` on the laptop (both open from disk with no server), the five-minute screen recording, `?lite=1` on the demo if the 3D view is blank, and the phone hotspot.
+The backups are the plan's: the five-minute screen recording, `?lite=1` on the demo if the 3D view is blank, the phone hotspot, and an offline copy of `docs/` on the laptop. The slides open straight from disk. The demo does not, because the browser blocks it from reading its data files there, so serve the copy first and open <http://localhost:8000/demo/>:
+
+```sh
+cd docs && python3 -m http.server 8000
+```
 
 ## Slides and speaker notes
 
