@@ -150,7 +150,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .pipe .head{fill:var(--ink-mute)}
 .pipe .step{fill:var(--ink-mute);font-family:var(--serif)}
 .pipe .truth{stroke:var(--ink-dim);stroke-width:2}
-.pipe{margin-top:calc(var(--u)*.6)}
+.pipe{margin-top:0}
+.pipe-note{max-width:86ch}
 .qs{counter-reset:q;display:grid;gap:calc(var(--u)*1.2);max-width:calc(var(--u)*86)}
 .qs li{counter-increment:q;display:grid;grid-template-columns:calc(var(--u)*4.4) 1fr;align-items:baseline}
 .qs li::before{content:counter(q);font:400 calc(var(--u)*3.5)/1 var(--serif);color:var(--infer)}
@@ -522,27 +523,28 @@ body.presenter .pnav{display:flex}
 <!-- 10 -->
 <section class="slide" data-beat="How we built it" data-who="Karissa, then Daniel" data-start="12:45" data-end="13:30">
   <h2 class="t-h3">How we built and tested Tracer.</h2>
-  <svg class="diagram pipe" viewBox="0 0 860 330" role="img" aria-label="The data: code draws 12,000 specimen briefs with planted faults, Claude writes each scan trail and its hidden true path, and a validator with nine checks keeps 11,967 and freezes them, for 2.16 dollars. The model: it learns trip times, stalls and losses from 24 runs, is tested on 6 runs it never saw, with 2,378 specimens and 100 missed windows, and its numbers go to the demo. The hidden truth goes only to the test.">
+  <svg class="diagram pipe" viewBox="0 0 860 296" role="img" aria-label="The data: code draws 12,000 specimen briefs with planted faults, Claude writes each scan trail and its hidden true path, and a validator with nine checks keeps 11,967 and freezes them, for 2.16 dollars. The model: a three-part survival model fit on 24 runs, tested on 6 runs it never saw, with 2,378 specimens and 100 missed windows, and its numbers go to the demo. The hidden truth goes only to the test.">
     <defs><marker id="pipe-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0 0L10 5L0 10z"/></marker></defs>
     <text class="lab-dim" x="0" y="18" font-size="20">The data</text>
-    <text class="lab-dim" x="0" y="198" font-size="20">The model</text>
+    <text class="lab-dim" x="0" y="164" font-size="20">The model</text>
     <g class="node data"><rect x="0" y="30" width="260" height="100" rx="8"/><rect class="tick" x="0" y="30" width="260" height="5" rx="2"/><text class="step" x="244" y="120" text-anchor="end" font-size="20">1</text><text class="lab-ink" x="16" y="68" font-size="24">Briefs drawn by code</text><text class="lab-dim" x="16" y="96" font-size="20">12,000 specimens with</text><text class="lab-dim" x="16" y="120" font-size="20">planted faults</text></g>
     <g class="node data"><rect x="300" y="30" width="260" height="100" rx="8"/><rect class="tick" x="300" y="30" width="260" height="5" rx="2"/><text class="step" x="544" y="120" text-anchor="end" font-size="20">2</text><text class="lab-ink" x="316" y="68" font-size="24">Claude writes scans</text><text class="lab-dim" x="316" y="96" font-size="20">each trail, plus its</text><text class="lab-dim" x="316" y="120" font-size="20">hidden true path</text></g>
     <g class="node data"><rect x="600" y="30" width="260" height="100" rx="8"/><rect class="tick" x="600" y="30" width="260" height="5" rx="2"/><text class="step" x="844" y="120" text-anchor="end" font-size="20">3</text><text class="lab-ink" x="616" y="68" font-size="24">A validator checks</text><text class="lab-dim" x="616" y="96" font-size="20">nine checks: 11,967 kept</text><text class="lab-dim" x="616" y="120" font-size="20">frozen; $2.16 in all</text></g>
-    <g class="node model"><rect x="600" y="210" width="260" height="100" rx="8"/><rect class="tick" x="600" y="210" width="260" height="5" rx="2"/><text class="step" x="844" y="300" text-anchor="end" font-size="20">4</text><text class="lab-ink" x="616" y="248" font-size="24">The model learns</text><text class="lab-dim" x="616" y="276" font-size="20">trip times, stalls and</text><text class="lab-dim" x="616" y="300" font-size="20">losses, from 24 runs</text></g>
-    <g class="node model"><rect x="300" y="210" width="260" height="100" rx="8"/><rect class="tick" x="300" y="210" width="260" height="5" rx="2"/><text class="step" x="544" y="300" text-anchor="end" font-size="20">5</text><text class="lab-ink" x="316" y="248" font-size="24">Tested on 6 runs</text><text class="lab-dim" x="316" y="276" font-size="20">it never saw: 2,378</text><text class="lab-dim" x="316" y="300" font-size="20">specimens, 100 misses</text></g>
-    <g class="node model"><rect x="0" y="210" width="260" height="100" rx="8"/><rect class="tick" x="0" y="210" width="260" height="5" rx="2"/><text class="step" x="244" y="300" text-anchor="end" font-size="20">6</text><text class="lab-ink" x="16" y="248" font-size="24">The demo you used</text><text class="lab-dim" x="16" y="276" font-size="20">every number in two</text><text class="lab-dim" x="16" y="300" font-size="20">files, no server</text></g>
+    <g class="node model"><rect x="600" y="176" width="260" height="100" rx="8"/><rect class="tick" x="600" y="176" width="260" height="5" rx="2"/><text class="step" x="844" y="266" text-anchor="end" font-size="20">4</text><text class="lab-ink" x="616" y="214" font-size="24">The model learns</text><text class="lab-dim" x="616" y="242" font-size="20">a three-part survival</text><text class="lab-dim" x="616" y="266" font-size="20">model, fit on 24 runs</text></g>
+    <g class="node model"><rect x="300" y="176" width="260" height="100" rx="8"/><rect class="tick" x="300" y="176" width="260" height="5" rx="2"/><text class="step" x="544" y="266" text-anchor="end" font-size="20">5</text><text class="lab-ink" x="316" y="214" font-size="24">Tested on 6 new runs</text><text class="lab-dim" x="316" y="242" font-size="20">2,378 specimens, 100</text><text class="lab-dim" x="316" y="266" font-size="20">missed their window</text></g>
+    <g class="node model"><rect x="0" y="176" width="260" height="100" rx="8"/><rect class="tick" x="0" y="176" width="260" height="5" rx="2"/><text class="step" x="244" y="266" text-anchor="end" font-size="20">6</text><text class="lab-ink" x="16" y="214" font-size="24">The demo you used</text><text class="lab-dim" x="16" y="242" font-size="20">every number in two</text><text class="lab-dim" x="16" y="266" font-size="20">files, no server</text></g>
     <line class="flow-line" x1="262" y1="80" x2="296" y2="80" marker-end="url(#pipe-head)"/>
     <line class="flow-line" x1="562" y1="80" x2="596" y2="80" marker-end="url(#pipe-head)"/>
-    <line class="flow-line" x1="730" y1="132" x2="730" y2="206" marker-end="url(#pipe-head)"/>
-    <line class="flow-line" x1="598" y1="260" x2="564" y2="260" marker-end="url(#pipe-head)"/>
-    <line class="flow-line" x1="298" y1="260" x2="264" y2="260" marker-end="url(#pipe-head)"/>
-    <line class="truth" x1="430" y1="132" x2="430" y2="206" stroke-dasharray="5 6"/>
-    <text class="lab-dim" x="742" y="176" font-size="20">frozen data</text>
-    <text class="lab-dim" x="442" y="176" font-size="20">hidden truth, test only</text>
+    <line class="flow-line" x1="730" y1="132" x2="730" y2="172" marker-end="url(#pipe-head)"/>
+    <line class="flow-line" x1="598" y1="226" x2="564" y2="226" marker-end="url(#pipe-head)"/>
+    <line class="flow-line" x1="298" y1="226" x2="264" y2="226" marker-end="url(#pipe-head)"/>
+    <line class="truth" x1="430" y1="132" x2="430" y2="172" stroke-dasharray="5 6"/>
+    <text class="lab-dim" x="742" y="150" font-size="20">frozen data</text>
+    <text class="lab-dim" x="442" y="150" font-size="20">hidden truth, test only</text>
   </svg>
+  <p class="t-cap pipe-note">Three parts: normal trip times by type, hour and priority; trips that run far longer but still arrive; and specimens that never arrive.</p>
   <div class="foot"><p class="caveat">Synthetic data, no clinical review</p></div>
-  <aside class="notes-src"><p class="who">Karissa</p><p>Here's how we built it. No public data has these scans, so we wrote our own. Code draws twelve thousand specimens from assumed timings and my policy table. Claude writes each one's scans and its hidden true path, and a validator keeps the ones that pass nine checks.</p><p><em>[About 50 words.]</em></p><p class="who">Daniel</p><p>Then the model learns from twenty-four of the thirty runs: how long a normal trip takes for each kind of specimen and time of day, how often one stalls and still arrives, and how often one never does. We test it on the other six, and only that test sees the hidden truth.</p><p><em>[About 55 words.]</em></p></aside>
+  <aside class="notes-src"><p class="who">Karissa</p><p>Here's how we built it. We couldn't find public data with these scans, so we wrote our own. Code draws twelve thousand specimens from assumed timings and my policy table. Claude writes each one's scans and its hidden true path, and a validator keeps the ones that pass nine checks.</p><p><em>[About 50 words.]</em></p><p class="who">Daniel</p><p>Then a small survival model learns from twenty-four of the thirty runs: how long a normal trip takes for each kind of specimen and time of day, how often a trip runs far longer and still arrives, and how often one never does. We test it on the other six, and only that test sees the hidden truth.</p><p><em>[About 60 words.]</em></p></aside>
 </section>
 
 <!-- 11 -->

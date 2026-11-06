@@ -501,17 +501,17 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
 <p class="beat-meta t-meta"><span class="window">12:45 to 13:30</span> <span class="slide-no">Slide 10</span></p>
 <h2 class="beat-name t-beat" id="beat-10-name">How we built it</h2>
 <p class="beat-who t-meta"><span class="who-list"><span class="chip" data-chip="Karissa">Karissa</span>, then <span class="chip" data-chip="Daniel">Daniel</span></span><span class="room">The room is: listening</span></p>
-<p class="screen t-small"><span class="screen-label">On screen</span> &quot;How we built and tested Tracer,&quot; in two rows. The data: briefs drawn by code (12,000 specimens, faults planted on purpose), then Claude writes the scans (each trail and its hidden true path), then a validator checks them (nine checks, 11,967 kept and frozen, $2.16 in all). The model: it learns from 24 runs (trip times, stalls and losses), it is tested on 6 runs it never saw (2,378 specimens, 100 missed windows), and its numbers go to the demo you used (two files, no server). The hidden truth goes only to the test, never to the model.</p>
+<p class="screen t-small"><span class="screen-label">On screen</span> &quot;How we built and tested Tracer,&quot; in two rows. The data: briefs drawn by code (12,000 specimens, faults planted on purpose), then Claude writes the scans (each trail and its hidden true path), then a validator checks them (nine checks, 11,967 kept and frozen, $2.16 in all). The model: a three-part survival model is fit on 24 runs (normal trip times by type, hour and priority; trips that run far longer but arrive; specimens that never arrive), it is tested on 6 runs it never saw (2,378 specimens, 100 missed windows), and its numbers go to the demo you used (two files, no server). The hidden truth goes only to the test, never to the model.</p>
 </header>
 <div class="block" data-who="Karissa">
 <p class="who t-label">Karissa</p>
-<p class="line">Here's how we built it. No public data has these scans, so we wrote our own. Code draws twelve thousand specimens from assumed timings and my policy table. Claude writes each one's scans and its hidden true path, and a validator keeps the ones that pass nine checks.</p>
+<p class="line">Here's how we built it. We couldn't find public data with these scans, so we wrote our own. Code draws twelve thousand specimens from assumed timings and my policy table. Claude writes each one's scans and its hidden true path, and a validator keeps the ones that pass nine checks.</p>
 <p class="line sd">[About 50 words.]</p>
 </div>
 <div class="block" data-who="Daniel">
 <p class="who t-label">Daniel</p>
-<p class="line">Then the model learns from twenty-four of the thirty runs: how long a normal trip takes for each kind of specimen and time of day, how often one stalls and still arrives, and how often one never does. We test it on the other six, and only that test sees the hidden truth.</p>
-<p class="line sd">[About 55 words.]</p>
+<p class="line">Then a small survival model learns from twenty-four of the thirty runs: how long a normal trip takes for each kind of specimen and time of day, how often a trip runs far longer and still arrives, and how often one never does. We test it on the other six, and only that test sees the hidden truth.</p>
+<p class="line sd">[About 60 words.]</p>
 </div>
 </section>
 

@@ -195,19 +195,19 @@ That trade is the threshold. Scroll down to Set the threshold and drag it both w
 
 ### Slide 10 · How we built it · 12:45 to 13:30 · Karissa, then Daniel
 
-**Screen:** "How we built and tested Tracer," in two rows. The data: briefs drawn by code (12,000 specimens, faults planted on purpose), then Claude writes the scans (each trail and its hidden true path), then a validator checks them (nine checks, 11,967 kept and frozen, $2.16 in all). The model: it learns from 24 runs (trip times, stalls and losses), it is tested on 6 runs it never saw (2,378 specimens, 100 missed windows), and its numbers go to the demo you used (two files, no server). The hidden truth goes only to the test, never to the model.
+**Screen:** "How we built and tested Tracer," in two rows. The data: briefs drawn by code (12,000 specimens, faults planted on purpose), then Claude writes the scans (each trail and its hidden true path), then a validator checks them (nine checks, 11,967 kept and frozen, $2.16 in all). The model: a three-part survival model is fit on 24 runs (normal trip times by type, hour and priority; trips that run far longer but arrive; specimens that never arrive), it is tested on 6 runs it never saw (2,378 specimens, 100 missed windows), and its numbers go to the demo you used (two files, no server). The hidden truth goes only to the test, never to the model.
 
 **Karissa:**
 
-Here's how we built it. No public data has these scans, so we wrote our own. Code draws twelve thousand specimens from assumed timings and my policy table. Claude writes each one's scans and its hidden true path, and a validator keeps the ones that pass nine checks.
+Here's how we built it. We couldn't find public data with these scans, so we wrote our own. Code draws twelve thousand specimens from assumed timings and my policy table. Claude writes each one's scans and its hidden true path, and a validator keeps the ones that pass nine checks.
 
 [About 50 words.]
 
 **Daniel:**
 
-Then the model learns from twenty-four of the thirty runs: how long a normal trip takes for each kind of specimen and time of day, how often one stalls and still arrives, and how often one never does. We test it on the other six, and only that test sees the hidden truth.
+Then a small survival model learns from twenty-four of the thirty runs: how long a normal trip takes for each kind of specimen and time of day, how often a trip runs far longer and still arrives, and how often one never does. We test it on the other six, and only that test sees the hidden truth.
 
-[About 55 words.]
+[About 60 words.]
 
 ### Slide 11 · Limits and next steps · 13:30 to 14:15 · Karissa
 
