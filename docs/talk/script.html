@@ -615,11 +615,20 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
              start: secs(el.dataset.start), end: secs(el.dataset.end) };
   });
   var clock = { acc: 0, since: null };
-  /* The slides, the presenter window and this page share one clock over the "tracer-talk" channel when they are
+  /* The slides, the presenter window and this page share one clock over the "tracer-talk-2" channel when they are
      open in the same browser from the same address. This page sends only the clock, never a slide number. */
   var chan = null;
-  try { chan = new BroadcastChannel("tracer-talk"); } catch (err) { chan = null; }
+  /* The channel's second version: pages from before the shared clock listen on "tracer-talk" and read every
+     message as a slide change, so a clock-only message must never reach them. */
+  try { chan = new BroadcastChannel("tracer-talk-2"); } catch (err) { chan = null; }
   function share() { if (chan) chan.postMessage({ clock: { acc: clock.acc, since: clock.since } }); }
+  /* A clock from another window is taken only when it is well formed: banked milliseconds that are finite and not
+     negative, and a start that is a finite timestamp or null. Anything else leaves this window as it was. */
+  function validClock(c) {
+    if (!c || typeof c !== "object" || typeof c.acc !== "number" || !isFinite(c.acc) || c.acc < 0) return null;
+    if (c.since !== null && (typeof c.since !== "number" || !isFinite(c.since))) return null;
+    return { acc: c.acc, since: c.since };
+  }
   var follow = true, current = -1;
   var $ = function (id) { return document.getElementById(id); };
 
@@ -751,11 +760,12 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
   if (chan) {
     chan.onmessage = function (m) {
       var d = m.data;
-      if (!d) return;
+      if (!d || typeof d !== "object") return;
       if (d.ask) { if (started()) share(); return; }
-      if (!d.clock) return;
-      clock.acc = +d.clock.acc || 0;
-      clock.since = d.clock.since == null ? null : +d.clock.since;
+      var c = validClock(d.clock);
+      if (!c) return;
+      clock.acc = c.acc;
+      clock.since = c.since;
       update();
     };
     chan.postMessage({ ask: true });
