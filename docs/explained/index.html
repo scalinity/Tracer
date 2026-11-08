@@ -189,6 +189,7 @@ input[type=range] { width: 100%; accent-color: var(--known); height: 28px; }
 .status { margin-top: 12px; padding: 10px 14px; border-radius: 14px; font-size: .95rem; background: var(--bg-secondary); transition: background-color 150ms ease-out; }
 .status.on { background: var(--alert-soft); color: #f3d29b; }
 .status.done { background: var(--known-soft); color: #bfe9f0; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .fade-in { animation: condense 400ms var(--ease-presence) both; }
 @keyframes condense { from { opacity: 0; transform: scale(.97); filter: blur(2px); } }
 @media (prefers-reduced-motion: reduce) { .fade-in { animation: none; } .place .fill { transition: none; } }
@@ -513,7 +514,8 @@ footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary);
     </div>
     <div class="small" style="margin-top:4px">Where Tracer thinks it is</div>
     <div class="places" id="rp-places"></div>
-    <div class="status" id="rp-status" aria-live="polite"></div>
+    <div class="status" id="rp-status"></div>
+    <p class="sr-only" id="rp-live" aria-live="polite"></p>
   </div>
 
   <ol class="timeline">
@@ -700,7 +702,7 @@ footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary);
   var NAMES = ["On the unit", "Hand carry", "In the tube", "At the tube station", "Stalled at the station", "Misrouted", "Lost"];
   var SEGS = [[0, 29, 0], [29, 43, 2], [43, 46, 3], [46, 102, 4]];
   var mIn = document.getElementById("rp-m"), truthBtn = document.getElementById("rp-truth"), placesEl = document.getElementById("rp-places");
-  var showTruth = false, rows = [];
+  var showTruth = false, rows = [], lastState = null, live = document.getElementById("rp-live");
   NAMES.forEach(function (n) {
     var row = document.createElement("div"); row.className = "place";
     row.innerHTML = '<span></span><div class="track"><div class="fill"></div></div><span class="v" style="text-align:right"></span>';
@@ -731,6 +733,10 @@ footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary);
     if (received) { st.classList.add("done"); st.textContent = "Received at minute 102, inside the window. Scoring stops: the outcome is known."; }
     else if (m >= 20) { st.classList.add("on"); st.textContent = "Alert open since minute 20, sent to the receiving technologist" + (showTruth ? ". Truth now: " + NAMES[ti].toLowerCase() + "." : "."); }
     else { st.textContent = "No alert yet: expected harm " + (3 * r).toFixed(3) + " is under 0.137." + (showTruth ? " Truth now: " + NAMES[ti].toLowerCase() + "." : ""); }
+    // Announce only a change of state (quiet, alert, received), not every 5-minute step of the slider.
+    var state = received ? "received" : m >= 20 ? "alert" : "quiet";
+    if (lastState !== null && state !== lastState) live.textContent = st.textContent;
+    lastState = state;
   }
   mIn.addEventListener("input", drawReplay);
   truthBtn.addEventListener("click", function () { showTruth = !showTruth; truthBtn.setAttribute("aria-pressed", showTruth ? "true" : "false"); truthBtn.textContent = showTruth ? "Hide the truth" : "Show the truth"; drawReplay(); });
