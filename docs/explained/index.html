@@ -1,0 +1,762 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Tracer, explained</title>
+<link rel="icon" href="data:,">
+<style>
+:root {
+  --bg-full: #141d27;
+  --bg-primary: #1b2632;
+  --bg-secondary: #223040;
+  --bg-tertiary: #2a3a4d;
+  --border-button: #33465b;
+  --separator: #26364a;
+  --text-primary: #e9eef4;
+  --text-secondary: #b5c2d1;
+  --text-tertiary: #8496aa;
+  --silence: #f0b45a;
+  --silence-soft: rgba(240, 180, 90, .14);
+  --known: #67c9b5;
+  --known-soft: rgba(103, 201, 181, .14);
+  --alert: #ff7a85;
+  --alert-soft: rgba(255, 122, 133, .14);
+  --focus-ring: #8fb8ff;
+  --serif: ui-serif, "New York", "Iowan Old Style", Charter, Georgia, serif;
+  --sans: "Avenir Next", Avenir, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --ease-presence: cubic-bezier(0.22, 1, 0.36, 1);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0; background: var(--bg-full); color: var(--text-primary);
+  font: 17px/1.62 var(--sans); font-variant-numeric: tabular-nums;
+}
+a { color: var(--known); text-underline-offset: 3px; }
+a:hover { color: #8fdccb; }
+:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; border-radius: 6px; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; line-height: 1.2; margin: 0; }
+h2 { font-size: 2rem; margin-bottom: .9rem; }
+h3 { font-size: 1.3rem; margin: 2.2rem 0 .6rem; }
+p { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.25rem; margin: 0 0 1rem; }
+li { margin-bottom: .4rem; }
+strong { color: var(--text-primary); }
+code { font-size: .88em; background: var(--bg-secondary); padding: .1em .35em; border-radius: 6px; }
+.muted { color: var(--text-secondary); }
+.small { font-size: .875rem; color: var(--text-tertiary); }
+
+/* layout */
+.shell { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+.layout { display: block; }
+nav.toc { margin: 0 0 2.5rem; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+nav.toc li { margin: 0; }
+nav.toc a {
+  display: block; padding: 6px 12px; border-radius: 999px; text-decoration: none; font-size: .9rem;
+  color: var(--text-secondary); border: 1px solid var(--border-button); background: var(--bg-primary);
+  transition: background-color 150ms ease-out, color 150ms ease-out, border-color 150ms ease-out;
+}
+nav.toc a:hover { background: var(--bg-secondary); color: var(--text-primary); }
+nav.toc a:active { background: var(--bg-tertiary); }
+nav.toc a.here { color: var(--text-primary); border-color: var(--known); }
+main { max-width: 46rem; }
+section { padding: 3.2rem 0 1rem; border-top: 1px solid var(--separator); scroll-margin-top: 12px; }
+@media (min-width: 1080px) {
+  .layout { display: grid; grid-template-columns: 13.5rem minmax(0, 46rem); gap: 4rem; }
+  nav.toc { position: sticky; top: 28px; align-self: start; margin: 3.2rem 0 0; }
+  nav.toc ol { flex-direction: column; gap: 2px; }
+  nav.toc a { border: 0; background: none; padding: 6px 12px; border-left: 2px solid transparent; border-radius: 0 8px 8px 0; }
+  nav.toc a.here { border-left-color: var(--known); background: var(--bg-primary); }
+}
+
+/* hero */
+header.hero { padding: 3.5rem 0 2.5rem; }
+.hero h1 { font-size: clamp(2.6rem, 7vw, 4.6rem); letter-spacing: -.01em; max-width: 14ch; }
+.hero .lede { font-size: 1.2rem; color: var(--text-secondary); max-width: 40rem; margin-top: 1.1rem; }
+.hero figure { margin: 2.4rem 0 0; max-width: 46rem; }
+.hero svg { width: 100%; height: auto; display: block; }
+.silence-line { stroke-dasharray: 6 7; }
+.silence-draw { stroke-dasharray: 600; stroke-dashoffset: 600; animation: draw 2.4s var(--ease-presence) .3s forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+.pulse { animation: pulse 1.6s ease-out 2.7s 2 both; transform-origin: center; transform-box: fill-box; }
+@keyframes pulse { 0% { opacity: .9; transform: scale(1); } 100% { opacity: 0; transform: scale(2.6); } }
+@media (prefers-reduced-motion: reduce) {
+  .silence-draw { animation: none; stroke-dashoffset: 0; }
+  .pulse { animation: none; opacity: 0; }
+}
+.notice {
+  display: inline-block; margin-top: 1.4rem; padding: 6px 12px; border-radius: 999px; font-size: .875rem;
+  color: var(--silence); background: var(--silence-soft); border: 1px solid rgba(240,180,90,.35);
+}
+
+/* panels */
+.panel { background: var(--bg-primary); border: 1px solid var(--border-button); border-radius: 24px; padding: 20px 22px; margin: 1.4rem 0; }
+.panel h3:first-child, .panel h4:first-child { margin-top: 0; }
+.plain { border-color: var(--silence); background: linear-gradient(var(--silence-soft), var(--silence-soft)), var(--bg-primary); }
+.plain h3 { color: var(--silence); }
+.say {
+  margin: .9rem 0 0; padding: 12px 16px; border-radius: 14px; background: var(--bg-secondary);
+  font-family: var(--serif); font-size: 1.08rem; line-height: 1.5;
+}
+.say b { font-family: var(--sans); font-size: .82rem; font-weight: 600; color: var(--known); display: block; margin-bottom: 2px; }
+.like { color: var(--text-secondary); }
+.like b { color: var(--text-primary); }
+
+/* stages */
+ol.stages { list-style: none; padding: 0; counter-reset: s; }
+ol.stages > li { counter-increment: s; position: relative; padding-left: 3.1rem; margin: 0 0 2.4rem; scroll-margin-top: 16px; }
+ol.stages > li::before {
+  content: counter(s); position: absolute; left: 0; top: .1rem; width: 2.1rem; height: 2.1rem; border-radius: 999px;
+  display: grid; place-items: center; font-weight: 600; background: var(--bg-secondary); border: 1px solid var(--border-button);
+}
+ol.stages > li:target::before, ol.stages > li.lit::before { background: var(--known); color: var(--bg-full); border-color: var(--known); }
+ol.stages h3 { margin-top: 0; }
+.who { font-family: var(--sans); font-size: .85rem; font-weight: 500; color: var(--text-tertiary); margin-left: .4rem; }
+figure.diagram { margin: 1.6rem 0 2.6rem; }
+figure.diagram svg { width: 100%; max-width: 520px; height: auto; display: block; }
+figcaption { font-size: .875rem; color: var(--text-tertiary); margin-top: .7rem; max-width: 40rem; }
+.node rect { fill: var(--bg-primary); stroke: var(--border-button); stroke-width: 1.2; transition: fill 150ms ease-out, stroke 150ms ease-out; }
+.node:hover rect, .node:focus-visible rect { fill: var(--bg-secondary); stroke: var(--known); }
+.node:active rect { fill: var(--bg-tertiary); }
+.node .t { fill: var(--text-primary); font: 600 15px var(--sans); }
+.node .s { fill: var(--text-secondary); font: 12.5px var(--sans); }
+.node.test rect { stroke-dasharray: 5 4; stroke: var(--silence); }
+.edge { stroke: var(--text-tertiary); stroke-width: 1.4; fill: none; }
+.edge.truth { stroke: var(--silence); stroke-dasharray: 5 4; }
+
+/* tables */
+.tablewrap { overflow-x: auto; margin: 1rem 0 1.4rem; border: 1px solid var(--border-button); border-radius: 18px; }
+table { border-collapse: collapse; width: 100%; font-size: .93rem; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--separator); vertical-align: top; }
+th { color: var(--text-tertiary); font-weight: 500; font-size: .85rem; background: var(--bg-primary); }
+tr:last-child td { border-bottom: 0; }
+td.n { white-space: nowrap; font-weight: 600; }
+.from { color: var(--text-tertiary); font-size: .82rem; }
+
+/* comparison bars */
+.bars { display: grid; gap: 10px; margin: 1rem 0 .4rem; }
+.bar { display: grid; grid-template-columns: 9.5rem 1fr 3.6rem; align-items: center; gap: 10px; font-size: .92rem; }
+.bar .track { height: 14px; border-radius: 999px; background: var(--bg-secondary); overflow: hidden; }
+.bar .fill { height: 100%; border-radius: 999px; background: var(--text-tertiary); transform-origin: left; }
+.bar.us .fill { background: var(--known); }
+.bar .v { text-align: right; font-weight: 600; }
+
+/* interactive instruments */
+.instrument { background: var(--bg-primary); border: 1px solid var(--border-button); border-radius: 24px; padding: 18px 18px 20px; margin: 1.6rem 0; }
+.instrument svg { width: 100%; height: auto; display: block; }
+.hero-mid { text-align: center; color: var(--silence); font-size: .95rem; margin-bottom: 4px; }
+.hero-ends { display: flex; justify-content: space-between; margin-top: 8px; font-size: .9rem; color: var(--text-tertiary); }
+.hero-ends b { display: block; color: var(--text-primary); font-weight: 600; }
+.hero-ends span:last-child { text-align: right; }
+.chartscroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.swipe { display: none; }
+@media (max-width: 560px) {
+  .chartscroll svg { min-width: 600px; }
+  .swipe { display: block; font-size: .8rem; color: var(--text-tertiary); margin: 4px 0 8px; }
+}
+.readouts { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; margin: 14px 0; }
+.readout { background: var(--bg-secondary); border-radius: 14px; padding: 10px 12px; }
+.readout .k { font-size: .8rem; color: var(--text-tertiary); }
+.readout .val { font-size: 1.35rem; font-weight: 600; line-height: 1.25; }
+.readout .sub { font-size: .8rem; color: var(--text-secondary); }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-top: 8px; }
+.controls label { font-size: .9rem; color: var(--text-secondary); }
+input[type=range] { width: 100%; accent-color: var(--known); height: 28px; }
+.btn {
+  font: 500 .9rem var(--sans); color: var(--text-primary); background: var(--bg-secondary); border: 1px solid var(--border-button);
+  border-radius: 12px; padding: 8px 14px; cursor: pointer; transition: background-color 150ms ease-out, border-color 150ms ease-out;
+}
+.btn:hover { background: var(--bg-tertiary); }
+.btn:active { background: #334760; }
+.btn[aria-pressed=true] { border-color: var(--silence); color: var(--silence); }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.seg .btn[aria-pressed=true] { border-color: var(--known); color: var(--known); }
+.places { display: grid; gap: 6px; margin-top: 6px; }
+.place { display: grid; grid-template-columns: 11.5rem 1fr 3rem; gap: 10px; align-items: center; font-size: .88rem; color: var(--text-secondary); }
+.place .track { height: 10px; border-radius: 999px; background: var(--bg-secondary); overflow: hidden; }
+.place .fill { height: 100%; width: 0; background: var(--silence); border-radius: 999px; transition: width 300ms var(--ease-presence); }
+.place.truth { color: var(--known); font-weight: 600; }
+.place.truth .fill { background: var(--known); }
+.status { margin-top: 12px; padding: 10px 14px; border-radius: 14px; font-size: .95rem; background: var(--bg-secondary); transition: background-color 150ms ease-out; }
+.status.on { background: var(--alert-soft); color: #ffc2c7; }
+.status.done { background: var(--known-soft); color: #bdeee3; }
+.fade-in { animation: condense 400ms var(--ease-presence) both; }
+@keyframes condense { from { opacity: 0; transform: scale(.97); filter: blur(2px); } }
+@media (prefers-reduced-motion: reduce) { .fade-in { animation: none; } .place .fill { transition: none; } }
+
+/* walkthrough steps */
+ol.timeline { list-style: none; padding: 0; margin: 1.4rem 0; border-left: 2px solid var(--separator); }
+ol.timeline li { position: relative; padding: 0 0 1.1rem 1.4rem; margin: 0; }
+ol.timeline li::before { content: ""; position: absolute; left: -7px; top: .45rem; width: 12px; height: 12px; border-radius: 999px; background: var(--bg-full); border: 2px solid var(--text-tertiary); }
+ol.timeline li.k::before { border-color: var(--known); background: var(--known); }
+ol.timeline li.a::before { border-color: var(--alert); background: var(--alert); }
+ol.timeline li.h::before { border-color: var(--silence); }
+ol.timeline .when { font-weight: 600; display: block; }
+
+/* glossary */
+.search { width: 100%; font: 1rem var(--sans); color: var(--text-primary); background: var(--bg-primary); border: 1px solid var(--border-button); border-radius: 12px; padding: 10px 14px; margin: .4rem 0 1.2rem; }
+.search::placeholder { color: var(--text-tertiary); }
+dl.gloss { margin: 0; }
+dl.gloss div { padding: 10px 0; border-bottom: 1px solid var(--separator); }
+dl.gloss dt { font-weight: 600; }
+dl.gloss dd { margin: 2px 0 0; color: var(--text-secondary); }
+.empty { color: var(--text-tertiary); }
+
+/* questions */
+details { border: 1px solid var(--border-button); border-radius: 16px; background: var(--bg-primary); margin: 0 0 10px; transition: border-color 150ms ease-out; }
+details[open] { border-color: var(--text-tertiary); }
+summary { cursor: pointer; padding: 13px 16px; font-weight: 600; list-style: none; display: flex; gap: 12px; justify-content: space-between; align-items: baseline; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; color: var(--text-tertiary); font-weight: 400; font-size: 1.2rem; line-height: 1; }
+details[open] summary::after { content: "\2212"; }
+summary .by { font-weight: 400; font-size: .82rem; color: var(--text-tertiary); margin-left: auto; white-space: nowrap; }
+details .ans { padding: 0 16px 14px; color: var(--text-secondary); }
+details[open] .ans { animation: condense 300ms var(--ease-presence) both; }
+@media (prefers-reduced-motion: reduce) { details[open] .ans { animation: none; } }
+
+/* links */
+.links { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); margin-top: 1rem; }
+.links a {
+  display: block; padding: 16px 18px; border-radius: 20px; border: 1px solid var(--border-button); background: var(--bg-primary);
+  text-decoration: none; color: var(--text-primary); transition: background-color 150ms ease-out, border-color 150ms ease-out;
+}
+.links a:hover { background: var(--bg-secondary); border-color: var(--known); }
+.links a:active { background: var(--bg-tertiary); }
+.links b { display: block; font-family: var(--serif); font-size: 1.15rem; }
+.links span { font-size: .85rem; color: var(--text-tertiary); word-break: break-all; }
+footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary); border-top: 1px solid var(--separator); margin-top: 2rem; }
+
+@media (max-width: 560px) {
+  body { font-size: 16px; }
+  h2 { font-size: 1.65rem; }
+  .readouts { grid-template-columns: 1fr 1fr; }
+  .readouts .readout:last-child { grid-column: span 2; }
+  .place { grid-template-columns: 8.5rem 1fr 2.6rem; font-size: .82rem; }
+  .bar { grid-template-columns: 7rem 1fr 3.2rem; font-size: .85rem; }
+  ol.stages > li { padding-left: 2.7rem; }
+  .panel, .instrument { padding: 16px 14px; border-radius: 20px; }
+  summary .by { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<header class="hero">
+  <h1>Silence is evidence.</h1>
+  <p class="lede">Tracer watches every specimen the microbiology lab is still waiting for. Every 5 minutes it estimates the chance each one misses its stability window and where it probably is, and it alerts someone while there is still time to find it. This page explains how it works and who built which part, for the talk on November 18.</p>
+  <figure aria-label="One specimen: collected at 7:15 AM, received at 8:57 AM, with 102 minutes and no scan in between">
+    <div class="hero-mid" aria-hidden="true">102 minutes with no scan</div>
+    <svg viewBox="0 0 640 28" aria-hidden="true">
+      <line x1="10" y1="14" x2="630" y2="14" stroke="var(--separator)" stroke-width="3" stroke-linecap="round"/>
+      <line class="silence-draw" x1="10" y1="14" x2="630" y2="14" stroke="var(--silence)" stroke-width="3" stroke-linecap="round" pathLength="600"/>
+      <circle cx="10" cy="14" r="8" fill="var(--known)"/>
+      <circle class="pulse" cx="630" cy="14" r="8" fill="none" stroke="var(--known)" stroke-width="2"/>
+      <circle cx="630" cy="14" r="8" fill="var(--known)"/>
+    </svg>
+    <div class="hero-ends" aria-hidden="true"><span><b>Collected</b>7:15 AM</span><span><b>Received</b>8:57 AM</span></div>
+    <figcaption>A specimen from the test runs, SP-r27-000368: a stat tissue sample from the emergency department. The lab saw two scans and nothing between them. <a href="#walkthrough">Replay what Tracer saw.</a></figcaption>
+  </figure>
+  <span class="notice">Every specimen and result here is synthetic, with no clinical review.</span>
+</header>
+
+<div class="layout">
+<nav class="toc" aria-label="Sections">
+  <ol>
+    <li><a href="#problem">The problem</a></li>
+    <li><a href="#how">How Tracer works</a></li>
+    <li><a href="#daniel">What Daniel built</a></li>
+    <li><a href="#karissa">What Karissa built</a></li>
+    <li><a href="#walkthrough">One specimen, start to flag</a></li>
+    <li><a href="#glossary">Glossary</a></li>
+    <li><a href="#questions">Likely questions</a></li>
+    <li><a href="#limits">Honest limits</a></li>
+    <li><a href="#links">Links</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<section id="problem" aria-labelledby="problem-h">
+  <h2 id="problem-h">The problem</h2>
+  <p>A specimen leaving a hospital ward has two scans in its future: one when it is collected and one when the lab receives it. Between them, nothing is recorded. Nobody can see whether a tube is riding the pneumatic system, waiting at a station, or still sitting on the unit.</p>
+  <p>That matters because microbiology specimens are on a clock. Unpreserved urine at room temperature has about 60 minutes before bacteria overgrow and the colony count stops meaning anything. Spinal fluid has to come straight to the lab and must not be refrigerated. A specimen that misses its window is usually rejected and collected again, which for the patient means another needle stick or lumbar puncture and hours of delay.</p>
+  <p>Today a missing specimen makes no noise. It is usually noticed when someone calls asking for the result.</p>
+  <ul>
+    <li><strong>Most lab errors happen before testing.</strong> In one stat laboratory's audit, 61.9% of errors happened before the specimen was analyzed. <span class="from">Carraro and Plebani, Clin Chem 2007; docs/problem-evidence.md</span></li>
+    <li><strong>Windows differ a lot.</strong> They run from 60 minutes for unpreserved urine to days for a swab in transport medium, so one time limit is too late for some specimens and far too early for others. <span class="from">config/policy_table.csv</span></li>
+    <li><strong>Public records skip the journey.</strong> The public MIMIC-IV demo extract stamps 1,291 microbiology specimens twice, at collection and when the result is filed, a median of 80.1 hours apart, with nothing in between. <span class="from">docs/mimic-demo-findings.md</span></li>
+  </ul>
+</section>
+
+<section id="how" aria-labelledby="how-h">
+  <h2 id="how-h">How Tracer works</h2>
+  <p>Four parts, in the order the data flows. Karissa's policy table sets the rules. Code and Claude make the data. A small statistical model learns from it. A static web page shows the results. Tap a box to jump to its part.</p>
+  <figure class="diagram">
+    <svg viewBox="0 0 420 430" role="img" aria-labelledby="dg-t">
+      <title id="dg-t">Pipeline: the policy table feeds data generation and the prediction logic; data generation feeds the prediction logic and a held-out test; both feed the demo.</title>
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--text-tertiary)"/></marker>
+        <marker id="ahs" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--silence)"/></marker>
+      </defs>
+      <path class="edge" d="M210 78 V102" marker-end="url(#ah)"/>
+      <path class="edge" d="M24 44 H10 V264 H22" marker-end="url(#ah)"/>
+      <path class="edge" d="M135 192 V214" marker-end="url(#ah)"/>
+      <path class="edge truth" d="M335 192 V214" marker-end="url(#ahs)"/>
+      <path class="edge" d="M135 314 V338" marker-end="url(#ah)"/>
+      <path class="edge" d="M335 314 V338" marker-end="url(#ah)"/>
+      <a class="node" href="#stage-policy"><rect x="24" y="12" width="376" height="66" rx="16"/><text class="t" x="44" y="40">Karissa's policy table</text><text class="s" x="44" y="62">44 rows: window, clock, urgency tier, source</text></a>
+      <a class="node" href="#stage-data"><rect x="24" y="104" width="376" height="88" rx="16"/><text class="t" x="44" y="132">Data generation</text><text class="s" x="44" y="154">Code draws 12,000 briefs, Claude writes the scans,</text><text class="s" x="44" y="174">a nine-check validator keeps 11,967</text></a>
+      <a class="node" href="#stage-model"><rect x="24" y="216" width="226" height="98" rx="16"/><text class="t" x="44" y="244">Prediction logic</text><text class="s" x="44" y="266">Survival model fit on 24 runs,</text><text class="s" x="44" y="286">location filter, alert rule</text></a>
+      <a class="node test" href="#checked"><rect x="266" y="216" width="134" height="98" rx="16"/><text class="t" x="282" y="244">The test</text><text class="s" x="282" y="266">6 held-out runs;</text><text class="s" x="282" y="286">only it sees the truth</text></a>
+      <a class="node" href="#stage-demo"><rect x="24" y="340" width="376" height="74" rx="16"/><text class="t" x="44" y="368">Demo</text><text class="s" x="44" y="392">Static page: board, timeline, Beat Tracer, threshold</text></a>
+    </svg>
+    <figcaption>The policy table feeds both the data (it decides which specimens missed their window) and the model (each specimen's window and urgency). The dashed path is the hidden truth, which only the test reads.</figcaption>
+  </figure>
+
+  <ol class="stages">
+    <li id="stage-policy">
+      <h3>Policy table <span class="who">Karissa</span></h3>
+      <p>For each specimen type and test, one row says how long the specimen stays usable (its stability window), where that clock starts and stops, how urgent it is (tier 1 to 3), how it travels, what gets it rejected, and the published source for the window. There are 44 rows: 34 have a source and 10 are marked assumed. Every row runs the clock from collection to receipt in the lab.</p>
+      <p class="like"><b>Like</b> the "use by" chart in a restaurant kitchen: every ingredient gets its own limit, and nobody judges fish by the rule for rice.</p>
+      <p class="say"><b>On stage</b>"Karissa's table tells Tracer how long each kind of specimen can wait, and where every one of those numbers came from."</p>
+    </li>
+    <li id="stage-data">
+      <h3>Data generation <span class="who">Daniel</span></h3>
+      <p>No public data records specimens in transit, so we made our own. Seeded code draws each specimen's brief: its type, tests, unit, route, collection time, one planted fault or none, and every timing. Claude then writes the scans the lab would have recorded and the hidden true path. A nine-check validator accepts or rejects each one, and the accepted set is frozen: 11,967 of 12,000, for $2.16.</p>
+      <p class="like"><b>Like</b> a film shoot: code writes the plot and the timing of every scene, Claude writes the dialogue, and the validator is the continuity editor who sends back any scene that contradicts the script.</p>
+      <p class="say"><b>On stage</b>"Code decides what happens to each specimen and when. Claude writes what the scanners would have recorded. A checker throws out anything that doesn't match."</p>
+    </li>
+    <li id="stage-model">
+      <h3>Prediction logic <span class="who">Daniel</span></h3>
+      <p>Every 5 minutes, for every specimen collected and not yet received, Tracer asks three questions. How unusual is this silence? Where is the specimen most likely to be? Is there still time to act? A survival model answers the first: from the training runs it learned how long a normal trip takes for each kind of specimen, time of day and priority, how often a trip runs far longer but still arrives, and how often a specimen never arrives. A location filter answers the second. An alert fires when risk times urgency crosses a threshold set so the lab gets about 6 alerts per 8-hour shift.</p>
+      <p class="like"><b>Like</b> package tracking with no scans along the way. You know when it shipped and how long deliveries like it usually take, so early silence means nothing. The longer it stays quiet past normal, and the closer the deadline, the more you worry.</p>
+      <p class="say"><b>On stage</b>"Silence is evidence. The longer a specimen stays quiet past a normal trip, the more likely it's stuck, and Tracer turns that into a ranked list."</p>
+    </li>
+    <li id="stage-demo">
+      <h3>Demo <span class="who">Daniel</span></h3>
+      <p>A static page on GitHub Pages, with no server, no key and no live AI calls. It reads files made ahead of time: the fitted numbers, the 2,378 held-out test specimens with their scans, risk and likely place every 5 minutes, each method's alert moment and the hidden truth, and short stories and search briefs written in advance. The board ranks specimens by expected harm, the timeline lets you scrub through one, Show the truth reveals where it really was, Set the threshold trades warning against alert count, and Beat Tracer has you race the model. A 3D tube bench draws the same model.</p>
+      <p class="like"><b>Like</b> a flight recorder you can replay: everything already happened, and you scrub back and forth to see what Tracer knew at each minute.</p>
+      <p class="say"><b>On stage</b>"Everything on your phone already happened. You're replaying what Tracer knew minute by minute, and then checking it against the truth."</p>
+    </li>
+  </ol>
+
+  <div class="instrument" id="lab">
+    <h3 style="margin-top:0">Try the risk math</h3>
+    <p class="muted" style="font-size:.95rem">This runs Tracer's real risk formula in your browser with the fitted numbers from <code>results/interval_params.json</code>, for a routine specimen collected between 6 and 11 AM. Pick a type and drag the silence.</p>
+    <div class="seg" role="group" aria-label="Specimen type" id="lab-types"></div>
+    <div class="chartscroll" style="margin-top:12px"><svg id="lab-chart" viewBox="0 0 640 230" role="img" aria-label="Risk of missing the window as silence grows"></svg></div>
+    <p class="swipe">Swipe the chart sideways to see all three hours.</p>
+    <label for="lab-t">Minutes of silence since collection: <b id="lab-tv">30</b></label>
+    <input id="lab-t" type="range" min="0" max="180" step="1" value="30">
+    <div class="readouts">
+      <div class="readout"><div class="k">Chance it misses its window</div><div class="val" id="lab-risk">–</div><div class="sub" id="lab-w">–</div></div>
+      <div class="readout"><div class="k">Expected harm (risk × weight)</div><div class="val" id="lab-harm">–</div><div class="sub" id="lab-tier">–</div></div>
+      <div class="readout"><div class="k">At 6 alerts a shift</div><div class="val" id="lab-alert">–</div><div class="sub" id="lab-at">–</div></div>
+    </div>
+    <p class="small" style="margin:0">Notice that even a swab with a 24-hour window climbs fast after two hours: by then most specimens still silent are the ones that never arrive. Urine waits for a higher risk before alerting because its weight is 1, against 3 for tissue.</p>
+  </div>
+</section>
+
+<section id="daniel" aria-labelledby="daniel-h">
+  <h2 id="daniel-h">What Daniel built</h2>
+  <p>Daniel built everything technical: the data generator, the model, the evaluation and the demo. Claude Code, a coding agent, wrote code and tests under rules Daniel set, and Daniel made the calls the repo could not settle.</p>
+
+  <div class="panel plain">
+    <h3>Plainly: this is a statistical model, not a trained black box</h3>
+    <p>Tracer has no neural network, no gradient boosting, and no AI model making live predictions. Its shape is written by hand: a three-part survival model, a location filter and a threshold rule. What it learns from data is a short list of numbers, fit by maximum likelihood on 24 training runs. Claude wrote the synthetic data and predicts nothing.</p>
+    <p style="margin:0">It learns its numbers from data and gives a probability, not a yes or no. A gradient-boosted challenger is planned and has not been run.</p>
+  </div>
+
+  <h3>The synthetic dataset, and why</h3>
+  <p>There was no data to learn from: MIMIC-IV has no transit scans, and nothing from a real workplace is used. So the data is generated. Code owns the statistics and Claude supplies the texture, because timings written by a language model have thin tails (too few very long delays) and cannot be redrawn on demand.</p>
+  <ul>
+    <li><strong>Briefs, by code.</strong> 30 runs of 400 specimens from seed 1. Faults are planted on purpose, at inflated rates so each appears often enough to test: of the 12,000 requested, 262 stall at the station, 218 are mislabeled or leaking, 128 are never sent, 96 go to the wrong station, 75 are never collected, 74 are lost in the tube, and 11,147 have no fault.</li>
+    <li><strong>Trails, by Claude.</strong> claude-haiku-5-5 writes each specimen's scan events and its hidden true path from the brief. It never sees the window or whether the specimen breached.</li>
+    <li><strong>Nine checks.</strong> The reply's shape, the event order, the hidden stages, the true-path segments, their lengths, the planted fault, the receipt scan, locations and notes, and no personal data. A failing trail gets one retry with the error text; a second failure drops it.</li>
+    <li><strong>Result.</strong> 11,967 accepted (99.7%), 99.4% on the first try, 33 dropped, $2.16 in all. The dropped ones lean toward long delays, because the model resists writing very long waits.</li>
+    <li><strong>Not reviewed.</strong> Karissa's planned review of twenty pilot timelines was skipped, so the dataset has had no clinical review.</li>
+  </ul>
+
+  <h3>How predictions are made</h3>
+  <p><strong>1. Risk: a three-part survival model.</strong> Fit on runs 0 to 23 (9,514 specimens). A trip is one of three kinds: normal (93.1% of specimens, typically about 21 minutes), far longer but still arriving (5.3%, typically about 89 minutes), or never arriving (1.6%). The normal trip time is fit separately for 96 groups, specimen type × six-hour block × priority; a group with fewer than 30 received specimens borrows the fit of a broader group. Risk is then one division:</p>
+  <div class="panel" style="font-family:var(--serif);font-size:1.08rem;text-align:center">
+    chance it misses = <span style="white-space:nowrap">(still out at the window)</span> ÷ <span style="white-space:nowrap">(still out now)</span>
+  </div>
+  <p>As the silence passes a normal trip, the specimens still out are more and more the long-delayed and lost ones, so risk rises on its own and never falls while the silence lasts. Once the receipt scan arrives the outcome is known and scoring stops.</p>
+  <p><strong>2. Location: a forward filter.</strong> On a one-minute grid, the filter moves probability through the legs of a trip (on the unit, hand carry, in the tube, at the station) and the ways it can fail (stalled, misrouted, lost). Each minute, anything that would have been received is removed, because it wasn't, and the rest is rescaled. Silence is the input. The split of time between legs and of failures between places are assumptions, not learned.</p>
+  <p><strong>3. Alerts: a threshold rule.</strong> Expected harm is risk × urgency weight (tier 1 = 3, tier 2 = 2, tier 3 = 1, all assumed). Each specimen gets at most one alert, when its harm reaches a threshold. The threshold is set on the training runs from alert volume alone, with no labels, as the most eager setting that stays within 6 alerts per 8-hour shift (an assumed budget); it comes out at 0.137. Alerts go to the receiving technologist for a tube specimen, the courier coordinator for a hand carry, and the charge nurse when the filter places the specimen still on its unit.</p>
+  <p><strong>The two rules it is compared with.</strong> The plan's rule alerts when the time since collection passes a percentile of that group's usual trip times, and ignores the window. The window-aware rule alerts once a fixed share of the window has passed. Each gets the same alert budget.</p>
+
+  <h3 id="checked">How it was checked</h3>
+  <ul>
+    <li><strong>A test it never saw.</strong> Runs 24 to 29: 2,378 specimens with a clock, 100 missed windows, 126 shifts. Only the evaluation code reads the hidden truth, and a test fails if the model code touches it.</li>
+    <li><strong>A bar set in advance:</strong> at least 5 more minutes of median warning than the plan's rule at the same alerts per shift. Cleared at 2, 4 and 6 alerts per shift, with both weightings.</li>
+    <li><strong>Parameter recovery.</strong> The fit gets back what the generator planted: 29.6% of specimens planted still out at 30 minutes against 30.0% fitted; 1.78% planted never arriving against 1.63% fitted; inside the bar at every checkpoint.</li>
+    <li><strong>Parity.</strong> The Python risk matches the original JavaScript page within one part in a million at every minute of its scenario.</li>
+    <li><strong>Sensitivity.</strong> The time-of-day profile did not matter. Volume did: at 1.5 and 2 times the volume, the window-aware rule ties Tracer.</li>
+  </ul>
+
+  <p style="margin-top:1.4rem"><strong>Median warning on the test runs at 6 alerts per shift,</strong> in minutes from alert to window close, counting a missed breach as zero:</p>
+  <div class="bars" role="img" aria-label="Tracer 55 minutes, window-aware rule 45, Tracer with equal weights 45, plan's rule 30">
+    <div class="bar us"><span>Tracer</span><div class="track"><div class="fill" style="width:91.7%"></div></div><span class="v">55</span></div>
+    <div class="bar"><span>Window-aware rule</span><div class="track"><div class="fill" style="width:75%"></div></div><span class="v">45</span></div>
+    <div class="bar"><span>Tracer, equal weights</span><div class="track"><div class="fill" style="width:75%"></div></div><span class="v">45</span></div>
+    <div class="bar"><span>Plan's rule</span><div class="track"><div class="fill" style="width:50%"></div></div><span class="v">30</span></div>
+  </div>
+  <p class="small">All 100 breaches were caught by every method at this budget. The lead over the plan's rule is 20 to 25 minutes (95% paired bootstrap). Most of that gain comes from using the window. <span class="from">results/README.md, results/mvp-nov8.json</span></p>
+
+  <h3>Key numbers</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Number</th><th>What it is</th><th>From</th></tr></thead>
+    <tbody>
+      <tr><td class="n">11,967 / 12,000</td><td>Specimens accepted by the validator (99.7%)</td><td class="from">datasets/manifest.json</td></tr>
+      <tr><td class="n">$2.16</td><td>Cost to generate the whole dataset</td><td class="from">datasets/manifest.json</td></tr>
+      <tr><td class="n">24 / 6</td><td>Runs used to fit / runs held out for the test</td><td class="from">results/interval_params.json</td></tr>
+      <tr><td class="n">9,514</td><td>Specimens in the fit; 155 of them never arrived</td><td class="from">results/interval_params.json</td></tr>
+      <tr><td class="n">2,378 / 100</td><td>Test specimens with a clock / missed windows among them</td><td class="from">docs/demo/bundle.json</td></tr>
+      <tr><td class="n">55 / 45 / 30 min</td><td>Median warning: Tracer / window-aware rule / plan's rule, at 6 alerts a shift</td><td class="from">results/README.md</td></tr>
+      <tr><td class="n">806 / 706</td><td>Tracer's alerts over 126 test shifts / those on specimens that arrived in time</td><td class="from">docs/demo/bundle.json</td></tr>
+      <tr><td class="n">55% / 88%</td><td>Place right on the first guess / in the top three, at 30 minutes of silence</td><td class="from">results/location-accuracy.json</td></tr>
+      <tr><td class="n">0.109 vs 0.119</td><td>Brier score against the base rate at 30 minutes (lower is better)</td><td class="from">results/README.md</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="karissa" aria-labelledby="karissa-h">
+  <h2 id="karissa-h">What Karissa built</h2>
+  <p>Karissa Kocourek is a clinical microbiology scientist. She wrote the policy table that every part of Tracer runs on, owns clinical review, and gives the clinical half of the talk.</p>
+  <h3>The policy table</h3>
+  <p>44 rows across the five specimen families in scope (urine, body fluid, bronchoalveolar lavage, culture swabs, tissue) and their tests. Each row holds the stability window in minutes, where the clock stops, the urgency tier, transport temperature, preservative, whether a stain is needed, rejection criteria, and the source. Karissa checked 30 rows against a published source herself and initialed them: most cite the IDSA and ASM 2024 guide to microbiology specimen collection, by table, and the eSwab rows cite Copan's instructions for use. Every row runs the clock from collection to receipt in the lab.</p>
+  <h3>How it drives the system</h3>
+  <ul>
+    <li><strong>It defines a miss.</strong> A specimen not received within its window is a breach. That is the label the test scores against.</li>
+    <li><strong>It sets each specimen's deadline.</strong> The window is the deadline in the risk formula, so the same 40 minutes of silence means far more for urine (60 minutes) than for a swab (24 hours).</li>
+    <li><strong>It sets urgency.</strong> The tier becomes the alert weight: tissue and lavage cannot be collected again, so they alert sooner.</li>
+    <li><strong>It settles multi-test specimens.</strong> A specimen with several tests takes the shortest window among them.</li>
+    <li><strong>It is locked to the results.</strong> Every result carries a fingerprint of the table, and scoring refuses one that does not match, so no number can drift away from her table unnoticed.</li>
+  </ul>
+  <p>The fairest credit is in the results: most of Tracer's gain over the plan's simple rule comes from using the window, and the window is hers. A rule built on her windows alone gets 45 minutes of warning where the plan's rule gets 30.</p>
+  <h3>Rows still marked assumed</h3>
+  <p>10 of the 44 rows have no published source for their window yet. They are labeled assumed everywhere and never called sourced.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Specimen</th><th>Tests</th><th>Window</th><th>Why it is assumed</th></tr></thead>
+    <tbody>
+      <tr><td>Urine, unpreserved, refrigerated</td><td>Culture</td><td class="n">24 h</td><td>The guide recommends refrigeration but gives no time limit</td></tr>
+      <tr><td>Body fluid, sterile container, refrigerated</td><td>Gram stain, bacterial culture, anaerobic culture</td><td class="n">24 h</td><td>The guide says refrigerate after 1 hour but gives no limit</td></tr>
+      <tr><td>Body fluid in a blood culture bottle</td><td>Bottle culture</td><td class="n">24 h</td><td>The guide says send at once, never refrigerate, with no limit</td></tr>
+      <tr><td>Culture swab (Stuart's)</td><td>Fungal smear, fungal culture</td><td class="n">24 h</td><td>No source found</td></tr>
+      <tr><td>eSwab</td><td>Fungal smear, fungal culture, AFB culture</td><td class="n">48 h</td><td>Copan's instructions cover bacteria only</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small">Four more rows that the sheet left without a source (boric-acid urine, the Stuart's swab Gram stain and bacterial culture, and tissue AFB culture) were filled from sources listed in <code>config/policy_sources.csv</code>. <span class="from">config/policy_table.csv, config/breach_policy.yaml</span></p>
+</section>
+
+<section id="walkthrough" aria-labelledby="walk-h">
+  <h2 id="walk-h">One specimen, from collection to flag</h2>
+  <p>SP-r27-000368 is the specimen Karissa walks through on slide 7. Drag the minute and watch what Tracer knew. Then show the truth.</p>
+
+  <div class="instrument" id="replay">
+    <div class="chartscroll"><svg viewBox="0 0 640 250" role="img" aria-label="Risk for SP-r27-000368 rises from 3% at minute 5 to 79% at minute 100. Tracer alerts at minute 20. The specimen is received at minute 102, before its window closes at minute 120.">
+      <g font-family="var(--sans)" font-size="12" fill="var(--text-tertiary)">
+        <line x1="40" y1="30" x2="625" y2="30" stroke="var(--separator)"/><text x="34" y="34" text-anchor="end">100%</text>
+        <line x1="40" y1="67.5" x2="625" y2="67.5" stroke="var(--separator)"/><text x="34" y="71.5" text-anchor="end">75%</text>
+        <line x1="40" y1="105" x2="625" y2="105" stroke="var(--separator)"/><text x="34" y="109" text-anchor="end">50%</text>
+        <line x1="40" y1="142.5" x2="625" y2="142.5" stroke="var(--separator)"/><text x="34" y="146.5" text-anchor="end">25%</text>
+        <line x1="40" y1="180" x2="625" y2="180" stroke="var(--border-button)"/><text x="34" y="184" text-anchor="end">0%</text>
+        <text x="40" y="197" text-anchor="middle">0</text><text x="130" y="197" text-anchor="middle">20</text><text x="220" y="197" text-anchor="middle">40</text><text x="310" y="197" text-anchor="middle">60</text><text x="400" y="197" text-anchor="middle">80</text><text x="490" y="197" text-anchor="middle">100</text><text x="580" y="197" text-anchor="middle">120 min</text>
+      </g>
+      <line x1="580" y1="30" x2="580" y2="180" stroke="var(--silence)" stroke-dasharray="4 4"/>
+      <text x="576" y="60" text-anchor="end" fill="var(--silence)" font-size="12" font-family="var(--sans)">Window closes, 120</text>
+      <line x1="152.5" y1="64" x2="152.5" y2="180" stroke="var(--text-tertiary)" stroke-dasharray="2 4"/>
+      <text x="157" y="76" fill="var(--text-tertiary)" font-size="12" font-family="var(--sans)">Both simple rules, 25</text>
+      <line x1="130" y1="30" x2="130" y2="180" stroke="var(--alert)" stroke-width="1.5"/>
+      <text x="134" y="44" fill="var(--alert)" font-size="12" font-family="var(--sans)">Tracer alerts, 20</text>
+      <line x1="499" y1="30" x2="499" y2="180" stroke="var(--known)" stroke-width="1.5"/>
+      <text x="495" y="44" text-anchor="end" fill="var(--known)" font-size="12" font-family="var(--sans)">Received, 102</text>
+      <polyline fill="none" stroke="var(--silence)" stroke-width="2.5" stroke-linejoin="round" points="62.5,175.4 85,175.1 107.5,173.95 130,171.8 152.5,168.4 175,163.6 197.5,157.35 220,149.95 242.5,141.9 265,133.7 287.5,125.7 310,118.1 332.5,110.9 355,103.9 377.5,97 400,90.2 422.5,83.2 445,76.1 467.5,68.8 490,61.3"/>
+      <line id="cursor" x1="130" y1="26" x2="130" y2="184" stroke="var(--text-primary)" stroke-width="1"/>
+      <circle id="cursor-dot" cx="130" cy="171.8" r="5" fill="var(--text-primary)"/>
+      <g id="truthbar" opacity="0.25">
+        <rect x="40" y="210" width="130.5" height="12" rx="3" fill="var(--known)"/>
+        <rect x="170.5" y="210" width="63" height="12" rx="3" fill="var(--text-secondary)"/>
+        <rect x="233.5" y="210" width="13.5" height="12" rx="3" fill="#d39b4a"/>
+        <rect x="247" y="210" width="252" height="12" rx="3" fill="var(--silence)"/>
+        <g font-family="var(--sans)" font-size="11.5" fill="var(--text-secondary)">
+          <text x="105" y="240" text-anchor="middle">on the unit</text>
+          <text x="202" y="240" text-anchor="middle">in the tube</text>
+          <text x="373" y="240" text-anchor="middle">at the lab's tube station, stalled</text>
+        </g>
+      </g>
+      <text x="34" y="220" text-anchor="end" fill="var(--text-tertiary)" font-size="12" font-family="var(--sans)">Truth</text>
+    </svg></div>
+    <p class="swipe">Swipe the chart sideways to see the window close.</p>
+    <label for="rp-m">Minute since collection: <b id="rp-mv">20</b> (<span id="rp-clock">7:35 AM</span>)</label>
+    <input id="rp-m" type="range" min="5" max="105" step="5" value="20">
+    <div class="controls">
+      <button class="btn" id="rp-truth" aria-pressed="false" type="button">Show the truth</button>
+      <span class="small">The truth is hidden from Tracer. Only the test reads it.</span>
+    </div>
+    <div class="readouts">
+      <div class="readout"><div class="k">Chance it misses the window</div><div class="val" id="rp-risk">5.5%</div><div class="sub">window: 120 minutes</div></div>
+      <div class="readout"><div class="k">Expected harm</div><div class="val" id="rp-harm">0.164</div><div class="sub">tier 1, weight 3; alerts at 0.137</div></div>
+      <div class="readout"><div class="k">Warning left</div><div class="val" id="rp-left">100 min</div><div class="sub">until the window closes</div></div>
+    </div>
+    <div class="k small" style="margin-top:4px">Where Tracer thinks it is</div>
+    <div class="places" id="rp-places"></div>
+    <div class="status" id="rp-status" aria-live="polite"></div>
+  </div>
+
+  <ol class="timeline">
+    <li class="k"><span class="when">7:15 AM, minute 0</span>Collected in the emergency department: stat tissue, going by pneumatic tube. Karissa's table gives tissue a 120-minute window and tier 1, from the IDSA and ASM 2024 guide, Table 47. The lab sees this scan and nothing more.</li>
+    <li class="h"><span class="when">Minutes 5 to 15</span>Risk creeps from 3.1% to 4.0%. A normal morning trip for stat tissue takes a median of about 21 minutes (39 minutes at the 90th percentile, from 103 training specimens), so this silence is still ordinary.</li>
+    <li class="a"><span class="when">7:35 AM, minute 20: alert</span>Risk 5.5%. Expected harm 3 × 5.5% = 0.164 passes the 0.137 threshold. Tracer's best guess is the lab's tube station (56%: 52% waiting there, 4% stalled there), then the collecting unit (25%), then the tube (15%). It is a tube specimen not placed on its unit, so the alert goes to the receiving technologist, with 100 minutes of warning. Both simple rules would have alerted at minute 25.</li>
+    <li class="h"><span class="when">Hidden from Tracer</span>At minute 20 the specimen was really still on the unit, Tracer's second guess. It sat there 29 minutes, rode the tube 14 minutes, reached the station at minute 43 and stalled there from minute 46. Tracer's first guess became true later.</li>
+    <li class="h"><span class="when">Minutes 60 and 100</span>Risk 41%, then 79%. The silence now looks like a stall or a loss.</li>
+    <li class="k"><span class="when">8:57 AM, minute 102</span>Received, inside its window, which would have closed at 9:15. The clock stops here. Accessioning at minute 142 and plating at 153 happen after the clock and do not count.</li>
+  </ol>
+  <p class="small">A 79% risk that ends in an on-time arrival is not a wrong prediction: risk is a chance, not a verdict. <span class="from">docs/demo/bundle.json, docs/demo/heroes.json, results/alerts.csv</span></p>
+</section>
+
+<section id="glossary" aria-labelledby="gloss-h">
+  <h2 id="gloss-h">Glossary</h2>
+  <label for="gq" class="small">Filter the terms</label>
+  <input id="gq" class="search" type="search" placeholder="Type a word, like window or Brier" autocomplete="off">
+  <dl class="gloss" id="gl">
+    <div><dt>Specimen</dt><dd>A sample sent to the lab for testing, here urine, body fluid, bronchoalveolar lavage, a culture swab or tissue.</dd></div>
+    <div><dt>Stability window</dt><dd>How long a specimen stays usable, in minutes, from Karissa's policy table. Miss it and the specimen is usually rejected.</dd></div>
+    <div><dt>Clock start and stop</dt><dd>Where the window is measured from and to. In Tracer it runs from collection to receipt in the lab, for every row.</dd></div>
+    <div><dt>Receipt scan</dt><dd>The scan when the lab receives a specimen. The only scan after collection that Tracer uses.</dd></div>
+    <div><dt>Breach</dt><dd>A specimen not received within its window. What Tracer tries to warn about.</dd></div>
+    <div><dt>Pneumatic tube and tube station</dt><dd>The system of tubes that carries specimens in carriers, and the station where a carrier lands.</dd></div>
+    <div><dt>Accessioning and plating</dt><dd>Logging a specimen into the lab system, then putting it on culture plates. Both happen after the clock stops.</dd></div>
+    <div><dt>Pre-analytical</dt><dd>Everything before testing: collection, labeling, transport. Where most lab errors happen.</dd></div>
+    <div><dt>Policy table</dt><dd>Karissa's 44-row table of windows, clock stops, urgency tiers, handling rules and sources.</dd></div>
+    <div><dt>Assumed row</dt><dd>A policy row with no published source for its window yet. 10 of the 44.</dd></div>
+    <div><dt>Urgency tier</dt><dd>1 to 3, from the policy table. Tier 1 (tissue, lavage) is the most urgent. It becomes the alert weight 3, 2 or 1.</dd></div>
+    <div><dt>Risk</dt><dd>The chance a still-silent specimen misses its window, given how long it has been silent.</dd></div>
+    <div><dt>Expected harm</dt><dd>Risk times the urgency weight. The board is ranked by it, and alerts fire on it.</dd></div>
+    <div><dt>Alert budget</dt><dd>How many alerts a shift can handle. Set at 6 per 8-hour shift, an assumption.</dd></div>
+    <div><dt>Warning time</dt><dd>Minutes from an alert to the window closing. The headline measure.</dd></div>
+    <div><dt>Survival model</dt><dd>A model of how long until something happens, here until a specimen arrives, allowing that some never do.</dd></div>
+    <div><dt>Long delay</dt><dd>The model's middle part: a trip that runs far longer than normal but still arrives, about 5% of specimens in the fit. It describes the timings, and is not the same thing as the planted fault "stalled at the station".</dd></div>
+    <div><dt>Location filter</dt><dd>The part that turns silence into a probability for each of seven places.</dd></div>
+    <div><dt>Top-1 and top-3</dt><dd>How often the true place is Tracer's first guess, or among its first three.</dd></div>
+    <div><dt>Baseline</dt><dd>A simpler method to compare against. Tracer has two: the plan's percentile rule and the window-aware rule.</dd></div>
+    <div><dt>Held-out runs</dt><dd>The 6 of 30 runs kept away from fitting and used only for the test.</dd></div>
+    <div><dt>Synthetic data</dt><dd>Data made for the project rather than recorded in a hospital. All of Tracer's data is synthetic.</dd></div>
+    <div><dt>Brief and trail</dt><dd>A brief is what code decides happens to a specimen; a trail is the scans and true path Claude writes for it.</dd></div>
+    <div><dt>Validator</dt><dd>The nine checks a trail must pass to be kept.</dd></div>
+    <div><dt>Truth log</dt><dd>Where each specimen really was. Only the evaluation code reads it.</dd></div>
+    <div><dt>Brier score</dt><dd>How close predicted chances are to what happened; lower is better. Tracer's is only slightly better than guessing the average rate.</dd></div>
+    <div><dt>MIMIC-IV</dt><dd>A public hospital research database. Its demo extract shows two timestamps per microbiology specimen and nothing in between.</dd></div>
+  </dl>
+  <p class="empty" id="gl-empty" hidden>No term matches. Try a shorter word.</p>
+</section>
+
+<section id="questions" aria-labelledby="q-h">
+  <h2 id="q-h">Likely questions</h2>
+  <p class="muted">The first ten are the script's prepared answers. Keep each to two or three sentences, and say what we don't know.</p>
+  <details><summary>What if a scanner just misses a scan?<span class="by">Daniel</span></summary><div class="ans">We didn't plant missed scans in the data, so that's a gap. A missed receipt scan would look like a late specimen, so Tracer would raise its risk and someone would check, which costs one alert.</div></details>
+  <details><summary>Why not just alert on everything after 30 minutes?<span class="by">Daniel</span></summary><div class="ans">That's close to the simple rule we compared against. It ignores the window, and the windows in our table run from 60 minutes for unpreserved urine to days for a swab in transport medium, so one time limit is too late for some and far too early for others.</div></details>
+  <details><summary>What would someone actually do with an alert?<span class="by">Karissa</span></summary><div class="ans">Go to the place Tracer names, like the tube station or the collecting unit, and look for it. Who gets which alert is an assumption we made, and a real lab would set it.</div></details>
+  <details><summary>Isn't it circular to test on data you generated?<span class="by">Daniel</span></summary><div class="ans">Partly, yes. The data and the model share our assumptions, so a good result shows the method behaves as designed, not that it works in a real lab. That's why the next step is a real log with receipt scans.</div></details>
+  <details><summary>Why a simple model and not deep learning?<span class="by">Daniel</span></summary><div class="ans">A lab scientist can read its numbers: how long a normal trip takes, how often a specimen stalls and still arrives, how often it never does. A gradient-boosted challenger is planned and hasn't been run.</div></details>
+  <details><summary>How often is it right about where the specimen is?<span class="by">Daniel</span></summary><div class="ans">At 30 minutes of silence, the true place is in its top three about 88% of the time and its first guess about 55%, on synthetic data. So an alert says something is off more reliably than it says where.</div></details>
+  <details><summary>How many false alarms?<span class="by">Daniel</span></summary><div class="ans">Plenty, by design. At 6 alerts a shift about a third of all specimens get an alert, and most of them arrive in time. Its risk scores are only slightly sharper than guessing the average rate, so the gain is in timing, not in sorting.</div></details>
+  <details><summary>Why does the clock stop at receipt?<span class="by">Karissa</span></summary><div class="ans">Where a window ends is a clinical judgement, and receipt in the lab is the standard measure. That's what the policy table uses, so a delay at the bench after receipt is outside what Tracer watches.</div></details>
+  <details><summary>Is any real patient or hospital data in this?<span class="by">Karissa</span></summary><div class="ans">No. We checked a public 100-patient MIMIC-IV extract and set it aside because it describes intensive care, not a general lab. No workplace data is used anywhere.</div></details>
+  <details><summary>How did you use AI to build it?<span class="by">Daniel</span></summary><div class="ans">Claude Code, a coding agent, wrote the code and tests under rules I set, and I made the calls the repo couldn't. A small Claude model wrote the scan trails: 12,000 requested, 11,967 passed a nine-check validator, for about two dollars. It's all in the AI teaming log in the repo.</div></details>
+  <details><summary>So is Tracer machine learning, or a set of rules?<span class="by">Daniel</span></summary><div class="ans">Both, in a specific way. The model's shape is chosen by hand and its numbers are learned from data by maximum likelihood: a typical trip time for each of 96 groups, plus how often a trip runs far longer and how often a specimen never arrives. The alert itself is a threshold rule on top. There is no neural network, and no AI model runs when Tracer scores a specimen.</div></details>
+  <details><summary>What does Claude do inside Tracer?<span class="by">Daniel</span></summary><div class="ans">Nothing at run time. A small Claude model wrote the synthetic scan trails before any model was fit, and a larger one wrote the demo's specimen stories and search briefs ahead of time, stored as files. The predictions are plain arithmetic on fitted numbers.</div></details>
+  <details><summary>Why did it alert on a tissue specimen at only 5.5% risk?<span class="by">Daniel</span></summary><div class="ans">Because tissue can't be collected again, so its weight is 3, and 3 × 5.5% passes the 0.137 harm threshold. A urine specimen, weight 1, would wait until its risk reached about 14%.</div></details>
+  <details><summary>Why six alerts a shift?<span class="by">Karissa</span></summary><div class="ans">It's an assumption, about a third of all specimens, and a real lab would choose its own number. The demo's threshold slider shows the trade: fewer alerts, less warning.</div></details>
+</section>
+
+<section id="limits" aria-labelledby="lim-h">
+  <h2 id="lim-h">Honest limits</h2>
+  <ul>
+    <li><strong>Every specimen is synthetic,</strong> and neither the data nor the model has had clinical review.</li>
+    <li><strong>The data and the model share our assumptions,</strong> so the results are best-case: they show the method behaves as designed, not that it works in a real lab.</li>
+    <li><strong>10 of the 44 policy rows are assumed,</strong> and so is every timing, urgency weight, alert budget and routing rule.</li>
+    <li><strong>Missed scans were never planted,</strong> and Tracer cannot see a mislabeled or leaking specimen: it watches only time and place.</li>
+    <li><strong>The 33 dropped specimens lean toward long delays,</strong> so the hardest cases are slightly underrepresented.</li>
+    <li><strong>It is better at timing than at sorting.</strong> About a third of specimens get an alert, 706 of 806 test alerts were on specimens that arrived in time, and its Brier score is only slightly better than the base rate.</li>
+    <li><strong>Location is a hint.</strong> The first guess is right about 55% of the time at 30 minutes of silence.</li>
+    <li><strong>The lead depends on the setting.</strong> At 1.5 and 2 times the volume the window-aware rule ties it, and its 10-minute lead over that rule at the original volume comes from the urgency weights. The generator does not model congestion.</li>
+    <li><strong>The gradient-boosted challenger has not been run.</strong></li>
+  </ul>
+  <h3>What a real deployment would need</h3>
+  <ul>
+    <li>A retrospective log from a real laboratory with collection, receipt and accessioning scans, to refit and retest the numbers.</li>
+    <li>Clinical review of the windows, urgency weights, alert budget and routing, by the lab that would use it, and sources for the 10 assumed rows or local policy in their place.</li>
+    <li>A feed from the lab information system. The design maps onto standard FHIR Specimen and Task records; no such feed is built.</li>
+  </ul>
+  <p class="small"><span class="from">results/README.md, datasets/manifest.json, docs/architecture.md</span></p>
+</section>
+
+<section id="links" aria-labelledby="links-h">
+  <h2 id="links-h">Links</h2>
+  <div class="links">
+    <a href="https://scalinity.github.io/Tracer/demo/"><b>Live demo</b><span>scalinity.github.io/Tracer/demo/</span></a>
+    <a href="https://scalinity.github.io/Tracer/demo/?seed=18#beat"><b>Beat Tracer, seed 18</b><span>The room's three rounds</span></a>
+    <a href="https://scalinity.github.io/Tracer/talk/"><b>Slides</b><span>scalinity.github.io/Tracer/talk/</span></a>
+    <a href="https://github.com/scalinity/Tracer"><b>Code and data</b><span>github.com/scalinity/Tracer</span></a>
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer>Built on November 8, 2026 from the Tracer repository at commit 56bac68. Each figure names the file it comes from. Daniel Escalante and Karissa Kocourek, CAI 5724, University of Florida.</footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // --- Tracer's risk formula with the fitted numbers (results/interval_params.json) ---
+  function erf(x) { // Abramowitz and Stegun 7.1.26
+    var s = x < 0 ? -1 : 1; x = Math.abs(x);
+    var t = 1 / (1 + 0.3275911 * x);
+    var y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+    return s * y;
+  }
+  function lnSurv(t, mu, sg) { return t <= 0 ? 1 : 0.5 * (1 - erf((Math.log(t) - mu) / (sg * Math.SQRT2))); }
+  var POOL = { wN: 0.93053, wS: 0.053179, pNever: 0.016292, sMu: 4.492707, sSg: 0.465061 };
+  function stillOut(t, g) { return POOL.pNever + POOL.wN * lnSurv(t, g.mu, g.sg) + POOL.wS * lnSurv(t, POOL.sMu, POOL.sSg); }
+  function risk(t, g) { return t >= g.W ? 1 : stillOut(g.W, g) / stillOut(t, g); }
+  var THRESH = 0.13742;
+  var TYPES = [
+    { k: "Urine", full: "unpreserved urine, room temperature", mu: 3.078529, sg: 0.486275, W: 60, tier: 3 },
+    { k: "Body fluid", full: "body fluid, sterile container, room temperature", mu: 3.071993, sg: 0.520317, W: 60, tier: 2 },
+    { k: "Lavage", full: "bronchoalveolar lavage, room temperature", mu: 3.043915, sg: 0.524895, W: 120, tier: 1 },
+    { k: "Tissue", full: "tissue", mu: 3.061914, sg: 0.535968, W: 120, tier: 1 },
+    { k: "Swab", full: "culture swab in Stuart's medium", mu: 3.04489, sg: 0.456958, W: 1440, tier: 3 }
+  ];
+  var WEIGHT = { 1: 3, 2: 2, 3: 1 };
+  function pct(r) { return r >= 0.995 ? Math.round(r * 100) + "%" : (r * 100).toFixed(1) + "%"; }
+  function fmtW(m) { return m >= 1440 ? (m / 60) + " hours" : m + " minutes"; }
+
+  var cur = 3, typesEl = document.getElementById("lab-types"), tIn = document.getElementById("lab-t");
+  var chart = document.getElementById("lab-chart"), NS = "http://www.w3.org/2000/svg";
+  TYPES.forEach(function (ty, i) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "btn"; b.textContent = ty.k;
+    b.setAttribute("aria-pressed", i === cur ? "true" : "false");
+    b.addEventListener("click", function () { cur = i; [].forEach.call(typesEl.children, function (c, j) { c.setAttribute("aria-pressed", j === i ? "true" : "false"); }); drawLab(true); });
+    typesEl.appendChild(b);
+  });
+  function el(name, attrs, text) { var e = document.createElementNS(NS, name); for (var a in attrs) e.setAttribute(a, attrs[a]); if (text != null) e.textContent = text; return e; }
+  var X = function (t) { return 44 + t * (580 / 180); }, Y = function (r) { return 190 - r * 165; };
+  function firstAlert(g) { var w = WEIGHT[g.tier]; for (var t = 0; t <= 180; t += 5) { if (risk(t, g) * w >= THRESH) return t; } return null; }
+  function drawLab(fresh) {
+    var g = TYPES[cur], t = +tIn.value, w = WEIGHT[g.tier];
+    while (chart.firstChild) chart.removeChild(chart.firstChild);
+    var axis = el("g", { "font-family": "var(--sans)", "font-size": "12", fill: "var(--text-tertiary)" });
+    [0, .25, .5, .75, 1].forEach(function (r) { axis.appendChild(el("line", { x1: 44, x2: 624, y1: Y(r), y2: Y(r), stroke: r === 0 ? "var(--border-button)" : "var(--separator)" })); axis.appendChild(el("text", { x: 38, y: Y(r) + 4, "text-anchor": "end" }, Math.round(r * 100) + "%")); });
+    [0, 30, 60, 90, 120, 150, 180].forEach(function (m) { axis.appendChild(el("text", { x: X(m), y: 208, "text-anchor": "middle" }, m === 180 ? "180 min" : String(m))); });
+    chart.appendChild(axis);
+    var thr = THRESH / w;
+    chart.appendChild(el("line", { x1: 44, x2: 624, y1: Y(thr), y2: Y(thr), stroke: "var(--alert)", "stroke-dasharray": "4 4" }));
+    chart.appendChild(el("text", { x: 620, y: Y(thr) - 6, "text-anchor": "end", fill: "var(--alert)", "font-size": "12", "font-family": "var(--sans)" }, "alert line for weight " + w + ": " + pct(thr)));
+    if (g.W <= 180) {
+      chart.appendChild(el("line", { x1: X(g.W), x2: X(g.W), y1: 20, y2: 190, stroke: "var(--silence)", "stroke-dasharray": "4 4" }));
+      chart.appendChild(el("text", { x: X(g.W) + 5, y: 32, fill: "var(--silence)", "font-size": "12", "font-family": "var(--sans)" }, "window closes"));
+    }
+    var pts = [];
+    for (var m = 0; m <= 180; m += 1) pts.push(X(m).toFixed(1) + "," + Y(risk(m, g)).toFixed(1));
+    var line = el("polyline", { points: pts.join(" "), fill: "none", stroke: "var(--silence)", "stroke-width": "2.5", "stroke-linejoin": "round" });
+    if (fresh && !reduce) line.setAttribute("class", "fade-in");
+    chart.appendChild(line);
+    chart.appendChild(el("line", { x1: X(t), x2: X(t), y1: 20, y2: 190, stroke: "var(--text-primary)" }));
+    chart.appendChild(el("circle", { cx: X(t), cy: Y(risk(t, g)), r: 5, fill: "var(--text-primary)" }));
+    var r = risk(t, g), h = r * w, fa = firstAlert(g);
+    document.getElementById("lab-tv").textContent = t;
+    document.getElementById("lab-risk").textContent = pct(r);
+    document.getElementById("lab-w").textContent = g.full + ", window " + fmtW(g.W);
+    document.getElementById("lab-harm").textContent = h.toFixed(3);
+    document.getElementById("lab-tier").textContent = "tier " + g.tier + ", weight " + w + "; alerts at " + THRESH.toFixed(3);
+    document.getElementById("lab-alert").textContent = h >= THRESH ? "Alert" : "Quiet";
+    document.getElementById("lab-alert").style.color = h >= THRESH ? "var(--alert)" : "var(--text-primary)";
+    document.getElementById("lab-at").textContent = fa == null ? "no alert in the first 3 hours" : "first alert at minute " + fa + " (5-minute ticks)";
+  }
+  tIn.addEventListener("input", function () { drawLab(false); });
+  drawLab(false);
+
+  // --- Replay of SP-r27-000368 (docs/demo/bundle.json); index i is minute 5(i+1) ---
+  var RISK = [0.0305, 0.0327, 0.0403, 0.0548, 0.0774, 0.1095, 0.151, 0.2003, 0.2541, 0.3088, 0.362, 0.4127, 0.4609, 0.5074, 0.5531, 0.5989, 0.6453, 0.6928, 0.7414, 0.7914];
+  var PLACES = [[0.6681,0,0.29165,0.03918,3e-05,0.00076,0.00027],[0.38983,0,0.29448,0.30315,0.00301,0.00703,0.00251],[0.28678,0,0.20574,0.47019,0.01622,0.01552,0.00555],[0.24987,0,0.15169,0.52128,0.04119,0.02649,0.00947],[0.23552,0,0.11867,0.51267,0.07763,0.04088,0.01462],[0.22855,0,0.09557,0.47218,0.12414,0.05855,0.021],[0.22309,0,0.07751,0.41526,0.17753,0.0783,0.02832],[0.21717,0,0.06262,0.3529,0.2331,0.09814,0.03607],[0.21073,0,0.05026,0.29321,0.28594,0.11602,0.04383],[0.20457,0,0.04018,0.24109,0.33229,0.13054,0.05132],[0.19962,0,0.03213,0.19847,0.37013,0.14114,0.05851],[0.19656,0,0.02581,0.16508,0.39905,0.14797,0.06552],[0.19579,0,0.02091,0.13956,0.41964,0.15156,0.07254],[0.19745,0,0.01712,0.12024,0.43289,0.15253,0.07977],[0.20153,0,0.01417,0.10556,0.4399,0.15146,0.08739],[0.20793,0,0.01186,0.09424,0.44162,0.14882,0.09553],[0.21652,0,0.01004,0.0853,0.43888,0.14497,0.1043],[0.22716,0,0.00857,0.07801,0.43235,0.14018,0.11373],[0.23966,0,0.00738,0.07186,0.42258,0.13465,0.12386],[0.25385,0,0.00641,0.06649,0.41005,0.12855,0.13466]];
+  var NAMES = ["On the unit", "Hand carry", "In the tube", "At the tube station", "Stalled at the station", "Misrouted", "Lost"];
+  var SEGS = [[0, 29, 0], [29, 43, 2], [43, 46, 3], [46, 102, 4]];
+  var mIn = document.getElementById("rp-m"), truthBtn = document.getElementById("rp-truth"), placesEl = document.getElementById("rp-places");
+  var showTruth = false, rows = [];
+  NAMES.forEach(function (n) {
+    var row = document.createElement("div"); row.className = "place";
+    row.innerHTML = '<span></span><div class="track"><div class="fill"></div></div><span class="v" style="text-align:right"></span>';
+    row.firstChild.textContent = n; placesEl.appendChild(row); rows.push(row);
+  });
+  function trueIdx(m) { for (var i = 0; i < SEGS.length; i++) if (m >= SEGS[i][0] && m < SEGS[i][1]) return SEGS[i][2]; return -1; }
+  function clock(m) { var t = 7 * 60 + 15 + m, h = Math.floor(t / 60), mm = t % 60; return (h > 12 ? h - 12 : h) + ":" + (mm < 10 ? "0" : "") + mm + " AM"; }
+  function drawReplay() {
+    var m = +mIn.value, received = m >= 102, i = Math.min(Math.max(m / 5 - 1, 0), 19);
+    var cx = 40 + Math.min(m, 102) * 4.5, r = RISK[i];
+    document.getElementById("rp-mv").textContent = received ? "102" : m;
+    document.getElementById("rp-clock").textContent = received ? "8:57 AM, received" : clock(m);
+    document.getElementById("cursor").setAttribute("x1", cx); document.getElementById("cursor").setAttribute("x2", cx);
+    var dot = document.getElementById("cursor-dot"); dot.setAttribute("cx", cx); dot.setAttribute("cy", received ? 180 : 180 - r * 150);
+    document.getElementById("rp-risk").textContent = received ? "Known" : pct(r);
+    document.getElementById("rp-harm").textContent = received ? "–" : (3 * r).toFixed(3);
+    document.getElementById("rp-left").textContent = received ? "18 min spare" : (120 - m) + " min";
+    var ti = received ? -1 : trueIdx(m);
+    rows.forEach(function (row, k) {
+      var p = received ? 0 : PLACES[i][k];
+      row.querySelector(".fill").style.width = (p * 100).toFixed(1) + "%";
+      row.querySelector(".v").textContent = received ? "" : Math.round(p * 100) + "%";
+      row.classList.toggle("truth", showTruth && k === ti);
+    });
+    document.getElementById("truthbar").setAttribute("opacity", showTruth ? "1" : "0.25");
+    var st = document.getElementById("rp-status");
+    st.className = "status";
+    if (received) { st.classList.add("done"); st.textContent = "Received at minute 102, inside the window. Scoring stops: the outcome is known."; }
+    else if (m >= 20) { st.classList.add("on"); st.textContent = "Alert open since minute 20, sent to the receiving technologist" + (showTruth ? ". Truth now: " + NAMES[ti].toLowerCase() + "." : "."); }
+    else { st.textContent = "No alert yet: expected harm " + (3 * r).toFixed(3) + " is under 0.137." + (showTruth ? " Truth now: " + NAMES[ti].toLowerCase() + "." : ""); }
+  }
+  mIn.addEventListener("input", drawReplay);
+  truthBtn.addEventListener("click", function () { showTruth = !showTruth; truthBtn.setAttribute("aria-pressed", showTruth ? "true" : "false"); truthBtn.textContent = showTruth ? "Hide the truth" : "Show the truth"; drawReplay(); });
+  drawReplay();
+
+  // --- Glossary filter ---
+  var q = document.getElementById("gq"), items = [].slice.call(document.querySelectorAll("#gl > div")), empty = document.getElementById("gl-empty");
+  q.addEventListener("input", function () {
+    var s = q.value.trim().toLowerCase(), n = 0;
+    items.forEach(function (d) { var hit = !s || d.textContent.toLowerCase().indexOf(s) >= 0; d.hidden = !hit; if (hit) n++; });
+    empty.hidden = n > 0;
+  });
+
+  // --- Section highlight in the contents ---
+  var links = [].slice.call(document.querySelectorAll("nav.toc a"));
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) links.forEach(function (a) { a.classList.toggle("here", a.getAttribute("href") === "#" + e.target.id); }); });
+    }, { rootMargin: "-30% 0px -60% 0px" });
+    links.forEach(function (a) { var s = document.querySelector(a.getAttribute("href")); if (s) io.observe(s); });
+  }
+
+  // --- Diagram boxes light their stage ---
+  [].forEach.call(document.querySelectorAll(".node"), function (n) {
+    n.addEventListener("click", function () {
+      var target = document.querySelector(n.getAttribute("href"));
+      [].forEach.call(document.querySelectorAll("ol.stages > li"), function (li) { li.classList.toggle("lit", li === target); });
+    });
+  });
+})();
+</script>
+</body>
+</html>

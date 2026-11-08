@@ -11,6 +11,9 @@ Team: Daniel Escalante and Karissa Kocourek.
 The demo is a static page on GitHub Pages, <https://scalinity.github.io/Tracer/demo/> (the QR code is `docs/demo/qr.png`). It reads
 its data files in the browser and makes no other request, so it needs no key and no server.
 
+How Tracer works, who built which part and the likely questions are explained in one page at
+<https://scalinity.github.io/Tracer/explained/> (`docs/explained/index.html`, a single self-contained file that also opens from disk).
+
 Events come from a Claude-generated synthetic dataset, because no public dataset records where a specimen
 is mid-transit, when it was received, or that one never arrived at all. Seeded code draws each specimen's
 brief and every timing, `claude-haiku-5-5` writes the scan events and the hidden true path, a nine-check
