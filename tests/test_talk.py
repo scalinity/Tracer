@@ -332,3 +332,16 @@ def test_stage_directions_are_only_directions():
     for n, section in page.sections.items():
         readme = [line for line in notes[n] if line not in ("Daniel", "Karissa")]
         assert " ".join(section["lines"]) == " ".join(readme), f"beat {n}: spoken text was lost"
+
+
+def test_karissas_lines_are_the_scripts_lines():
+    """docs/talk/karissa-lines.md is a copy of Karissa's part of this script, so a change here is copied there."""
+    lines = (TALK / "karissa-lines.md").read_text(encoding="utf-8")
+    for para in (p.strip() for p in lines.split("\n\n")):
+        if para and not para.startswith("# "):
+            assert para in SCRIPT, para
+    karissas = re.findall(r"^\*\*Karissa:\*\*\n\n(.+?)\n\n", SCRIPT, flags=re.M | re.S)
+    karissas += re.findall(r"^\d+\. \*\*.+?\*\* \[Karissa\] .+$", SCRIPT, flags=re.M)
+    assert len(karissas) >= 11  # 8 slide paragraphs and 3 prepared answers
+    for para in karissas:
+        assert para in lines, para
