@@ -17,12 +17,16 @@
   --text-primary: #e9eef4;
   --text-secondary: #b5c2d1;
   --text-tertiary: #8496aa;
-  --silence: #f0b45a;
-  --silence-soft: rgba(240, 180, 90, .14);
-  --known: #67c9b5;
-  --known-soft: rgba(103, 201, 181, .14);
-  --alert: #ff7a85;
-  --alert-soft: rgba(255, 122, 133, .14);
+  /* Colour grammar of docs/demo, docs/talk and visuals/: cyan is observed (scans, the truth), violet is
+     inferred (risk, places, the silent interval), amber is an alert or a caution, red is the window closing. */
+  --known: #63C4D3;
+  --known-deep: #2E7C8A;
+  --known-soft: rgba(99, 196, 211, .14);
+  --silence: #9D8DF1;
+  --silence-soft: rgba(157, 141, 241, .14);
+  --alert: #E3A33C;
+  --alert-soft: rgba(227, 163, 60, .13);
+  --alarm: #D05A4A;
   --focus-ring: #8fb8ff;
   --serif: ui-serif, "New York", "Iowan Old Style", Charter, Georgia, serif;
   --sans: "Avenir Next", Avenir, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -37,7 +41,7 @@ body {
   font: 17px/1.62 var(--sans); font-variant-numeric: tabular-nums;
 }
 a { color: var(--known); text-underline-offset: 3px; }
-a:hover { color: #8fdccb; }
+a:hover { color: #9ad9e3; }
 :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; border-radius: 6px; }
 h1, h2, h3 { font-family: var(--serif); font-weight: 600; line-height: 1.2; margin: 0; }
 h2 { font-size: 2rem; margin-bottom: .9rem; }
@@ -91,14 +95,14 @@ header.hero { padding: 3.5rem 0 2.5rem; }
 }
 .notice {
   display: inline-block; margin-top: 1.4rem; padding: 6px 12px; border-radius: 999px; font-size: .875rem;
-  color: var(--silence); background: var(--silence-soft); border: 1px solid rgba(240,180,90,.35);
+  color: var(--alert); background: var(--alert-soft); border: 1px solid rgba(227,163,60,.35);
 }
 
 /* panels */
 .panel { background: var(--bg-primary); border: 1px solid var(--border-button); border-radius: 24px; padding: 20px 22px; margin: 1.4rem 0; }
 .panel h3:first-child, .panel h4:first-child { margin-top: 0; }
-.plain { border-color: var(--silence); background: linear-gradient(var(--silence-soft), var(--silence-soft)), var(--bg-primary); }
-.plain h3 { color: var(--silence); }
+.plain { border-color: var(--alert); background: linear-gradient(var(--alert-soft), var(--alert-soft)), var(--bg-primary); }
+.plain h3 { color: var(--alert); }
 .say {
   margin: .9rem 0 0; padding: 12px 16px; border-radius: 14px; background: var(--bg-secondary);
   font-family: var(--serif); font-size: 1.08rem; line-height: 1.5;
@@ -173,7 +177,7 @@ input[type=range] { width: 100%; accent-color: var(--known); height: 28px; }
 }
 .btn:hover { background: var(--bg-tertiary); }
 .btn:active { background: #334760; }
-.btn[aria-pressed=true] { border-color: var(--silence); color: var(--silence); }
+.btn[aria-pressed=true] { border-color: var(--known); color: var(--known); }
 .seg { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 .seg .btn[aria-pressed=true] { border-color: var(--known); color: var(--known); }
 .places { display: grid; gap: 6px; margin-top: 6px; }
@@ -183,8 +187,8 @@ input[type=range] { width: 100%; accent-color: var(--known); height: 28px; }
 .place.truth { color: var(--known); font-weight: 600; }
 .place.truth .fill { background: var(--known); }
 .status { margin-top: 12px; padding: 10px 14px; border-radius: 14px; font-size: .95rem; background: var(--bg-secondary); transition: background-color 150ms ease-out; }
-.status.on { background: var(--alert-soft); color: #ffc2c7; }
-.status.done { background: var(--known-soft); color: #bdeee3; }
+.status.on { background: var(--alert-soft); color: #f3d29b; }
+.status.done { background: var(--known-soft); color: #bfe9f0; }
 .fade-in { animation: condense 400ms var(--ease-presence) both; }
 @keyframes condense { from { opacity: 0; transform: scale(.97); filter: blur(2px); } }
 @media (prefers-reduced-motion: reduce) { .fade-in { animation: none; } .place .fill { transition: none; } }
@@ -471,8 +475,8 @@ footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary);
         <line x1="40" y1="180" x2="625" y2="180" stroke="var(--border-button)"/><text x="34" y="184" text-anchor="end">0%</text>
         <text x="40" y="197" text-anchor="middle">0</text><text x="130" y="197" text-anchor="middle">20</text><text x="220" y="197" text-anchor="middle">40</text><text x="310" y="197" text-anchor="middle">60</text><text x="400" y="197" text-anchor="middle">80</text><text x="490" y="197" text-anchor="middle">100</text><text x="580" y="197" text-anchor="middle">120 min</text>
       </g>
-      <line x1="580" y1="30" x2="580" y2="180" stroke="var(--silence)" stroke-dasharray="4 4"/>
-      <text x="576" y="60" text-anchor="end" fill="var(--silence)" font-size="12" font-family="var(--sans)">Window closes, 120</text>
+      <line x1="580" y1="30" x2="580" y2="180" stroke="var(--alarm)" stroke-dasharray="4 4"/>
+      <text x="576" y="60" text-anchor="end" fill="var(--alarm)" font-size="12" font-family="var(--sans)">Window closes, 120</text>
       <line x1="152.5" y1="64" x2="152.5" y2="180" stroke="var(--text-tertiary)" stroke-dasharray="2 4"/>
       <text x="157" y="76" fill="var(--text-tertiary)" font-size="12" font-family="var(--sans)">Both simple rules, 25</text>
       <line x1="130" y1="30" x2="130" y2="180" stroke="var(--alert)" stroke-width="1.5"/>
@@ -484,9 +488,9 @@ footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary);
       <circle id="cursor-dot" cx="130" cy="171.8" r="5" fill="var(--text-primary)"/>
       <g id="truthbar" opacity="0.25">
         <rect x="40" y="210" width="130.5" height="12" rx="3" fill="var(--known)"/>
-        <rect x="170.5" y="210" width="63" height="12" rx="3" fill="var(--text-secondary)"/>
-        <rect x="233.5" y="210" width="13.5" height="12" rx="3" fill="#d39b4a"/>
-        <rect x="247" y="210" width="252" height="12" rx="3" fill="var(--silence)"/>
+        <rect x="170.5" y="210" width="63" height="12" rx="3" fill="var(--text-tertiary)"/>
+        <rect x="233.5" y="210" width="13.5" height="12" rx="3" fill="var(--known-deep)"/>
+        <rect x="247" y="210" width="252" height="12" rx="3" fill="var(--known-deep)"/>
         <g font-family="var(--sans)" font-size="11.5" fill="var(--text-secondary)">
           <text x="105" y="240" text-anchor="middle">on the unit</text>
           <text x="202" y="240" text-anchor="middle">in the tube</text>
@@ -661,14 +665,14 @@ footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary);
     while (chart.firstChild) chart.removeChild(chart.firstChild);
     var axis = el("g", { "font-family": "var(--sans)", "font-size": "12", fill: "var(--text-tertiary)" });
     [0, .25, .5, .75, 1].forEach(function (r) { axis.appendChild(el("line", { x1: 44, x2: 624, y1: Y(r), y2: Y(r), stroke: r === 0 ? "var(--border-button)" : "var(--separator)" })); axis.appendChild(el("text", { x: 38, y: Y(r) + 4, "text-anchor": "end" }, Math.round(r * 100) + "%")); });
-    [0, 30, 60, 90, 120, 150, 180].forEach(function (m) { axis.appendChild(el("text", { x: X(m), y: 208, "text-anchor": "middle" }, m === 180 ? "180 min" : String(m))); });
+    [0, 30, 60, 90, 120, 150, 180].forEach(function (m) { axis.appendChild(el("text", { x: X(m), y: 208, "text-anchor": m === 180 ? "end" : "middle" }, m === 180 ? "180 min" : String(m))); });
     chart.appendChild(axis);
     var thr = THRESH / w;
     chart.appendChild(el("line", { x1: 44, x2: 624, y1: Y(thr), y2: Y(thr), stroke: "var(--alert)", "stroke-dasharray": "4 4" }));
     chart.appendChild(el("text", { x: 620, y: Y(thr) - 6, "text-anchor": "end", fill: "var(--alert)", "font-size": "12", "font-family": "var(--sans)" }, "alert line for weight " + w + ": " + pct(thr)));
     if (g.W <= 180) {
-      chart.appendChild(el("line", { x1: X(g.W), x2: X(g.W), y1: 20, y2: 190, stroke: "var(--silence)", "stroke-dasharray": "4 4" }));
-      chart.appendChild(el("text", { x: X(g.W) + 5, y: 32, fill: "var(--silence)", "font-size": "12", "font-family": "var(--sans)" }, "window closes"));
+      chart.appendChild(el("line", { x1: X(g.W), x2: X(g.W), y1: 20, y2: 190, stroke: "var(--alarm)", "stroke-dasharray": "4 4" }));
+      chart.appendChild(el("text", { x: X(g.W) + 5, y: 32, fill: "var(--alarm)", "font-size": "12", "font-family": "var(--sans)" }, "window closes"));
     }
     var pts = [];
     for (var m = 0; m <= 180; m += 1) pts.push(X(m).toFixed(1) + "," + Y(risk(m, g)).toFixed(1));
