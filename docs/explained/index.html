@@ -353,7 +353,7 @@ footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary);
     <div class="chartscroll" style="margin-top:12px"><svg id="lab-chart" viewBox="0 0 640 230" role="img" aria-label="Risk of missing the window as silence grows"></svg></div>
     <p class="swipe">Swipe the chart sideways to see all three hours.</p>
     <label for="lab-t">Minutes of silence since collection: <b id="lab-tv">30</b></label>
-    <input id="lab-t" type="range" min="0" max="180" step="1" value="30">
+    <input id="lab-t" type="range" min="5" max="180" step="1" value="30">
     <div class="readouts">
       <div class="readout"><div class="k">Chance it misses its window</div><div class="val" id="lab-risk">–</div><div class="sub" id="lab-w">–</div></div>
       <div class="readout"><div class="k">Expected harm (risk × weight)</div><div class="val" id="lab-harm">–</div><div class="sub" id="lab-tier">–</div></div>
@@ -655,7 +655,7 @@ footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary);
   });
   function el(name, attrs, text) { var e = document.createElementNS(NS, name); for (var a in attrs) e.setAttribute(a, attrs[a]); if (text != null) e.textContent = text; return e; }
   var X = function (t) { return 44 + t * (580 / 180); }, Y = function (r) { return 190 - r * 165; };
-  function firstAlert(g) { var w = WEIGHT[g.tier]; for (var t = 0; t <= 180; t += 5) { if (risk(t, g) * w >= THRESH) return t; } return null; }
+  function firstAlert(g) { var w = WEIGHT[g.tier]; for (var t = 5; t <= 180; t += 5) { if (risk(t, g) * w >= THRESH) return t; } return null; }
   function drawLab(fresh) {
     var g = TYPES[cur], t = +tIn.value, w = WEIGHT[g.tier];
     while (chart.firstChild) chart.removeChild(chart.firstChild);
