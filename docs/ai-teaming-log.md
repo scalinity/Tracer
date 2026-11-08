@@ -359,7 +359,7 @@ The history holds the design documents, system map and milestone submissions (Oc
 
 ## The Claude API jobs
 
-All jobs call `claude-haiku-5-5` at low effort with thinking off. The reply must match a JSON schema, so replies parse and retries stay rare. Bulk jobs run through the Batch API at half price, and every call is logged to `data/claude/usage.jsonl` (kept local). The order for each job is a token count, a pilot, then the batch, and a job's estimate must be under the plan's gate before it starts.
+The dataset jobs (D4 to J2) call `claude-haiku-5-5` at low effort with thinking off. The demo's specimen stories (J3) and search briefs (J4) call `claude-sonnet-5-5`, the model for text a person reads. The reply must match a JSON schema, so replies parse and retries stay rare. Bulk jobs run through the Batch API at half price, and every call is logged to `data/claude/usage.jsonl` (kept local). The order for each job is a token count, a pilot, then the batch, and a job's estimate must be under the plan's gate before it starts.
 
 | Job | What it wrote | Requests | Cost | Result |
 |---|---|---|---|---|
@@ -368,8 +368,10 @@ All jobs call `claude-haiku-5-5` at low effort with thinking off. The reply must
 | J1b reruns | The pilot again after the note fix, and 190 specimens with every fault | 400 | $0.1350 | 199 of 200 and 188 of 190 accepted |
 | J2 smoke | 10 specimens through the Batch API | 10 | $0.0019 | All 10 accepted |
 | J2 full | 12,000 specimens in 30 seeded runs of 400 | 12,077 | $2.1612 | 11,967 accepted, 33 dropped |
+| J3 stories | Stories for the demo's 10 showcase specimens (`docs/demo/heroes.json`) | 10, plus 1 retry | $0.0518 | 10 stories |
+| J4 search briefs | A search brief for each of the 806 alerts (`docs/demo/briefs.json`) | 806, plus 2 retries | $0.9317 | 804 on the first try, 2 after a retry, none fell back to the template |
 
-Total about $2.37 of the $50 soft limit. The manifest (`datasets/manifest.json`) records the model, the prompt hash, the seed, the counts and the cost of the full job.
+Total about $3.36 of the $50 soft limit ($2.37 for the dataset, $0.98 for the demo's text). The manifest (`datasets/manifest.json`) records the model, the prompt hash, the seed, the counts and the cost of the full job.
 
 **What each job wrote.** For each brief the seeded code had already fixed the specimen, its planted fault and every timing. The model wrote the observed scan events and the hidden true path for that brief, and nothing else. Code owns the statistics, since language-model timings have thin tails and cannot be re-drawn.
 
