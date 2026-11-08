@@ -364,6 +364,13 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** the new figure test failed on its first run. The page said 29.6% of specimens were planted still out at 30 minutes, but the source value is 0.2955, which sits on a rounding boundary that float formatting rounds down; the page now quotes 29.55% against 29.97%. The recolour check found the risk lab's last axis label clipped ("180 mi"). Room-temperature body fluid gets 112 of its 150 alerts at minute 5: its starting risk of about 8% times weight 2 already passes the 0.137 threshold, so for that group the alert says little about silence. It is not changed here, since the weights and the budget are assumptions.
 - **Assumed:** squash merge, as for the earlier pull requests. The log's spend total now counts J3 and J4, about $3.36 in all.
 
+### Nov 8 · T2 · Add a short, card-by-card explainer (this pull request)
+
+- **Agent:** added `docs/explained/short/index.html`, served at /Tracer/explained/short/: the explainer condensed to twelve cards for two people to step through together, one idea per card, each marked with whose part of the talk it is. It keeps the replay of SP-r27-000368, draws Karissa's 44 policy rows as 34 sourced and 10 assumed squares, and ends with tap-to-reveal practice questions. Its figures come from the full explainer, which `tests/test_explained.py` holds to the repo.
+- **Daniel:** asked for a far shorter version to go through with Karissa, and for it to reach her through the Drive guide.
+- **Went wrong:** headless captures showed the opening line undrawn and the progress rail grey; seeking the animation with the Web Animations API showed it ends fully drawn, so the captures were taken mid-animation. The line is now visible by default and only drawn in by the animation.
+- **Assumed:** no drift test covers the short page; its figures are a subset of the full page's, so a change there has to be copied by hand.
+
 ## The Claude API jobs
 
 The dataset jobs (D4 to J2) call `claude-haiku-5-5` at low effort with thinking off. The demo's specimen stories (J3) and search briefs (J4) call `claude-sonnet-5-5`, the model for text a person reads. The reply must match a JSON schema, so replies parse and retries stay rare. Bulk jobs run through the Batch API at half price, and every call is logged to `data/claude/usage.jsonl` (kept local). The order for each job is a token count, a pilot, then the batch, and a job's estimate must be under the plan's gate before it starts.
