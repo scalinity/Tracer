@@ -118,3 +118,14 @@ def test_headline_figures_match_their_sources():
     ]
     missing = [n for n in needles if n not in TEXT]
     assert not missing, missing
+
+
+def test_the_window_rule_ties_at_every_other_volume():
+    scenarios = load("results/sensitivity.json")["scenarios"]
+    others = [s for s in scenarios if s["group"] == "arrival volume" and s["volume_factor"] != 1.0]
+    assert others
+    for s in others:
+        warning = {k: v["median_warning_all_breaches_min"] for k, v in s["retuned_to_6_per_shift"].items()}
+        assert warning["window_baseline"] == warning["model"], s["name"]
+    assert TEXT.count("every other volume tested, from half to twice") == 2
+    assert f"Runs {BUNDLE['source']['runs']}:" in TEXT  # the held-out runs, cited beside interval_params.json

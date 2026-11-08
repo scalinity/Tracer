@@ -404,7 +404,7 @@ footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary);
     <li><strong>A bar set in advance:</strong> at least 5 more minutes of median warning than the plan's rule at the same alerts per shift. Cleared at 2, 4 and 6 alerts per shift, with both weightings.</li>
     <li><strong>Parameter recovery.</strong> The fit gets back what the generator planted: 29.55% of specimens planted still out at 30 minutes against 29.97% fitted; 1.78% planted never arriving against 1.63% fitted; inside the bar at every checkpoint.</li>
     <li><strong>Parity.</strong> The Python risk matches the original JavaScript page within one part in a million at every minute of its scenario.</li>
-    <li><strong>Sensitivity.</strong> The time-of-day profile did not matter. Volume did: at 1.5 and 2 times the volume, the window-aware rule ties Tracer.</li>
+    <li><strong>Sensitivity.</strong> The time-of-day profile did not matter. Volume did: at every other volume tested, from half to twice, the window-aware rule ties Tracer.</li>
   </ul>
 
   <p style="margin-top:1.4rem"><strong>Median warning on the test runs at 6 alerts per shift,</strong> in minutes from alert to window close, counting a missed breach as zero:</p>
@@ -422,7 +422,7 @@ footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary);
     <tbody>
       <tr><td class="n">11,967 / 12,000</td><td>Specimens accepted by the validator (99.7%)</td><td class="from">datasets/manifest.json</td></tr>
       <tr><td class="n">$2.16</td><td>Cost to generate the whole dataset</td><td class="from">datasets/manifest.json</td></tr>
-      <tr><td class="n">24 / 6</td><td>Runs used to fit / runs held out for the test</td><td class="from">results/interval_params.json</td></tr>
+      <tr><td class="n">24 / 6</td><td>Runs used to fit / runs held out for the test</td><td class="from">results/interval_params.json, docs/demo/bundle.json</td></tr>
       <tr><td class="n">9,514</td><td>Specimens in the fit; 155 of them never arrived</td><td class="from">results/interval_params.json</td></tr>
       <tr><td class="n">2,378 / 100</td><td>Test specimens with a clock / missed windows among them</td><td class="from">docs/demo/bundle.json</td></tr>
       <tr><td class="n">55 / 45 / 30 min</td><td>Median warning: Tracer / window-aware rule / plan's rule, at 6 alerts a shift</td><td class="from">results/README.md</td></tr>
@@ -594,7 +594,7 @@ footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary);
     <li><strong>The 33 dropped specimens lean toward long delays,</strong> so the hardest cases are slightly underrepresented.</li>
     <li><strong>It is better at timing than at sorting.</strong> About a third of specimens get an alert, 706 of 806 test alerts were on specimens that arrived in time, and its Brier score is only slightly better than the base rate.</li>
     <li><strong>Location is a hint.</strong> The first guess is right about 55% of the time at 30 minutes of silence.</li>
-    <li><strong>The lead depends on the setting.</strong> At 1.5 and 2 times the volume the window-aware rule ties it, and its 10-minute lead over that rule at the original volume comes from the urgency weights. The generator does not model congestion.</li>
+    <li><strong>The lead depends on the setting.</strong> At every other volume tested, from half to twice, the window-aware rule ties it, and its 10-minute lead over that rule at the original volume comes from the urgency weights. The generator does not model congestion.</li>
     <li><strong>The gradient-boosted challenger has not been run.</strong></li>
   </ul>
   <h3>What a real deployment would need</h3>
