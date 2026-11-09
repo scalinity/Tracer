@@ -70,11 +70,24 @@ def _kpis(scenario: dict) -> dict:
     return kpi.kpis(scenario)
 
 
-def kpis_parallel(scenarios: list[dict], workers: int) -> list[dict]:
+def _revalidate(args: tuple[dict, dict]) -> str | None:
+    """None when layers 1 to 5 pass, else the first failing layer and its errors."""
+    from src.sim import kpi
+    scenario, brief = args
+    res = validate.validate(scenario, brief, plausibility=kpi.check)
+    return None if res.ok else f"{res.layer}: {'; '.join(res.errors)[:200]}"
+
+
+def _parallel(fn, items: list, workers: int) -> list:
+    """fn over items in order, in worker processes (run from a module or script: spawn re-imports __main__)."""
     if workers <= 1:
-        return [_kpis(s) for s in scenarios]
+        return [fn(x) for x in items]
     with ProcessPoolExecutor(workers) as pool:
-        return list(pool.map(_kpis, scenarios, chunksize=8))
+        return list(pool.map(fn, items, chunksize=8))
+
+
+def kpis_parallel(scenarios: list[dict], workers: int) -> list[dict]:
+    return _parallel(_kpis, scenarios, workers)
 
 
 def accepted_items(jobs: tuple[str, ...], paths: runner.Paths) -> tuple[list[dict], dict]:
@@ -150,12 +163,8 @@ def freeze(jobs: tuple[str, ...], *, paths: runner.Paths | None = None, workers:
     out(f"freeze: {len(existing)} in the library, {len(new)} new accepted items from {', '.join(jobs)}")
 
     # Re-validate layers 1 to 5 (the plausibility layer simulates the full week), keeping the first failure.
-    invalid = {}
-    from src.sim import kpi
-    for i in new:
-        res = validate.validate(i["scenario"], i["brief"], plausibility=kpi.check)
-        if not res.ok:
-            invalid[i["item_id"]] = f"{res.layer}: {'; '.join(res.errors)[:200]}"
+    checks = _parallel(_revalidate, [(i["scenario"], i["brief"]) for i in new], workers)
+    invalid = {i["item_id"]: why for i, why in zip(new, checks) if why is not None}
     new = [i for i in new if i["item_id"] not in invalid]
 
     pool = [{"item_id": r["meta"]["item_id"], "scenario": r["scenario"], "brief": {"stratum": r["meta"]["stratum"]},
