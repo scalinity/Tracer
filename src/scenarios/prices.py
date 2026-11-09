@@ -9,8 +9,11 @@ Pricing follows docs/neural/spec.md Appendix B:
   rate), cached input at the cached rate, output (which already includes reasoning tokens) at the output rate, all at
   the tier actually served. When a usage object does not report cache writes, all uncached input is priced at the
   cache-write rate, since any of it may have been written.
-- a worst case: estimated input x 1.15 at the highest input rate the tier could bill (input or cache write), plus
-  max_output_tokens at the output rate, at the tier requested.
+- a worst case (the reservation): an upper bound on input tokens (the runner's byte bound) at the highest input rate
+  (input, the 30-minute cache write, or the 12-hour write when a request asks for 12-hour retention), plus
+  max_output_tokens (which include reasoning) at the output rate, all at Standard rates (RESERVE_TIER). A Flex request
+  can be served and billed at Standard, and Flex and Batch are half of Standard, so a Standard reservation covers the
+  bill whatever tier serves it. Settlement still prices the tier actually served.
 """
 
 from __future__ import annotations
@@ -24,9 +27,10 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 PRICES_PATH = ROOT / "config" / "openai_prices.yaml"
 MAX_AGE = timedelta(hours=24)
-FUTURE_SKEW = timedelta(minutes=10)  # a verified_at later than now by more than this is a typo, not a fresh table
+FUTURE_SKEW = timedelta(minutes=5)  # a timestamp later than now by more than this is a typo, not a fresh record
 RATE_KEYS = ("input", "cached_input", "cache_write", "output")
-WORST_CASE_INPUT_FACTOR = Decimal("1.15")
+RESERVE_TIER = "standard"  # every reservation is priced here: the most any Flex, Batch or Standard request is billed
+SHORT_CONTEXT_MAX_INPUT = 272_000  # above it the whole request is billed at long-context rates, which the table lacks
 
 # The response's service_tier field, mapped to the price table's tier names. A tier missing here or from the table
 # cannot be priced, and the runner then keeps the whole reservation as spent.
@@ -66,7 +70,7 @@ def age(table: dict, now: datetime | None = None) -> timedelta:
 
 
 def check_fresh(table: dict, now: datetime | None = None, max_age: timedelta = MAX_AGE) -> None:
-    """Refuse a table verified more than 24 hours ago (or dated in the future)."""
+    """Refuse a table verified more than 24 hours ago, or dated more than five minutes ahead."""
     how_old = age(table, now)
     if how_old > max_age:
         raise PriceError(f"price table verified {how_old.total_seconds() / 3600:.1f} hours ago (limit "
@@ -151,12 +155,24 @@ def usage_cost_micros(usage: dict, r: dict[str, Decimal]) -> int:
     return micros(cost)
 
 
-def worst_case_micros(est_input_tokens: int, max_output_tokens: int, r: dict[str, Decimal]) -> int:
-    """The reservation for one request: no response at these rates can cost more, given the input estimate holds."""
-    if est_input_tokens <= 0 or max_output_tokens <= 0:
+def worst_case_micros(input_bound: int, max_output_tokens: int, r: dict[str, Decimal], *,
+                      ttl_12h: bool = False) -> int:
+    """The reservation for one request: no response billed at these rates can cost more, because billed input never
+    passes `input_bound` (an upper bound, not an estimate) and billed output never passes max_output_tokens.
+
+    `r` is the reservation tier's rates (RESERVE_TIER). `ttl_12h` is set when the request asks for 12-hour cache
+    retention, whose write rate is the highest input rate of all."""
+    if input_bound <= 0 or max_output_tokens <= 0:
         raise PriceError("a worst case needs positive input and output token counts")
+    if input_bound > SHORT_CONTEXT_MAX_INPUT:
+        raise PriceError(f"the input bound {input_bound:,} tokens passes {SHORT_CONTEXT_MAX_INPUT:,}, where long-context "
+                         "rates apply; the price table has none, so the request cannot be reserved")
     top_input = max(r["input"], r["cache_write"])
-    return micros(Decimal(est_input_tokens) * WORST_CASE_INPUT_FACTOR * top_input + max_output_tokens * r["output"])
+    if ttl_12h:
+        if "cache_write_12h" not in r:
+            raise PriceError("the request asks for 12-hour cache retention but the table has no 12-hour write rate")
+        top_input = max(top_input, r["cache_write_12h"])
+    return micros(Decimal(input_bound) * top_input + max_output_tokens * r["output"])
 
 
 def expected_micros(est_input_tokens: int, expected_output_tokens: int, r: dict[str, Decimal]) -> int:

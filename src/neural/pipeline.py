@@ -3,25 +3,27 @@ run, generate and collect; the later stages join it with their tasks.
 
     python -m src.neural.pipeline status
     python -m src.neural.pipeline plan     --job O1 [--force]
-    python -m src.neural.pipeline dry-run  --job O1 [--tier flex|batch|standard] [--count-tokens-api] [--force]
+    python -m src.neural.pipeline dry-run  --job O1 [--tier flex|batch|standard] [--force]
     python -m src.neural.pipeline generate --job O1 --budget-usd 3 [--tier flex|batch|standard]
     python -m src.neural.pipeline collect  --job O1
     python -m src.neural.pipeline ledger report
     python -m src.neural.pipeline ledger release-job O1b --reason TEXT
 
-The dry run sends nothing and spends nothing: it builds every request of the job with the real planner and prompt,
-estimates input tokens locally (characters / 2.5, plus 15%), and prices each request's expected and worst case. Only
-`--count-tokens-api` calls the API (OpenAI's input-token counting endpoint, on three requests per model), and each of
-those calls goes through the ledger with its full estimate kept as spent, because the docs do not say whether it is
-billed. `generate` refuses unless a dry run of the same request set and tier exists from the last 24 hours, the price
-table is under 24 hours old and prices every model and tier it may use, `--budget-usd` is no greater than the job's cap,
-the job is released, and (O2) the O1 gate passed or (O3) a weak-spot plan exists.
+The dry run sends nothing, spends nothing and opens no connection: it builds every request of the job with the real
+planner and prompt and prices each one's worst case (what generate reserves: its input bound, every UTF-8 byte sent
+plus framing, and max_output_tokens, at Standard rates) and its expected cost (a local estimate, characters / 2.5 plus
+15%, at the tier's rates), with the measured median input of stored responses beside it. `generate` refuses unless a
+dry run of the same request set and tier exists from the last 24 hours (and not dated ahead), the price table is under
+24 hours old and prices every model and tier it may use, `--budget-usd` is no greater than the job's cap, the job is
+released, and (O2) the O1 gate passed or (O3) a weak-spot plan exists. It sends only that request set and the repairs
+it spawns.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import statistics
 import sys
 import time
 from datetime import datetime
@@ -109,7 +111,22 @@ class Pipeline:
                  f"[{'ran: ' + reason if ran else 'up to date'}]")
         return briefs
 
-    def dry_run(self, job: str, tier: str | None = None, count_api: bool = False, force: bool = False) -> dict:
+    def measured_input(self) -> dict:
+        """{model: (median billed input tokens, responses)} over every stored response the item store records."""
+        if not self.paths.items.exists():
+            return {}
+        store = runner.ItemStore(self.paths.items, self.paths.items_log)
+        try:
+            seen: dict[str, list[int]] = {}
+            for item in store.items():
+                n = (item.get("tokens") or {}).get("input")
+                if isinstance(n, int) and not isinstance(n, bool) and n > 0:
+                    seen.setdefault(item["model"], []).append(n)
+        finally:
+            store.close()
+        return {m: (round(statistics.median(v)), len(v)) for m, v in seen.items()}
+
+    def dry_run(self, job: str, tier: str | None = None, force: bool = False) -> dict:
         cfg = self.cfg()
         tier = tier or runner.job_settings(cfg, job)["tier"]
         self.plan(job)
@@ -123,25 +140,20 @@ class Pipeline:
             balance = {"account": totals["accounts"][cfg["jobs"][job]["account"]], "job": totals["jobs"][job]}
             inputs = {"briefs": stages.file_hash(self.paths.briefs(job)), "request_set": set_hash,
                       "prices": stages.file_hash(self.paths.prices), "tier": tier,
-                      "estimator": "count_api" if count_api else "local", "ledger": stages.obj_hash(balance)}
+                      "estimator": "local; worst case from the byte bound at standard rates",
+                      "ledger": stages.obj_hash(balance)}
             path = self.paths.dryrun(job)
 
             def fn():
-                counter = self._counter(lg, cfg, table, job, tier) if count_api else None
                 d = runner.dry_run(job=job, cfg=cfg, table=table, requests=requests, tier=tier, totals=totals,
-                                   counter=counter, now=self.now(), seams=self.seams,
+                                   now=self.now(), seams=self.seams, measured=self.measured_input(),
                                    ledger_state="created empty by this dry run" if created else "present")
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(json.dumps(d, indent=1, sort_keys=True) + "\n", encoding="utf-8")
                 return {"dryrun": path}, d
 
-            if count_api:  # it calls the API, so it holds the generator lock like any other sender
-                with runner.GeneratorLock(self.paths.lock):
-                    ran, d, _ = stages.run_stage(self.paths.stages, f"dry-run-{job}", inputs, fn, force=force,
-                                                 max_age=runner.DRYRUN_MAX_AGE, now=self.now())
-            else:
-                ran, d, _ = stages.run_stage(self.paths.stages, f"dry-run-{job}", inputs, fn, force=force,
-                                             max_age=runner.DRYRUN_MAX_AGE, now=self.now())
+            ran, d, _ = stages.run_stage(self.paths.stages, f"dry-run-{job}", inputs, fn, force=force,
+                                         max_age=runner.DRYRUN_MAX_AGE, now=self.now())
         if not ran:
             d = json.loads(path.read_text(encoding="utf-8"))
             self.out("The dry run is up to date (same inputs, under 24 hours old); here it is again.")
@@ -151,27 +163,6 @@ class Pipeline:
         except prices.PriceError as e:
             self.out(f"NOTE: {e}. generate will refuse until the table is re-verified.")
         return d
-
-    def _counter(self, lg: ledger_mod.Ledger, cfg: dict, table: dict, job: str, tier: str):
-        """The token-counting endpoint, with each call reserved and its estimate kept as spent."""
-        client = self.client_factory()
-
-        def count(body: dict) -> int:
-            est = runner.estimate_input_tokens(body)
-            cost = max(1, prices.micros(Decimal(est) * prices.rates(table, body["model"], tier)["input"]))
-            rid = lg.reserve(job, f"count-{runner.request_hash(body)[:12]}", Decimal(cost) / 1_000_000,
-                             detail={"purpose": "input-token count", "model": body["model"], "tier": tier})
-            try:
-                n = client.count_input_tokens(body)
-            except ClientError as e:
-                if e.kind == "missing_key":
-                    lg.void(rid, "no key; nothing was sent")
-                else:
-                    lg.settle_unknown(rid, f"token count failed ({e.kind}); not proven unbilled", e.request_id)
-                raise
-            lg.settle_unknown(rid, "token count: the docs do not say whether it is billed")
-            return n
-        return count
 
     def generate(self, job: str, budget_usd: str | None, tier: str | None = None) -> int:
         cfg = self.cfg()
@@ -188,7 +179,7 @@ class Pipeline:
         now = self.now()
         table = prices.load(self.paths.prices)
         uses = {(cfg["arms"][a]["model"], t) for arms in j["arms"].values() for a in arms
-                for t in {tier, "batch"}}  # any item may fall back to Batch after six unanswered tries
+                for t in {tier, "batch", prices.RESERVE_TIER}}  # Batch after six unanswered tries; reserved at Standard
         prices.require(table, sorted(uses), now)
         runner.check_efforts(cfg, job, table)
         if j.get("needs") == "pilot_gate":
@@ -211,7 +202,8 @@ class Pipeline:
                 try:
                     run = runner.Runner(job=job, cfg=cfg, table=table, ledger=lg, store=store, client=client,
                                         seams=self.seams, paths=self.paths, tier=tier, budget_usd=budget,
-                                        sleep=self.sleep, clock=self.clock, now=self.now, out=self.out)
+                                        sleep=self.sleep, clock=self.clock, now=self.now, out=self.out,
+                                        units={r["unit"] for r in requests})  # the dry run's checked set only
                     run.plan_items(requests, dry)
                     _, summary, _ = stages.run_stage(
                         self.paths.stages, f"generate-{job}",
@@ -345,8 +337,6 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("dry-run", help="price every request of a job; sends nothing")
     p.add_argument("--job", required=True)
     p.add_argument("--tier", choices=TIERS)
-    p.add_argument("--count-tokens-api", action="store_true",
-                   help="count input tokens with OpenAI's endpoint (calls the API, through the ledger)")
     p.add_argument("--force", action="store_true")
     p = sub.add_parser("generate", help="send a job's requests (spends money)")
     p.add_argument("--job", required=True)
@@ -377,7 +367,7 @@ def main(argv: list[str] | None = None, *, paths: runner.Paths | None = None, se
             pipe.plan(args.job, force=args.force)
             return 0
         if args.command == "dry-run":
-            pipe.dry_run(args.job, tier=args.tier, count_api=args.count_tokens_api, force=args.force)
+            pipe.dry_run(args.job, tier=args.tier, force=args.force)
             return 0
         if args.command == "generate":
             return pipe.generate(args.job, args.budget_usd, tier=args.tier)

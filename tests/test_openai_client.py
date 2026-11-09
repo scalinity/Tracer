@@ -342,12 +342,64 @@ def test_a_failed_upload_is_reported_as_the_upload_stage(tmp_path):
     assert (e.value.stage, e.value.status) == ("upload", 400)
 
 
-def test_input_tokens_are_counted_with_the_documented_endpoint(tmp_path):
-    t = Transport((200, {"object": "response.input_tokens", "input_tokens": 6912}, {}))
-    assert make_client(tmp_path, t).count_input_tokens(body()) == 6912
-    sent = json.loads(t.requests[0].content)
-    assert t.requests[0].url.path.endswith("/responses/input_tokens")
-    assert set(sent) == {"model", "input", "text", "reasoning"}
+def test_the_token_counting_endpoint_is_gone():
+    """F009: its billing is undocumented and the byte bound makes it unnecessary."""
+    assert not hasattr(OpenAIClient, "count_input_tokens")
+
+
+def test_finding_a_batch_reads_every_page_of_the_list(tmp_path):
+    """F003: a chunk older than the newest 100 batches must still be found."""
+    pages = {None: {"data": [{"id": f"batch_{i}", "metadata": {"chunk_id": f"c{i}"}} for i in range(100)],
+                    "has_more": True, "last_id": "batch_99"},
+             "batch_99": {"data": [{"id": "batch_100", "metadata": None},
+                                   {"id": "batch_101", "metadata": {"chunk_id": "O2-old"}}],
+                          "has_more": False, "last_id": "batch_101"}}
+    seen = []
+
+    def route(request):
+        after = request.url.params.get("after")
+        seen.append(after)
+        return httpx2.Response(200, json=pages[after])
+
+    (tmp_path / ".env").write_text(f"OPENAI_API_KEY={FAKE_KEY}\n")
+    c = OpenAIClient(env_path=tmp_path / ".env", settings=SETTINGS,
+                     http_client=httpx2.Client(transport=httpx2.MockTransport(route)))
+    assert c.find_batch("O2-old")["id"] == "batch_101" and seen == [None, "batch_99"]
+    seen.clear()
+    assert c.find_batch("never-made") is None and seen == [None, "batch_99"]
+
+    def stuck(request):  # a list that never advances ends the search instead of looping
+        return httpx2.Response(200, json={"data": [{"id": "batch_1", "metadata": None}], "has_more": True,
+                                          "last_id": "batch_1"})
+    c = OpenAIClient(env_path=tmp_path / ".env", settings=SETTINGS,
+                     http_client=httpx2.Client(transport=httpx2.MockTransport(stuck)))
+    assert c.find_batch("x") is None
+
+
+def test_an_http_error_keeps_the_usage_it_reports_as_numbers_only(tmp_path):
+    """F002: the spec's exception "unless the error says tokens were consumed" needs the usage an error body carries,
+    and nothing else from it."""
+    err = {"error": {"message": f"upstream failed for Bearer {FAKE_KEY}", "type": "server_error", "code": None},
+           "usage": {"input_tokens": 9000, "input_tokens_details": {"cached_tokens": 1000, "note": "x"},
+                     "output_tokens": 120, "output_tokens_details": {"reasoning_tokens": 100},
+                     "label": f"Bearer {FAKE_KEY}", "total_tokens": "9120"}}
+    r = make_client(tmp_path, Transport((500, err, {}))).call(body(), timeout=900)
+    assert r.status == "http_500" and r.tokens_consumed
+    assert r.usage == {"input_tokens": 9000, "input_tokens_details": {"cached_tokens": 1000}, "output_tokens": 120,
+                       "output_tokens_details": {"reasoning_tokens": 100}}
+    assert_clean(json.dumps(r.record()), repr(r))
+    nested = {"error": {"message": "m", "type": "server_error", "usage": {"input_tokens": 50, "output_tokens": 0}}}
+    assert make_client(tmp_path, Transport((502, nested, {}))).call(body(), timeout=900).usage["input_tokens"] == 50
+    flag = {"error": {"message": "m", "type": "server_error", "billed_tokens": 3}}
+    r = make_client(tmp_path, Transport((500, flag, {}))).call(body(), timeout=900)
+    assert r.usage is None and r.tokens_consumed
+    plain = make_client(tmp_path, Transport((500, {"error": {"message": "m", "type": "server_error"}}, {})))
+    r = plain.call(body(), timeout=900)
+    assert r.usage is None and not r.tokens_consumed
+    assert C.billing_evidence("<html>bad gateway</html>") == (None, False)
+    limits = {"error": {"type": "tokens", "code": "rate_limit_exceeded", "limit_tokens": 1_000_000,
+                        "remaining_tokens": 0, "requested_tokens": 40_000}}
+    assert C.billing_evidence(limits) == (None, False)  # a rate limit's numbers are not consumption
 
 
 def test_call_results_report_their_http_status():

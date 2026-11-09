@@ -7,7 +7,9 @@ config/openai_jobs.yaml; the ledger refuses a cap change for a job or account th
 Money is integer micro-dollars (`micros`); each entry also carries `usd` for reading. Five entry kinds:
 
 - `reserve`: a request's worst case, held until closed. Made inside one BEGIN IMMEDIATE transaction and refused
-  unless spent + held + new <= account cap - margin and the job's own spent + held + new <= job cap.
+  unless spent + held + new <= account cap - margin and the job's own spent + held + new <= job cap. `cover()`
+  replaces an unsent reservation that has become smaller than its request's worst case (a `void` and a larger
+  `reserve` in one transaction, under the same checks).
 - `settle`: the actual cost of a reserved request (closes it); `release` records the remainder handed back.
 - `void`: closes a reservation with nothing spent (an error the docs say is not billed).
 - `settle_unknown()` writes a `settle` for the full reservation: a timeout or any outcome not proven unbilled.
@@ -427,26 +429,60 @@ class Ledger:
         total = sum(m for _, m, _ in wanted)
 
         def fn(cur):
-            account, job_cap, released, acct_cap, margin = self._job_row(cur, job)
-            if not released:
-                raise CapReached(f"job {job} is not released; it takes no reservation until "
-                                 f"`ledger release-job {job} --reason TEXT`", "released")
-            a_spent, a_held = self._spent_held(cur, "account", account)
-            j_spent, j_held = self._spent_held(cur, "job", job)
-            if a_spent + a_held + total > acct_cap - margin:
-                raise CapReached(f"account {account}: ${as_usd(a_spent):.6f} spent + ${as_usd(a_held):.6f} held + "
-                                 f"${as_usd(total):.6f} would pass ${as_usd(acct_cap - margin):.2f} "
-                                 f"(cap ${as_usd(acct_cap):.2f} less the ${as_usd(margin):.2f} margin)", "account")
-            if j_spent + j_held + total > job_cap:
-                raise CapReached(f"job {job}: ${as_usd(j_spent):.6f} spent + ${as_usd(j_held):.6f} held + "
-                                 f"${as_usd(total):.6f} would pass its ${as_usd(job_cap):.2f} cap", "job")
-            if ceiling is not None and j_spent + j_held + total > ceiling:
-                raise CapReached(f"job {job}: ${as_usd(j_spent):.6f} spent + ${as_usd(j_held):.6f} held + "
-                                 f"${as_usd(total):.6f} would pass this run's ${as_usd(ceiling):.2f} budget", "budget")
+            account = self._check_room(cur, job, total, ceiling)
             return [self._insert(cur, account=account, job=job, item_id=item_id, kind="reserve", micros=m,
                                  detail=d) for item_id, m, d in wanted]
 
         return [r["entry_id"] for r in self._write(fn)]
+
+    def _check_room(self, cur, job: str, total: int, ceiling: int | None, freed: int = 0) -> str:
+        """Raise CapReached unless `total` more fits the account, the job and the run's budget once `freed` (an open
+        reservation of this job about to be closed) is handed back. Returns the job's account."""
+        account, job_cap, released, acct_cap, margin = self._job_row(cur, job)
+        if not released:
+            raise CapReached(f"job {job} is not released; it takes no reservation until "
+                             f"`ledger release-job {job} --reason TEXT`", "released")
+        a_spent, a_held = self._spent_held(cur, "account", account)
+        j_spent, j_held = self._spent_held(cur, "job", job)
+        a_held, j_held = a_held - freed, j_held - freed
+        if a_spent + a_held + total > acct_cap - margin:
+            raise CapReached(f"account {account}: ${as_usd(a_spent):.6f} spent + ${as_usd(a_held):.6f} held + "
+                             f"${as_usd(total):.6f} would pass ${as_usd(acct_cap - margin):.2f} "
+                             f"(cap ${as_usd(acct_cap):.2f} less the ${as_usd(margin):.2f} margin)", "account")
+        if j_spent + j_held + total > job_cap:
+            raise CapReached(f"job {job}: ${as_usd(j_spent):.6f} spent + ${as_usd(j_held):.6f} held + "
+                             f"${as_usd(total):.6f} would pass its ${as_usd(job_cap):.2f} cap", "job")
+        if ceiling is not None and j_spent + j_held + total > ceiling:
+            raise CapReached(f"job {job}: ${as_usd(j_spent):.6f} spent + ${as_usd(j_held):.6f} held + "
+                             f"${as_usd(total):.6f} would pass this run's ${as_usd(ceiling):.2f} budget", "budget")
+        return account
+
+    def cover(self, entry_id: str, usd, *, ceiling_usd=None, detail: dict | None = None) -> str:
+        """Make sure an open, unsent reservation holds at least `usd` before its request leaves.
+
+        A reservation already that large is returned unchanged. A smaller one is voided and a reservation of the full
+        amount made in its place, in one transaction and under the same account, job and budget checks (the old hold
+        counts as handed back). If the larger amount does not fit, CapReached is raised and the old reservation stays
+        open as it was. Returns the entry_id that now covers the request."""
+        wanted = to_micros(usd)
+        if wanted <= 0:
+            raise LedgerError("a reservation must be a positive amount")
+        ceiling = None if ceiling_usd is None else to_micros(ceiling_usd)
+
+        def fn(cur):
+            res = self._open_reservation(cur, entry_id)
+            if res["micros"] >= wanted:
+                return []
+            account = self._check_room(cur, res["job"], wanted, ceiling, freed=res["micros"])
+            return [self._insert(cur, account=account, job=res["job"], item_id=res["item_id"], kind="void",
+                                 micros=res["micros"], ref=entry_id,
+                                 detail={"reason": f"replaced by a reservation of ${as_usd(wanted):.6f} before "
+                                                   "sending; nothing was sent"}),
+                    self._insert(cur, account=account, job=res["job"], item_id=res["item_id"], kind="reserve",
+                                 micros=wanted, detail={**res["detail"], **(detail or {}), "replaces": entry_id})]
+
+        rows = self._write(fn)
+        return rows[1]["entry_id"] if rows else entry_id
 
     def _open_reservation(self, cur, entry_id: str) -> dict:
         row = cur.execute("SELECT account, job, item_id, micros, detail FROM entries WHERE entry_id=? "

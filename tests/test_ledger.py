@@ -447,6 +447,13 @@ def test_a_verified_at_in_the_future_refuses():
         prices.check_fresh(price_table(verified_at=(NOW + timedelta(hours=2)).isoformat()), NOW)
 
 
+def test_a_verified_at_more_than_five_minutes_ahead_refuses_and_clock_skew_under_it_passes():
+    """F011: five minutes of clock skew is allowed, no more."""
+    with pytest.raises(prices.PriceError, match="future"):
+        prices.check_fresh(price_table(verified_at=(NOW + timedelta(minutes=6)).isoformat()), NOW)
+    prices.check_fresh(price_table(verified_at=(NOW + timedelta(minutes=4)).isoformat()), NOW)
+
+
 def test_incomplete_prices_refuse():
     table = price_table()
     with pytest.raises(prices.PriceError, match="no model"):
@@ -488,15 +495,16 @@ def test_usage_is_priced_per_appendix_b():
             prices.usage_cost_micros(broken, r)
 
 
-def test_no_usage_within_the_estimate_and_the_output_limit_costs_more_than_its_worst_case():
+def test_no_usage_within_the_input_bound_and_the_output_limit_at_any_tier_costs_more_than_the_worst_case():
+    """F001, F005: the reservation is the byte bound at the highest input rate plus max_output_tokens at the output
+    rate, all at Standard; no usage up to those counts, served at Flex, Batch or Standard, costs more."""
     rnd = random.Random(7)
     table = price_table()
     for _ in range(3000):
         model = rnd.choice(["gpt-6-luna", "gpt-6.1-terra", "gpt-6.1-sol"])
-        tier = rnd.choice(["flex", "batch", "standard"])
-        r = prices.rates(table, model, tier)
-        est, max_out = rnd.randint(100, 20000), rnd.randint(16, 30000)
-        inp = rnd.randint(0, int(est * 1.15))
+        served = prices.rates(table, model, rnd.choice(["flex", "batch", "standard"]))
+        bound, max_out = rnd.randint(100, 60000), rnd.randint(16, 30000)
+        inp = rnd.randint(0, bound)
         cached = rnd.randint(0, inp)
         writes = rnd.randint(0, inp - cached)
         out = rnd.randint(0, max_out)
@@ -504,14 +512,57 @@ def test_no_usage_within_the_estimate_and_the_output_limit_costs_more_than_its_w
                  "input_tokens_details": {"cached_tokens": cached, "cache_write_tokens": writes}}
         if rnd.random() < 0.3:
             del usage["input_tokens_details"]["cache_write_tokens"]
-        assert prices.usage_cost_micros(usage, r) <= prices.worst_case_micros(est, max_out, r)
+        worst = prices.worst_case_micros(bound, max_out, prices.rates(table, model, prices.RESERVE_TIER))
+        assert prices.usage_cost_micros(usage, served) <= worst
 
 
-def test_the_worst_case_matches_the_spec_table():
+def test_the_worst_case_is_the_bound_at_the_highest_input_rate_plus_the_output_limit():
     table = price_table()
-    terra = prices.rates(table, "gpt-6.1-terra", "flex")
-    # 8,000 x 1.15 x 0.625 + 16,000 x 2.50 = 5,750 + 40,000 micro-dollars
-    assert prices.worst_case_micros(8000, 16000, terra) == 45750
-    assert prices.worst_case_micros(8000, 16000, prices.rates(table, "gpt-6.1-terra", "standard")) == 91500
+    terra = prices.rates(table, "gpt-6.1-terra", "standard")
+    assert prices.RESERVE_TIER == "standard"
+    # 8,000 bound x 1.25 cache-write + 16,000 x 5.00 output = 10,000 + 80,000 micro-dollars
+    assert prices.worst_case_micros(8000, 16000, terra) == 90000
+    # 12-hour retention, when a request asks for it, writes at 2.50
+    assert prices.worst_case_micros(8000, 16000, terra, ttl_12h=True) == 100000
+    no_12h = prices.rates(price_table(), "gpt-6.1-terra", "standard")
+    del no_12h["cache_write_12h"]
+    with pytest.raises(prices.PriceError, match="12-hour"):
+        prices.worst_case_micros(8000, 16000, no_12h, ttl_12h=True)
+    with pytest.raises(prices.PriceError, match="272"):  # long-context rates are not in the table
+        prices.worst_case_micros(272_001, 16000, terra)
     assert prices.served_tier("default") == "standard" and prices.served_tier("flex") == "flex"
     assert prices.served_tier("priority") == "fast" and prices.served_tier(None) is None
+
+
+# -- reservations topped up before a send (F004) --------------------------------------------------------------------
+
+def test_cover_keeps_a_large_enough_reservation_and_replaces_a_smaller_one_under_the_caps(tmp_path):
+    lg = open_ledger(tmp_path)
+    rid = lg.reserve("A", "a1", "0.040124", detail={"tier": "flex"})
+    assert lg.cover(rid, "0.040124") == rid and lg.cover(rid, "0.01") == rid  # enough: unchanged
+    new = lg.cover(rid, "0.080124", detail={"tier": "flex"})
+    assert new != rid
+    kinds = [(e["kind"], e["ref"], e["micros"]) for e in lg.entries()]
+    assert kinds == [("reserve", None, 40124), ("void", rid, 40124), ("reserve", None, 80124)]
+    assert lg.totals()["jobs"]["A"]["held"] == 80124
+    s = lg.settle(new, "0.08", None, None, "standard")
+    assert s["over"] is False and lg.totals()["jobs"]["A"]["held"] == 0
+    check_caps(lg)
+
+
+def test_cover_refuses_a_top_up_that_does_not_fit_and_leaves_the_old_reservation_open(tmp_path):
+    lg = open_ledger(tmp_path)
+    lg.reserve("A", "filler", "0.55")
+    rid = lg.reserve("A", "a1", "0.04")  # 0.59 of A's 0.60
+    with pytest.raises(L.CapReached) as e:
+        lg.cover(rid, "0.06")
+    assert e.value.scope == "job"
+    assert [r["entry_id"] for r in lg.open_reservations()][-1] == rid and lg.totals()["jobs"]["A"]["held"] == m("0.59")
+    assert lg.cover(rid, "0.05") != rid  # 0.55 + 0.05 fits once the old 0.04 is freed
+    with pytest.raises(L.CapReached) as e:
+        lg.cover(lg.open_reservations()[-1]["entry_id"], "0.20", ceiling_usd="0.61")
+    assert e.value.scope == "job"
+    check_caps(lg)
+    lg.void(lg.open_reservations()[-1]["entry_id"], "done")
+    with pytest.raises(L.LedgerError, match="closed"):
+        lg.cover(rid, "0.07")
