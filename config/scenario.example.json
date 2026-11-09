@@ -1,0 +1,105 @@
+{
+  "archetype": "community_hospital",
+  "size_band": "medium",
+  "transport_mix": "mixed",
+  "staffing": "reduced_nights",
+  "failure_focus": "tube_outage",
+  "narrative": "A mid-sized community hospital whose emergency department and intensive care unit share one tube line, while the surgical floors use a second, older line or the campus runner. An off-site clinic sends preserved urine and swabs by van twice a day. Nights run on one receiving technologist. On Tuesday morning the shared tube line fails during the collection peak and the floors switch to the runner after about twenty minutes.",
+  "volume": {
+    "specimens_per_weekday": 220,
+    "hourly_profile": [1.0, 0.8, 0.7, 0.7, 1.0, 1.6, 3.0, 4.4, 5.2, 5.0, 4.6, 4.0, 3.5, 3.3, 3.1, 2.9, 2.7, 2.5, 2.3, 2.1, 1.9, 1.7, 1.4, 1.2],
+    "weekend_factor": 0.75
+  },
+  "specimen_mix": {
+    "urine_room_temp": 0.22,
+    "urine_refrigerated": 0.09,
+    "urine_boric_acid": 0.08,
+    "body_fluid_room_temp": 0.06,
+    "body_fluid_refrigerated": 0.04,
+    "pleural_anaerobic_vial": 0.02,
+    "body_fluid_culture_bottle": 0.02,
+    "bal_room_temp": 0.06,
+    "bal_refrigerated": 0.04,
+    "swab_stuarts": 0.17,
+    "swab_eswab": 0.12,
+    "tissue": 0.08
+  },
+  "units": [
+    {"unit_id": "ed_main", "kind": "ed", "volume_share": 0.30, "stat_fraction": 0.6, "route": "tube",
+     "tube_line_id": "line_a", "courier_route_id": null, "tube_share_if_mixed": null,
+     "dispatch": {"mode": "immediate", "median_min": 5, "p90_min": 15, "batch_interval_min": null},
+     "not_dispatched_rate": 0.004,
+     "mix_tilt": [{"key": "urine_room_temp", "multiplier": 1.3}, {"key": "body_fluid_room_temp", "multiplier": 1.2}]},
+    {"unit_id": "icu_2", "kind": "icu", "volume_share": 0.14, "stat_fraction": 0.55, "route": "tube",
+     "tube_line_id": "line_a", "courier_route_id": null, "tube_share_if_mixed": null,
+     "dispatch": {"mode": "immediate", "median_min": 6, "p90_min": 20, "batch_interval_min": null},
+     "not_dispatched_rate": 0.003,
+     "mix_tilt": [{"key": "bal_room_temp", "multiplier": 2.0}, {"key": "bal_refrigerated", "multiplier": 1.5}]},
+    {"unit_id": "med_surg_3", "kind": "med_surg", "volume_share": 0.24, "stat_fraction": 0.2, "route": "mixed",
+     "tube_line_id": "line_b", "courier_route_id": "campus_loop", "tube_share_if_mixed": 0.7,
+     "dispatch": {"mode": "immediate", "median_min": 10, "p90_min": 35, "batch_interval_min": null},
+     "not_dispatched_rate": 0.008,
+     "mix_tilt": []},
+    {"unit_id": "periop", "kind": "periop", "volume_share": 0.10, "stat_fraction": 0.4, "route": "courier",
+     "tube_line_id": null, "courier_route_id": "campus_loop", "tube_share_if_mixed": null,
+     "dispatch": {"mode": "immediate", "median_min": 8, "p90_min": 30, "batch_interval_min": null},
+     "not_dispatched_rate": 0.002,
+     "mix_tilt": [{"key": "tissue", "multiplier": 3.0}, {"key": "body_fluid_refrigerated", "multiplier": 1.5}]},
+    {"unit_id": "clinic_west", "kind": "clinic_offsite", "volume_share": 0.12, "stat_fraction": 0.05, "route": "courier",
+     "tube_line_id": null, "courier_route_id": "van_west", "tube_share_if_mixed": null,
+     "dispatch": {"mode": "batched", "median_min": 30, "p90_min": 90, "batch_interval_min": 120},
+     "not_dispatched_rate": 0.01,
+     "mix_tilt": [{"key": "urine_boric_acid", "multiplier": 3.0}, {"key": "swab_eswab", "multiplier": 1.5}]},
+    {"unit_id": "oncology_clinic", "kind": "oncology", "volume_share": 0.10, "stat_fraction": 0.25, "route": "walk_in",
+     "tube_line_id": null, "courier_route_id": null, "tube_share_if_mixed": null,
+     "dispatch": {"mode": "immediate", "median_min": 12, "p90_min": 40, "batch_interval_min": null},
+     "not_dispatched_rate": 0.005,
+     "mix_tilt": []}
+  ],
+  "tube_system": {
+    "lines": [
+      {"line_id": "line_a", "transit_median_min": 4, "transit_p90_min": 9, "misroute_rate": 0.004, "lost_rate": 0.0008},
+      {"line_id": "line_b", "transit_median_min": 6, "transit_p90_min": 14, "misroute_rate": 0.008, "lost_rate": 0.0015}
+    ],
+    "station_empty_interval_min": {"day": 8, "evening": 15, "night": 30},
+    "stalled_rate": 0.015,
+    "stall_extra_min": {"median": 45, "p90": 150},
+    "misroute_found_min": {"median": 35, "p90": 90}
+  },
+  "couriers": {
+    "routes": [
+      {"route_id": "campus_loop", "kind": "campus_loop", "round_interval_min": {"day": 30, "evening": 45, "night": 90},
+       "travel_median_min": 10, "travel_p90_min": 22, "missed_round_rate": 0.03, "lost_rate": 0.0005, "capacity_per_round": 40},
+      {"route_id": "van_west", "kind": "offsite_van", "round_interval_min": {"day": 120, "evening": 180, "night": null},
+       "travel_median_min": 35, "travel_p90_min": 60, "missed_round_rate": 0.05, "lost_rate": 0.001, "capacity_per_round": 80}
+    ],
+    "on_call_runner": true,
+    "on_call_response_median_min": 15
+  },
+  "receiving": {
+    "staff_by_shift": {"weekday": {"day": 4, "evening": 3, "night": 1}, "weekend": {"day": 3, "evening": 2, "night": 1}},
+    "shift_pattern": "7-15-23",
+    "scan_service_min": {"median": 1.2, "p90": 3.0},
+    "shift_change_gap_min": 15
+  },
+  "processing": {
+    "accession_min": {"median": 12, "p90": 40},
+    "plating_min": {"median": 20, "p90": 60},
+    "instruments": [
+      {"name": "maldi_tof", "downtime_per_week": 1, "downtime_median_min": 90},
+      {"name": "automated_plater", "downtime_per_week": 0.5, "downtime_median_min": 60}
+    ],
+    "staff_pull_from_receiving": 0.25
+  },
+  "independent_faults": {"never_collected_rate": 0.004, "content_failure_rate": 0.015},
+  "disruptions": [
+    {"disruption_id": "d1", "type": "tube_line_outage", "target_id": "line_a", "day": 1, "start": "08:30",
+     "duration_min": 75, "severity": 0.6, "response": "divert_to_courier", "noticed_after_min": 20, "recurs_daily": false},
+    {"disruption_id": "d2", "type": "receiving_short_staffed", "target_id": "receiving", "day": 3, "start": "23:00",
+     "duration_min": 480, "severity": 0.5, "response": "none", "noticed_after_min": 0, "recurs_daily": false},
+    {"disruption_id": "d3", "type": "station_unattended", "target_id": "lab_station", "day": 0, "start": "03:00",
+     "duration_min": 60, "severity": 0.5, "response": "none", "noticed_after_min": 0, "recurs_daily": true}
+  ],
+  "edge_tags": [],
+  "realism_notes": "Every value is an assumption for a synthetic simulator. Transit and staffing are set so a normal weekday stays well inside each window; the outage and the night short-staffing are the only planned stresses."
+}
