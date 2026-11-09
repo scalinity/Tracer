@@ -782,7 +782,7 @@ If the box runs short, drop A9, A8, A7, A4 and A3 in that order.
 2. Headline table at 1, 2, 4 and 6 alerts per shift: every method and weighting, every alert metric.
 3. Discrimination and calibration, with reliability plots.
 4. Slices.
-5. `test_ood`, `legacy_v1` and the negative control.
+5. `test_ood`, `legacy_v1` and the negative control; the sensitivity sets and the face-validity ratings of §8.11, or "not run".
 6. Ablations A1 to A9.
 7. Explanation checks (§9.4) and three example alerts with their factors.
 8. Decision layer results (§11), or "not run" and why.
@@ -791,6 +791,30 @@ If the box runs short, drop A9, A8, A7, A4 and A3 in that order.
 11. How to reproduce: commands and hashes.
 
 `results/README.md` gets one line at its end pointing to the report. Its headline paragraph and table are not touched (`tests/test_results_readme.py` holds them to the midterm snapshot).
+
+### 8.11 Paper analyses (fixed before any test result; non-binding)
+
+These analyses serve a possible paper. They never change the verdict of §8.6, the primary model or any selection. They sit outside the critical path of N0 to N11: they run when compute and time allow, before or after the course's deadlines, and always as designed here.
+
+**Sensitivity to the simulator's assumptions.** The test families are re-simulated in five perturbed worlds and scored with every method exactly as frozen for `test`: the same artifact, calibration and global fits, with nothing retrained or refitted on perturbed data. Each method's knob, and the local analytic refit, is set on the perturbed history replicate by the rule of §8.3. The replicates are `test`'s own, and common random numbers (§5.6) keep every specimen's latent draws, so each world differs from `test` only in the assumption it changes.
+
+| Set | Assumption | Change |
+|---|---|---|
+| `sens_tail` | Every duration is lognormal (§5.6) | Each draw maps its quantile through a log-logistic with the same median and 90th percentile (shape β = ln 9 / ln(p90 / median)), so every duration keeps its median and 90th percentile and gains a heavier upper tail |
+| `sens_disrupt_half`, `sens_disrupt_double` | How strongly a disruption acts (§5.4, §5.5) | The effect constants times 0.5 or 2: the 3 in a degraded line's transit × (1 + 3s), the 5 in its fault rates × (1 + 5s), the 20 in a stuck carrier's loss (the 0.5 cap stays), the 3 in a surge's arrivals × (1 + 3s), the 150 in batching sweeps, and the 1 in a delayed courier's s × interval and travel × (1 + s) |
+| `sens_pace_fast`, `sens_pace_slow` | How fast every step runs | Every lognormal duration times 0.8 or 1.25 (μ + ln k); arrivals, schedules, staffing and windows unchanged |
+
+Reported for each set and both weightings: the quantities of R1 to R4 at 6 alerts per shift, R1 at 30 alerts per 100 specimens, and the capped mean warning, with the intervals of §8.5. A set is **consistent** with `test` when every R1 difference keeps its sign (zero counting as its own sign), every R1 interval that excludes zero on `test` still excludes it, and R2 and R3 each hold or fail as they did on `test`. Otherwise it is **sensitive**, and the report names the comparisons that changed. The result is called robust to an assumption only when every set that varies it is consistent.
+
+The sets are scored only after `test` has been scored and locked. Each is scored once; a second scoring is logged with its reason as §8.7 logs one. If compute runs short, score `sens_disrupt_*` first, then `sens_tail`, then `sens_pace_*`.
+
+**Face validity (optional).** Run only if Karissa agrees, arranged outside the hands-off build, which asks nothing new of her. She rates 30 laboratory weeks in a shuffled order with the source hidden:
+- 15 scenarios drawn from the library's train families with seed 0 (4 normal, 4 stressed, 4 disrupted, 3 edge);
+- 15 code-random scenarios from `src/scenarios/random_baseline.py`, also with seed 0.
+
+Each week is shown as a one-page plain-language description with three specimen timelines from the plausibility replicate (99). She rates each week from 1 (could not happen) to 5 (typical of a real laboratory) and marks any element that looks unrealistic. Reported: the mean rating by source with a 95% bootstrap interval, the share rated 4 or 5, and every marked element. Expected before any rating: the library rated above the code-random scenarios. No test family is shown.
+
+**Everything else is exploratory.** An analysis of `test`, `test_ood` or a sensitivity set that §8 does not name is labeled exploratory wherever it appears.
 
 ---
 
