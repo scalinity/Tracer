@@ -20,8 +20,9 @@ volume alone (spec §8.3); on legacy_v1 the local analytic model is the committe
 the evaluation. TracerNet's headline alerts are explained with Predictor.explain against the same store. The rounding
 of p_miss and p_never to ROUND places is for display: alerts are precomputed at full precision.
 
-This module reads docs/demo/bundle.json never and writes it never; the bundle stays byte-identical. A locked split
-(test, test_ood) among the chosen scenarios is scored only with the test run its lock recorded
+This module reads docs/demo/bundle.json never and writes it never; the bundle stays byte-identical. On v2, every run of
+the chosen scenarios is read from the observed runs table and put through Predictor.check_lock before any specimen,
+label or feature is read, so a locked split (test, test_ood) among them needs the test run its lock recorded
 (`build(..., test_run=)`).
 The file is synthetic data with no clinical review. Rebuilding the demo page on top of it is a separate task.
 """
@@ -40,7 +41,7 @@ import polars as pl
 from src.api import export
 from src.generator import config
 from src.models.tracernet import predict
-from src.models.tracernet.predictor import DEFAULT_ARTIFACT, Predictor
+from src.models.tracernet.predictor import DEFAULT_ARTIFACT, History, Predictor
 from src.pipeline import evaluate, intervals, neural_eval as ne, store, triage
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -69,6 +70,21 @@ class _RiskSeries:
 
 def _sha256(path: Path) -> str | None:
     return hashlib.sha256(Path(path).read_bytes()).hexdigest() if path and Path(path).is_file() else None
+
+
+def scenario_runs(store_dir: Path, scenarios) -> list[int]:
+    """Every run (every replicate, the history included) of the chosen v2 scenarios, from the observed runs table
+    alone, so the lock can be checked before any specimen or label is read. Refuses a scenario the store lacks."""
+    con = store.open_observed_v2(Path(store_dir))
+    try:
+        rows = con.execute("select scenario_id, run from runs where list_contains(?, scenario_id) order by run",
+                           [[str(s) for s in scenarios]]).fetchall()
+    finally:
+        con.close()
+    missing = sorted(set(scenarios) - {s for s, _ in rows})
+    if missing:
+        raise ValueError(f"scenarios not in the store at {store_dir}: {missing}")
+    return [r for _, r in rows]
 
 
 def _groups(source: str, store_dir: Path, scenarios, env: ne.Env, start: str, stop: str) -> tuple[list, set]:
@@ -112,6 +128,8 @@ def build(pred: Predictor, source: str, *, scenarios=None, store_dir: Path | Non
     env = ne.Env(set_name=source, kind="legacy" if legacy else "v2", store_split="test" if legacy else None,
                  store_dir=str(store_dir), by_run=legacy, schemes=tuple((n, schemes[s]) for n, s in WEIGHTINGS),
                  budgets=budgets, headline=head, slice_dimensions=(), matched=False, keep_alerts=True)
+    if not legacy:      # the lock before any read: a test or test_ood scenario needs the run its lock recorded
+        pred.check_lock(store_dir, scenario_runs(store_dir, scenarios), [], History(), test_run)
     groups, leaves = _groups(source, store_dir, scenarios, env, start, stop)
 
     # TracerNet's risk at every tick of the history and scored specimens

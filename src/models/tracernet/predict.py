@@ -12,8 +12,9 @@ with --explain, merges frozen dispatch decisions when --dispatch names them (dis
 
 Probabilities that float32 rounding took a hair past [0, 1] are clipped into it for the records (`bounded`). Before
 anything is written, every alert record is validated with its schema, and so is a seeded sample of SAMPLE_ROWS
-prediction rows, while every prediction row is checked column by column against the schema's own types, bounds, enums
-and patterns, plus p_late + p_never = p_miss. Scoring and explaining go through Predictor alone, so
+prediction rows, while every prediction row is checked column by column against every constraint the schema declares
+(types, bounds, enums, const, patterns and string lengths; a keyword the column check lacks is refused), plus
+p_late + p_never = p_miss. Scoring and explaining go through Predictor alone, so
 test and test_ood are refused unless `run(..., test_run=...)` is given the run the test lock recorded; the command
 line has no way to pass one.
 
@@ -101,10 +102,18 @@ _TYPES = {"integer": (pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.UInt8, pl.UInt16
           "number": (pl.Float32, pl.Float64, pl.Int8, pl.Int16, pl.Int32, pl.Int64), "string": (pl.Utf8,)}
 
 
+CHECKED = frozenset({"type", "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "enum", "const", "pattern",
+                     "minLength", "maxLength", "description"})
+
+
 def column_problems(df: pl.DataFrame, doc: dict) -> list[str]:
     """Every row of a frame against a flat object schema, column by column: required columns and no others, types
-    (null only where the schema allows it), minimum, maximum, enum and pattern."""
+    (null only where the schema allows it), minimum, maximum, exclusive bounds, enum, const, pattern, minLength and
+    maxLength. A schema keyword this check does not implement is refused, so no constraint is left to the sample."""
     props = doc["properties"]
+    unknown = sorted({k for rule in props.values() for k in rule} - CHECKED)
+    if unknown:
+        raise ValueError(f"the column check does not implement the schema keywords {unknown}")
     problems = []
     missing, extra = set(doc["required"]) - set(df.columns), set(df.columns) - set(props)
     if missing or extra:
@@ -128,10 +137,23 @@ def column_problems(df: pl.DataFrame, doc: dict) -> list[str]:
             problems.append(f"{name}: {vals.max()} above {rule['maximum']}")
         if col.dtype in (pl.Float32, pl.Float64) and not vals.is_finite().all():
             problems.append(f"{name}: a value that is not finite")
+        if "exclusiveMinimum" in rule and vals.min() <= rule["exclusiveMinimum"]:
+            problems.append(f"{name}: {vals.min()} not above {rule['exclusiveMinimum']}")
+        if "exclusiveMaximum" in rule and vals.max() >= rule["exclusiveMaximum"]:
+            problems.append(f"{name}: {vals.max()} not below {rule['exclusiveMaximum']}")
         if "enum" in rule and not vals.is_in(rule["enum"]).all():
             problems.append(f"{name}: values outside {rule['enum']}")
-        if "pattern" in rule and not vals.str.contains(rule["pattern"]).all():
-            problems.append(f"{name}: values not matching {rule['pattern']}")
+        if "const" in rule and not (vals == rule["const"]).all():
+            problems.append(f"{name}: values other than {rule['const']!r}")
+        if col.dtype == pl.Utf8:
+            lengths = vals.str.len_chars()
+            if "minLength" in rule and lengths.min() < rule["minLength"]:
+                problems.append(f"{name}: {int((lengths < rule['minLength']).sum())} values shorter than "
+                                f"{rule['minLength']}")
+            if "maxLength" in rule and lengths.max() > rule["maxLength"]:
+                problems.append(f"{name}: values longer than {rule['maxLength']}")
+            if "pattern" in rule and not vals.str.contains(rule["pattern"]).all():
+                problems.append(f"{name}: values not matching {rule['pattern']}")
     return problems
 
 

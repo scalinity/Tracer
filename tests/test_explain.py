@@ -16,6 +16,7 @@ import torch
 import tinynet as T
 from src.models.tracernet import explain as X
 from src.models.tracernet import features as F
+from src.models.tracernet import predict as PR
 from src.models.tracernet.net import GROUPS, TracerNet
 from src.models.tracernet.predictor import History, Predictor
 from src.neural import report as R
@@ -107,9 +108,10 @@ def test_a_set_of_null_tokens_gives_the_empty_set_output(tiny):
 PLANTED = {"route_flow": 1.0, "unit_flow": 0.6, "lab_flow": 0.3, "silence": 0.1, "window": 0.05, "batch_mates": 0.02}
 
 
-def planted(tiny) -> tuple[Predictor, dict, dict, np.ndarray]:
+def planted(tiny, sign: float = 1.0) -> tuple[Predictor, dict, dict, np.ndarray]:
     """Rung L with every weight zero except the `beyond` logit's weights on the numeric columns of six groups, and a
-    batch whose input exceeds its baseline by 0.1 on exactly those columns: F rises with each, by a known share."""
+    batch whose input exceeds its baseline by 0.1 on exactly those columns: F rises with each, by a known share (with
+    sign -1 it falls, and resetting a group to the baseline raises p_miss)."""
     schema = tiny["pred"].schema
     net = TracerNet(F.net_config(schema, rung="L"))
     cat_dim = sum(d for _, _, d in net.config.vocab)
@@ -119,7 +121,7 @@ def planted(tiny) -> tuple[Predictor, dict, dict, np.ndarray]:
         net.linear.bias.zero_()
         net.linear.bias[-1] = -2.0
         for j, (_, g, _) in enumerate(F.NUM_COLUMNS):
-            net.linear.weight[-1, offset + j] = PLANTED.get(g, 0.0)
+            net.linear.weight[-1, offset + j] = sign * PLANTED.get(g, 0.0)
     pred = Predictor([net], schema, None, manifest={"notice": T.NOTICE})
     n = 40
     rng = np.random.default_rng(0)
@@ -168,7 +170,7 @@ def test_deletion_beats_random_on_the_planted_toy(tiny):
 def test_completeness_on_a_small_network(explained):
     assert explained.median_relative_gap <= X.COMPLETENESS_GAP
     assert X.completeness_check(explained)["passed"]
-    for r in explained.records:
+    for r in X.attributed(explained):
         assert abs(sum(r["groups"]) - (r["f1"] - r["f0"])) == pytest.approx(r["gap"], abs=1e-12)
         assert all(r["groups"][GROUPS.index(g)] == 0 for g in UNCHANGED)          # the same specimen and laboratory
 
@@ -301,3 +303,59 @@ def test_the_checks_can_run_on_a_seeded_sample_and_the_report_says_so(tiny, tmp_
     assert [e["alert_id"] for e in doc["examples"]] == [e["alert_id"] for e in again["examples"]]
     text = "\n".join(R.section_explanations(R.load(R.default_inputs(tmp_path))))
     assert f"a seeded sample of 5 of its {tiny['some'].height} alerts" in text
+
+
+def test_deletion_fails_when_resetting_the_top_groups_raises_the_risk(tiny):
+    """F002: with the planted effects reversed, resetting any planted group raises p_miss. The top 3 by attribution
+    (the least negative) raise it less than random draws, which once counted as a success; a reset that does not
+    lower p_miss now never does, and the check fails."""
+    pred, x1, x0, _ = planted(tiny, sign=-1.0)
+    ig = X.integrated_gradients(pred, x1, x0, X.STEPS)
+    assert np.all(ig["f1"] < ig["f0"])
+    can = X.resettable(pred, x1, x0)
+    ids = [f"SP-r1-{i:06d}@10" for i in range(len(can))]
+    p, _ = X.deletion_resets(pred, x1, x0, ig["groups"], can, ids)
+    records = [{"deletion": {"full": r[0], "top": r[1], "random": r[2:].mean(), "groups_reset": 3}} for r in p]
+    check = X.deletion_check(X.Explained(records, X.STEPS, 0.0))
+    assert check["mean_drop_top"] < 0 and check["mean_drop_top"] > check["mean_drop_random"]   # the old rule's trap
+    assert check["share_top_beats_random"] == 0.0 and not check["passed"]
+
+
+def test_closed_window_alerts_get_one_window_factor_and_stay_out_of_the_checks(tiny, tmp_path):
+    """F003: at tick == window p_miss is 1 by construction and F sits at the mask sentinel; such an alert gets no
+    integrated gradients, one window factor with a null attribution, its related specimens, and no place in the
+    completeness, deletion or randomization statistics, which count it apart."""
+    pred, d = tiny["pred"], tiny["store"]
+    at_close = (tiny["risk"].filter((pl.col("replicate") > 0) & (pl.col("tick_min") == pl.col("window_min")))
+                .sort("specimen_id").head(4))
+    closed = pred.alerts(PR.bounded(at_close), budget_per_shift=6, knob=0.0)       # as the records are built
+    assert closed.height == 4 and (closed["tick_min"] == closed["window_min"]).all()
+    ex = X.explain_alerts(pred, closed, store_dir=d)
+    for r, row in zip(ex.records, closed.to_dicts()):
+        assert r["unattributed"] == "closed_window" and r["groups"] is None and r["relative_gap"] is None
+        assert r["factors"] == [{"group": "window", "text": f"The {row['window_min']:,}-min window has closed with no "
+                                 "receipt", "share": 1.0, "attribution": None, "direction": "raises"}]
+    assert ex.median_relative_gap is None and ex.steps == X.STEPS          # nothing to integrate, no doubling
+    validator = jsonschema.Draft202012Validator(json.loads(ALERT_SCHEMA.read_text()))
+    for rec in pred.explain(closed, store_dir=d).to_dicts():
+        validator.validate(rec)
+    assert any(r["related"] for r in ex.records)
+
+    both = pl.concat([tiny["some"], closed])
+    shut = int((both["tick_min"] >= both["window_min"]).sum())
+    path = tmp_path / "results" / "neural" / "explanations.json"
+    doc = X.run_checks(pred, both, store_dir=d, set_name="val", out_path=path)
+    assert doc["closed_window_alerts"] == shut >= 4 and doc["saturated_alerts"] == 0
+    assert doc["attributed_alerts"] == both.height - shut == doc["checks"]["completeness"]["alerts"]
+    assert doc["checks"]["deletion"]["alerts"] == doc["attributed_alerts"]
+    assert doc["checks"]["randomization"]["alerts"] <= doc["attributed_alerts"]
+    assert doc["checks"]["completeness"]["median_relative_gap"] <= X.COMPLETENESS_GAP
+    assert all(f["attribution"] is not None for e in doc["examples"] for f in e["factors"])
+    text = "\n".join(R.section_explanations(R.load(R.default_inputs(tmp_path))))
+    assert f"Closed-window alerts: {shut}." in text
+
+    assert X.attributable(np.array([0.5, -30.0, 1e9, -1e9, np.nan, np.inf, 2e6])).tolist() == \
+        [True, True, False, False, False, False, False]
+    raw = {"window": np.array([60.0]), "tick": np.array([45.0])}
+    rec = X.unattributed("SP-r1-000001@45", "saturated", raw, 0, {}, [])
+    assert rec["factors"][0]["attribution"] is None and "15 min left of a 60-min window" in rec["factors"][0]["text"]

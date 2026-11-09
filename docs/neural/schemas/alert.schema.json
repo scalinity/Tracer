@@ -24,16 +24,18 @@
     "method": {"const": "tracernet-v1"},
     "factors": {
       "type": "array", "maxItems": 4,
-      "description": "Up to three groups that raise the risk (share of the positive attribution total) and at most one that lowers it (share of the negative total); attribution in logit units of the ensemble's p_miss. Texts come from input values, never from attribution sizes.",
+      "description": "Up to three groups that raise the risk (share of the positive attribution total) and at most one that lowers it (share of the negative total); attribution in logit units of the ensemble's p_miss. Texts come from input values, never from attribution sizes. An alert at or past its window's close carries one window factor with share 1 and attribution null.",
       "items": {
         "type": "object", "additionalProperties": false,
         "required": ["group", "text", "share", "attribution", "direction"],
+        "if": {"properties": {"attribution": {"type": "null"}}, "required": ["attribution"]},
+        "then": {"properties": {"group": {"const": "window"}, "direction": {"const": "raises"}, "share": {"const": 1}}},
         "properties": {
           "group": {"enum": ["silence", "window", "specimen", "route_unit", "time_of_day", "batch_mates", "route_flow",
                              "unit_flow", "lab_flow", "lab_history"]},
           "text": {"type": "string", "minLength": 1},
           "share": {"type": "number", "minimum": 0, "maximum": 1},
-          "attribution": {"type": "number"},
+          "attribution": {"type": ["number", "null"], "description": "in logit units of the ensemble's p_miss; null only for an alert whose window has closed (or whose logit is at the limit of the network's scale), whose single factor is the window group with share 1"},
           "direction": {"enum": ["raises", "lowers"]}
         }
       }

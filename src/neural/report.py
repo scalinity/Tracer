@@ -650,6 +650,12 @@ def section_explanations(data: dict) -> list[str]:
             ["Factors", f"{num(ex['alerts_with_factors'])} of {num(ex['alerts'])} alerts carry factors", "every alert",
              held(ex["alerts_with_factors"] == ex["alerts"])]]
     out += table(["Check", "Result", "Rule", "Outcome"], rows)
+    closed, saturated = ex.get("closed_window_alerts", 0), ex.get("saturated_alerts", 0)
+    out += ["", f"Closed-window alerts: {num(closed)}. At or past its window's close an alert's p_miss is 1 by "
+                "construction, so it carries one window factor with no attribution and is left out of the three "
+                "checks above."
+            + (f" Another {num(saturated)} alerts reached the limit of the network's scale and are treated the same "
+               "way." if saturated else "")]
     raising = ex.get("raising_groups") or {}
     if raising:
         ranked = sorted(raising.items(), key=lambda kv: (-kv[1], kv[0]))

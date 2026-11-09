@@ -1,8 +1,8 @@
 """A tiny development store and an untrained TracerNet over it, for the explanation, command-line and export tests.
 
-The store has one train scenario (the global analytic fit), one validation scenario (what the tests score) and one
-test scenario (the lock); the network is rung C at small widths with seeded weights, so every input path, the
-batch-mate attention included, is exercised in seconds on CPU."""
+The store has one train scenario (the global analytic fit), one validation scenario (what the tests score), and one
+test and one test_ood scenario (the lock); the network is rung C at small widths with seeded weights, so every input
+path, the batch-mate attention included, is exercised in seconds on CPU."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from src.models.tracernet.predictor import Predictor
 from src.neural import devlib, samplers as S
 from src.pipeline import store
 
-INDICES = (0, 7, 22)            # dev-00 (train), dev-07 (val), dev-22 (test)
+INDICES = (0, 7, 22, 45)        # dev-00 (train), dev-07 (val), dev-22 (test), dev-45 (test_ood)
 REPLICATES = {"train": [0, 1], "val": [0, 1, 2], "test": [0, 1], "test_ood": [0, 1]}
 NOTICE = "Synthetic data for tests: an untrained network over a simulated development store."
 

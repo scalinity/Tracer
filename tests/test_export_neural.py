@@ -115,3 +115,46 @@ def test_on_legacy_v1_the_baselines_are_the_bundles_own_alerts(legacy):
         assert ours["alerts"]["analytic_local"]["3-2-1"][i] == theirs["alerts"]["model"], ours["id"]
         assert ours["truth"] == {"breach": theirs["truth"]["breach"], "fault": theirs["truth"]["fault"]}
         assert ours["received_min"] == theirs["received_min"]
+
+
+TRAPPED = ("load_specs_v2", "load_specs", "load_test_specs", "truth_places", "truth_places_v2", "truth_causes_v2",
+           "truth_disruptions_v2", "scenario_cells_v2", "scenario_traits_v2")
+
+
+class Refusing:
+    """A test run whose lock no longer holds."""
+
+    def check(self, split, **kw):
+        raise RuntimeError("the lock does not hold this run")
+
+
+@pytest.mark.parametrize("split", ["test", "test_ood"])
+def test_a_locked_scenario_is_refused_before_any_specimen_label_or_feature_is_read(tiny, monkeypatch, tmp_path, split):
+    """F001: the lock is checked on every run of the chosen scenarios, history included, before evaluate's accessors
+    or the feature table are reached: with no test run, and with a test run whose check refuses."""
+    from src.models.tracernet import features as F
+    from src.pipeline import store
+
+    read = []
+
+    def trap(name):
+        def refuse(*a, **k):
+            read.append(name)
+            raise AssertionError(f"{name} was reached before the lock")
+        return refuse
+    for name in TRAPPED:
+        monkeypatch.setattr(evaluate, name, trap(name))
+    monkeypatch.setattr(store, "open_truth", trap("open_truth"))
+    monkeypatch.setattr(F, "load_table", trap("load_table"))
+    scenario, val = T.scenario(tiny["store"], split), tiny["scenario"]
+    for chosen in ([scenario], [val, scenario]):
+        with pytest.raises(RuntimeError, match="test lock"):
+            E.build(tiny["pred"], "v2", scenarios=chosen, store_dir=tiny["store"])
+    p = tiny["pred"]
+    loaded = Predictor(p.members, p.schema, p.calibration, manifest=p.manifest)
+    loaded.artifact_dir = tmp_path                        # as if loaded from an artifact, so the run's check is asked
+    with pytest.raises(RuntimeError, match="does not hold"):
+        E.build(loaded, "v2", scenarios=[scenario], store_dir=tiny["store"], test_run=Refusing())
+    with pytest.raises(ValueError, match="not in the store"):
+        E.build(tiny["pred"], "v2", scenarios=["no-such-scenario"], store_dir=tiny["store"])
+    assert read == []

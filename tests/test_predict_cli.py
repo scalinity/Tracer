@@ -104,3 +104,22 @@ def test_damaged_predictions_are_caught_column_by_column(written):
 def test_the_v1_store_scores_its_held_out_runs_with_the_fit_runs_as_history():
     scored, history = PR.split_runs(store.STORE_DIR, "test")
     assert scored == list(range(24, 30)) and history == list(range(24))
+
+
+def test_every_string_constraint_holds_on_every_row_not_just_the_sample(written):
+    """F004: an empty model_version on a row the jsonschema sample does not draw is still caught, column-wise; a schema
+    keyword the column check does not implement is refused rather than left to the sample."""
+    _, res = written
+    risk = res["predictions"].with_row_index("_i")
+    assert risk.height > PR.SAMPLE_ROWS
+    sampled = set(risk.sample(n=PR.SAMPLE_ROWS, seed=0)["_i"].to_list())
+    row = next(i for i in range(risk.height) if i not in sampled)
+    damaged = risk.with_columns(model_version=pl.when(pl.col("_i") == row).then(pl.lit(""))
+                                .otherwise(pl.col("model_version"))).drop("_i")
+    assert all(r["model_version"] for r in damaged.sample(n=PR.SAMPLE_ROWS, seed=0).to_dicts())   # the sample misses it
+    with pytest.raises(ValueError, match="model_version: 1 values shorter than 1"):
+        PR.validate_predictions(damaged)
+    doc = json.loads(PR.PREDICTION_SCHEMA.read_text())
+    doc["properties"]["run"]["multipleOf"] = 2
+    with pytest.raises(ValueError, match="does not implement the schema keywords \\['multipleOf'\\]"):
+        PR.column_problems(res["predictions"], doc)

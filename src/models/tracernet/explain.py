@@ -46,14 +46,21 @@ negative total, direction "lowers"). Texts come from the alert's input values an
 attribution sizes. Related specimens are the batch-mates with the largest cross-attention weight (members averaged),
 up to 5: what the network looked at, not an explanation.
 
+Closed windows. At a tick at or past the window every on-time bin is masked, so p_miss is 1 by construction and F at
+the alert and at its baseline both sit at the mask sentinel's scale (about 1e9): integrated gradients would only
+measure the sentinel. Such an alert gets no integration and one factor, {group "window", direction "raises", share 1,
+attribution null, "The {W}-min window has closed with no receipt"}, with its related specimens as usual. Any other
+alert whose F at either end is not finite or reaches LOGIT_LIMIT is treated the same way ("saturated"). Both kinds
+are left out of the three checks and counted in run_checks' output.
+
 The checks (§9.4), run on alerts that a caller has already scored (this module chooses no split; a locked split
 needs the test run its lock recorded, as Predictor.score does):
 
     completeness   the median alert's gap at the steps used is within 1%
     deletion       resetting the top 3 groups (by attribution, among the groups whose inputs differ from the
-                   baseline) to the baseline lowers p_miss (the ensemble mean, before calibration) more than resetting
-                   3 random groups of those (the mean drop over RANDOM_DRAWS draws) in at least 70% of alerts, with a
-                   larger mean drop
+                   baseline) to the baseline lowers p_miss (the ensemble mean, before calibration), and by more than
+                   resetting 3 random groups of those (the mean drop over RANDOM_DRAWS draws), in at least 70% of
+                   alerts; the mean top drop is positive and larger than the mean random drop
     randomization  the attributions of a re-initialized network rank the groups whose inputs differ from the baseline
                    differently: mean Spearman correlation over alerts below 0.3
 
@@ -97,6 +104,7 @@ DELETION_SHARE = 0.70
 RANDOMIZATION_LIMIT = 0.3
 REINIT_SEED = 7919           # the re-initialized network's seeds start here, away from the training seeds (0, 1, 2)
 RANDOMIZATION_ALERTS = 1000  # alerts the randomization check re-explains, a seeded sample (ASSUMED: cost)
+LOGIT_LIMIT = 1e6           # |F| beyond this is the mask sentinel's scale (1e9), never a real logit of p_miss
 PATH_ROWS = 2048            # rows per integrated-gradients forward pass: alerts per chunk = PATH_ROWS // (steps + 1)
 BLOCK_ALERTS = 64           # alerts per task: features and history probes built at once, the unit of parallel work
 TYPICAL_GROUPS = ("batch_mates", "route_flow", "unit_flow", "lab_flow")
@@ -459,52 +467,99 @@ def _explain_task(pred: P.Predictor, rand: P.Predictor | None, t: F.Table, task:
     return out
 
 
+def attention_at(pred: P.Predictor, x: dict) -> np.ndarray | None:
+    """The members' mean cross-attention weight on each batch-mate token [B, 16] at a scaled batch (rung C)."""
+    if pred.rung != "C":
+        return None
+    b = _tensors(x, pred.keys, slice(None))
+    with torch.no_grad():
+        return torch.stack([m.forward_embedded(member_inputs(m, b), b["tick"], b["window"])["attention"]
+                            for m in pred.members]).mean(0).numpy()
+
+
+def related_of(t: F.Table, raw: dict, i: int, attention: np.ndarray | None, b: int) -> list[dict]:
+    """Up to RELATED_K batch-mates of alert i by attention weight (row b of `attention`)."""
+    if attention is None:
+        return []
+    trow, w = raw["token_row"][i], attention[b]
+    order = [j for j in np.argsort(-w, kind="stable") if trow[j] >= 0][:RELATED_K]
+    return [{"specimen_id": sid, "weight": float(w[j])} for sid, j in zip(t.specimen_ids(trow[order]), order)]
+
+
+def attributable(f: np.ndarray) -> np.ndarray:
+    """True where a logit is a real number: finite and far below the mask sentinel's scale (LOGIT_LIMIT)."""
+    f = np.asarray(f, dtype=float)
+    return np.isfinite(f) & (np.abs(f) < LOGIT_LIMIT)
+
+
+def unattributed(alert_id: str, kind: str, raw: dict, i: int, note: dict, related: list[dict]) -> dict:
+    """The record of an alert that integrated gradients cannot explain: one window factor with no attribution. kind
+    "closed_window" is an alert at or past its window's close, where p_miss is 1 by construction; "saturated" one
+    whose logit, at the alert or its baseline, is at the mask sentinel's scale or not finite."""
+    w, tick = float(raw["window"][i]), float(raw["tick"][i])
+    if kind == "closed_window":
+        text = f"The {_int(w)}-min window has closed with no receipt"
+    else:
+        text = (f"The risk is at the limit of the network's scale ({_int(max(w - tick, 0))} min left of a "
+                f"{_int(w)}-min window), so no attribution is computed")
+    factor = {"group": "window", "text": text, "share": 1.0, "attribution": None, "direction": "raises"}
+    return {"alert_id": alert_id, "groups": None, "f1": None, "f0": None, "gap": None, "relative_gap": None,
+            "factors": [factor], "related": related, "baseline": note, "resettable": None, "unattributed": kind}
+
+
 def _explain_block(pred, rand, t, rows, ticks, ids, history_rows, random_flags, seed, contexts, steps, top_k,
                    checks) -> list[dict]:
     raw = _raw_at(t, rows, ticks, contexts, token_rows=True)
     base, notes = typical_state(t, raw, rows, ticks, history_rows, contexts)
     x1, x0 = F.transform(raw, pred.schema), F.transform(base, pred.schema)
     clock = np.asarray(t.a["collected"])[rows] / 60 + ticks
-    out = []
+    out: list = [None] * len(rows)
+    closed = np.asarray(raw["tick"], dtype=float) >= np.asarray(raw["window"], dtype=float)
+    shut = np.flatnonzero(closed)
+    if len(shut):                       # p_miss is 1 by construction: no integrated gradients
+        att = attention_at(pred, {k: v[shut] for k, v in x1.items()})
+        for b, i in enumerate(shut):
+            out[i] = unattributed(ids[i], "closed_window", raw, i, notes[i], related_of(t, raw, i, att, b))
+    live = np.flatnonzero(~closed)
     per = max(1, PATH_ROWS // (steps + 1))
-    for s in range(0, len(rows), per):
-        sl = slice(s, s + per)
-        c1, c0 = {k: v[sl] for k, v in x1.items()}, {k: v[sl] for k, v in x0.items()}
+    for s in range(0, len(live), per):
+        sel = live[s:s + per]
+        c1, c0 = {k: v[sel] for k, v in x1.items()}, {k: v[sel] for k, v in x0.items()}
         ig = integrated_gradients(pred, c1, c0, steps)
+        ok = attributable(ig["f1"]) & attributable(ig["f0"])
         can = resettable(pred, c1, c0)
-        if checks:
-            p, chosen = deletion_resets(pred, c1, c0, ig["groups"], can, ids[s:s + per], seed)
-            flags = random_flags[sl]
+        good = np.flatnonzero(ok)
+        at = {int(b): k for k, b in enumerate(good)}           # position of chunk row b among the good rows
+        if checks and len(good):
+            g1, g0 = {k: v[good] for k, v in c1.items()}, {k: v[good] for k, v in c0.items()}
+            p, chosen = deletion_resets(pred, g1, g0, ig["groups"][good], can[good], [ids[i] for i in sel[good]], seed)
+            flags = np.asarray(random_flags)[sel[good]]
+            random_groups = {}
             if rand is not None and flags.any():
                 sub = np.flatnonzero(flags)
-                rig = integrated_gradients(rand, {k: v[sub] for k, v in c1.items()},
-                                           {k: v[sub] for k, v in c0.items()}, steps)
+                rig = integrated_gradients(rand, {k: v[sub] for k, v in g1.items()},
+                                           {k: v[sub] for k, v in g0.items()}, steps)
                 random_groups = dict(zip(sub.tolist(), rig["groups"]))
-            else:
-                random_groups = {}
-        for b in range(len(c1["tick"])):
-            i = s + b
+        for b, i in enumerate(sel):
+            related = related_of(t, raw, i, ig["attention"], b)
+            if not ok[b]:
+                out[i] = unattributed(ids[i], "saturated", raw, i, notes[i], related)
+                continue
             attr = ig["groups"][b]
             delta = float(ig["f1"][b] - ig["f0"][b])
             gap = abs(float(attr.sum()) - delta)
             sentences = texts(raw, base, i, pred.schema, clock[i])
-            related = []
-            if ig["attention"] is not None:
-                trow, w = raw["token_row"][i], ig["attention"][b]
-                order = [j for j in np.argsort(-w, kind="stable") if trow[j] >= 0][:RELATED_K]
-                if order:
-                    related = [{"specimen_id": sid, "weight": float(w[j])}
-                               for sid, j in zip(t.specimen_ids(trow[order]), order)]
             rec = {"alert_id": ids[i], "groups": attr.tolist(), "f1": float(ig["f1"][b]), "f0": float(ig["f0"][b]),
                    "gap": gap, "relative_gap": gap / max(abs(delta), 1e-12),
                    "factors": factors_of(attr, sentences, top_k),
                    "related": related, "baseline": notes[i], "resettable": can[b].tolist()}
             if checks:
-                rec["deletion"] = {"full": float(p[b, 0]), "top": float(p[b, 1]),
-                                   "random": float(p[b, 2:].mean()), "groups_reset": int(chosen[b, 1].sum())}
-                if b in random_groups:
-                    rec["random_groups"] = random_groups[b].tolist()
-            out.append(rec)
+                k = at[b]
+                rec["deletion"] = {"full": float(p[k, 0]), "top": float(p[k, 1]),
+                                   "random": float(p[k, 2:].mean()), "groups_reset": int(chosen[k, 1].sum())}
+                if k in random_groups:
+                    rec["random_groups"] = random_groups[k].tolist()
+            out[i] = rec
     return out
 
 
@@ -553,7 +608,8 @@ def _run(pred, rand, t, tasks, steps, top_k, checks, workers) -> list[list[dict]
 
 @dataclass
 class Explained:
-    """One record per alert, in the order of the alerts given, and the steps and median completeness gap used."""
+    """One record per alert, in the order of the alerts given, and the steps and median completeness gap used (over
+    the attributed alerts; a record with an `unattributed` kind, closed_window or saturated, has no attributions)."""
     records: list[dict]
     steps: int
     median_relative_gap: float | None
@@ -617,20 +673,21 @@ def explain_alerts(pred: P.Predictor, alerts: pl.DataFrame, *, store_dir: Path, 
         for sel, part in zip(order, parts):
             for i, rec in zip(sel, part):
                 recs[i] = rec
-        return recs, float(np.median([recs[i]["relative_gap"] for i in np.flatnonzero(keep)]))
+        gaps = [recs[i]["relative_gap"] for i in np.flatnonzero(keep) if recs[i]["relative_gap"] is not None]
+        return recs, (float(np.median(gaps)) if gaps else None)       # None: every alert unattributed
 
     every = np.ones(len(ids), dtype=bool)
     used = steps or STEPS
     if steps is None:
         sample = _sample(ids, STEP_SAMPLE, seed)          # every alert when there are few
         records, median_gap = once(sample, used, False)
-        while median_gap > COMPLETENESS_GAP and used < MAX_STEPS:
+        while median_gap is not None and median_gap > COMPLETENESS_GAP and used < MAX_STEPS:
             used *= 2
             records, median_gap = once(sample, used, False)
         if sample.all() and not checks:
             return Explained(records, used, median_gap)
     records, median_gap = once(every, used, checks)
-    while steps is None and median_gap > COMPLETENESS_GAP and used < MAX_STEPS:
+    while steps is None and median_gap is not None and median_gap > COMPLETENESS_GAP and used < MAX_STEPS:
         used *= 2
         records, median_gap = once(every, used, checks)
     return Explained(records, used, median_gap)
@@ -638,24 +695,34 @@ def explain_alerts(pred: P.Predictor, alerts: pl.DataFrame, *, store_dir: Path, 
 
 # --- The checks of §9.4 ---------------------------------------------------------------------------------------------
 
+def attributed(ex: Explained) -> list[dict]:
+    """The records with attributions: closed-window and saturated alerts left out of every check."""
+    return [r for r in ex.records if r["groups"] is not None]
+
+
 def completeness_check(ex: Explained) -> dict:
-    gaps = [r["relative_gap"] for r in ex.records]
+    recs = attributed(ex)
+    gaps = [r["relative_gap"] for r in recs]
     return {"steps": ex.steps, "median_relative_gap": ex.median_relative_gap,
-            "median_absolute_gap": float(np.median([r["gap"] for r in ex.records])) if gaps else None,
+            "median_absolute_gap": float(np.median([r["gap"] for r in recs])) if gaps else None,
             "limit": COMPLETENESS_GAP, "alerts": len(gaps),
             "passed": bool(gaps) and ex.median_relative_gap <= COMPLETENESS_GAP}
 
 
 def deletion_check(ex: Explained) -> dict:
+    """An alert counts as a success only when resetting its top 3 groups lowers p_miss (a positive drop) and by more
+    than the random resets' mean drop; the check passes when at least DELETION_SHARE of the alerts succeed, the mean
+    top drop is positive and it exceeds the mean random drop."""
     rows = [r["deletion"] for r in ex.records if "deletion" in r]
     if not rows:
         return {"alerts": 0, "passed": False}
     top = np.array([d["full"] - d["top"] for d in rows])
     rnd = np.array([d["full"] - d["random"] for d in rows])
-    share = float(np.mean(top > rnd))
+    share = float(np.mean((top > 0) & (top > rnd)))
+    mean_top, mean_rnd = float(top.mean()), float(rnd.mean())
     return {"alerts": len(rows), "share_top_beats_random": share, "required_share": DELETION_SHARE,
-            "mean_drop_top": float(top.mean()), "mean_drop_random": float(rnd.mean()), "random_draws": RANDOM_DRAWS,
-            "passed": share >= DELETION_SHARE and float(top.mean()) > float(rnd.mean())}
+            "mean_drop_top": mean_top, "mean_drop_random": mean_rnd, "random_draws": RANDOM_DRAWS,
+            "passed": share >= DELETION_SHARE and mean_top > 0 and mean_top > mean_rnd}
 
 
 def randomization_check(ex: Explained) -> dict:
@@ -674,10 +741,15 @@ def randomization_check(ex: Explained) -> dict:
 
 
 def examples(alerts: pl.DataFrame, ex: Explained, k: int = 3) -> list[dict]:
-    """Three alerts with their factors: the highest, the median and the lowest p_miss (ties to the alert id)."""
+    """Three attributed alerts with their factors: the highest, the median and the lowest p_miss (ties to the alert
+    id); unattributed (closed-window) alerts only when no alert is attributed."""
     if alerts.height == 0:
         return []
-    order = alerts.with_row_index("_i").sort(["p_miss", "alert_id"])
+    order = alerts.with_row_index("_i")
+    has = pl.Series([r["groups"] is not None for r in ex.records])
+    if has.any():
+        order = order.filter(has)
+    order = order.sort(["p_miss", "alert_id"])
     picks = sorted({0, order.height // 2, order.height - 1}, key=lambda j: -j)[:k]
     out = []
     for j in picks:
@@ -704,13 +776,16 @@ def run_checks(pred: P.Predictor, alerts: pl.DataFrame, *, store_dir: Path, hist
     checks = {"completeness": completeness_check(ex), "deletion": deletion_check(ex),
               "randomization": randomization_check(ex)}
     with_factors = sum(1 for r in ex.records if r["factors"])
+    kinds = _counts([r.get("unattributed") for r in ex.records if r.get("unattributed")])
     doc = {"set": set_name, "alerts": len(ex.records), "alerts_given": total, "alerts_with_factors": with_factors,
+           "closed_window_alerts": kinds.get("closed_window", 0), "saturated_alerts": kinds.get("saturated", 0),
+           "attributed_alerts": len(attributed(ex)),
            "model_version": pred.version, "policy_hash": pred.policy_hash, "steps": ex.steps, "seed": seed,
            "budget_per_shift": _one(alerts, "budget_per_shift"), "weights": _one(alerts, "weights"),
            "checks": checks, "passed": all(c["passed"] for c in checks.values()) and with_factors == len(ex.records),
            "examples": examples(alerts, ex), "notice": pred.manifest.get("notice", ""),
            "baseline_scopes": _counts([r["baseline"]["scope"] for r in ex.records]),
-           "raising_groups": _counts([f["group"] for r in ex.records for f in r["factors"]
+           "raising_groups": _counts([f["group"] for r in attributed(ex) for f in r["factors"]
                                       if f["direction"] == "raises"])}
     if out_path is not None:
         out_path = Path(out_path)
