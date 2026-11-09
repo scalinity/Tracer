@@ -1,0 +1,226 @@
+{
+ "job": "O1",
+ "thresholds": {
+  "G1": 0.95,
+  "G2": 0.8,
+  "G3": 0.85,
+  "G4": 0.05,
+  "G5": 1.5
+ },
+ "delta": 1.9521502930324282,
+ "accepted_total": 69,
+ "models": {
+  "luna-low": {
+   "briefs": 24,
+   "first_attempt_responses": 24,
+   "unknown_outcomes": 0,
+   "accepted": 22,
+   "accepted_first_attempt": 20,
+   "near_duplicates": [],
+   "spent_usd": 0.01698,
+   "cost_per_accepted_usd": 0.000772,
+   "estimate_usd": 0.0012,
+   "rates": {
+    "G1": 1.0,
+    "G2": 0.9166666666666666,
+    "G3": 0.9090909090909091,
+    "G3_edge": 0.8333333333333334,
+    "G4": 0.0,
+    "G5": 0.6431818181818182
+   },
+   "passed": {
+    "G1": true,
+    "G2": true,
+    "G3": true,
+    "G4": true,
+    "G5": true,
+    "G6": true
+   },
+   "eligible": true,
+   "collapse": {
+    "normal": {
+     "n": 5,
+     "cv_median_transit": 0.1874635746087215,
+     "cv_breach_share": 0.3219589364091897,
+     "flagged": false
+    },
+    "stressed": {
+     "n": 6,
+     "cv_median_transit": 0.36483101575594096,
+     "cv_breach_share": 0.5321355773810789,
+     "flagged": false
+    },
+    "disrupted": {
+     "n": 6,
+     "cv_median_transit": 0.3831534804784571,
+     "cv_breach_share": 0.6803664828378941,
+     "flagged": false
+    },
+    "edge": {
+     "n": 5,
+     "cv_median_transit": 0.31200526698598835,
+     "cv_breach_share": 0.7144423855909159,
+     "flagged": false
+    }
+   },
+   "failures_by_layer": {
+    "adherence": 3,
+    "plausibility": 3
+   },
+   "accepted_by_stratum": {
+    "normal": 5,
+    "stressed": 6,
+    "disrupted": 6,
+    "edge": 5
+   }
+  },
+  "sol-medium": {
+   "briefs": 24,
+   "first_attempt_responses": 24,
+   "unknown_outcomes": 0,
+   "accepted": 24,
+   "accepted_first_attempt": 23,
+   "near_duplicates": [],
+   "spent_usd": 0.41884,
+   "cost_per_accepted_usd": 0.017452,
+   "estimate_usd": 0.0395,
+   "rates": {
+    "G1": 1.0,
+    "G2": 1.0,
+    "G3": 1.0,
+    "G3_edge": 1.0,
+    "G4": 0.0,
+    "G5": 0.4418143459915612
+   },
+   "passed": {
+    "G1": true,
+    "G2": true,
+    "G3": true,
+    "G4": true,
+    "G5": true,
+    "G6": true
+   },
+   "eligible": true,
+   "collapse": {
+    "normal": {
+     "n": 6,
+     "cv_median_transit": 0.24710314524934354,
+     "cv_breach_share": 0.5080914128734223,
+     "flagged": false
+    },
+    "stressed": {
+     "n": 6,
+     "cv_median_transit": 0.1731662681805165,
+     "cv_breach_share": 0.4934010337002428,
+     "flagged": false
+    },
+    "disrupted": {
+     "n": 6,
+     "cv_median_transit": 0.3684236737281992,
+     "cv_breach_share": 0.6934033300393186,
+     "flagged": false
+    },
+    "edge": {
+     "n": 6,
+     "cv_median_transit": 0.4211826570418411,
+     "cv_breach_share": 0.8603285450219533,
+     "flagged": false
+    }
+   },
+   "failures_by_layer": {
+    "plausibility": 1
+   },
+   "accepted_by_stratum": {
+    "normal": 6,
+    "stressed": 6,
+    "disrupted": 6,
+    "edge": 6
+   }
+  },
+  "terra-low": {
+   "briefs": 24,
+   "first_attempt_responses": 24,
+   "unknown_outcomes": 0,
+   "accepted": 23,
+   "accepted_first_attempt": 22,
+   "near_duplicates": [],
+   "spent_usd": 0.164455,
+   "cost_per_accepted_usd": 0.00715,
+   "estimate_usd": 0.0135,
+   "rates": {
+    "G1": 1.0,
+    "G2": 0.9583333333333334,
+    "G3": 1.0,
+    "G3_edge": 1.0,
+    "G4": 0.0,
+    "G5": 0.529645732689211
+   },
+   "passed": {
+    "G1": true,
+    "G2": true,
+    "G3": true,
+    "G4": true,
+    "G5": true,
+    "G6": true
+   },
+   "eligible": true,
+   "collapse": {
+    "normal": {
+     "n": 5,
+     "cv_median_transit": 0.2688947339235059,
+     "cv_breach_share": 0.5851324789964032,
+     "flagged": false
+    },
+    "stressed": {
+     "n": 6,
+     "cv_median_transit": 0.239321347462156,
+     "cv_breach_share": 0.47511516482683125,
+     "flagged": false
+    },
+    "disrupted": {
+     "n": 6,
+     "cv_median_transit": 0.3528559530806725,
+     "cv_breach_share": 0.6316552511481046,
+     "flagged": false
+    },
+    "edge": {
+     "n": 6,
+     "cv_median_transit": 0.2860106482043922,
+     "cv_breach_share": 0.6566942227060695,
+     "flagged": false
+    }
+   },
+   "failures_by_layer": {
+    "plausibility": 3
+   },
+   "accepted_by_stratum": {
+    "normal": 5,
+    "stressed": 6,
+    "disrupted": 6,
+    "edge": 6
+   }
+  }
+ },
+ "choice": {
+  "core": "terra-low",
+  "edge": "terra-low",
+  "eligible": [
+   "luna-low",
+   "sol-medium",
+   "terra-low"
+  ],
+  "core_candidates": [
+   "sol-medium",
+   "terra-low"
+  ],
+  "edge_candidates": [
+   "sol-medium",
+   "terra-low"
+  ],
+  "best_g2": 1.0,
+  "best_g3": 1.0
+ },
+ "passed": true,
+ "spent_usd": 0.600275,
+ "cap_usd": 3.0
+}
