@@ -18,6 +18,10 @@ from src.scenarios import planner, runner
 
 ROOT = Path(__file__).resolve().parents[1]
 JOBS = runner.load_jobs(ROOT / "config" / "openai_jobs.yaml")
+# A two-arm mix (sol-medium writes the edge stratum), so the count's per-arm weighting is exercised whatever
+# the live config chooses.
+MIXED = json.loads(json.dumps(JOBS))
+MIXED["jobs"]["O3"]["arms"]["edge"] = ["sol-medium"]
 CFG = W.load_config()
 
 # Three validation scenarios, 100 scored specimens each with 40 breaches. TracerNet is sharp in S1, no better than
@@ -74,7 +78,7 @@ def doc():
                 "jobs": {"O2": {"arms": {s: ["terra-low"] for s in planner.STRATA}, "spent_usd": 43.865879,
                                 "counts": {"accepted": 6023, "briefs": 6101}}}}
     pilot = {"models": {"sol-medium": {"briefs": 24, "accepted": 24, "cost_per_accepted_usd": 0.017452}}}
-    return W.analyze(rows, risk.lazy(), evaluation(), cfg=CFG, jobs_cfg=JOBS, manifest=manifest, pilot=pilot)
+    return W.analyze(rows, risk.lazy(), evaluation(), cfg=CFG, jobs_cfg=MIXED, manifest=manifest, pilot=pilot)
 
 
 def test_the_excess_is_the_log_loss_over_the_slice_base_rate(doc):

@@ -1,6 +1,6 @@
 {
  "breaches": 305080,
- "briefs": 1630,
+ "briefs": 2378,
  "chosen": [
   {
    "base_rate": 0.1691283507031436,
@@ -104,21 +104,20 @@
   }
  ],
  "count": {
-  "accepted": 1615,
-  "accepted_per_brief": 0.9913276512047206,
+  "accepted": 2347,
+  "accepted_per_brief": 0.9872152106212096,
   "arm_share": {
-   "sol-medium": 0.32166666666666666,
-   "terra-low": 0.6783333333333333
+   "terra-low": 1.0
   },
-  "briefs": 1630,
+  "briefs": 2378,
   "cap_share": 0.95,
   "cap_usd": 18.0,
-  "cost_per_accepted_usd": 0.010582685494924844,
-  "expected_spend_usd": 17.100181270849042,
+  "cost_per_accepted_usd": 0.0072830614311804745,
+  "expected_spend_usd": 17.0976987808556,
   "formula": "accepted = floor(cap x cap_share / cost per accepted); briefs = ceil(accepted / acceptance)",
   "provisional_briefs": 600,
   "seed": 301,
-  "spend_per_brief_usd": 0.01049090875512211,
+  "spend_per_brief_usd": 0.007189949024750041,
   "stratum_share": {
    "disrupted": 0.13166666666666665,
    "edge": 0.32166666666666666,
@@ -132,7 +131,7 @@
    "set": "val",
    "sha256": "105a41acc3b0e66e"
   },
-  "jobs": "0806073acf10b820",
+  "jobs": "a0c598fdb0f9d988",
   "manifest": "4ee69974b14c3b8e",
   "pilot": "d0872da656bba76f",
   "risk": {
@@ -166,12 +165,6 @@
  },
  "job": "O3",
  "measured": {
-  "sol-medium": {
-   "acceptance": 1.0,
-   "briefs": 24,
-   "cost_per_accepted_usd": 0.017452,
-   "source": "pilot gate (results/neural/generation/pilot.json): $0.017452 per accepted, 24 accepted of 24 briefs"
-  },
   "terra-low": {
    "acceptance": 0.9872152106212096,
    "briefs": 6101,
@@ -229,25 +222,25 @@
   }
  ],
  "plan": {
-  "briefs": 1630,
+  "briefs": 2378,
   "by_origin": {
-   "coverage": 244,
-   "edge": 408,
-   "slice": 978
+   "coverage": 357,
+   "edge": 594,
+   "slice": 1427
   },
   "by_slice": {
-   "slice:0": 244,
-   "slice:1": 244,
-   "slice:2": 245,
-   "slice:3": 245
+   "slice:0": 357,
+   "slice:1": 356,
+   "slice:2": 357,
+   "slice:3": 357
   },
   "by_stratum": {
-   "disrupted": 216,
-   "edge": 524,
-   "normal": 488,
-   "stressed": 402
+   "disrupted": 314,
+   "edge": 767,
+   "normal": 710,
+   "stressed": 587
   },
-  "expected_spend_usd": 17.096931621373546,
+  "expected_spend_usd": 17.0976987808556,
   "ood_briefs": 0
  },
  "ranking": [
@@ -1546,6 +1539,7 @@
    }
   }
  ],
+ "recounted": "Recounted with spec \u00a74.10's model rule applied to O3 (terra-low writes the edge stratum, as for O2): the slices, targets and ranking are unchanged; measured costs, the count and the plan follow the updated config/openai_jobs.yaml.",
  "settings": {
   "budget": "6/shift",
   "cap_share": 0.95,

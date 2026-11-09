@@ -102,12 +102,11 @@ Targets: the four slices at equal shares of the 60% of slice briefs, 25% general
 
 Measured cost and acceptance per model arm:
 
-- `sol-medium`: $0.017452 per accepted scenario, acceptance 1.0000 (pilot gate (results/neural/generation/pilot.json): $0.017452 per accepted, 24 accepted of 24 briefs).
 - `terra-low`: $0.007283 per accepted scenario, acceptance 0.9872 (library manifest, job O2: $43.865879 spent, 6,023 accepted of 6,101 briefs).
 
-Count (spec Appendix B, the formula O2's count used): the 600 briefs the planner makes at its default size give the strata's shares (disrupted 0.1317, edge 0.3217, normal 0.3033, stressed 0.2433), so the arms' shares (`sol-medium` 0.3217, `terra-low` 0.6783). Spend per brief $0.010491 and accepted per brief 0.9913 give $0.010583 per accepted scenario; accepted = floor($18.00 x 0.95 / $0.010583) = 1,615; briefs = ceil(1,615 / 0.9913) = 1,630.
+Count (spec Appendix B, the formula O2's count used): the 600 briefs the planner makes at its default size give the strata's shares (disrupted 0.1317, edge 0.3217, normal 0.3033, stressed 0.2433), so the arms' shares (`terra-low` 1.0000). Spend per brief $0.007190 and accepted per brief 0.9872 give $0.007283 per accepted scenario; accepted = floor($18.00 x 0.95 / $0.007283) = 2,347; briefs = ceil(2,347 / 0.9872) = 2,378.
 
-The briefs `plan --job O3` will write (seed 301): 1,630 in all, coverage 244, edge 408, slice 978 by origin; disrupted 216, edge 524, normal 488, stressed 402 by stratum; 0 out of distribution.
+The briefs `plan --job O3` will write (seed 301): 2,378 in all, coverage 357, edge 594, slice 1,427 by origin; disrupted 314, edge 767, normal 710, stressed 587 by stratum; 0 out of distribution.
 
 ## Spend
 
