@@ -1497,6 +1497,34 @@ def test_the_subsets_are_pinned_per_split_in_the_lock(ood_store, ood_look, tmp_p
     assert [e["status"] for e in logged(files)] == ["first", "repeat", "repeat"]
 
 
+def test_a_run_whose_subsets_the_lock_no_longer_pins_is_refused(ood_store, tmp_path):
+    record = lambda subsets: ne.lock_record(ood_store["store"], ne.baselines(), **ood_args(subsets=subsets))  # noqa: E731
+    feature = ood_store["feature"]
+    files = lock_paths(tmp_path)
+    plain = ne.guard_test_run("test", record(None), **files)
+    old = ne.guard_test_run("test_ood", record({ne.OOD_FEATURE: feature}), **files)
+    ne.guard_test_run("test_ood", record({ne.OOD_FEATURE: feature[:1]}), "the subset was narrowed", **files)
+    with pytest.raises(ne.LockError, match="subsets"):     # re-pinned by a subset-only relock of its own split
+        old.check("test_ood")
+    with pytest.raises(ne.LockError, match="subsets"):     # cleared by the other split's relock
+        plain.check("test")
+
+
+def test_lock_transactions_wait_for_each_other(ood_store, tmp_path):
+    import threading
+
+    files = lock_paths(tmp_path)
+    hashes = ne.lock_record(ood_store["store"], ne.baselines(), **ood_args())
+    release, done = threading.Event(), []
+    with ne._lock_transaction(files["runs_path"]):
+        worker = threading.Thread(target=lambda: done.append(ne.guard_test_run("test", hashes, **files)))
+        worker.start()
+        worker.join(0.3)
+        assert worker.is_alive() and not files["lock_path"].exists()   # held off while another transaction runs
+    worker.join(10)
+    assert done[0]["status"] == "first" and files["lock_path"].exists()
+
+
 def test_subsets_are_refused_before_the_lock_where_they_cannot_apply(ood_store, tmp_path):
     files = lock_paths(tmp_path)
     with pytest.raises(ValueError, match="v2 set"):

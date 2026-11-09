@@ -35,12 +35,14 @@ label store itself.
 
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
 import math
 import os
 import tempfile
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -872,6 +874,8 @@ class TestRun(dict):
             raise LockError(f"no test lock at {self.lock_path}; take it with guard_test_run first")
         locked = json.loads(self.lock_path.read_text(encoding="utf-8"))
         changed = [k for k in HASH_FIELDS if locked.get(k) != self["hashes"][k]]
+        if (locked.get("subsets") or {}).get(split) != (self["hashes"].get(SUBSETS_FIELD) or subsets_sha256(None)):
+            changed.append("subsets")       # a relock of either split re-pins or clears this split's subsets
         if changed:
             raise LockError(f"the test lock changed since this run was recorded ({', '.join(changed)})")
         logged = self.runs_path.read_text(encoding="utf-8").splitlines() if self.runs_path.exists() else []
@@ -888,6 +892,21 @@ def _check_run(test_run, split: str, **inputs) -> None:
         raise LockError(f"{split} is scored only after the test lock is taken: pass the test run guard_test_run "
                         "recorded")
     check(split, **inputs)
+
+
+@contextmanager
+def _lock_transaction(runs_path: Path):
+    """One read-check-write of a test lock at a time, across processes and across nodes (/blue is Lustre mounted
+    with cluster-wide flock): the run log is the mutex, since it is only appended to while the lock file itself is
+    replaced on every write."""
+    runs_path = Path(runs_path)
+    runs_path.parent.mkdir(parents=True, exist_ok=True)
+    with runs_path.open("a", encoding="utf-8") as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle, fcntl.LOCK_UN)
 
 
 def guard_test_run(split: str, hashes: Mapping, relock_reason: str | None = None, lock_path: Path | None = None,
@@ -926,35 +945,36 @@ def guard_test_run(split: str, hashes: Mapping, relock_reason: str | None = None
     entry = {"time": stamp, "split": split, "hashes": new | {SUBSETS_FIELD: subsets}}
     if risk_parts:
         entry["risk_parts"] = {m: dict(p) for m, p in risk_parts.items()}
-    if not lock_path.exists():
-        entry |= {"status": "first", "reason": "first evaluation of a test set"}
-        _write_atomic(lock_path, json.dumps({"first_split": split, "time": stamp, "risk_parts": {},
-                                             "subsets": {split: subsets}} | new, indent=1, sort_keys=True) + "\n")
-    else:
-        locked = json.loads(lock_path.read_text(encoding="utf-8"))
-        changed = [k for k in HASH_FIELDS if locked.get(k) != new[k]]
-        pinned = (locked.get("subsets") or {}).get(split)
-        if pinned is not None and pinned != subsets:
-            changed.append("subsets")
-        recorded = (locked.get("risk_parts") or {}).get(split, {})
-        if any(m in recorded and recorded[m] != dict(p) for m, p in (risk_parts or {}).items()):
-            changed.append("risk_parts")
-        if not changed:
-            entry |= {"status": "repeat", "reason": relock_reason or "inputs unchanged"}
-            if pinned is None:      # this split's first look under the lock: pin the subsets it reports
-                _write_atomic(lock_path, json.dumps(locked | {"subsets": (locked.get("subsets") or {}) | {split: subsets}},
-                                                    indent=1, sort_keys=True) + "\n")
-        elif relock_reason is None:
-            raise LockError(f"the test sets were locked at {locked.get('time')} and these changed: {', '.join(changed)}; "
-                            "rerun with a relock reason to record the new inputs")
+    with _lock_transaction(runs_path):    # read, check and write the lock as one step
+        if not lock_path.exists():
+            entry |= {"status": "first", "reason": "first evaluation of a test set"}
+            _write_atomic(lock_path, json.dumps({"first_split": split, "time": stamp, "risk_parts": {},
+                                                 "subsets": {split: subsets}} | new, indent=1, sort_keys=True) + "\n")
         else:
-            entry |= {"status": "relock", "reason": relock_reason, "changed": changed,
-                      "previous": {k: locked.get(k) for k in changed}, "locked_at": locked.get("time")}
-            _write_atomic(lock_path, json.dumps({"first_split": locked.get("first_split", split), "time": stamp,
-                                                 "relocked_from": locked.get("time"), "risk_parts": {},
-                                                 "subsets": {split: subsets}} | new,
-                                                indent=1, sort_keys=True) + "\n")
-    _log(runs_path, entry)
+            locked = json.loads(lock_path.read_text(encoding="utf-8"))
+            changed = [k for k in HASH_FIELDS if locked.get(k) != new[k]]
+            pinned = (locked.get("subsets") or {}).get(split)
+            if pinned is not None and pinned != subsets:
+                changed.append("subsets")
+            recorded = (locked.get("risk_parts") or {}).get(split, {})
+            if any(m in recorded and recorded[m] != dict(p) for m, p in (risk_parts or {}).items()):
+                changed.append("risk_parts")
+            if not changed:
+                entry |= {"status": "repeat", "reason": relock_reason or "inputs unchanged"}
+                if pinned is None:      # this split's first look under the lock: pin the subsets it reports
+                    pins = (locked.get("subsets") or {}) | {split: subsets}
+                    _write_atomic(lock_path, json.dumps(locked | {"subsets": pins}, indent=1, sort_keys=True) + "\n")
+            elif relock_reason is None:
+                raise LockError(f"the test sets were locked at {locked.get('time')} and these changed: {', '.join(changed)}; "
+                                "rerun with a relock reason to record the new inputs")
+            else:
+                entry |= {"status": "relock", "reason": relock_reason, "changed": changed,
+                          "previous": {k: locked.get(k) for k in changed}, "locked_at": locked.get("time")}
+                _write_atomic(lock_path, json.dumps({"first_split": locked.get("first_split", split), "time": stamp,
+                                                     "relocked_from": locked.get("time"), "risk_parts": {},
+                                                     "subsets": {split: subsets}} | new,
+                                                    indent=1, sort_keys=True) + "\n")
+        _log(runs_path, entry)
     return TestRun(entry, lock_path, runs_path, relock_reason)
 
 
@@ -963,27 +983,28 @@ def record_risk_parts(test_run: TestRun, parts: Mapping, now=None) -> None:
     recorded for this split are recorded in the lock and logged with the run; recorded parts must match, unless the
     run carries a relock reason, which replaces them and is logged as a relock. Otherwise raises LockError."""
     split = test_run["split"]
-    _check_run(test_run, split)
-    locked = json.loads(test_run.lock_path.read_text(encoding="utf-8"))
-    recorded = dict((locked.get("risk_parts") or {}).get(split, {}))
-    parts = {m: dict(p) for m, p in parts.items()}
-    changed = sorted(m for m, p in parts.items() if m in recorded and recorded[m] != p)
-    if changed and test_run.relock_reason is None:
-        raise LockError(f"the risk table of {', '.join(changed)} on {split} differs from the one recorded at the lock "
-                        f"({locked.get('time')}); rerun with a relock reason to record the new table")
-    added = {m: p for m, p in parts.items() if m not in recorded or m in changed}
-    if not added:
-        return
-    entry = {"time": _now(now), "split": split, "run": test_run["time"], "risk_parts": added}
-    if changed:
-        entry |= {"status": "risk table relock", "reason": test_run.relock_reason,
-                  "previous": {m: recorded[m] for m in changed}}
-    else:
-        entry |= {"status": "risk table recorded", "reason": "the parts this run read, recorded once written"}
-    recorded.update(added)
-    locked["risk_parts"] = dict(locked.get("risk_parts") or {}) | {split: recorded}
-    _write_atomic(test_run.lock_path, json.dumps(locked, indent=1, sort_keys=True) + "\n")
-    _log(test_run.runs_path, entry)
+    with _lock_transaction(test_run.runs_path):
+        _check_run(test_run, split)
+        locked = json.loads(test_run.lock_path.read_text(encoding="utf-8"))
+        recorded = dict((locked.get("risk_parts") or {}).get(split, {}))
+        parts = {m: dict(p) for m, p in parts.items()}
+        changed = sorted(m for m, p in parts.items() if m in recorded and recorded[m] != p)
+        if changed and test_run.relock_reason is None:
+            raise LockError(f"the risk table of {', '.join(changed)} on {split} differs from the one recorded at the lock "
+                            f"({locked.get('time')}); rerun with a relock reason to record the new table")
+        added = {m: p for m, p in parts.items() if m not in recorded or m in changed}
+        if not added:
+            return
+        entry = {"time": _now(now), "split": split, "run": test_run["time"], "risk_parts": added}
+        if changed:
+            entry |= {"status": "risk table relock", "reason": test_run.relock_reason,
+                      "previous": {m: recorded[m] for m in changed}}
+        else:
+            entry |= {"status": "risk table recorded", "reason": "the parts this run read, recorded once written"}
+        recorded.update(added)
+        locked["risk_parts"] = dict(locked.get("risk_parts") or {}) | {split: recorded}
+        _write_atomic(test_run.lock_path, json.dumps(locked, indent=1, sort_keys=True) + "\n")
+        _log(test_run.runs_path, entry)
 
 
 # ---------------------------------------------------------------------------------------------------------
