@@ -19,3 +19,11 @@ Every number this work reports comes from synthetic data with no clinical review
 - One shift clock per scenario, from `receiving.shift_pattern`, governs every day, evening and night field (staffing, station emptying, courier rounds). Under `7-19` the evening values are unused.
 - `response` is `none` for every disruption type except a tube line outage, and `noticed_after_min` only matters for outages.
 - Tasks N10 and N11 join no gate, since the spec puts only N0 to N9 under Gate C.
+
+**9:30 PM.** N0 merged as #49. Five agents now build in separate git worktrees, none of which may commit: N3 the simulator, N1 the scenario schema, planner, prompt and validators, N2 the OpenAI client, ledger and runner (at the highest effort, since it guards the cap), and two pieces with no dependency on the others, TracerNet's network core (bins, rungs, loss, calibration) and the evaluation harness's core. torch 2.15.0 and Optuna 5.0.0 are installed; MPS works, though CPU wins on small matrices, as expected for a network of about 0.3 million parameters.
+
+**Docs check before any API code.** All three model ids exist and the prices match the spec, with Batch and Flex at exactly half of Standard in every column. Three findings change the client: under OpenAI's default implicit caching a one-off prompt is billed at the cache-write rate (1.25 times input), so only the stable developer prefix earns its write back; Flex's capacity error is a 429 with no machine-readable code; and exhausted credit arrives as `credit_balance_exhausted`. The project must also allow the Flex tier, or every Flex request fails with a 400.
+
+**HiPerGator.** The class allocation is 8 GPUs, 32 CPUs and 250 GB shared by the whole class. A 0.3-million-parameter network is limited by building its inputs, not by GPU arithmetic, so training starts on the Mac (18 cores) and HiPerGator is the fallback for running search trials or ablations in parallel.
+
+**9:45 PM, the plan.** The first republish was refused: the published plan held a November 8 rework (tasks R1 to R7, a rework summary, a new API section) that was never committed. Main's plan is now rebuilt from the published page, with N0 to N11 added after R7; overwriting the page would have erased the rework.

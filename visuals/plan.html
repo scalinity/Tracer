@@ -388,6 +388,29 @@ table.t tr.total td{border-top:1px solid var(--hair);color:var(--ink);font-weigh
 .after .when{font:12.5px var(--mono);color:var(--ink-mute);padding-top:2px}
 footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-height:1.6;color:var(--ink-mute);max-width:78ch}
 
+/* ───────── nov 8 rework ───────── */
+.rw-facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;margin-top:16px}
+.rw-facts div{background:var(--panel);border:1px solid var(--hair);border-radius:2px;padding:10px 12px;display:grid;gap:3px;min-width:0}
+.rw-facts dt{font-size:12px;color:var(--ink-mute)}
+.rw-facts dd{margin:0;font-size:14px;line-height:1.4;color:var(--ink)}
+.rw-facts .warn{color:var(--warn)}
+.rw-order{counter-reset:o;display:grid;gap:0;margin-top:22px}
+.rw-order li{counter-increment:o;display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:12px;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--hair-soft);font-size:15px;color:var(--ink)}
+.rw-order li::before{content:counter(o);font:12px var(--mono);color:var(--ink-mute)}
+.rw-order small{display:block;font-size:12.5px;color:var(--ink-mute);margin-top:2px}
+.pill{font:12px var(--mono);border:1px solid var(--hair);border-radius:2px;padding:1px 8px;white-space:nowrap;color:var(--ink-mute)}
+.pill.go{color:var(--infer);border-color:var(--infer-deep)}
+.pill.wait{color:var(--warn);border-color:var(--warn)}
+.pill.cut{color:var(--alarm);border-color:var(--alarm)}
+.rw-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 44px;margin-top:26px}
+.rw-cols h3{font-family:var(--serif);font-weight:400;font-size:18px;margin-bottom:8px;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline}
+.rw-cols ul{display:grid;gap:6px}
+.rw-cols li{position:relative;padding-left:18px;font-size:14px;line-height:1.5;color:var(--ink-dim)}
+.rw-cols li::before{content:"";position:absolute;left:2px;top:.68em;width:8px;height:1px;background:var(--infer)}
+.rw-cols li b{color:var(--ink);font-weight:500}
+.rw-flag{margin-top:14px;padding:10px 14px;border-left:2px solid var(--warn);background:var(--warn-wash);font-size:14px;line-height:1.5;color:var(--ink-dim);max-width:74ch}
+.rw-flag b{color:var(--ink);font-weight:500}
+
 /* ───────── narrow screens ───────── */
 @media (max-width:1040px){
   .shell{grid-template-columns:minmax(0,1fr);padding-top:0}
@@ -409,7 +432,8 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
   .verdict{grid-template-columns:minmax(0,1fr)}
   .whatif{border-left:0;padding-left:0;border-top:1px solid var(--hair);padding-top:22px}
   .beat-detail{grid-template-columns:minmax(0,1fr)}
-  .cols2,.cols3{grid-template-columns:minmax(0,1fr)}
+  .cols2,.cols3,.rw-cols{grid-template-columns:minmax(0,1fr)}
+  .rw-facts{grid-template-columns:repeat(2,minmax(0,1fr))}
   .show{flex-direction:column}
   .beat{flex:none;flex-direction:row;justify-content:space-between;align-items:baseline;border-top:1px solid var(--hair);border-left:2px solid var(--infer)}
   .beat[aria-pressed="true"]{border-left-color:var(--observed)}
@@ -424,6 +448,9 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
   .meter-row{grid-template-columns:minmax(0,1fr) 92px}
   .meter-row .track{grid-column:1 / -1;order:3}
   .after li{grid-template-columns:minmax(0,1fr)}
+  .rw-facts{grid-template-columns:minmax(0,1fr)}
+  .rw-order li{grid-template-columns:22px minmax(0,1fr)}
+  .rw-order .pill{grid-column:2;justify-self:start}
   .after .when{padding-top:0}
 }
 </style>
@@ -444,8 +471,9 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
     </fieldset>
     <nav class="nav" aria-label="Sections">
       <a href="#now">Where we are</a>
+      <a href="#rework">Nov 8 rework</a>
       <a href="#plan">The plan</a>
-      <a href="#api">Claude API</a>
+      <a href="#api">API spend</a>
       <a href="#demo">The demo</a>
       <a href="#three">3D view</a>
       <a href="#rubric">Points</a>
@@ -461,7 +489,7 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
     <!-- ───────── where we are ───────── -->
     <section id="now" class="hero">
       <h1 id="h1">Twenty-one days until Tracer is on the screen.</h1>
-      <p class="lede" id="lede">Every task left before the November 18 presentation, who does it, how long it takes and what Claude will cost. Tick things off and the schedule check recalculates. Set the hours you can really give and the page tells you which gate is at risk.</p>
+      <p class="lede" id="lede">Updated November 8, after the session with Karissa. <b>The model comes first:</b> a neural network replaces the survival model, then the 3D bench, the demo and the QR pages are rebuilt on it. Freeze is November 16. Tick things off and the schedule check recalculates.</p>
 
       <div class="strip">
         <div class="scroll-x"><svg id="stripSvg" viewBox="0 0 1000 292" role="img" aria-label="Timeline from October 28 to November 18 showing each task, the gates and the projected finish"></svg></div>
@@ -503,6 +531,46 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
       <div class="scroll-x"><table class="gates" id="gates"></table></div>
     </section>
 
+    <!-- ───────── nov 8 rework ───────── -->
+    <section id="rework">
+      <div class="head"><h2>The November 8 rework</h2><span class="note">From the session with Karissa</span></div>
+      <dl class="rw-facts">
+        <div><dt>Talk and deck</dt><dd>Merged, PR 40. Deck fixes in PR 45.</dd></div>
+        <div><dt>Explainer and Karissa's lines</dt><dd>Merged, PRs 46 to 48.</dd></div>
+        <div><dt>Session with Karissa</dt><dd>Went well. List of changes below.</dd></div>
+        <div><dt>Talk length</dt><dd class="warn">About 16:15 for a 15-minute slot. Needs a cut.</dd></div>
+      </dl>
+      <ol class="rw-order">
+        <li><span>Build the new model<small>Neural network on a large synthetic dataset. Daniel gets the spec from an Opus chat and runs it in Claude Code.</small></span><span class="pill go">Spec in progress</span></li>
+        <li><span>Rebuild the 3D bench, demo and QR pages on it<small>They have to show the model Tracer will actually use.</small></span><span class="pill wait">Waiting on the model</span></li>
+        <li><span>Cut the talk to 15 minutes, rehearse, freeze<small>Freeze Nov 16, talk Nov 18, final prototype Dec 2, final report Dec 9.</small></span><span class="pill">After both</span></li>
+      </ol>
+      <div class="rw-cols">
+        <div>
+          <h3>The model <span class="pill go">R1, R2</span></h3>
+          <ul>
+            <li><b>Neural network</b> in place of the statistical survival model.</li>
+            <li><b>Data from the OpenAI API</b>, key in a gitignored <code>.env</code>.</li>
+            <li><b>Hard budget $76.43</b>, split into pilot, main run and reserve.</li>
+            <li><b>Hybrid:</b> the API writes scenario configs, a code simulator writes the timelines.</li>
+            <li><b>Tested on whole scenario configs</b> it never saw in training.</li>
+            <li><b>Must beat</b> the survival model and the window-aware rule. Today: about 55 vs 45 min warning at 6 alerts per shift, a tie at equal weights. If it doesn't win, we say so.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>The front end <span class="pill wait">Waiting on the model</span></h3>
+          <ul>
+            <li><b>3D bench:</b> redone so a first-time viewer gets it.</li>
+            <li><b>One Start button</b> that self-plays on time, stalled and lost. No return-to-demo section.</li>
+            <li><b>Demo page:</b> the graph only, no wall of text.</li>
+            <li><b>QR pages:</b> one phone screen, no scroll, visual and interactive.</li>
+            <li><b>Beat Tracer:</b> removed, unless it can be made genuinely fun.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="small" style="margin-top:18px">House rule from November 8: pages we look over stay short. Specs can be as detailed as they need to be.</p>
+    </section>
+
     <!-- ───────── the plan ───────── -->
     <section id="plan">
       <div class="head"><h2>The plan</h2><span class="note" id="planNote"></span></div>
@@ -518,8 +586,8 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
         <span class="small" id="planCount"></span>
       </div>
       <div id="copyHost"></div>
-      <details class="runorder" open>
-        <summary>Run order from October 30: hands-off, now complete</summary>
+      <details class="runorder">
+        <summary>Run order from October 30: hands-off, complete (history)</summary>
         <p class="small">Claude Code works down this list without waiting for the planned days or for Daniel. When the repo, the plan or the course guidelines can settle a call, it makes the call, labels it as an assumption in the pull request and the AI Teaming Log, and keeps going. The one hard stop is the spend guard: no Claude job over $2 and no more than $10 in all without Daniel's word. Steps that need Daniel's own hands are parked on his checklist below and never stop the run. Every step below is done and merged, in pull requests 23 to 36: M5, M6, M7, M8, M8b, S1, V1, W6, W8, D11, D12, M9, G3, A2, P2, P3, P4, P5, P6, P7 and the clean-clone test from A4. The demo is live on GitHub Pages at https://scalinity.github.io/Tracer/demo/, built from <code>main</code>, and 575 tests pass on a clean clone. The end-to-end gate and the demo landed on October 30, well ahead of November 6 and 10, so the time left goes to the talk.</p>
         <ol>
           <li><b>W8</b> start the AI Teaming Log, backfilled from the merged pull requests.</li>
@@ -545,8 +613,15 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
 
     <!-- ───────── claude api ───────── -->
     <section id="api">
-      <div class="head"><h2>What Claude generates, and what it costs</h2></div>
-      <p class="prose">Claude writes the event trail for every synthetic specimen, a few showcase scenarios, and a search brief for every alert in the demo. Everything else, including fitting the models, is ordinary Python. The demo itself makes no live calls and holds no key: every Claude output is generated once, checked, and saved as a file.</p>
+      <div class="head"><h2>What the APIs generate, and what they cost</h2></div>
+      <h3 class="sub" style="margin-top:6px">Model v2: OpenAI API</h3>
+      <ul class="rules">
+        <li><b>What it makes:</b> scenario configs for the neural network's training data. A code simulator turns them into timelines.</li>
+        <li><b>Hard cap: $76.43</b>, split into pilot, main run and reserve.</li>
+        <li><b>The key</b> lives only in a gitignored <code>.env</code>, never in the repo or a page.</li>
+      </ul>
+      <h3 class="sub">Model v1: Claude jobs (history)</h3>
+      <p class="prose">For v1, Claude wrote the event trail for every synthetic specimen, a few showcase scenarios, and a search brief for every alert in the demo. Everything else, including fitting the models, is ordinary Python. The demo itself makes no live calls and holds no key: every Claude output is generated once, checked, and saved as a file.</p>
       <p class="prose">Every core job has run, and its real usage is entered under Spent: about $3.53 in all, well under the $10 guard. Only the optional jobs are still estimates. Change a model, a count or the batch setting and the totals follow.</p>
       <div class="scroll-x" style="margin-top:20px"><table class="t jobs" id="jobs"></table></div>
       <div class="capfield">
@@ -575,6 +650,7 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
     <!-- ───────── demo ───────── -->
     <section id="demo">
       <div class="head"><h2>The demo on November 18</h2></div>
+      <p class="rw-flag"><b>Changing after November 8.</b> The demo becomes one Start button that self-plays on time, stalled and lost. The demo page becomes the graph only, the QR pages fit one phone screen, and Beat Tracer goes unless it can be made genuinely fun. All of it waits on the new model. What follows describes the current version.</p>
       <p class="prose">The course grades the talk on a clear story, a reason for each design choice, a correct picture of how the system works, and class engagement, which carries the most points. The run of show gives each of those a place. The revised guidelines also ask for a hands-on activity of about 10 minutes, so the class has the demo in hand from the board to the threshold slider. Pick the slot length to see the minutes.</p>
       <div class="slot">
         <span>Slot length</span>
@@ -584,7 +660,7 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
       <div class="show" id="show"></div>
       <div class="beat-detail" id="beatDetail"></div>
 
-      <h3 class="sub">Beat Tracer, the class activity</h3>
+      <h3 class="sub">Beat Tracer, the class activity <span class="pill cut">Cut unless made fun</span></h3>
       <div class="cols2">
         <div>
           <p>Everyone opens the demo link on a phone. A ward feed shows six specimens leaving collection. One goes silent. Tap the specimen you think is lost and press Call it. The sooner you call it correctly, the more warning you gave. A wrong call uses up one of your three alerts for the round.</p>
@@ -600,7 +676,7 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
         </ul>
       </div>
 
-      <h3 class="sub">What the demo page contains</h3>
+      <h3 class="sub">What the demo page contains today</h3>
       <div class="cols2">
         <ul>
           <li>The problem in sixty seconds, written by Karissa, with a glossary.</li>
@@ -615,7 +691,7 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
           <li>An honest limits section: the failures Tracer cannot see, and what real validation would need.</li>
         </ul>
       </div>
-      <p class="small" style="margin-top:14px">Where it stands on October 30: the board, the timeline, the threshold control, Beat Tracer with its activity card, the 3D link and the limits section are built and live at https://scalinity.github.io/Tracer/demo/. One part is a placeholder: the problem in sixty seconds, until Karissa's text arrives. Why it is built this way was written on October 30.</p>
+      <p class="small" style="margin-top:14px">Where it stands on October 30: the board, the timeline, the threshold control, Beat Tracer with its activity card, the 3D link and the limits section are built and live at https://scalinity.github.io/Tracer/demo/. One part is a placeholder: the problem in sixty seconds, until Karissa's text arrives. Why it is built this way was written on October 30. On November 8 the explainer page and Karissa's lines were merged (PRs 46 to 48). After the rework the demo page keeps only the graph.</p>
 
       <h3 class="sub">If something fails in the room</h3>
       <div class="scroll-x"><table class="t" style="min-width:640px">
@@ -631,6 +707,7 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
     <section id="three">
       <div class="head"><h2>Seeing the silence in 3D</h2></div>
       <p class="prose">A pneumatic tube bench built from the same model as the board. The carrier is the truth. Hide it, and what is left is what the lab sees, which is nothing, and what Tracer infers, drawn as light along the tube. It is the opening image of the talk and the answer to "what does absence of data look like".</p>
+      <p class="rw-flag"><b>November 8: too complicated for a first-time viewer.</b> It gets redone once the new model is in (R3): one Start button that self-plays on time, stalled and lost, with no return-to-demo section. The version below is the current one.</p>
       <div class="frame">
         <iframe id="exhibit" title="Tracer 3D exhibit" loading="lazy" allow="fullscreen" src="exhibit-3d/dist/index.html?embed=1"></iframe>
         <div class="frame-note">
@@ -662,7 +739,8 @@ footer{border-top:1px solid var(--hair);padding-top:20px;font-size:12.5px;line-h
       <h3 class="sub">After November 18</h3>
       <ul class="after" id="after"></ul>
       <footer style="margin-top:56px">
-        <p>Updated October 30, after the hands-off build finished: every step of the run order is merged (pull requests 23 to 36). The dataset is frozen at 11,967 synthetic specimens with no clinical review, the first prototype is tagged <code>v0.1-mvp</code> with <code>results/mvp-nov8.json</code>, and the demo is live on GitHub Pages from <code>main</code>. On held-out runs the risk model leads the plan's simple rule by 10 to 15 minutes of median warning at 4 and 6 alerts per shift (20 to 25 at 6 with the default urgency weights). A rule that alerts at a fixed share of the stability window closes most of that gap: at equal weights the model ties it at 4 and 6, and the lead holds only at the original arrival volume. A fresh clone regenerates every committed result byte for byte, with 575 tests passing. Claude spend is about $3.53. What is left before November 18 is Daniel's checklist, Karissa's tasks and the talk. The plan follows Ben's revised guidelines (in the repo under <code>docs/course/</code>): the talk is about 15 minutes with a hands-on demo of about 10, and the final report is 2 to 4 pages, due December 9. Hour estimates are ours and can be edited in each task. Prices are Anthropic's list prices as of October 6, 2026. The page stores ticks, spend and cuts in the shared store when it can reach one, and on this device otherwise.</p>
+        <p>Updated November 8, after the session with Karissa. Talk merged (PR 40), deck fixes (PR 45), explainer page and Karissa's lines (PRs 46 to 48). The talk ran about 16:15 against a 15-minute slot. Next: a neural network trained on OpenAI API data with a $76.43 cap replaces the survival model, then the 3D bench, demo and QR pages are rebuilt on it. Freeze November 16, talk November 18, final prototype December 2, final report December 9.</p>
+        <p style="margin-top:10px">History: by October 30 every step of the first run order was merged (PRs 23 to 36). The v1 dataset is 11,967 synthetic specimens with no clinical review, tagged <code>v0.1-mvp</code>, and v1 Claude spend was about $3.53. The page stores ticks, spend and cuts in the shared store when it can reach one, and on this device otherwise.</p>
       </footer>
     </section>
 
@@ -810,7 +888,7 @@ const TASKS = [
 
 {id:"M7", tr:"model", day:[11,8], who:{D:1.5}, t:"Does the risk model beat the simple rule?", needs:["M6"],
  why:"If it does not, that is the result, and the architecture says to report it that way.",
- steps:["Done: `results/README.md` holds one headline paragraph written from `results/mvp-nov8.json`, a table of the three alert budgets and a list of the files. A test checks every number in it against the snapshot.","Done: the bar set in advance, at least 5 more minutes of median warning at the same alerts per shift, is met over the plan's baseline at 2, 4 and 6 alerts per shift and at both weightings. At 6 per shift the model's median warning is 55 minutes against 30 (a lead of 20 to 25 minutes) at weights 3, 2, 1, and 45 against 30 (10 to 15) at equal weights.","Done: the window-aware result sits beside the headline number, not only in the caveats. A rule that alerts at a fixed share of the window reaches 45 minutes at 6 per shift. The model leads it by 5 to 10 minutes at weights 3, 2, 1 and ties it at equal weights at 4 and 6 per shift, and it trails by 5 minutes at 2. Most of the gain over the plan's rule is the window, and the weights move the headline.","Done: the caveats travel with the numbers: synthetic data with no clinical review, data and model that share assumptions, a generous budget (6 per shift is about a third of all specimens), a Brier score only slightly better than the base rate (0.109 against 0.119 at 30 minutes of silence), and 33 dropped specimens that lean toward long delays.","Open, Daniel's: Daniel shares the paragraph with Karissa. This blocks nothing."],
+ steps:["November 8: the survival model is being replaced by a neural network (R2). These numbers become the bar it has to beat.","Done: `results/README.md` holds one headline paragraph written from `results/mvp-nov8.json`, a table of the three alert budgets and a list of the files. A test checks every number in it against the snapshot.","Done: the bar set in advance, at least 5 more minutes of median warning at the same alerts per shift, is met over the plan's baseline at 2, 4 and 6 alerts per shift and at both weightings. At 6 per shift the model's median warning is 55 minutes against 30 (a lead of 20 to 25 minutes) at weights 3, 2, 1, and 45 against 30 (10 to 15) at equal weights.","Done: the window-aware result sits beside the headline number, not only in the caveats. A rule that alerts at a fixed share of the window reaches 45 minutes at 6 per shift. The model leads it by 5 to 10 minutes at weights 3, 2, 1 and ties it at equal weights at 4 and 6 per shift, and it trails by 5 minutes at 2. Most of the gain over the plan's rule is the window, and the weights move the headline.","Done: the caveats travel with the numbers: synthetic data with no clinical review, data and model that share assumptions, a generous budget (6 per shift is about a third of all specimens), a Brier score only slightly better than the base rate (0.109 against 0.119 at 30 minutes of silence), and 33 dropped specimens that lean toward long delays.","Open, Daniel's: Daniel shares the paragraph with Karissa. This blocks nothing."],
  done:"The paragraph exists and quotes the numbers in `results/mvp-nov8.json`.", earns:["F3","T2","T3"]},
 
 {id:"W6", tr:"write", day:[11,8], who:{D:1}, t:"Bring the design documents up to date",
@@ -856,7 +934,7 @@ const TASKS = [
 
 {id:"P2", tr:"demo", day:[11,12], who:{D:3}, t:"Demo page, part 1: the board", needs:["D11"],
  why:"The board is the first thing the class sees that is real model output.",
- steps:["Done: `docs/demo/index.html` is one file of vanilla JavaScript with no build step and no request beyond its two data files.","Done: the problem in sixty seconds is a placeholder until Karissa's text arrives. The board ranks the specimens outstanding at a chosen day and clock by expected harm, with the plan's rule beside the model's. A specimen whose window closed stays on the board for one shift, then moves to a list of IDs.","Done: `bundle.json` loads with `fetch`, and a failure shows a plain message in the page.","Checked in headless Chrome at 375 and 1280 px, with no horizontal overflow. Daniel's, parked on his checklist and never a stop: open the page on his own phone. P7 adds Firefox and WebKit."],
+ steps:["November 8: superseded by R4. The demo page becomes the graph only.","Done: `docs/demo/index.html` is one file of vanilla JavaScript with no build step and no request beyond its two data files.","Done: the problem in sixty seconds is a placeholder until Karissa's text arrives. The board ranks the specimens outstanding at a chosen day and clock by expected harm, with the plan's rule beside the model's. A specimen whose window closed stays on the board for one shift, then moves to a list of IDs.","Done: `bundle.json` loads with `fetch`, and a failure shows a plain message in the page.","Checked in headless Chrome at 375 and 1280 px, with no horizontal overflow. Daniel's, parked on his checklist and never a stop: open the page on his own phone. P7 adds Firefox and WebKit."],
  done:"The board shows ranked specimens from the real bundle.", earns:["D1","D3"]},
 
 {id:"K5", tr:"story", day:[11,12], who:{K:1.5}, t:"Write the clinical background",
@@ -886,12 +964,12 @@ const TASKS = [
 
 {id:"P5", tr:"demo", day:[11,14], who:{D:3}, t:"Beat Tracer, the class activity", needs:["P3"],
  why:"Class engagement and answering questions is the largest single line in the presentation score.",
- steps:["Done: the rounds come from the held-out runs in the bundle. Each round's six specimens come from one run: one missed a window of at most 120 minutes and the other five arrived in time. The three rounds come from three runs, and a round never uses the truth to build its cues.","Done: the six leave together and time runs at 3 minutes a second. A tap on Call it records the minute, and a wrong call uses one of three alerts and says that specimen arrives in time.","Done: `?seed=18` gives everyone the same rounds, and without a seed the page picks one and shows the address to share.","Done: the end screen shows the player's median warning next to Tracer's on the same rounds, with one sentence on the point.","Done: an activity card at the top of the page lists three things to try, about 4, 2 and under 3 minutes, and two questions to discuss.","A scripted full game with `?seed=18` finishes in about 42 seconds. Daniel's, parked on his checklist and never a stop: playtest with three people. That has not been run."],
+ steps:["November 8: under review. Removed unless it can be made genuinely fun (R6).","Done: the rounds come from the held-out runs in the bundle. Each round's six specimens come from one run: one missed a window of at most 120 minutes and the other five arrived in time. The three rounds come from three runs, and a round never uses the truth to build its cues.","Done: the six leave together and time runs at 3 minutes a second. A tap on Call it records the minute, and a wrong call uses one of three alerts and says that specimen arrives in time.","Done: `?seed=18` gives everyone the same rounds, and without a seed the page picks one and shows the address to share.","Done: the end screen shows the player's median warning next to Tracer's on the same rounds, with one sentence on the point.","Done: an activity card at the top of the page lists three things to try, about 4, 2 and under 3 minutes, and two questions to discuss.","A scripted full game with `?seed=18` finishes in about 42 seconds. Daniel's, parked on his checklist and never a stop: playtest with three people. That has not been run."],
  done:"Three people finish a game in under three minutes and understand the point without help.", earns:["D5","T4"]},
 
 {id:"P6", tr:"demo", day:[11,15], who:{D:2}, t:"Link the 3D view to each specimen", needs:["P3"],
  why:"The 3D bench is the opening image. Linking it means every specimen in the demo can be seen as a specimen in a tube.",
- steps:["Done: `docs/demo/exhibit/` is a byte copy of `visuals/exhibit-3d/dist/`, and a test compares the hashes.","Done: each timeline has View in 3D, which opens the exhibit in a new tab with `fate`, `silence`, `window` and `alert` taken from the specimen. Before the truth is shown the fate comes only from the scans shown so far and the link passes `truth=0`, so it never reveals what the visitor has not asked to see.","Done: with no WebGPU or WebGL 2, or with `?lite=1`, the link is hidden and a note says why. The 2D timeline stays."],
+ steps:["November 8: the 3D bench is being redone (R3), so this link is rebuilt with it.","Done: `docs/demo/exhibit/` is a byte copy of `visuals/exhibit-3d/dist/`, and a test compares the hashes.","Done: each timeline has View in 3D, which opens the exhibit in a new tab with `fate`, `silence`, `window` and `alert` taken from the specimen. Before the truth is shown the fate comes only from the scans shown so far and the link passes `truth=0`, so it never reveals what the visitor has not asked to see.","Done: with no WebGPU or WebGL 2, or with `?lite=1`, the link is hidden and a note says why. The 2D timeline stays."],
  done:"The button opens the 3D view in the same situation as the timeline.", earns:["D5"]},
 
 {id:"P7", tr:"demo", day:[11,15], who:{D:2}, t:"Publish on GitHub Pages and test on devices", needs:["P4","P5"],
@@ -906,7 +984,7 @@ const TASKS = [
 
 {id:"T1", tr:"story", day:[11,15], who:{D:1, K:1}, t:"Write the talk",
  why:"Karissa's beats are about the people and the lab. Daniel's are about the system.",
- steps:["Done: a full draft is in `docs/talk/`, with the run of show at 15 minutes, every line for both speakers and the slides at https://scalinity.github.io/Tracer/talk/.","Use the run of show in the demo section. Decide who says each beat.","Write the sentences you will say into the notes of each beat.","Cut anything that does not serve the story, the reasons for the design, or the class activity."],
+ steps:["Use the run of show in the demo section. Decide who says each beat.","Write the sentences you will say into the notes of each beat.","Cut anything that does not serve the story, the reasons for the design, or the class activity."],
  done:"Each beat has an owner and its sentences.", earns:["T1","T2"]},
 
 {id:"T2", tr:"story", day:[11,16], who:{D:1.5, K:1.5}, t:"Dress rehearsal one", needs:["T1","P7"],
@@ -929,6 +1007,42 @@ const TASKS = [
  why:"The checklist is short so nothing on it gets skipped.",
  steps:["Arrive early. Test the projector with the demo open and the sound off.","Open the link on a phone and check that the QR code scans from the back of the room.","Have the offline copy and the recording ready.","Afterward, write down every question the class asked."],
  done:"Presented, and the questions are written down.", earns:["T4"]},
+
+{id:"R1", tr:"model", day:[11,9], who:{D:1}, t:"Spec the neural network",
+ why:"November 8 rework, step one. Everything shown on screen has to come from the model Tracer will actually use. Hour estimates for the R tasks are first guesses; change them in each task.",
+ steps:["Daniel gets the model spec from an Opus chat. It is detailed; this is a spec, not a page we look over.","The spec covers: OpenAI API data with the key in a gitignored `.env`, a hard budget of $76.43 (pilot, main run, reserve), the hybrid design (API writes scenario configs, a code simulator writes timelines), and tests on whole held-out scenario configs.","Daniel sends the spec and a kickoff prompt to Claude Code."],
+ done:"Claude Code has the spec and the kickoff prompt.", earns:[]},
+
+{id:"R2", tr:"model", day:[11,11], who:{D:4}, t:"Build and train the neural network", needs:["R1"],
+ why:"Replaces the statistical survival model with a neural network trained on a much larger synthetic dataset.",
+ steps:["`docs/neural/spec.md` breaks this into tasks N0 to N11 below; R2 is done when N8 and N9 are.","Claude Code builds the data pipeline and runs the pilot inside the reserve, then the main run, without passing $76.43.","Train the network and evaluate it on scenario configs it never saw.","Compare it with the survival model and the window-aware rule at the same alerts per shift. Today's bar: about 55 vs 45 min of warning at 6 alerts per shift, a tie at equal weights.","If it does not win, the result says so plainly.","Merge to main."],
+ done:"The network is merged with a held-out comparison against both, and the API spend is under $76.43.", earns:["P3","P5","F3"]},
+
+{id:"R3", tr:"demo", day:[11,13], who:{D:3}, t:"Redo the 3D bench so it is clear the first time", needs:["R2"],
+ why:"In the November 8 session the bench was too complicated to explain, even for Daniel.",
+ steps:["Rebuild it on the new model so a first-time viewer understands it without a walkthrough.","One Start button that self-plays on time, stalled and lost.","No section that returns to the demo after the opening showcase.","Keep it short and visual."],
+ done:"Someone who has never seen it presses Start and follows all three cases.", earns:["D5","T3"]},
+
+{id:"R4", tr:"demo", day:[11,13], who:{D:1.5}, t:"Make the Tracer demo page the graph only", needs:["R2"],
+ why:"The text on the page overwhelmed the graph.",
+ steps:["Remove the wall of text and keep the graph, driven by the new model.","Merge to main."],
+ done:"The demo page shows the graph and almost nothing else.", earns:["D3"]},
+
+{id:"R5", tr:"demo", day:[11,14], who:{D:2}, t:"Rebuild the QR pages for one phone screen", needs:["R2"],
+ why:"Students scan the code in class, and the current page is a wall of text.",
+ steps:["One phone screen, no scrolling.","Visual and interactive, not paragraphs.","Check it on a real phone."],
+ done:"The page fits a phone screen with no scroll and works by touch.", earns:["D1","D5"]},
+
+{id:"R6", tr:"demo", day:[11,14], who:{D:1}, t:"Decide on Beat Tracer", needs:["R2"],
+ why:"It stays only if it is genuinely fun and shows the concept.",
+ steps:["Either make it something actually fun and interactive, or remove it from the demo and the talk.","If it goes, its minutes in the talk go to the self-playing demo."],
+ done:"Beat Tracer is either fun or gone.", earns:["T4"]},
+
+{id:"R7", tr:"story", day:[11,15], who:{D:1, K:1}, t:"Cut the talk to 15 minutes", needs:["R3"],
+ why:"The talk ran about 16:15 against a 15-minute slot.",
+ steps:["Cut to fit 15 minutes with the new model and the self-playing demo in it.","Run it once against a timer with Karissa."],
+ done:"A timed run comes in under 15 minutes.", earns:["T1","T4"]},
+
 {id:"N0", tr:"data", day:[11,9], who:{D:0.25}, t:"Neural model: spec, key hygiene, price table", 
  why:"The v2 build spends real money on two APIs, so the spec, the key guards and verified prices come before any code that calls them.",
  steps:["Commit `docs/neural/spec.md`, the source of truth for the scenario data and TracerNet.","`.env.example` names `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` and `OPENROUTER_API_KEY` with empty values; `tests/test_no_key_in_site.py` also matches OpenAI and OpenRouter key shapes and their API hosts.","Check OpenAI's pricing and model pages and record every rate with the time checked in `config/openai_prices.yaml`.","Add tasks N0 to N11 here, run `node visuals/plan.check.cjs` and republish."],
@@ -1009,6 +1123,9 @@ const DONE_ALREADY = [
  {t:"Policy table, first pass and most citations", s:"Karissa's 44 rows, compiled into `config/breach_policy.yaml` with the workflow graph, a loader that fails loudly and nine tests. The clock stops at receipt; 34 rows are sourced and 10 are marked assumed."},
  {t:"The 3D specimen exhibit", s:"Built in `visuals/exhibit-3d` and embedded in the 3D view section."},
  {t:"The frozen synthetic dataset", s:"`datasets/tracer-synthetic-v1.jsonl.gz`: 11,967 specimens in 30 runs, 516 breaches (4.3 percent), written by `claude-haiku-5-5` for $2.16 and described in `datasets/manifest.json`. No clinical review: K2 was skipped."},
+ {t:"Talk and deck", s:"Talk merged in PR 40, deck fixes in PR 45."},
+ {t:"Explainer page and Karissa's lines", s:"Merged on November 8, PRs 46 to 48."},
+ {t:"Session with Karissa, November 8", s:"Went well. The changes it produced are the November 8 rework."},
  {t:"Milestone 4 written", s:"A four-page LaTeX PDF and a paste-ready Markdown copy, on GitHub, in the shared Drive folder and in Downloads. Submitting it on Canvas is the first task below."}
 ];
 
@@ -1016,7 +1133,7 @@ const GATES = [
  {id:"A", name:"Gate A", title:"The data is real", day:[11,3], need:"Policy first pass in, a 200-specimen pilot that passes the validator and a code audit (Karissa's review was skipped), and the full dataset frozen with its manifest.", tasks:["K1","D1","D6","K2","D9"]},
  {id:"B", name:"Gate B", title:"The headline number", day:[11,8], need:"Risk model against the simple rule on held-out runs, tagged as the first prototype, and the cited policy table.", tasks:["M1","M2","M3","M4","M5","M6","M7","K3"]},
  {id:"C", name:"Gate C", title:"End to end", day:[11,13], need:"Location estimate, search briefs and the exported bundle, shown in a demo page with a real timeline.", tasks:["M8","M8b","V1","M9","K4","D11","D12","P2","P3","N0","N1","N2","N3","N4","N5","N6","N7","N8","N9"]},
- {id:"F", name:"Freeze", title:"Demo complete", day:[11,16], need:"Everything on GitHub Pages and rehearsed once. After 6 PM only bug fixes.", tasks:["P4","P5","P6","P7","K5","K7","T1","T2","P8","G3","K6"]},
+ {id:"F", name:"Freeze", title:"Demo complete", day:[11,16], need:"The neural network merged and the 3D bench, demo and QR pages rebuilt on it, all on GitHub Pages and rehearsed once. After 6 PM only bug fixes.", tasks:["P4","P5","P6","P7","K5","K7","T1","T2","P8","G3","K6","R1","R2","R3","R4","R5","R6","R7"]},
  {id:"P", name:"Present", title:"November 18", day:[11,18], need:"Second rehearsal, backups, and the day-of checklist.", tasks:["T3","T4"]}
 ];
 
@@ -1088,18 +1205,18 @@ const BEATS = [
  {id:"hook", t:"The silent tube", w:0.5, who:"Karissa", screen:"The 3D bench with the truth hidden. A tube leaves the unit and nothing happens.", say:"A tube leaves the ward. Nothing beeps and nothing is logged. How long until you would worry? Show of hands: fifteen minutes, an hour?", earns:["T1","T4"]},
  {id:"problem", t:"Why it matters", w:1, who:"Karissa", screen:"The problem panel from the demo page.", say:"What a lab does today when a specimen goes missing, why a recollection hurts the patient, and why the stability window makes time the enemy.", earns:["T1","D2"]},
  {id:"gap", t:"The missing data", w:0.5, who:"Daniel", screen:"One panel: two timestamps with 80.1 hours between them.", say:"The only public microbiology data we found stamps a specimen twice and nothing in between. That is why we generated our own data, and why every number we show is an assumption we can vary.", earns:["T2","T3"]},
- {id:"meet", t:"Meet Tracer", w:0.75, who:"Daniel", screen:"What Tracer reads and what it gives the lab, like package tracking with no scans along the way.", say:"An early warning for specimens in transit. It knows when each one left, what kind it is and how long it can wait, and every five minutes it says who is at risk, where each one likely is and who should go and look. No new hardware: only the scans the lab already records.", earns:["T1","T3"]},
- {id:"fix", t:"What Tracer is built to fix", w:0.75, who:"Karissa", screen:"Today and with Tracer, side by side.", say:"Today a missing specimen makes no noise and is found when someone calls for the result, one time limit covers every specimen, and tracking tags need readers in every hallway. Tracer is built to close those gaps with data the lab already has, and the aim is fewer repeat collections, quicker results and less time chasing.", earns:["D2","T1"]},
- {id:"how", t:"How Tracer works", w:0.75, who:"Daniel", screen:"The 3D bench, truth hidden, then shown.", say:"Silence is evidence. Tracer asks how unusual the silence is, where the specimen probably is, and whether an alert would still leave time to act.", earns:["T3","T2"]},
- {id:"board", t:"Board and timeline", w:3, who:"Both", screen:"The live board, then one specimen timeline with the scrubber.", say:"Everyone open the link from the QR code now. Pick a specimen, drag the clock, and watch the risk climb, the likely place move to the tube station, and the alert fire with time to spare.", earns:["T3","D5"]},
- {id:"game", t:"Beat Tracer", w:4.5, who:"Both", screen:"The class activity on every phone and on the projector.", say:"Three rounds: tap the specimen you think is lost, then compare your warning time with Tracer's. Who beat it, and what did you notice that made you call it?", earns:["T4","D5"]},
- {id:"why", t:"Why this design", w:1, who:"Daniel", screen:"The threshold slider, warning time against alerts per shift.", say:"Drag the threshold slider yourself. Fewer alerts means less warning. We chose a simple survival model a clinician can inspect over a black box, and we judge it by minutes of warning at a tolerable number of alerts, not by accuracy.", earns:["T2"]},
- {id:"built", t:"How we built it", w:0.75, who:"Both", screen:"The data and the model, from briefs to the demo, with the hidden truth kept for the test.", say:"Code draws 12,000 specimen briefs with planted faults, Claude writes each scan trail and its hidden true path, and a nine-check validator keeps 11,967. A three-part survival model learns normal trip times, how often a trip runs far longer and still arrives, and how often a specimen never arrives, from 24 runs, and is tested on 6 runs it never saw; only that test reads the truth.", earns:["T3","T2"]},
+ {id:"how", t:"How Tracer works", w:1, who:"Daniel", screen:"The 3D bench, truth hidden, then shown.", say:"Silence is evidence. Tracer asks how unusual the silence is, where the specimen probably is, and whether an alert would still leave time to act.", earns:["T3","T2"]},
+ {id:"board", t:"Board and timeline", w:3, who:"Daniel", screen:"The live board, then one specimen timeline with the scrubber.", say:"Everyone open the link from the QR code now. Pick a specimen, drag the clock, and watch the risk climb, the likely place move to the tube station, and the alert fire with time to spare.", earns:["T3","D5"]},
+ {id:"game", t:"Beat Tracer (under review)", w:4.5, who:"Both", screen:"The class activity on every phone and on the projector.", say:"Under review after November 8: cut unless it can be made genuinely fun, and then this time goes to the self-playing demo. Today: three rounds: tap the specimen you think is lost, then compare your warning time with Tracer's. Who beat it, and what did you notice that made you call it?", earns:["T4","D5"]},
+ {id:"why", t:"Why this design", w:1, who:"Daniel", screen:"The threshold slider, warning time against alerts per shift.", say:"Drag the threshold slider yourself. Fewer alerts means less warning. We judge the model by minutes of warning at a tolerable number of alerts, not by accuracy. (November 8: rewrite once the neural network replaces the survival model.)", earns:["T2"]},
  {id:"limits", t:"Limits and next steps", w:0.75, who:"Karissa", screen:"The limits panel.", say:"Tracer cannot see mislabeled or wrongly packed specimens. All the data here is synthetic. The next step is a test on a real laboratory log that has receipt timestamps.", earns:["T2","T1"]},
  {id:"qa", t:"Questions", w:2.75, who:"Both", screen:"Back to the 3D bench, so the room has something to look at.", say:"Use the prepared answers. Say what we do not know.", earns:["T4"], qa:true}
 ];
 
 const RISKS = [
+ {r:"The neural network does not beat the survival model or the window-aware rule", watch:"R2's comparison on scenario configs held out from training, at the same alerts per shift.", act:"Say so plainly in the talk and the report, and keep the stronger model behind the demo."},
+ {r:"The rework does not fit before the freeze", watch:"R2 merged early enough to rebuild the 3D bench, demo and QR pages before November 16.", act:"Model first, as planned. If time runs short, cut Beat Tracer before anything else."},
+ {r:"The OpenAI data run goes over budget", watch:"The $76.43 hard cap, split into pilot, main run and reserve.", act:"Run the pilot first and stop at the cap. The key stays in the gitignored `.env`."},
  {r:"The generated trails are not realistic enough", watch:"No clinical review was done, so the validator, the code audit and parameter recovery are the checks. The manifest and every Results text say so.", act:"Tighten the briefs and the prompt and rerun the pilot (about ten cents). If it still fails, render the trails from the briefs in code and let Claude write only the notes. The briefs already hold every timestamp, so this fallback costs nothing and cannot fail."},
  {r:"Ten policy rows are still assumptions", watch:"The 10 rows marked `assumed: true` in `config/breach_policy.yaml`.", act:"Every output that uses them says so, and the limits beat names them. A citation found later goes into `config/policy_sources.csv` and costs a recompile, not a code change."},
  {r:"The hands-on part runs long, or phones cannot load the page", watch:"Rehearsal one (T2), against a timer, with three phones on the room's network.", act:"Keep the activity card to three steps, drop the replay (cut C3), and have the presenter drive one round on the projector."},
