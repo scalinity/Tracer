@@ -282,7 +282,8 @@ class Predictor:
             rows = rows[t.n_ticks(rows) > 0]
             if len(rows):
                 tasks.append((run, rows))
-        workers = workers if workers is not None else max(1, min(len(tasks), (os.cpu_count() or 2) - 1))
+        cores = len(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else (os.cpu_count() or 2)
+        workers = workers if workers is not None else max(1, min(len(tasks), cores - 1))
         parts = _run_tasks(self, t, tasks, workers, chunk)
         return self._frame(t, parts)
 

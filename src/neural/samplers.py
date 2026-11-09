@@ -168,6 +168,16 @@ def tasks_of(t: F.Table, rows: np.ndarray, ticks: np.ndarray, weight: np.ndarray
 
 # --- Workers -----------------------------------------------------------------------------------------------------
 
+def available_cores() -> int:
+    """The cores this process may use: the CPU set a scheduler such as SLURM gave it, not the whole machine."""
+    try:
+        return len(os.sched_getaffinity(0))
+    except AttributeError:      # macOS has no affinity call; the whole machine is ours
+        return os.cpu_count() or 2
+
+
+THREAD_VARS = ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "VECLIB_MAXIMUM_THREADS",
+               "NUMEXPR_NUM_THREADS")   # set to 1 in feature workers: N workers x N threads oversubscribe the cores
 _W: dict = {}
 
 
@@ -213,11 +223,20 @@ class Workers:
 
     def __init__(self, t: F.Table, schema: dict | None, workers: int | None = None, cache_root: Path = CACHE_ROOT):
         self.table, self.schema = t, schema
-        self.workers = workers if workers is not None else max(1, (os.cpu_count() or 2) - 1)
+        self.workers = workers if workers is not None else max(1, available_cores() - 1)
         self.pool = None
         if self.workers > 1:
             path = cached_table_dir(t, cache_root)
-            self.pool = mp.get_context("spawn").Pool(self.workers, initializer=_init, initargs=(str(path), schema))
+            saved = {k: os.environ.get(k) for k in THREAD_VARS}
+            os.environ.update({k: "1" for k in THREAD_VARS})    # one thread per worker; the trainer keeps its own
+            try:
+                self.pool = mp.get_context("spawn").Pool(self.workers, initializer=_init, initargs=(str(path), schema))
+            finally:
+                for k, v in saved.items():
+                    if v is None:
+                        os.environ.pop(k, None)
+                    else:
+                        os.environ[k] = v
 
     def map(self, tasks: list[tuple]):
         """Results in task order."""
@@ -355,7 +374,7 @@ def benchmark(t: F.Table, schema: dict, *, workers: int, specimens: int, seed: i
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Measure the training sampler's throughput on a v2 store.")
     ap.add_argument("--store", type=Path, required=True)
-    ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 1))
+    ap.add_argument("--workers", type=int, default=max(1, available_cores() - 1))
     ap.add_argument("--specimens", type=int, default=150_000)
     args = ap.parse_args(argv)
     t = F.load_table(args.store)
