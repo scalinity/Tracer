@@ -1,0 +1,1757 @@
+{
+ "breaches": 305080,
+ "briefs": 1630,
+ "chosen": [
+  {
+   "base_rate": 0.1691283507031436,
+   "base_rate_log_loss": 0.45450140614965817,
+   "breach_share": 0.7932706175429396,
+   "breaches": 242011,
+   "dimension": "route_kind",
+   "excess": -0.3400928413414432,
+   "loss_ratio": 0.25172323618849823,
+   "pins": {
+    "transport_mix": "courier_dominant"
+   },
+   "rank": 3,
+   "ranked": true,
+   "score": 0.19968464702115724,
+   "slice": "courier",
+   "specimens": 1430931,
+   "tracernet_log_loss": 0.11440856480821497,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   }
+  },
+  {
+   "base_rate": 0.07651639669288539,
+   "base_rate_log_loss": 0.27017764413426537,
+   "breach_share": 0.6672905467418382,
+   "breaches": 203577,
+   "dimension": "volume_tercile",
+   "excess": -0.1894079747299408,
+   "loss_ratio": 0.2989502320339498,
+   "pins": {
+    "size_band": "large"
+   },
+   "rank": 4,
+   "ranked": true,
+   "score": 0.19948666378253377,
+   "slice": "high",
+   "specimens": 2660567,
+   "tracernet_log_loss": 0.08076966940432455,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   }
+  },
+  {
+   "base_rate": 0.022473214625979662,
+   "base_rate_log_loss": 0.10751431733313548,
+   "breach_share": 0.16623180805034746,
+   "breaches": 50714,
+   "dimension": "route_kind",
+   "excess": -0.04702293549431504,
+   "loss_ratio": 0.5626355943961078,
+   "pins": {
+    "transport_mix": "tube_dominant"
+   },
+   "rank": 5,
+   "ranked": true,
+   "score": 0.09352793212994694,
+   "slice": "tube",
+   "specimens": 2256642,
+   "tracernet_log_loss": 0.060491381838820434,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   }
+  },
+  {
+   "base_rate": 0.07066673756858335,
+   "base_rate_log_loss": 0.2553601855841816,
+   "breach_share": 0.24393273895371706,
+   "breaches": 74419,
+   "dimension": "volume_tercile",
+   "excess": -0.1738919983567121,
+   "loss_ratio": 0.31903245621903287,
+   "pins": {
+    "size_band": "medium"
+   },
+   "rank": 6,
+   "ranked": true,
+   "score": 0.07782246086064051,
+   "slice": "middle",
+   "specimens": 1053098,
+   "tracernet_log_loss": 0.08146818722746953,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 15.0,
+    "tracernet_min": 15.0
+   }
+  }
+ ],
+ "count": {
+  "accepted": 1615,
+  "accepted_per_brief": 0.9913276512047206,
+  "arm_share": {
+   "sol-medium": 0.32166666666666666,
+   "terra-low": 0.6783333333333333
+  },
+  "briefs": 1630,
+  "cap_share": 0.95,
+  "cap_usd": 18.0,
+  "cost_per_accepted_usd": 0.010582685494924844,
+  "expected_spend_usd": 17.100181270849042,
+  "formula": "accepted = floor(cap x cap_share / cost per accepted); briefs = ceil(accepted / acceptance)",
+  "provisional_briefs": 600,
+  "seed": 301,
+  "spend_per_brief_usd": 0.01049090875512211,
+  "stratum_share": {
+   "disrupted": 0.13166666666666665,
+   "edge": 0.32166666666666666,
+   "normal": 0.30333333333333334,
+   "stressed": 0.24333333333333335
+  }
+ },
+ "inputs": {
+  "evaluation": {
+   "path": "/blue/cai6734/daniel.escalante/tracer/code-n7b/results/neural/val/evaluation.json",
+   "set": "val",
+   "sha256": "105a41acc3b0e66e"
+  },
+  "jobs": "0806073acf10b820",
+  "manifest": "4ee69974b14c3b8e",
+  "pilot": "d0872da656bba76f",
+  "risk": {
+   "parts": 16,
+   "sha256": {
+    "part-0000.parquet": "2a07ed6ea8e31dd8",
+    "part-0001.parquet": "c14e97799d8b57cd",
+    "part-0002.parquet": "7146167bd88712f7",
+    "part-0003.parquet": "bf2c875b397ffb43",
+    "part-0004.parquet": "747e42b8f60f96f6",
+    "part-0005.parquet": "a0dd4e59d5213786",
+    "part-0006.parquet": "88c21f33bceb9785",
+    "part-0007.parquet": "c0e74b28d9ed6e3f",
+    "part-0008.parquet": "7988a66b5cfaf8a6",
+    "part-0009.parquet": "e9d21414e7098ecf",
+    "part-0010.parquet": "ef917200fc2c97a0",
+    "part-0011.parquet": "92e59b249fcfb1de",
+    "part-0012.parquet": "1de6f94abbb771c3",
+    "part-0013.parquet": "d8d4efefa2191163",
+    "part-0014.parquet": "d76a589cc9f80bd7",
+    "part-0015.parquet": "dab5675fe9be65da"
+   }
+  },
+  "rows": {
+   "breaches": 305080,
+   "path": "/blue/cai6734/daniel.escalante/tracer/code/data/neural/weakspots/val-rows.parquet",
+   "scenarios": 772,
+   "sha256": "eaa379157b6d26df",
+   "specimens": 4093666
+  }
+ },
+ "job": "O3",
+ "measured": {
+  "sol-medium": {
+   "acceptance": 1.0,
+   "briefs": 24,
+   "cost_per_accepted_usd": 0.017452,
+   "source": "pilot gate (results/neural/generation/pilot.json): $0.017452 per accepted, 24 accepted of 24 briefs"
+  },
+  "terra-low": {
+   "acceptance": 0.9872152106212096,
+   "briefs": 6101,
+   "cost_per_accepted_usd": 0.0072830614311804745,
+   "source": "library manifest, job O2: $43.865879 spent, 6,023 accepted of 6,101 briefs"
+  }
+ },
+ "notice": "Synthetic data: laboratory weeks designed by language models and simulated by this project's code, with no clinical review. Every number below is a validation number from that simulator.",
+ "passed_over": [
+  {
+   "base_rate": 0.1885116280263803,
+   "base_rate_log_loss": 0.48405759866262643,
+   "breach_share": 0.9627835321882785,
+   "breaches": 293726,
+   "dimension": "window_class",
+   "excess": -0.29846308263867194,
+   "loss_ratio": 0.3834141154621317,
+   "rank": 1,
+   "ranked": true,
+   "score": 0.36914479637547565,
+   "slice": "short (up to 2 h)",
+   "specimens": 1558132,
+   "tracernet_log_loss": 0.18559451602395446,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   },
+   "why": "no brief factor sets a specimen's window"
+  },
+  {
+   "base_rate": 0.0724108577630643,
+   "base_rate_log_loss": 0.2598309120538399,
+   "breach_share": 0.8718893405008522,
+   "breaches": 265996,
+   "dimension": "edge_tag",
+   "excess": -0.18045829181772977,
+   "loss_ratio": 0.3054779726119086,
+   "rank": 2,
+   "ranked": true,
+   "score": 0.2663429880781344,
+   "slice": "none",
+   "specimens": 3673427,
+   "tracernet_log_loss": 0.07937262023611015,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   },
+   "why": "a week without edge tags is not an edge-tag target"
+  }
+ ],
+ "plan": {
+  "briefs": 1630,
+  "by_origin": {
+   "coverage": 244,
+   "edge": 408,
+   "slice": 978
+  },
+  "by_slice": {
+   "slice:0": 244,
+   "slice:1": 244,
+   "slice:2": 245,
+   "slice:3": 245
+  },
+  "by_stratum": {
+   "disrupted": 216,
+   "edge": 524,
+   "normal": 488,
+   "stressed": 402
+  },
+  "expected_spend_usd": 17.096931621373546,
+  "ood_briefs": 0
+ },
+ "ranking": [
+  {
+   "base_rate": 0.1885116280263803,
+   "base_rate_log_loss": 0.48405759866262643,
+   "breach_share": 0.9627835321882785,
+   "breaches": 293726,
+   "dimension": "window_class",
+   "excess": -0.29846308263867194,
+   "loss_ratio": 0.3834141154621317,
+   "rank": 1,
+   "ranked": true,
+   "score": 0.36914479637547565,
+   "slice": "short (up to 2 h)",
+   "specimens": 1558132,
+   "tracernet_log_loss": 0.18559451602395446,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   }
+  },
+  {
+   "base_rate": 0.0724108577630643,
+   "base_rate_log_loss": 0.2598309120538399,
+   "breach_share": 0.8718893405008522,
+   "breaches": 265996,
+   "dimension": "edge_tag",
+   "excess": -0.18045829181772977,
+   "loss_ratio": 0.3054779726119086,
+   "rank": 2,
+   "ranked": true,
+   "score": 0.2663429880781344,
+   "slice": "none",
+   "specimens": 3673427,
+   "tracernet_log_loss": 0.07937262023611015,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   }
+  },
+  {
+   "base_rate": 0.1691283507031436,
+   "base_rate_log_loss": 0.45450140614965817,
+   "breach_share": 0.7932706175429396,
+   "breaches": 242011,
+   "dimension": "route_kind",
+   "excess": -0.3400928413414432,
+   "loss_ratio": 0.25172323618849823,
+   "rank": 3,
+   "ranked": true,
+   "score": 0.19968464702115724,
+   "slice": "courier",
+   "specimens": 1430931,
+   "tracernet_log_loss": 0.11440856480821497,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   }
+  },
+  {
+   "base_rate": 0.07651639669288539,
+   "base_rate_log_loss": 0.27017764413426537,
+   "breach_share": 0.6672905467418382,
+   "breaches": 203577,
+   "dimension": "volume_tercile",
+   "excess": -0.1894079747299408,
+   "loss_ratio": 0.2989502320339498,
+   "rank": 4,
+   "ranked": true,
+   "score": 0.19948666378253377,
+   "slice": "high",
+   "specimens": 2660567,
+   "tracernet_log_loss": 0.08076966940432455,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   }
+  },
+  {
+   "base_rate": 0.022473214625979662,
+   "base_rate_log_loss": 0.10751431733313548,
+   "breach_share": 0.16623180805034746,
+   "breaches": 50714,
+   "dimension": "route_kind",
+   "excess": -0.04702293549431504,
+   "loss_ratio": 0.5626355943961078,
+   "rank": 5,
+   "ranked": true,
+   "score": 0.09352793212994694,
+   "slice": "tube",
+   "specimens": 2256642,
+   "tracernet_log_loss": 0.060491381838820434,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   }
+  },
+  {
+   "base_rate": 0.07066673756858335,
+   "base_rate_log_loss": 0.2553601855841816,
+   "breach_share": 0.24393273895371706,
+   "breaches": 74419,
+   "dimension": "volume_tercile",
+   "excess": -0.1738919983567121,
+   "loss_ratio": 0.31903245621903287,
+   "rank": 6,
+   "ranked": true,
+   "score": 0.07782246086064051,
+   "slice": "middle",
+   "specimens": 1053098,
+   "tracernet_log_loss": 0.08146818722746953,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 15.0,
+    "tracernet_min": 15.0
+   }
+  },
+  {
+   "base_rate": 0.10203218395666507,
+   "base_rate_log_loss": 0.32952533149227103,
+   "breach_share": 0.1265078012324636,
+   "breaches": 38595,
+   "dimension": "archetype_stratum",
+   "excess": -0.23733786851088523,
+   "loss_ratio": 0.27975834987832504,
+   "rank": 7,
+   "ranked": true,
+   "score": 0.035391613719529154,
+   "slice": "safety_net_urban / stressed",
+   "specimens": 378263,
+   "tracernet_log_loss": 0.0921874629813858,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.10003275322335808,
+   "base_rate_log_loss": 0.32515493361952225,
+   "breach_share": 0.1041136751016127,
+   "breaches": 31763,
+   "dimension": "archetype_stratum",
+   "excess": -0.23123113349047625,
+   "loss_ratio": 0.2888586037539577,
+   "rank": 8,
+   "ranked": true,
+   "score": 0.030074130821545034,
+   "slice": "academic_medical_center / stressed",
+   "specimens": 317526,
+   "tracernet_log_loss": 0.093923800129046,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.07294567588677314,
+   "base_rate_log_loss": 0.261192698274362,
+   "breach_share": 0.08877671430444474,
+   "breaches": 27084,
+   "dimension": "volume_tercile",
+   "excess": -0.17809261011119726,
+   "loss_ratio": 0.31815624522502817,
+   "rank": 9,
+   "ranked": true,
+   "score": 0.028244866086517186,
+   "slice": "low",
+   "specimens": 371290,
+   "tracernet_log_loss": 0.0831000881631647,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "analytic_local",
+    "best_baseline_min": 40.0,
+    "gap_min": 15.0,
+    "tracernet_min": 55.0
+   }
+  },
+  {
+   "base_rate": 0.031090990533038737,
+   "base_rate_log_loss": 0.13851434369863808,
+   "breach_share": 0.04049757440671299,
+   "breaches": 12355,
+   "dimension": "route_kind",
+   "excess": -0.059690494505852176,
+   "loss_ratio": 0.5690663297967236,
+   "rank": 10,
+   "ranked": true,
+   "score": 0.023045806033297887,
+   "slice": "walk_in",
+   "specimens": 397382,
+   "tracernet_log_loss": 0.0788238491927859,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   }
+  },
+  {
+   "base_rate": 0.004493389525107219,
+   "base_rate_log_loss": 0.028770714305760024,
+   "breach_share": 0.03721646781172151,
+   "breaches": 11354,
+   "dimension": "window_class",
+   "excess": -0.012006350777489603,
+   "loss_ratio": 0.5826884709954567,
+   "rank": 11,
+   "ranked": true,
+   "score": 0.02168560672506364,
+   "slice": "long (a day or more)",
+   "specimens": 2526823,
+   "tracernet_log_loss": 0.01676436352827042,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   }
+  },
+  {
+   "base_rate": 0.07042210357133129,
+   "base_rate_log_loss": 0.2547294318235096,
+   "breach_share": 0.06778877671430444,
+   "breaches": 20681,
+   "dimension": "archetype_stratum",
+   "excess": -0.17370612228750967,
+   "loss_ratio": 0.3180759638020049,
+   "rank": 12,
+   "ranked": true,
+   "score": 0.021561980488361294,
+   "slice": "cancer_center / stressed",
+   "specimens": 293672,
+   "tracernet_log_loss": 0.08102330953599993,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.08219469448178461,
+   "base_rate_log_loss": 0.2840971247837675,
+   "breach_share": 0.06333420742100433,
+   "breaches": 19322,
+   "dimension": "archetype_stratum",
+   "excess": -0.19464815557913379,
+   "loss_ratio": 0.3148534828457531,
+   "rank": 13,
+   "ranked": true,
+   "score": 0.019940995789778555,
+   "slice": "safety_net_urban / disrupted",
+   "specimens": 235076,
+   "tracernet_log_loss": 0.0894489692046337,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.08811634187743256,
+   "base_rate_log_loss": 0.29815792664866597,
+   "breach_share": 0.06448800314671561,
+   "breaches": 19674,
+   "dimension": "archetype_stratum",
+   "excess": -0.20650515066272307,
+   "loss_ratio": 0.3073967444573152,
+   "rank": 14,
+   "ranked": true,
+   "score": 0.019823402223853478,
+   "slice": "childrens_hospital / stressed",
+   "specimens": 223273,
+   "tracernet_log_loss": 0.0916527759859429,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.08839344262295082,
+   "base_rate_log_loss": 0.2988049933947766,
+   "breach_share": 0.06406844106463878,
+   "breaches": 19546,
+   "dimension": "archetype_stratum",
+   "excess": -0.20810099089135167,
+   "loss_ratio": 0.30355584581408984,
+   "rank": 15,
+   "ranked": true,
+   "score": 0.01944834981736659,
+   "slice": "community_hospital / stressed",
+   "specimens": 221125,
+   "tracernet_log_loss": 0.09070400250342495,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.04532383563339635,
+   "base_rate_log_loss": 0.18450925311951535,
+   "breach_share": 0.057604562737642584,
+   "breaches": 17574,
+   "dimension": "archetype_stratum",
+   "excess": -0.12378133448125643,
+   "loss_ratio": 0.3291321037374889,
+   "rank": 16,
+   "ranked": true,
+   "score": 0.018959510918718468,
+   "slice": "safety_net_urban / normal",
+   "specimens": 387743,
+   "tracernet_log_loss": 0.060727918638258924,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.08922211808809746,
+   "base_rate_log_loss": 0.3007343845620133,
+   "breach_share": 0.04836764127441982,
+   "breaches": 14756,
+   "dimension": "archetype_stratum",
+   "excess": -0.20461799145408532,
+   "loss_ratio": 0.3196055989670452,
+   "rank": 17,
+   "ranked": true,
+   "score": 0.015458568960134126,
+   "slice": "academic_medical_center / disrupted",
+   "specimens": 165385,
+   "tracernet_log_loss": 0.09611639310792798,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.11348597195204337,
+   "base_rate_log_loss": 0.3537421038972268,
+   "breach_share": 0.045702766487478695,
+   "breaches": 13943,
+   "dimension": "archetype_stratum",
+   "excess": -0.25061893446371614,
+   "loss_ratio": 0.2915207669581543,
+   "rank": 18,
+   "ranked": true,
+   "score": 0.013323305538539222,
+   "slice": "academic_medical_center / edge",
+   "specimens": 122861,
+   "tracernet_log_loss": 0.10312316943351067,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.06275512948475051,
+   "base_rate_log_loss": 0.23448200741924238,
+   "breach_share": 0.03441720204536515,
+   "breaches": 10500,
+   "dimension": "archetype_stratum",
+   "excess": -0.15289207111020475,
+   "loss_ratio": 0.3479581960553536,
+   "rank": 19,
+   "ranked": true,
+   "score": 0.011975747536977884,
+   "slice": "cancer_center / disrupted",
+   "specimens": 167317,
+   "tracernet_log_loss": 0.08158993630903762,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.04526534588475544,
+   "base_rate_log_loss": 0.1843309637743269,
+   "breach_share": 0.02848105414973122,
+   "breaches": 8689,
+   "dimension": "archetype_stratum",
+   "excess": -0.12138246821036562,
+   "loss_ratio": 0.341497132522065,
+   "rank": 20,
+   "ranked": true,
+   "score": 0.009726198323338871,
+   "slice": "cancer_center / normal",
+   "specimens": 191957,
+   "tracernet_log_loss": 0.06294849556396127,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.05495747975800704,
+   "base_rate_log_loss": 0.21286125865157013,
+   "breach_share": 0.033617411826406186,
+   "breaches": 10256,
+   "dimension": "archetype_stratum",
+   "excess": -0.15147117730227366,
+   "loss_ratio": 0.28840420158270835,
+   "rank": 21,
+   "ranked": true,
+   "score": 0.009695402817071774,
+   "slice": "childrens_hospital / normal",
+   "specimens": 186617,
+   "tracernet_log_loss": 0.06139008134929645,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.07984356531465425,
+   "base_rate_log_loss": 0.27838713763085227,
+   "breach_share": 0.03299134653205717,
+   "breaches": 10065,
+   "dimension": "archetype_stratum",
+   "excess": -0.19666517392406824,
+   "loss_ratio": 0.2935550988535585,
+   "rank": 22,
+   "ranked": true,
+   "score": 0.009684777992530046,
+   "slice": "childrens_hospital / disrupted",
+   "specimens": 126059,
+   "tracernet_log_loss": 0.08172196370678404,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.036334906347153584,
+   "base_rate_log_loss": 0.15611600685898044,
+   "breach_share": 0.02781237708142127,
+   "breaches": 8485,
+   "dimension": "archetype_stratum",
+   "excess": -0.10193248097202007,
+   "loss_ratio": 0.34707219955929536,
+   "rank": 23,
+   "ranked": true,
+   "score": 0.009652902888621416,
+   "slice": "academic_medical_center / normal",
+   "specimens": 233522,
+   "tracernet_log_loss": 0.05418352588696038,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.11000438895932897,
+   "base_rate_log_loss": 0.3465245129979283,
+   "breach_share": 0.029575848957650454,
+   "breaches": 9023,
+   "dimension": "archetype_stratum",
+   "excess": -0.24574319930405789,
+   "loss_ratio": 0.2908345872041466,
+   "rank": 24,
+   "ranked": true,
+   "score": 0.00860167982281046,
+   "slice": "safety_net_urban / edge",
+   "specimens": 82024,
+   "tracernet_log_loss": 0.10078131369387042,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.15150664749009016,
+   "base_rate_log_loss": 0.42531364264166827,
+   "breach_share": 0.02831388488265373,
+   "breaches": 8638,
+   "dimension": "edge_tag",
+   "excess": -0.2998921872427742,
+   "loss_ratio": 0.2948916818653831,
+   "rank": 25,
+   "ranked": true,
+   "score": 0.008349529133188604,
+   "slice": "courier_capacity_crunch",
+   "specimens": 57014,
+   "tracernet_log_loss": 0.12542145539889407,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   }
+  },
+  {
+   "base_rate": 0.10152411093528775,
+   "base_rate_log_loss": 0.3284189401501103,
+   "breach_share": 0.02796971286220008,
+   "breaches": 8533,
+   "dimension": "archetype_stratum",
+   "excess": -0.2314280287202496,
+   "loss_ratio": 0.2953267901830788,
+   "rank": 26,
+   "ranked": true,
+   "score": 0.008260205521935923,
+   "slice": "community_hospital / disrupted",
+   "specimens": 84049,
+   "tracernet_log_loss": 0.09699091142986073,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.08807936330564557,
+   "base_rate_log_loss": 0.2980715046002644,
+   "breach_share": 0.023252917267601942,
+   "breaches": 7094,
+   "dimension": "archetype_stratum",
+   "excess": -0.19861802053377847,
+   "loss_ratio": 0.3336564634041764,
+   "rank": 27,
+   "ranked": true,
+   "score": 0.0077584861393379684,
+   "slice": "surgical_specialty / stressed",
+   "specimens": 80541,
+   "tracernet_log_loss": 0.0994534840664859,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.044312329115533795,
+   "base_rate_log_loss": 0.18141473979201572,
+   "breach_share": 0.022843188671823784,
+   "breaches": 6969,
+   "dimension": "archetype_stratum",
+   "excess": -0.12577069254297882,
+   "loss_ratio": 0.30672285676913813,
+   "rank": 28,
+   "ranked": true,
+   "score": 0.007006528087138205,
+   "slice": "community_hospital / normal",
+   "specimens": 157270,
+   "tracernet_log_loss": 0.0556440472490369,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.08077998322616718,
+   "base_rate_log_loss": 0.2806702407182033,
+   "breach_share": 0.018942572440015733,
+   "breaches": 5779,
+   "dimension": "archetype_stratum",
+   "excess": -0.19110572944064508,
+   "loss_ratio": 0.31910939702183166,
+   "rank": 29,
+   "ranked": true,
+   "score": 0.006044752869375787,
+   "slice": "childrens_hospital / edge",
+   "specimens": 71540,
+   "tracernet_log_loss": 0.0895645112775582,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.17335523742470468,
+   "base_rate_log_loss": 0.4611666831751382,
+   "breach_share": 0.021791005637865478,
+   "breaches": 6648,
+   "dimension": "edge_tag",
+   "excess": -0.3429695216389558,
+   "loss_ratio": 0.25630030496217454,
+   "rank": 30,
+   "ranked": true,
+   "score": 0.005585041390417387,
+   "slice": "weekend_courier_no_show",
+   "specimens": 38349,
+   "tracernet_log_loss": 0.11819716153618244,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   }
+  },
+  {
+   "base_rate": 0.06434998351208329,
+   "base_rate_log_loss": 0.2387725671274931,
+   "breach_share": 0.013432542283991085,
+   "breaches": 4098,
+   "dimension": "archetype_stratum",
+   "excess": -0.1476664475690975,
+   "loss_ratio": 0.3815602464488699,
+   "rank": 31,
+   "ranked": true,
+   "score": 0.005125324144314504,
+   "slice": "cancer_center / edge",
+   "specimens": 63683,
+   "tracernet_log_loss": 0.09110611955839559,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.08272427151117302,
+   "base_rate_log_loss": 0.28537308311678744,
+   "breach_share": 0.01420938770158647,
+   "breaches": 4335,
+   "dimension": "edge_tag",
+   "excess": -0.1897887297889086,
+   "loss_ratio": 0.3349452312878487,
+   "rank": 32,
+   "ranked": true,
+   "score": 0.0047593666501665926,
+   "slice": "misroute_long_search",
+   "specimens": 52403,
+   "tracernet_log_loss": 0.09558435332787883,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   }
+  },
+  {
+   "base_rate": 0.1130770745152082,
+   "base_rate_log_loss": 0.35290073526796417,
+   "breach_share": 0.015061623180805036,
+   "breaches": 4595,
+   "dimension": "edge_tag",
+   "excess": -0.24474973005932077,
+   "loss_ratio": 0.30646296366178527,
+   "rank": 33,
+   "ranked": true,
+   "score": 0.004615829677546556,
+   "slice": "instrument_staff_drain",
+   "specimens": 40636,
+   "tracernet_log_loss": 0.10815100520864342,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   }
+  },
+  {
+   "base_rate": 0.03808422026839426,
+   "base_rate_log_loss": 0.16180715818257912,
+   "breach_share": 0.010790612298413532,
+   "breaches": 3292,
+   "dimension": "archetype_stratum",
+   "excess": -0.09687844328549416,
+   "loss_ratio": 0.4012722034449244,
+   "rank": 34,
+   "ranked": true,
+   "score": 0.0043299727735042984,
+   "slice": "surgical_specialty / normal",
+   "specimens": 86440,
+   "tracernet_log_loss": 0.06492871489708496,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.0896898391026626,
+   "base_rate_log_loss": 0.3018196361025,
+   "breach_share": 0.013393208338796382,
+   "breaches": 4086,
+   "dimension": "edge_tag",
+   "excess": -0.2050361370341351,
+   "loss_ratio": 0.320666674700703,
+   "rank": 35,
+   "ranked": true,
+   "score": 0.004294755581575562,
+   "slice": "compound_failure",
+   "specimens": 45557,
+   "tracernet_log_loss": 0.09678349906836492,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   }
+  },
+  {
+   "base_rate": 0.08492033463656619,
+   "base_rate_log_loss": 0.2906250550040238,
+   "breach_share": 0.01324242821555002,
+   "breaches": 4040,
+   "dimension": "edge_tag",
+   "excess": -0.19687091923453956,
+   "loss_ratio": 0.32259481471129936,
+   "rank": 36,
+   "ranked": true,
+   "score": 0.004271938676523041,
+   "slice": "batching_night_unit",
+   "specimens": 47574,
+   "tracernet_log_loss": 0.09375413576948424,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   }
+  },
+  {
+   "base_rate": 0.09882609882609883,
+   "base_rate_log_loss": 0.3224959662927867,
+   "breach_share": 0.014238888160482497,
+   "breaches": 4344,
+   "dimension": "archetype_stratum",
+   "excess": -0.23750662440440384,
+   "loss_ratio": 0.26353613927444597,
+   "rank": 37,
+   "ranked": true,
+   "score": 0.003752461613374175,
+   "slice": "critical_access_rural / stressed",
+   "specimens": 43956,
+   "tracernet_log_loss": 0.08498934188838288,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.06520915747832674,
+   "base_rate_log_loss": 0.241066389151858,
+   "breach_share": 0.010157991346532056,
+   "breaches": 3099,
+   "dimension": "edge_tag",
+   "excess": -0.15258238535123086,
+   "loss_ratio": 0.3670524294653423,
+   "rank": 38,
+   "ranked": true,
+   "score": 0.003728515402232515,
+   "slice": "night_station_neglect",
+   "specimens": 47524,
+   "tracernet_log_loss": 0.08848400380062711,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   }
+  },
+  {
+   "base_rate": 0.09608442864622083,
+   "base_rate_log_loss": 0.31639339939811245,
+   "breach_share": 0.011429788907827455,
+   "breaches": 3487,
+   "dimension": "edge_tag",
+   "excess": -0.21531696436589487,
+   "loss_ratio": 0.3194644237980288,
+   "rank": 39,
+   "ranked": true,
+   "score": 0.003651410927572199,
+   "slice": "holiday_skeleton",
+   "specimens": 36291,
+   "tracernet_log_loss": 0.10107643503221758,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   }
+  },
+  {
+   "base_rate": 0.0745740847827054,
+   "base_rate_log_loss": 0.26531312437685994,
+   "breach_share": 0.01099055985315327,
+   "breaches": 3353,
+   "dimension": "edge_tag",
+   "excess": -0.1801057720016544,
+   "loss_ratio": 0.3211576983812308,
+   "rank": 40,
+   "ranked": true,
+   "score": 0.0035297029063598626,
+   "slice": "unnoticed_outage",
+   "specimens": 44962,
+   "tracernet_log_loss": 0.08520735237520556,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   }
+  },
+  {
+   "base_rate": 0.08106077680114192,
+   "base_rate_log_loss": 0.28135254314479013,
+   "breach_share": 0.010610331716271142,
+   "breaches": 3237,
+   "dimension": "archetype_stratum",
+   "excess": -0.18866314520952868,
+   "loss_ratio": 0.32944218985630946,
+   "rank": 41,
+   "ranked": true,
+   "score": 0.0034954909157102194,
+   "slice": "community_hospital / edge",
+   "specimens": 39933,
+   "tracernet_log_loss": 0.09268939793526146,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.10160075825390974,
+   "base_rate_log_loss": 0.32858603004087783,
+   "breach_share": 0.012649141208863249,
+   "breaches": 3859,
+   "dimension": "edge_tag",
+   "excess": -0.23957471448976103,
+   "loss_ratio": 0.2708919656141295,
+   "rank": 42,
+   "ranked": true,
+   "score": 0.0034265507253996514,
+   "slice": "offsite_road_closure",
+   "specimens": 37982,
+   "tracernet_log_loss": 0.0890113155511168,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   }
+  },
+  {
+   "base_rate": 0.05833452480647072,
+   "base_rate_log_loss": 0.22236010217603588,
+   "breach_share": 0.009361478956339321,
+   "breaches": 2856,
+   "dimension": "edge_tag",
+   "excess": -0.14501849199703742,
+   "loss_ratio": 0.34782143658923764,
+   "rank": 43,
+   "ranked": true,
+   "score": 0.00325612305919386,
+   "slice": "stat_heavy_icu_night",
+   "specimens": 48959,
+   "tracernet_log_loss": 0.07734161017899847,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "analytic_local",
+    "best_baseline_min": 10.0,
+    "gap_min": 20.0,
+    "tracernet_min": 30.0
+   }
+  },
+  {
+   "base_rate": 0.15277255639097745,
+   "base_rate_log_loss": 0.4274883731847947,
+   "breach_share": 0.010656221318998295,
+   "breaches": 3251,
+   "dimension": "edge_tag",
+   "excess": -0.29923238881198766,
+   "loss_ratio": 0.3000221583040915,
+   "rank": 44,
+   "ranked": true,
+   "score": 0.0031971025194919415,
+   "slice": "misroute_storm",
+   "specimens": 21280,
+   "tracernet_log_loss": 0.12825598437280702,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   }
+  },
+  {
+   "base_rate": 0.0849919311457773,
+   "base_rate_log_loss": 0.29079522823590254,
+   "breach_share": 0.010357938901271797,
+   "breaches": 3160,
+   "dimension": "edge_tag",
+   "excess": -0.20511334502634088,
+   "loss_ratio": 0.2946467991560499,
+   "rank": 45,
+   "ranked": true,
+   "score": 0.0030519335431136675,
+   "slice": "mass_casualty_surge",
+   "specimens": 37180,
+   "tracernet_log_loss": 0.08568188320956167,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   }
+  },
+  {
+   "base_rate": 0.09115757824244909,
+   "base_rate_log_loss": 0.30520788732170184,
+   "breach_share": 0.008745247148288974,
+   "breaches": 2668,
+   "dimension": "edge_tag",
+   "excess": -0.19907677429334336,
+   "loss_ratio": 0.34773384777075517,
+   "rank": 46,
+   "ranked": true,
+   "score": 0.003041018440580749,
+   "slice": "slow_degradation",
+   "specimens": 29268,
+   "tracernet_log_loss": 0.10613111302835847,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   }
+  },
+  {
+   "base_rate": 0.06894316608231932,
+   "base_rate_log_loss": 0.2508966273358837,
+   "breach_share": 0.007670119312967091,
+   "breaches": 2340,
+   "dimension": "edge_tag",
+   "excess": -0.15248052649616275,
+   "loss_ratio": 0.39225756792644334,
+   "rank": 47,
+   "ranked": true,
+   "score": 0.0030086623474101138,
+   "slice": "chronic_non_dispatch_unit",
+   "specimens": 33941,
+   "tracernet_log_loss": 0.09841610083972094,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "analytic_local",
+    "best_baseline_min": 20.0,
+    "gap_min": 5.0,
+    "tracernet_min": 25.0
+   }
+  },
+  {
+   "base_rate": 0.06444400418871876,
+   "base_rate_log_loss": 0.23902417815278998,
+   "breach_share": 0.0074636161006949,
+   "breaches": 2277,
+   "dimension": "archetype_stratum",
+   "excess": -0.1454941487038889,
+   "loss_ratio": 0.39129945000423527,
+   "rank": 48,
+   "ranked": true,
+   "score": 0.0029205088752446693,
+   "slice": "surgical_specialty / disrupted",
+   "specimens": 35333,
+   "tracernet_log_loss": 0.09353002944890107,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.11107216185086885,
+   "base_rate_log_loss": 0.34875109545244143,
+   "breach_share": 0.00727022420348761,
+   "breaches": 2218,
+   "dimension": "archetype_stratum",
+   "excess": -0.23924490952079036,
+   "loss_ratio": 0.3139952457771827,
+   "rank": 49,
+   "ranked": true,
+   "score": 0.0022828158356293145,
+   "slice": "surgical_specialty / edge",
+   "specimens": 19969,
+   "tracernet_log_loss": 0.10950618593165105,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.08365503541846257,
+   "base_rate_log_loss": 0.2876067143525482,
+   "breach_share": 0.007316113806214763,
+   "breaches": 2232,
+   "dimension": "archetype_stratum",
+   "excess": -0.19911267620357043,
+   "loss_ratio": 0.30769114117586915,
+   "rank": 50,
+   "ranked": true,
+   "score": 0.002251103406006752,
+   "slice": "critical_access_rural / disrupted",
+   "specimens": 26681,
+   "tracernet_log_loss": 0.08849403814897779,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.2074879732273583,
+   "base_rate_log_loss": 0.5106093481416707,
+   "breach_share": 0.00325160613609545,
+   "breaches": 992,
+   "dimension": "disruption_type",
+   "excess": -0.15992838192745235,
+   "loss_ratio": 0.6867891617936467,
+   "rank": 51,
+   "ranked": true,
+   "score": 0.0022331678526920726,
+   "slice": "station_unattended",
+   "specimens": 4781,
+   "tracernet_log_loss": 0.35068096621421835,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices disruption as present or absent, not by type"
+   }
+  },
+  {
+   "base_rate": 0.09332109027643534,
+   "base_rate_log_loss": 0.3101550102615438,
+   "breach_share": 0.006329487347580962,
+   "breaches": 1931,
+   "dimension": "edge_tag",
+   "excess": -0.219617955850976,
+   "loss_ratio": 0.2919090500399165,
+   "rank": 52,
+   "ranked": true,
+   "score": 0.0018476346388720296,
+   "slice": "outage_at_shift_change",
+   "specimens": 20692,
+   "tracernet_log_loss": 0.09053705441056781,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 15.0,
+    "gap_min": 20.0,
+    "tracernet_min": 35.0
+   }
+  },
+  {
+   "base_rate": 0.07647901903017756,
+   "base_rate_log_loss": 0.27008453964649226,
+   "breach_share": 0.00629670905991871,
+   "breaches": 1921,
+   "dimension": "disruption_type",
+   "excess": -0.1932130757257497,
+   "loss_ratio": 0.28462000831798046,
+   "rank": 53,
+   "ranked": true,
+   "score": 0.001792169385009966,
+   "slice": "instrument_down",
+   "specimens": 25118,
+   "tracernet_log_loss": 0.07687146392074255,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices disruption as present or absent, not by type"
+   }
+  },
+  {
+   "base_rate": 0.04266017329707166,
+   "base_rate_log_loss": 0.17630807424917375,
+   "breach_share": 0.004421791005637866,
+   "breaches": 1349,
+   "dimension": "archetype_stratum",
+   "excess": -0.11253164302430275,
+   "loss_ratio": 0.3617329013232636,
+   "rank": 54,
+   "ranked": true,
+   "score": 0.0015995072895144964,
+   "slice": "critical_access_rural / normal",
+   "specimens": 31622,
+   "tracernet_log_loss": 0.06377643122487099,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.08452067315447068,
+   "base_rate_log_loss": 0.2896739115339154,
+   "breach_share": 0.005152746820506097,
+   "breaches": 1572,
+   "dimension": "edge_tag",
+   "excess": -0.2010369329680955,
+   "loss_ratio": 0.3059888206585776,
+   "rank": 55,
+   "ranked": true,
+   "score": 0.0015766829227588958,
+   "slice": "outage_during_peak",
+   "specimens": 18599,
+   "tracernet_log_loss": 0.08863697856581991,
+   "warning_gap": {
+    "available": true,
+    "best_baseline": "window_rule",
+    "best_baseline_min": 0.0,
+    "gap_min": 0.0,
+    "tracernet_min": 0.0
+   }
+  },
+  {
+   "base_rate": 0.12292139769980222,
+   "base_rate_log_loss": 0.3727055420405334,
+   "breach_share": 0.005500196669725973,
+   "breaches": 1678,
+   "dimension": "disruption_type",
+   "excess": -0.2690510495499041,
+   "loss_ratio": 0.27811363341454254,
+   "rank": 56,
+   "ranked": true,
+   "score": 0.001529679680312057,
+   "slice": "receiving_short_staffed",
+   "specimens": 13651,
+   "tracernet_log_loss": 0.10365449249062927,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices disruption as present or absent, not by type"
+   }
+  },
+  {
+   "base_rate": 0.517816091954023,
+   "base_rate_log_loss": 0.6925122198918514,
+   "breach_share": 0.0029533237183689523,
+   "breaches": 901,
+   "dimension": "disruption_type",
+   "excess": -0.4542448990756167,
+   "loss_ratio": 0.34406226196765816,
+   "rank": 57,
+   "ranked": true,
+   "score": 0.0010161272388647567,
+   "slice": "courier_missed_rounds",
+   "specimens": 1740,
+   "tracernet_log_loss": 0.23826732081623467,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices disruption as present or absent, not by type"
+   }
+  },
+  {
+   "base_rate": 0.20340788072417465,
+   "base_rate_log_loss": 0.5050906098985555,
+   "breach_share": 0.0012521305886980464,
+   "breaches": 382,
+   "dimension": "disruption_type",
+   "excess": -0.14818399406977711,
+   "loss_ratio": 0.7066189884236038,
+   "rank": 58,
+   "ranked": true,
+   "score": 0.0008847792499600652,
+   "slice": "tube_line_outage",
+   "specimens": 1878,
+   "tracernet_log_loss": 0.35690661582877836,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices disruption as present or absent, not by type"
+   }
+  },
+  {
+   "base_rate": 0.06824101406494183,
+   "base_rate_log_loss": 0.24906504663617662,
+   "breach_share": 0.0025763734102530484,
+   "breaches": 786,
+   "dimension": "archetype_stratum",
+   "excess": -0.1676225695126456,
+   "loss_ratio": 0.32699280056947805,
+   "rank": 59,
+   "ranked": true,
+   "score": 0.0008424555567313811,
+   "slice": "critical_access_rural / edge",
+   "specimens": 11518,
+   "tracernet_log_loss": 0.08144247712353105,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices archetype and stratum separately"
+   }
+  },
+  {
+   "base_rate": 0.26964285714285713,
+   "base_rate_log_loss": 0.5829032941210529,
+   "breach_share": 0.0009899042874000263,
+   "breaches": 302,
+   "dimension": "disruption_type",
+   "excess": -0.2934611060364022,
+   "loss_ratio": 0.4965526717791057,
+   "rank": 60,
+   "ranked": true,
+   "score": 0.0004915396187140748,
+   "slice": "unit_batching_hold",
+   "specimens": 1120,
+   "tracernet_log_loss": 0.2894421880846507,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices disruption as present or absent, not by type"
+   }
+  },
+  {
+   "base_rate": 0.056298497606075616,
+   "base_rate_log_loss": 0.216658830546723,
+   "breach_share": 0.001117739609282811,
+   "breaches": 341,
+   "dimension": "disruption_type",
+   "excess": -0.13438247396888953,
+   "loss_ratio": 0.3797507646940353,
+   "rank": 61,
+   "ranked": true,
+   "score": 0.00042446247135395973,
+   "slice": "unit_surge",
+   "specimens": 6057,
+   "tracernet_log_loss": 0.08227635657783347,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices disruption as present or absent, not by type"
+   }
+  },
+  {
+   "base_rate": 0.32204396910279265,
+   "base_rate_log_loss": 0.6284005548723768,
+   "breach_share": 0.0017765831912940869,
+   "breaches": 542,
+   "dimension": "disruption_type",
+   "excess": -0.4796071347611061,
+   "loss_ratio": 0.2367811723869172,
+   "rank": 62,
+   "ranked": true,
+   "score": 0.0004206614508775047,
+   "slice": "courier_delayed",
+   "specimens": 1683,
+   "tracernet_log_loss": 0.14879342011127067,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices disruption as present or absent, not by type"
+   }
+  },
+  {
+   "base_rate": 0.04276315789473684,
+   "base_rate_log_loss": 0.1766283185315365,
+   "breach_share": 0.00038350596564835454,
+   "breaches": 117,
+   "dimension": "disruption_type",
+   "excess": -0.07349635559008597,
+   "loss_ratio": 0.5838925705621582,
+   "rank": 63,
+   "ranked": true,
+   "score": 0.00022392628410834045,
+   "slice": "tube_line_degraded",
+   "specimens": 2736,
+   "tracernet_log_loss": 0.10313196294145052,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices disruption as present or absent, not by type"
+   }
+  },
+  {
+   "base_rate": 0.3247863247863248,
+   "base_rate_log_loss": 0.6304247517678643,
+   "breach_share": 0.0002491149862331192,
+   "breaches": 76,
+   "dimension": "disruption_type",
+   "excess": -0.5840608209099857,
+   "loss_ratio": 0.07354395703509872,
+   "rank": 64,
+   "ranked": true,
+   "score": 1.8320901844327726e-05,
+   "slice": "offsite_route_closed",
+   "specimens": 234,
+   "tracernet_log_loss": 0.04636393085787859,
+   "warning_gap": {
+    "available": false,
+    "why": "the evaluation slices disruption as present or absent, not by type"
+   }
+  }
+ ],
+ "settings": {
+  "budget": "6/shift",
+  "cap_share": 0.95,
+  "dimensions": [
+   "archetype_stratum",
+   "disruption_type",
+   "route_kind",
+   "window_class",
+   "volume_tercile",
+   "edge_tag"
+  ],
+  "max_tick_min": 240,
+  "min_breaches": 30,
+  "top": 4,
+  "weighting": "3-2-1"
+ },
+ "shares": {
+  "general_edge": 0.25,
+  "slices": 0.6,
+  "under_covered": 0.15
+ },
+ "spend": {
+  "by_job": {
+   "O1": 0.600275,
+   "O2": 43.865879
+  },
+  "source": "the library manifest's ledger record at the freeze",
+  "total": 44.466154
+ },
+ "targets": [
+  {
+   "count": 1,
+   "transport_mix": "courier_dominant"
+  },
+  {
+   "count": 1,
+   "size_band": "large"
+  },
+  {
+   "count": 1,
+   "transport_mix": "tube_dominant"
+  },
+  {
+   "count": 1,
+   "size_band": "medium"
+  },
+  {
+   "under_covered": [
+    {
+     "archetype": "community_hospital",
+     "stratum": "normal"
+    },
+    {
+     "archetype": "academic_medical_center",
+     "stratum": "normal"
+    },
+    {
+     "archetype": "safety_net_urban",
+     "stratum": "normal"
+    },
+    {
+     "archetype": "critical_access_rural",
+     "stratum": "normal"
+    },
+    {
+     "archetype": "surgical_specialty",
+     "stratum": "normal"
+    },
+    {
+     "archetype": "childrens_hospital",
+     "stratum": "normal"
+    },
+    {
+     "archetype": "cancer_center",
+     "stratum": "normal"
+    },
+    {
+     "archetype": "critical_access_rural",
+     "stratum": "stressed"
+    },
+    {
+     "archetype": "academic_medical_center",
+     "stratum": "disrupted"
+    },
+    {
+     "archetype": "community_hospital",
+     "stratum": "stressed"
+    },
+    {
+     "archetype": "safety_net_urban",
+     "stratum": "stressed"
+    },
+    {
+     "edge_tag": "holiday_skeleton"
+    }
+   ]
+  }
+ ],
+ "under_covered": [
+  {
+   "count": 389,
+   "deficit": 18,
+   "pins": {
+    "archetype": "community_hospital",
+    "stratum": "normal"
+   },
+   "target": 407
+  },
+  {
+   "count": 314,
+   "deficit": 12,
+   "pins": {
+    "archetype": "academic_medical_center",
+    "stratum": "normal"
+   },
+   "target": 326
+  },
+  {
+   "count": 355,
+   "deficit": 11,
+   "pins": {
+    "archetype": "safety_net_urban",
+    "stratum": "normal"
+   },
+   "target": 366
+  },
+  {
+   "count": 194,
+   "deficit": 10,
+   "pins": {
+    "archetype": "critical_access_rural",
+    "stratum": "normal"
+   },
+   "target": 204
+  },
+  {
+   "count": 235,
+   "deficit": 10,
+   "pins": {
+    "archetype": "surgical_specialty",
+    "stratum": "normal"
+   },
+   "target": 245
+  },
+  {
+   "count": 236,
+   "deficit": 8,
+   "pins": {
+    "archetype": "childrens_hospital",
+    "stratum": "normal"
+   },
+   "target": 244
+  },
+  {
+   "count": 240,
+   "deficit": 4,
+   "pins": {
+    "archetype": "cancer_center",
+    "stratum": "normal"
+   },
+   "target": 244
+  },
+  {
+   "count": 201,
+   "deficit": 2,
+   "pins": {
+    "archetype": "critical_access_rural",
+    "stratum": "stressed"
+   },
+   "target": 203
+  },
+  {
+   "count": 185,
+   "deficit": 1,
+   "pins": {
+    "archetype": "academic_medical_center",
+    "stratum": "disrupted"
+   },
+   "target": 186
+  },
+  {
+   "count": 406,
+   "deficit": 1,
+   "pins": {
+    "archetype": "community_hospital",
+    "stratum": "stressed"
+   },
+   "target": 407
+  },
+  {
+   "count": 365,
+   "deficit": 1,
+   "pins": {
+    "archetype": "safety_net_urban",
+    "stratum": "stressed"
+   },
+   "target": 366
+  },
+  {
+   "count": 53,
+   "deficit": 1,
+   "pins": {
+    "edge_tag": "holiday_skeleton"
+   },
+   "target": 54
+  }
+ ],
+ "unranked": []
+}
