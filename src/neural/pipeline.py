@@ -208,7 +208,7 @@ class Pipeline:
                     _, summary, _ = stages.run_stage(
                         self.paths.stages, f"generate-{job}",
                         {"request_set": set_hash, "tier": tier, "budget_usd": str(budget)},
-                        lambda: ({}, run.generate()), always=True, now=self.now())
+                        lambda: ({}, run.generate()), always=True, now=self.now)
                 finally:
                     store.close()
                     getattr(client, "close", lambda: None)()
@@ -233,7 +233,7 @@ class Pipeline:
                         chunks = run.collect()
                         return {}, {**run.summary(), "chunks": chunks}
                     _, summary, _ = stages.run_stage(self.paths.stages, f"collect-{job}", {}, fn, always=True,
-                                                     now=self.now())
+                                                     now=self.now)
                 finally:
                     store.close()
                     getattr(client, "close", lambda: None)()

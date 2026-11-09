@@ -96,11 +96,15 @@ class Stage:
 
 
 def run_stage(directory: Path, name: str, inputs: dict, fn: Callable[[], tuple[dict, object]], *, force: bool = False,
-              always: bool = False, max_age: timedelta | None = None, now: datetime | None = None):
+              always: bool = False, max_age: timedelta | None = None,
+              now: datetime | Callable[[], datetime] | None = None):
     """Run fn() -> (outputs {label: path}, result) unless the stage is up to date.
 
-    Returns (ran, result, reason): result is None when the stage did not run.
+    `now` is a time or a clock; a clock is read again when the stage finishes, so a long stage records its real
+    finish. Returns (ran, result, reason): result is None when the stage did not run.
     """
+    clock = now if callable(now) else (lambda: now)
+    now = clock()
     stage = Stage(directory, name)
     reason = "forced" if force else "runs every time" if always else stage.stale_reason(inputs, max_age=max_age,
                                                                                          now=now)
@@ -110,10 +114,10 @@ def run_stage(directory: Path, name: str, inputs: dict, fn: Callable[[], tuple[d
     try:
         outputs, result = fn()
     except BaseException as e:
-        stage.finish(marker, {}, status="failed", note=f"{type(e).__name__}: {e}"[:500], now=now)
+        stage.finish(marker, {}, status="failed", note=f"{type(e).__name__}: {e}"[:500], now=clock())
         raise
     stopped = result.get("stopped") if isinstance(result, dict) else None
-    stage.finish(marker, outputs, status="stopped" if stopped else "done", note=stopped, now=now)
+    stage.finish(marker, outputs, status="stopped" if stopped else "done", note=stopped, now=clock())
     return True, result, reason
 
 

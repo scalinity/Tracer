@@ -154,3 +154,13 @@ def test_the_module_runs_as_a_command():
     assert done.returncode == 0
     for command in ("status", "plan", "dry-run", "generate", "collect", "ledger"):
         assert command in done.stdout
+
+
+def test_a_stage_given_a_clock_records_its_real_finish(tmp_path):
+    from datetime import datetime, timedelta, timezone
+
+    from src.neural import stages
+    times = iter([datetime(2026, 11, 8, 23, 23, tzinfo=timezone.utc) + timedelta(minutes=m) for m in (0, 98)])
+    stages.run_stage(tmp_path, "generate-X", {}, lambda: ({}, {}), always=True, now=lambda: next(times))
+    m = stages.markers(tmp_path)[0]
+    assert (datetime.fromisoformat(m["finished_at"]) - datetime.fromisoformat(m["started_at"])) == timedelta(minutes=98)
