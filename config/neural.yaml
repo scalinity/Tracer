@@ -7,3 +7,73 @@
 simulation:
   master_seed: 20261108         # ASSUMED: any fixed integer; every replicate's random streams start
                                 # from SeedSequence([master_seed, scenario_index, replicate])
+
+# TracerNet training (src/neural/train.py, spec §7.5 and §7.7). The search writes its best values into
+# `search.best`; a run uses these values with `search.best` laid over them when it holds any.
+training:
+  feature_version: tracernet-features-1   # must equal SCHEMA_VERSION in src/models/tracernet/features.py
+  learning_rate: 2.0e-3         # spec §7.7
+  weight_decay: 1.0e-4          # spec §7.7
+  dropout: 0.1                  # spec §7.3
+  width: 128                    # trunk width, spec §7.3
+  temporal_channels: 32         # spec §7.3
+  lam: 1.0                      # ASSUMED: weight of the p_miss cross-entropy (spec §7.5 leaves the default to the search)
+  eta: 0.05                     # ASSUMED: weight of the ranking term, the middle of the searched {0, 0.05, 0.1}
+  batch: 2048                   # spec §7.7
+  warmup_share: 0.03            # spec §7.7: cosine schedule with 3% warmup
+  grad_clip: 1.0                # spec §7.7
+  max_epochs: 30                # spec §7.7
+  patience: 4                   # spec §7.7: early stopping after 4 epochs without improvement
+  epoch_minutes: 10             # spec §7.7: an epoch sized from measured throughput to about 10 minutes
+  epoch_samples: null           # a fixed epoch size in samples instead (tests and short runs); null sizes it
+  epochs_in_box: 6              # ASSUMED: under a time box or a sample cap, epochs shrink so at least this many fit
+  ticks_per_specimen: 4         # spec §7.7
+  breach_factor: 3.0            # spec §7.5: breaches drawn 3 times as often, weighted 1/3
+  device_benchmark_s: 30        # ASSUMED: the spec's 2-minute device benchmark shortened to 30 seconds
+  schema_samples: 200000        # train ticks the robust scalers are fitted on (seed 0)
+  workers: null                 # feature worker processes; null picks from the device (spec §7.4 implementation)
+  val_chunk: 16384              # validation ticks per forward pass
+  val_cache_gb: 4.0             # ASSUMED: val_sel inputs are kept in memory up to this size, else rebuilt every epoch
+  max_nonfinite: 3              # spec §7.7: three non-finite losses in a row reload the last checkpoint
+  max_reloads: 3                # ASSUMED: a run that reloads 3 times is marked diverged
+
+# Hyperparameter search (src/neural/hpo.py, spec §7.8).
+search:
+  rung: B                       # spec §7.8
+  sampler_seed: 20261111        # ASSUMED: any fixed integer; worker k of a parallel search uses sampler_seed + k
+  train_seed: 0                 # the training seed of every trial
+  trials: 24                    # spec §7.8: at most 24 trials
+  time_box_h: 3.0               # spec §7.8: a 3-hour wall-clock box
+  max_samples: 1500000          # spec §7.8: at most 1.5 million samples per trial
+  startup_trials: 8             # ASSUMED: random trials before TPE models the space (Optuna's default is 10)
+  pruner_startup_trials: 4      # ASSUMED: the median pruner waits for 4 finished trials
+  pruner_warmup_epochs: 1       # ASSUMED: and never prunes on a trial's first epoch
+  space:                        # spec §7.8
+    learning_rate: {low: 5.0e-4, high: 5.0e-3, log: true}
+    weight_decay: {low: 1.0e-6, high: 1.0e-3, log: true}
+    dropout: {low: 0.0, high: 0.3}
+    width: [96, 128, 192]
+    temporal_channels: [16, 32, 48]
+    lam: [0.0, 0.5, 1.0, 2.0]
+    eta: [0.0, 0.05, 0.1]
+    batch: [1024, 2048, 4096]
+  best:
+    learning_rate: 0.004989069999481969
+    weight_decay: 0.00012124301372748123
+    dropout: 0.2809288560133388
+    width: 128
+    temporal_channels: 48
+    lam: 2.0
+    eta: 0.0
+    batch: 2048
+
+# Rung selection, the ensemble and calibration (src/neural/ensemble.py, spec §7.6, §7.9, §7.10, §10.4).
+ensemble:
+  version: tracernet-v1         # spec §10.1
+  seeds: [0, 1, 2]              # spec §7.10: 3 seeds of the chosen rung
+  ladder: [A, B, C]             # spec §7.9: rung L is a reference and is never selected
+  tolerance: 0.01               # spec §7.9: within 1% relative, the simpler rung
+  warning_budget_per_shift: 6   # spec §7.9 and §8.3
+  warning_margin_min: 5         # spec §7.9: more than 5 minutes below rung A's median warning chooses rung A
+  calibration_max_ticks: 3000000  # ASSUMED: above this many validation ticks a fixed uniform sample fits the temperature
+  max_artifact_mb: 10           # spec §10.4

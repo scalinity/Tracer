@@ -989,6 +989,40 @@ def test_a_frame_risk_reads_a_risk_table(v2_store, tmp_path):
     assert ne.tracernet_method(tmp_path / "r.parquet").name == ne.TRACERNET
 
 
+def test_a_pinned_frame_risk_reads_only_the_parts_that_can_hold_its_specimens(v2_store, tmp_path):
+    import polars as pl
+
+    specs = specs_of(v2_store, "dev-07-weekend-050", "scored")[:30]
+    rows = [(s.specimen_id, int(t), float(t) / 1000) for s in specs for t in s.ticks]
+    frame = pl.DataFrame(rows, schema=["specimen_id", "tick_min", "p_miss"], orient="row").sort("specimen_id")
+    for i, part in enumerate(frame.iter_slices(n_rows=max(1, frame.height // 4))):
+        part.write_parquet(tmp_path / f"risk-{i:05d}.parquet")
+    risk = ne.FrameRisk(tmp_path / "risk-*.parquet")
+    assert len(risk.pin()) == len(risk.ranges) >= 4
+    got = risk(specs, {})
+    assert all(np.array_equal(got[s.specimen_id], s.ticks / 1000) for s in specs)   # the same as a full read
+    first = sorted(specs, key=lambda s: s.specimen_id)[:1]
+    read = [f for f, lo, hi in risk.ranges if lo <= first[0].specimen_id <= hi]
+    assert len(read) == 1 and np.array_equal(risk(first, {})[first[0].specimen_id], first[0].ticks / 1000)
+
+
+def test_specimens_without_ticks_need_no_risk_rows_in_a_pinned_table(v2_store, tmp_path):
+    from types import SimpleNamespace
+
+    import polars as pl
+
+    specs = specs_of(v2_store, "dev-07-weekend-050", "scored")[:5]
+    rows = [(s.specimen_id, int(t), 0.5) for s in specs for t in s.ticks]
+    pl.DataFrame(rows, schema=["specimen_id", "tick_min", "p_miss"], orient="row").write_parquet(tmp_path / "risk-0.parquet")
+    risk = ne.FrameRisk(tmp_path / "risk-*.parquet")
+    risk.pin()
+    # received before the first tick: no rows, and an id outside every part's range
+    early = SimpleNamespace(specimen_id="SP-r999999-000001", ticks=np.array([], dtype=np.int64))
+    assert risk([early], {})["SP-r999999-000001"].size == 0
+    got = risk([early, specs[1]], {})
+    assert got["SP-r999999-000001"].size == 0 and np.array_equal(got[specs[1].specimen_id], np.full(len(specs[1].ticks), 0.5))
+
+
 # ---------------------------------------------------------------------------------------------------------
 # The integrity review's findings (F001 to F005): the lock, the record, the manifests, the knobs, R4
 # ---------------------------------------------------------------------------------------------------------

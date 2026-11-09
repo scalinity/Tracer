@@ -363,6 +363,29 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--matched", action="store_true", help="also tune knobs to matched alert volume (R4)")
     p.add_argument("--relock-reason", default=None)
     p.add_argument("--train-store", default=None, help="for control_v1world: the v2 store giving global fits")
+    p = sub.add_parser("train", help="train a rung, or search on rung B with --hpo (spec §7.7, §7.8)")
+    p.add_argument("--rung", choices=("L", "A", "B", "C"))
+    p.add_argument("--seeds", default="0", help="comma-separated, for example 0,1,2")
+    p.add_argument("--hpo", action="store_true", help="the hyperparameter search (rung B)")
+    p.add_argument("--store", default=None, help="store folder (default: the v2 store)")
+    p.add_argument("--time-box-min", type=float, default=None)
+    p.add_argument("--max-samples", type=int, default=None)
+    p.add_argument("--device", default="auto", help="train: auto, cpu, mps or cuda[:N]")
+    p.add_argument("--devices", default="auto", help="--hpo: comma-separated devices, one per worker")
+    p.add_argument("--workers", type=int, default=None)
+    p.add_argument("--trials", type=int, default=None)
+    p.add_argument("--study", default=None)
+    p.add_argument("--storage", default=None)
+    p.add_argument("--first-worker", type=int, default=0)
+    p.add_argument("--run-id", default=None)
+    p.add_argument("--resume", action="store_true")
+    p = sub.add_parser("select", help="choose the rung from the ladder's validation runs (spec §7.9)")
+    p.add_argument("--store", default=None)
+    p = sub.add_parser("calibrate", help="3-seed ensemble, calibration and the artifact (spec §7.10, §10.4)")
+    p.add_argument("--store", default=None)
+    p.add_argument("--rung", choices=("A", "B", "C"), default=None)
+    p.add_argument("--out", default=None, help="artifact folder (default artifacts/tracernet/v1)")
+    p.add_argument("--workers", type=int, default=None)
     p = sub.add_parser("ledger", help="ledger report or job release")
     lsub = p.add_subparsers(dest="ledger_command", required=True)
     lsub.add_parser("report")
@@ -410,6 +433,30 @@ def main(argv: list[str] | None = None, *, paths: runner.Paths | None = None, se
                                                 artifact_dir=opt(args.artifact), matched=args.matched,
                                                 relock_reason=args.relock_reason,
                                                 train_store_dir=opt(args.train_store))
+        if args.command == "train":
+            opt = (lambda v: Path(v) if v else None)
+            if args.hpo:
+                from src.neural import hpo
+                return hpo.hpo_command(store_dir=opt(args.store), workers=args.workers or 1, devices=args.devices,
+                                       trials=args.trials, time_box_min=args.time_box_min,
+                                       max_samples=args.max_samples, study_name=args.study, storage=args.storage,
+                                       first_worker=args.first_worker, out=out)
+            if args.rung is None:
+                out("error: train needs --rung (or --hpo)")
+                return 1
+            from src.neural import train
+            return train.train_command(rung=args.rung, seeds=tuple(int(x) for x in args.seeds.split(",") if x),
+                                       store_dir=opt(args.store), time_box_min=args.time_box_min,
+                                       max_samples=args.max_samples, device=args.device, run_id=args.run_id,
+                                       resume=args.resume, workers=args.workers, out=out)
+        if args.command == "select":
+            from src.neural import ensemble
+            return ensemble.select_command(store_dir=Path(args.store) if args.store else None, out=out)
+        if args.command == "calibrate":
+            from src.neural import ensemble
+            return ensemble.calibrate_command(store_dir=Path(args.store) if args.store else None, rung=args.rung,
+                                              out_dir=Path(args.out) if args.out else None, workers=args.workers,
+                                              out=out)
         if args.ledger_command == "report":
             return pipe.ledger_report()
         return pipe.release_job(args.job, args.reason)

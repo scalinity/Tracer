@@ -1,0 +1,793 @@
+{
+ "best": {
+  "number": 21,
+  "params": {
+   "batch": 2048,
+   "dropout": 0.2809288560133388,
+   "eta": 0.0,
+   "lam": 2.0,
+   "learning_rate": 0.004989069999481969,
+   "temporal_channels": 48,
+   "weight_decay": 0.00012124301372748123,
+   "width": 128
+  },
+  "run_id": "hpo-tracernet-B-v1-t021",
+  "value": 0.0875008078798665
+ },
+ "counts": {
+  "COMPLETE": 15,
+  "FAIL": 0,
+  "PRUNED": 9,
+  "RUNNING": 0
+ },
+ "devices": [
+  "cuda (NVIDIA B200)"
+ ],
+ "direction": "minimize",
+ "finished": "2026-11-09T04:00:42-05:00",
+ "max_samples": 1500000,
+ "max_trials": 24,
+ "metric": "val_sel",
+ "note": "One search worker on one B200 ran all 24 trials (a second, on another class account, never got CPUs). The best learning rate lies at the top of the pre-registered range (5e-3).",
+ "started": "2026-11-09T03:19:57-05:00",
+ "storage": "journal:///blue/cai6734/daniel.escalante/tracer/hpo/tn-hpo-B-v1.log (HiPerGator)",
+ "study": "tracernet-B-v1",
+ "time_box_s": 10800,
+ "trials": [
+  {
+   "device": "cuda",
+   "epochs": 6,
+   "finished": "2026-11-09T03:23:49",
+   "intermediate": {
+    "1": 0.107777898382651,
+    "2": 0.09845297637099115,
+    "3": 0.10232754381079019,
+    "4": 0.10367330207723366,
+    "5": 0.09884569102942856,
+    "6": 0.10012437031424269
+   },
+   "number": 0,
+   "params": {
+    "batch": 2048,
+    "dropout": 0.10244919862230607,
+    "eta": 0.1,
+    "lam": 0.0,
+    "learning_rate": 0.0010071899857129621,
+    "temporal_channels": 16,
+    "weight_decay": 1.696333106967377e-06,
+    "width": 192
+   },
+   "pid": 2081708,
+   "run_id": "hpo-tracernet-B-v1-t000",
+   "samples": 1499188,
+   "started": "2026-11-09T03:21:36",
+   "state": "COMPLETE",
+   "status": "finished",
+   "value": 0.09845297637099115,
+   "wall_s": 131.61,
+   "worker": 0
+  },
+  {
+   "device": "cuda",
+   "epochs": 6,
+   "finished": "2026-11-09T03:25:50",
+   "intermediate": {
+    "1": 0.10250276836557892,
+    "2": 0.09661028251803076,
+    "3": 0.09682730380505757,
+    "4": 0.09734013090211302,
+    "5": 0.09442051966492086,
+    "6": 0.09527791899419051
+   },
+   "number": 1,
+   "params": {
+    "batch": 2048,
+    "dropout": 0.1658198002005656,
+    "eta": 0.1,
+    "lam": 2.0,
+    "learning_rate": 0.0010725665814485105,
+    "temporal_channels": 32,
+    "weight_decay": 1.7751741763518328e-05,
+    "width": 128
+   },
+   "pid": 2081708,
+   "run_id": "hpo-tracernet-B-v1-t001",
+   "samples": 1499188,
+   "started": "2026-11-09T03:23:49",
+   "state": "COMPLETE",
+   "status": "finished",
+   "value": 0.09442051966492086,
+   "wall_s": 119.84,
+   "worker": 0
+  },
+  {
+   "device": "cuda",
+   "epochs": 6,
+   "finished": "2026-11-09T03:27:48",
+   "intermediate": {
+    "1": 0.10007273565074185,
+    "2": 0.09758072655358727,
+    "3": 0.09634628922352813,
+    "4": 0.09795278584008749,
+    "5": 0.0942353306163352,
+    "6": 0.09520040152906396
+   },
+   "number": 2,
+   "params": {
+    "batch": 4096,
+    "dropout": 0.1698142397298444,
+    "eta": 0.05,
+    "lam": 1.0,
+    "learning_rate": 0.0017487040502194601,
+    "temporal_channels": 16,
+    "weight_decay": 9.92444480263624e-06,
+    "width": 128
+   },
+   "pid": 2081708,
+   "run_id": "hpo-tracernet-B-v1-t002",
+   "samples": 1499188,
+   "started": "2026-11-09T03:25:50",
+   "state": "COMPLETE",
+   "status": "finished",
+   "value": 0.0942353306163352,
+   "wall_s": 117.95,
+   "worker": 0
+  },
+  {
+   "device": "cuda",
+   "epochs": 6,
+   "finished": "2026-11-09T03:29:44",
+   "intermediate": {
+    "1": 0.09478286871106704,
+    "2": 0.09097022501635402,
+    "3": 0.08939453795571979,
+    "4": 0.08938444487247801,
+    "5": 0.08854255413609823,
+    "6": 0.08871213250770166
+   },
+   "number": 3,
+   "params": {
+    "batch": 4096,
+    "dropout": 0.23494075054343666,
+    "eta": 0.0,
+    "lam": 2.0,
+    "learning_rate": 0.003632231374372566,
+    "temporal_channels": 16,
+    "weight_decay": 0.0002512669708883552,
+    "width": 128
+   },
+   "pid": 2081708,
+   "run_id": "hpo-tracernet-B-v1-t003",
+   "samples": 1499188,
+   "started": "2026-11-09T03:27:48",
+   "state": "COMPLETE",
+   "status": "finished",
+   "value": 0.08854255413609823,
+   "wall_s": 114.59,
+   "worker": 0
+  },
+  {
+   "device": "cuda",
+   "epochs": 6,
+   "finished": "2026-11-09T03:31:40",
+   "intermediate": {
+    "1": 0.09741363102598681,
+    "2": 0.09151183296907323,
+    "3": 0.09062222407644237,
+    "4": 0.08977740576832972,
+    "5": 0.08926749803433627,
+    "6": 0.08927099766359142
+   },
+   "number": 4,
+   "params": {
+    "batch": 4096,
+    "dropout": 0.29313342692926936,
+    "eta": 0.0,
+    "lam": 0.5,
+    "learning_rate": 0.002289144703247307,
+    "temporal_channels": 16,
+    "weight_decay": 8.42928393758518e-06,
+    "width": 128
+   },
+   "pid": 2081708,
+   "run_id": "hpo-tracernet-B-v1-t004",
+   "samples": 1499188,
+   "started": "2026-11-09T03:29:44",
+   "state": "COMPLETE",
+   "status": "finished",
+   "value": 0.08926749803433627,
+   "wall_s": 115.52,
+   "worker": 0
+  },
+  {
+   "device": "cuda",
+   "epochs": 6,
+   "finished": "2026-11-09T03:33:40",
+   "intermediate": {
+    "1": 0.09609376154747386,
+    "2": 0.09143709087738738,
+    "3": 0.09028296955117672,
+    "4": 0.08951787491805378,
+    "5": 0.08917197423942405,
+    "6": 0.0890501067319109
+   },
+   "number": 5,
+   "params": {
+    "batch": 1024,
+    "dropout": 0.23154254030138421,
+    "eta": 0.0,
+    "lam": 0.5,
+    "learning_rate": 0.0005089145386131265,
+    "temporal_channels": 48,
+    "weight_decay": 0.00034771570443974646,
+    "width": 128
+   },
+   "pid": 2081708,
+   "run_id": "hpo-tracernet-B-v1-t005",
+   "samples": 1499188,
+   "started": "2026-11-09T03:31:40",
+   "state": "COMPLETE",
+   "status": "finished",
+   "value": 0.0890501067319109,
+   "wall_s": 119.23,
+   "worker": 0
+  },
+  {
+   "device": "cuda",
+   "epochs": 1,
+   "finished": "2026-11-09T03:34:28",
+   "intermediate": {
+    "1": 0.10256865429814575
+   },
+   "number": 6,
+   "params": {
+    "batch": 4096,
+    "dropout": 0.27805207335368065,
+    "eta": 0.1,
+    "lam": 1.0,
+    "learning_rate": 0.004230160458305172,
+    "temporal_channels": 32,
+    "weight_decay": 3.11583444253729e-05,
+    "width": 128
+   },
+   "pid": 2081708,
+   "run_id": "hpo-tracernet-B-v1-t006",
+   "samples": 249734,
+   "started": "2026-11-09T03:33:40",
+   "state": "PRUNED",
+   "status": "pruned",
+   "value": 0.10256865429814575,
+   "wall_s": 47.74,
+   "worker": 0
+  },
+  {
+   "device": "cuda",
+   "epochs": 6,
+   "finished": "2026-11-09T03:36:26",
+   "intermediate": {
+    "1": 0.09582102649547687,
+    "2": 0.09104835759651565,
+    "3": 0.09010886834436525,
+    "4": 0.0901739021830706,
+    "5": 0.08895078827863272,
+    "6": 0.08909208311369973
+   },
+   "number": 7,
+   "params": {
+    "batch": 2048,
+    "dropout": 0.13740972807124138,
+    "eta": 0.0,
+    "lam": 1.0,
+    "learning_rate": 0.0010299154152974591,
+    "temporal_channels": 16,
+    "weight_decay": 0.00020195180409347382,
+    "width": 192
+   },
+   "pid": 2081708,
+   "run_id": "hpo-tracernet-B-v1-t007",
+   "samples": 1499188,
+   "started": "2026-11-09T03:34:28",
+   "state": "COMPLETE",
+   "status": "finished",
+   "value": 0.08895078827863272,
+   "wall_s": 117.07,
+   "worker": 0
+  },
+  {
+   "device": "cuda",
+   "epochs": 2,
+   "finished": "2026-11-09T03:37:30",
+   "intermediate": {
+    "1": 0.09325228962942202,
+    "2": 0.09157214885023815
+   },
+   "number": 8,
+   "params": {
+    "batch": 4096,
+    "dropout": 0.1827724388081064,
+    "eta": 0.0,
+    "lam": 2.0,
+    "learning_rate": 0.003257959280144824,
+    "temporal_channels": 48,
+    "weight_decay": 1.109486617660741e-06,
+    "width": 128
+   },
+   "pid": 2081708,
+   "run_id": "hpo-tracernet-B-v1-t008",
+   "samples": 499482,
+   "started": "2026-11-09T03:36:26",
+   "state": "PRUNED",
+   "status": "pruned",
+   "value": 0.09157214885023815,
+   "wall_s": 63.6,
+   "worker": 0
+  },
+  {
+   "device": "cuda",
+   "epochs": 1,
+   "finished": "2026-11-09T03:38:16",
+   "intermediate": {
+    "1": 0.10455765570148931
+   },
+   "number": 9,
+   "params": {
+    "batch": 4096,
+    "dropout": 0.007435392268831803,
+    "eta": 0.0,
+    "lam": 2.0,
+    "learning_rate": 0.0005792166396502578,
+    "temporal_channels": 32,
+    "weight_decay": 8.253413271460343e-06,
+    "width": 128
+   },
+   "pid": 2081708,
+   "run_id": "hpo-tracernet-B-v1-t009",
+   "samples": 249734,
+   "started": "2026-11-09T03:37:30",
+   "state": "PRUNED",
+   "status": "pruned",
+   "value": 0.10455765570148931,
+   "wall_s": 45.37,
+   "worker": 0
+  },
+  {
+   "device": "cuda",
+   "epochs": 1,
+   "finished": "2026-11-09T03:39:03",
+   "intermediate": {
+    "1": 0.0976336205885308
+   },
+   "number": 10,
+   "params": {
+    "batch": 2048,
+    "dropout": 0.2657609794635523,
+    "eta": 0.0,
+    "lam": 2.0,
+    "learning_rate": 0.0005620382841269675,
+    "temporal_channels": 16,
+    "weight_decay": 5.2538508295843076e-05,
+    "width": 192
+   },
+   "pid": 2081708,
+   "run_id": "hpo-tracernet-B-v1-t010",
+   "samples": 249734,
+   "started": "2026-11-09T03:38:16",
+   "state": "PRUNED",
+   "status": "pruned",
+   "value": 0.0976336205885308,
+   "wall_s": 45.39,
+   "worker": 0
+  },
+  {
+   "device": "cuda",
+   "epochs": 6,
+   "finished": "2026-11-09T03:41:07",
+   "intermediate": {
+    "1": 0.09403859922240408,
+    "2": 0.09088529997436623,
+    "3": 0.08949339625703713,
+    "4": 0.0893455028311305,
+    "5": 0.08866035832082911,
+    "6": 0.08877753200969099
+   },
+   "number": 11,
+   "params": {
+    "batch": 4096,
+    "dropout": 0.27131295176964915,
+    "eta": 0.0,
+    "lam": 0.5,
+    "learning_rate": 0.0028930336159524897,
+    "temporal_channels": 16,
+    "weight_decay": 0.0006297026400722025,
+    "width": 192
+   },
+   "pid": 2081708,
+   "run_id": "hpo-tracernet-B-v1-t011",
+   "samples": 1499188,
+   "started": "2026-11-09T03:39:03",
+   "state": "COMPLETE",
+   "status": "finished",
+   "value": 0.08866035832082911,
+   "wall_s": 123.92,
+   "worker": 0
+  },
+  {
+   "device": "cuda",
+   "epochs": 2,
+   "finished": "2026-11-09T03:42:11",
+   "intermediate": {
+    "1": 0.09663858515073509,
+    "2": 0.09193162971751728
+   },
+   "number": 12,
+   "params": {
+    "batch": 4096,
+    "dropout": 0.23655387481984527,
+    "eta": 0.0,
+    "lam": 0.5,
+    "learning_rate": 0.0022915593319156272,
+    "temporal_channels": 16,
+    "weight_decay": 0.0004453965380048159,
+    "width": 96
+   },
+   "pid": 2081708,
+   "run_id": "hpo-tracernet-B-v1-t012",
+   "samples": 499482,
+   "started": "2026-11-09T03:41:07",
+   "state": "PRUNED",
+   "status": "pruned",
+   "value": 0.09193162971751728,
+   "wall_s": 62.93,
+   "worker": 0
+  },
+  {
+   "device": "cuda",
+   "epochs": 6,
+   "finished": "2026-11-09T03:44:12",
+   "intermediate": {
+    "1": 0.0926800829577394,
+    "2": 0.08991863213203294,
+    "3": 0.08956171596007015,
+    "4": 0.08881729236266027,
+    "5": 0.08758729676148774,
+    "6": 0.08783149720074879
+   },
+   "number": 13,
+   "params": {
+    "batch": 2048,
+    "dropout": 0.2536156215260945,
+    "eta": 0.0,
+    "lam": 2.0,
+    "learning_rate": 0.004695606784399716,
+    "temporal_channels": 48,
+    "weight_decay": 0.0003031378045367638,
+    "width": 128
+   },
+   "pid": 2081708,
+   "run_id": "hpo-tracernet-B-v1-t013",
+   "samples": 1499188,
+   "started": "2026-11-09T03:42:11",
+   "state": "COMPLETE",
+   "status": "finished",
+   "value": 0.08758729676148774,
+   "wall_s": 120.75,
+   "worker": 0
+  },
+  {
+   "device": "cuda",
+   "epochs": 6,
+   "finished": "2026-11-09T03:46:05",
+   "intermediate": {
+    "1": 0.09448629294248496,
+    "2": 0.09015302528953707,
+    "3": 0.08937876043547334,
+    "4": 0.08910995851118607,
+    "5": 0.08814761689111135,
+    "6": 0.08831162320630712
+   },
+   "number": 14,
+   "params": {
+    "batch": 2048,
+    "dropout": 0.25706219802532515,
+    "eta": 0.0,
+    "lam": 2.0,
+    "learning_rate": 0.0026518717915484965,
+    "temporal_channels": 16,
+    "weight_decay": 0.00014226416548764688,
+    "width": 128
+   },
+   "pid": 2081708,
+   "run_id": "hpo-tracernet-B-v1-t014",
+   "samples": 1499188,
+   "started": "2026-11-09T03:44:12",
+   "state": "COMPLETE",
+   "status": "finished",
+   "value": 0.08814761689111135,
+   "wall_s": 112.04,
+   "worker": 0
+  },
+  {
+   "device": "cuda",
+   "epochs": 1,
+   "finished": "2026-11-09T03:46:54",
+   "intermediate": {
+    "1": 0.09718087860816622
+   },
+   "number": 15,
+   "params": {
+    "batch": 2048,
+    "dropout": 0.19740991955009266,
+    "eta": 0.1,
+    "lam": 2.0,
+    "learning_rate": 0.004160414378191047,
+    "temporal_channels": 48,
+    "weight_decay": 0.0005360234777575844,
+    "width": 128
+   },
+   "pid": 2081708,
+   "run_id": "hpo-tracernet-B-v1-t015",
+   "samples": 249734,
+   "started": "2026-11-09T03:46:05",
+   "state": "PRUNED",
+   "status": "pruned",
+   "value": 0.09718087860816622,
+   "wall_s": 48.01,
+   "worker": 0
+  },
+  {
+   "device": "cuda",
+   "epochs": 6,
+   "finished": "2026-11-09T03:48:54",
+   "intermediate": {
+    "1": 0.0936852694808679,
+    "2": 0.09025147560283989,
+    "3": 0.08942049983081071,
+    "4": 0.08941176706899223,
+    "5": 0.08833415572979604,
+    "6": 0.08836944724862107
+   },
+   "number": 16,
+   "params": {
+    "batch": 2048,
+    "dropout": 0.2561034602010719,
+    "eta": 0.0,
+    "lam": 2.0,
+    "learning_rate": 0.0016749292835161289,
+    "temporal_channels": 48,
+    "weight_decay": 0.0002269126456358465,
+    "width": 128
+   },
+   "pid": 2081708,
+   "run_id": "hpo-tracernet-B-v1-t016",
+   "samples": 1499188,
+   "started": "2026-11-09T03:46:54",
+   "state": "COMPLETE",
+   "status": "finished",
+   "value": 0.08833415572979604,
+   "wall_s": 119.3,
+   "worker": 0
+  },
+  {
+   "device": "cuda",
+   "epochs": 3,
+   "finished": "2026-11-09T03:50:12",
+   "intermediate": {
+    "1": 0.09296080693287195,
+    "2": 0.09045570850608478,
+    "3": 0.0903458118119542
+   },
+   "number": 17,
+   "params": {
+    "batch": 2048,
+    "dropout": 0.28108020956320523,
+    "eta": 0.0,
+    "lam": 0.0,
+    "learning_rate": 0.002926617895597316,
+    "temporal_channels": 16,
+    "weight_decay": 6.618067958590672e-05,
+    "width": 192
+   },
+   "pid": 2081708,
+   "run_id": "hpo-tracernet-B-v1-t017",
+   "samples": 749518,
+   "started": "2026-11-09T03:48:54",
+   "state": "PRUNED",
+   "status": "pruned",
+   "value": 0.0903458118119542,
+   "wall_s": 76.98,
+   "worker": 0
+  },
+  {
+   "device": "cuda",
+   "epochs": 4,
+   "finished": "2026-11-09T03:51:49",
+   "intermediate": {
+    "1": 0.09509457621739413,
+    "2": 0.09066801078876575,
+    "3": 0.08964506585073788,
+    "4": 0.0897556068372288
+   },
+   "number": 18,
+   "params": {
+    "batch": 2048,
+    "dropout": 0.1442191226191379,
+    "eta": 0.0,
+    "lam": 2.0,
+    "learning_rate": 0.001464700628807478,
+    "temporal_channels": 48,
+    "weight_decay": 0.0005087074943437881,
+    "width": 128
+   },
+   "pid": 2081708,
+   "run_id": "hpo-tracernet-B-v1-t018",
+   "samples": 999616,
+   "started": "2026-11-09T03:50:12",
+   "state": "PRUNED",
+   "status": "pruned",
+   "value": 0.0897556068372288,
+   "wall_s": 95.7,
+   "worker": 0
+  },
+  {
+   "device": "cuda",
+   "epochs": 1,
+   "finished": "2026-11-09T03:52:36",
+   "intermediate": {
+    "1": 0.09745220125129671
+   },
+   "number": 19,
+   "params": {
+    "batch": 2048,
+    "dropout": 0.29525751538624895,
+    "eta": 0.05,
+    "lam": 2.0,
+    "learning_rate": 0.0023675782719416423,
+    "temporal_channels": 32,
+    "weight_decay": 0.0005144957724759453,
+    "width": 128
+   },
+   "pid": 2081708,
+   "run_id": "hpo-tracernet-B-v1-t019",
+   "samples": 249734,
+   "started": "2026-11-09T03:51:49",
+   "state": "PRUNED",
+   "status": "pruned",
+   "value": 0.09745220125129671,
+   "wall_s": 46.99,
+   "worker": 0
+  },
+  {
+   "device": "cuda",
+   "epochs": 6,
+   "finished": "2026-11-09T03:54:34",
+   "intermediate": {
+    "1": 0.09419413506561695,
+    "2": 0.09058574314457754,
+    "3": 0.08973239253777462,
+    "4": 0.0889045173897739,
+    "5": 0.08798560989031161,
+    "6": 0.0882206722409448
+   },
+   "number": 20,
+   "params": {
+    "batch": 2048,
+    "dropout": 0.21696718283911742,
+    "eta": 0.0,
+    "lam": 0.0,
+    "learning_rate": 0.0032509257852946206,
+    "temporal_channels": 16,
+    "weight_decay": 4.944473975373302e-05,
+    "width": 128
+   },
+   "pid": 2081708,
+   "run_id": "hpo-tracernet-B-v1-t020",
+   "samples": 1499188,
+   "started": "2026-11-09T03:52:36",
+   "state": "COMPLETE",
+   "status": "finished",
+   "value": 0.08798560989031161,
+   "wall_s": 116.68,
+   "worker": 0
+  },
+  {
+   "device": "cuda",
+   "epochs": 6,
+   "finished": "2026-11-09T03:56:36",
+   "intermediate": {
+    "1": 0.09288651336741552,
+    "2": 0.08973830698281098,
+    "3": 0.08952362182305454,
+    "4": 0.08854408321448468,
+    "5": 0.0875008078798665,
+    "6": 0.08769184117281763
+   },
+   "number": 21,
+   "params": {
+    "batch": 2048,
+    "dropout": 0.2809288560133388,
+    "eta": 0.0,
+    "lam": 2.0,
+    "learning_rate": 0.004989069999481969,
+    "temporal_channels": 48,
+    "weight_decay": 0.00012124301372748123,
+    "width": 128
+   },
+   "pid": 2081708,
+   "run_id": "hpo-tracernet-B-v1-t021",
+   "samples": 1499188,
+   "started": "2026-11-09T03:54:34",
+   "state": "COMPLETE",
+   "status": "finished",
+   "value": 0.0875008078798665,
+   "wall_s": 121.97,
+   "worker": 0
+  },
+  {
+   "device": "cuda",
+   "epochs": 6,
+   "finished": "2026-11-09T03:58:31",
+   "intermediate": {
+    "1": 0.09219551078380417,
+    "2": 0.09054118740190653,
+    "3": 0.08945139183086089,
+    "4": 0.08861778330089763,
+    "5": 0.08771525399023306,
+    "6": 0.08791828515089599
+   },
+   "number": 22,
+   "params": {
+    "batch": 2048,
+    "dropout": 0.2166589288416837,
+    "eta": 0.0,
+    "lam": 0.0,
+    "learning_rate": 0.004524376418770752,
+    "temporal_channels": 16,
+    "weight_decay": 1.7880696734942152e-05,
+    "width": 128
+   },
+   "pid": 2081708,
+   "run_id": "hpo-tracernet-B-v1-t022",
+   "samples": 1499188,
+   "started": "2026-11-09T03:56:36",
+   "state": "COMPLETE",
+   "status": "finished",
+   "value": 0.08771525399023306,
+   "wall_s": 114.08,
+   "worker": 0
+  },
+  {
+   "device": "cuda",
+   "epochs": 6,
+   "finished": "2026-11-09T04:00:40",
+   "intermediate": {
+    "1": 0.0923057895237991,
+    "2": 0.08991704522786408,
+    "3": 0.08931831537802143,
+    "4": 0.08850562212902907,
+    "5": 0.08758284170474682,
+    "6": 0.08780138189404547
+   },
+   "number": 23,
+   "params": {
+    "batch": 2048,
+    "dropout": 0.29789998411195295,
+    "eta": 0.0,
+    "lam": 2.0,
+    "learning_rate": 0.004033375255455292,
+    "temporal_channels": 48,
+    "weight_decay": 0.00013081724458955944,
+    "width": 128
+   },
+   "pid": 2081708,
+   "run_id": "hpo-tracernet-B-v1-t023",
+   "samples": 1499188,
+   "started": "2026-11-09T03:58:31",
+   "state": "COMPLETE",
+   "status": "finished",
+   "value": 0.08758284170474682,
+   "wall_s": 127.55,
+   "worker": 0
+  }
+ ],
+ "workers": 1
+}

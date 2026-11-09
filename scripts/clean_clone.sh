@@ -5,7 +5,7 @@
 #   scripts/clean_clone.sh [repository url or path]      default: the GitHub repository
 #   PYTHON=python3.13 scripts/clean_clone.sh .           the committed state of this checkout, with another Python
 #
-# It clones into a temporary folder, installs requirements.txt into a new venv, runs the README's commands and fails
+# It clones into a temporary folder, installs requirements.txt and requirements-neural.txt into a new venv, runs the README's commands and fails
 # if a test fails or if any committed output differs from what the commands write again. The store step refuses a
 # dataset whose SHA-256 differs from datasets/manifest.json, which is the manifest check. Nothing here calls the
 # Claude API or needs a key. It needs the network for pip and npm and takes about five minutes. Run it before the
@@ -28,7 +28,7 @@ cd "$DIR/repo" || exit 1
 git log --oneline -1
 
 step "install ($("$PYTHON" --version))"
-"$PYTHON" -m venv .venv && .venv/bin/pip install -q -r requirements.txt || exit 1
+"$PYTHON" -m venv .venv && .venv/bin/pip install -q -r requirements.txt -r requirements-neural.txt || exit 1
 .venv/bin/pip list 2>/dev/null | grep -i -E "^(duckdb|numpy|polars|scipy) "
 
 for module in "src.pipeline.store" "src.pipeline.intervals" "src.pipeline.recovery" "src.pipeline.evaluate" \

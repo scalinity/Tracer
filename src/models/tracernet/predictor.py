@@ -51,6 +51,7 @@ from src.models.tracernet import bins as tbins
 from src.models.tracernet import features as F
 from src.models.tracernet.net import SERIES_GROUP, TracerNet, TracerNetConfig
 from src.pipeline import store, triage
+from src import workers as workers_
 
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_ARTIFACT = ROOT / "artifacts" / "tracernet" / "v1"
@@ -515,8 +516,13 @@ def _run_tasks(pred: Predictor, t: F.Table, tasks: list, workers: int, chunk: in
     tmp = Path(tempfile.mkdtemp(prefix="tracernet-score-"))
     try:
         t.save(tmp)
-        with mp.get_context("spawn").Pool(min(workers, len(tasks)), initializer=_init,
-                                          initargs=(str(tmp), pred.payload())) as pool:
-            return list(pool.imap(_work, [(run, rows, chunk) for run, rows in tasks], chunksize=1))
+        out = []
+        workers_.report("network risk", 0, len(tasks), "runs")
+        with workers_.one_thread_children(), mp.get_context("spawn").Pool(
+                min(workers, len(tasks)), initializer=_init, initargs=(str(tmp), pred.payload())) as pool:
+            for res in pool.imap(_work, [(run, rows, chunk) for run, rows in tasks], chunksize=1):
+                out.append(res)
+                workers_.report("network risk", len(out), len(tasks), "runs")
+        return out
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

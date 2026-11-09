@@ -50,6 +50,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 from scipy.special import ndtr
 
+from src import workers as workers_
 from src.generator import config
 from src.pipeline import evaluate, intervals, store, triage
 
@@ -1405,23 +1406,38 @@ class FrameRisk:
     def __init__(self, path: Path | str, value: str = "p_miss"):
         self.path, self.value = str(path), value
         self.files: list[str] | None = None
+        self.ranges: list[tuple[str, str, str]] | None = None   # (file, lowest specimen_id, highest)
 
     def pin(self) -> dict[str, str]:
         """Resolve the table's parts now (a glob or one file), read only these from here on, and return each
-        part's SHA-256 by file name: the digest of every part actually read."""
+        part's SHA-256 by file name: the digest of every part actually read. Each part's specimen_id range is
+        noted too, so a lookup reads only the parts that can hold its specimens rather than the whole table."""
+        import polars as pl
+
         p = Path(self.path)
         found = sorted(p.parent.glob(p.name)) if any(c in p.name for c in "*?[") else [p]
         found = [f for f in found if f.is_file()]
         if not found:
             raise FileNotFoundError(f"no risk table at {self.path}")
         self.files = [str(f) for f in found]
+        bounds = [pl.scan_parquet(f).select(lo=pl.col("specimen_id").min(), hi=pl.col("specimen_id").max())
+                  .collect().row(0) for f in self.files]
+        self.ranges = [(f, lo, hi) for f, (lo, hi) in zip(self.files, bounds) if lo is not None]
         return {f.name: sha256_file(f) for f in found}
 
     def __call__(self, specs: Sequence, context: Mapping) -> dict[str, np.ndarray]:
         import polars as pl
 
-        ids = [s.specimen_id for s in specs]
-        frame = (pl.scan_parquet(self.files if self.files is not None else self.path)
+        ids = [s.specimen_id for s in specs if len(s.ticks)]    # a specimen received before its first tick needs no rows
+        if not ids:
+            return {s.specimen_id: np.array([]) for s in specs}
+        files = self.files if self.files is not None else self.path
+        if self.ranges is not None:
+            first, last = min(ids), max(ids)
+            files = [f for f, lo, hi in self.ranges if lo <= last and hi >= first]
+            if not files:
+                raise ValueError(f"{self.path} lacks {first}")
+        frame = (pl.scan_parquet(files)
                  .filter(pl.col("specimen_id").is_in(ids))
                  .select("specimen_id", "tick_min", self.value).collect())
         table = {(sid, int(t)): float(v) for sid, t, v in frame.iter_rows()}
@@ -2024,7 +2040,7 @@ def evaluate_split(split: str, methods: Sequence[Method] | None = None, *, store
     schemes = tuple((SCHEME_NAMES[k], v) for k, v in triage.weight_schemes(cfg).items())
     blist = budget_list(budgets, per_100_budgets)
     headline = next((b.key for b in blist if b.per == "shift" and b.value == HEADLINE_BUDGET), None)
-    workers = workers if workers is not None else max(1, (os.cpu_count() or 2) - 1)
+    workers = workers if workers is not None else max(1, workers_.available_cores() - 1)
     env_args = dict(set_name=split, kind=kind, store_dir=str(store_dir), schemes=schemes, budgets=tuple(blist),
                     headline=headline, matched=matched and headline is not None, keep_alerts=keep_alerts,
                     matched_parts=(matched or focus == TRACERNET) and headline is not None)
@@ -2058,13 +2074,23 @@ def evaluate_split(split: str, methods: Sequence[Method] | None = None, *, store
             _init_worker(methods, env)
             batches = [_run_batch(ids)]
         else:
-            from concurrent.futures import ProcessPoolExecutor
+            import multiprocessing as mp
+            from concurrent.futures import ProcessPoolExecutor, as_completed
 
             size = max(1, math.ceil(len(ids) / (workers * 3)))
             chunks = [ids[i:i + size] for i in range(0, len(ids), size)]
-            with ProcessPoolExecutor(max_workers=min(workers, len(chunks)), initializer=_init_worker,
-                                     initargs=(methods, env)) as pool:
-                batches = list(pool.map(_run_batch, chunks))
+            stage = f"{split}: tuning and scoring"
+            workers_.report(stage, 0, len(ids), "scenarios")
+            with workers_.one_thread_children(), ProcessPoolExecutor(
+                    max_workers=min(workers, len(chunks)), mp_context=mp.get_context("spawn"),
+                    initializer=_init_worker, initargs=(methods, env)) as pool:
+                futures = {pool.submit(_run_batch, c): len(c) for c in chunks}
+                done = 0
+                for f in as_completed(futures):
+                    f.result()      # a failed batch raises here, before it is counted as done
+                    done += futures[f]
+                    workers_.report(stage, done, len(ids), "scenarios")
+                batches = [f.result() for f in futures]
         for res, c in batches:
             results.extend(res)
             for k in counts:
@@ -2434,6 +2460,9 @@ def command_evaluate(split: str, *, store_dir: Path | None = None, out_dir: Path
     return 0
 
 
+WARNING_PART_ROWS = 1_000_000
+
+
 def median_warning(store_dir: Path | None = None, *, workers: int | None = None) -> Callable:
     """Spec §7.9's warning check for rung selection, on validation only. `median_warning(store_dir)(predict_fn)`
     scores every history and scored replicate of `val` with `predict_fn(store_dir, runs, *, workers)` (a rung's
@@ -2450,11 +2479,13 @@ def median_warning(store_dir: Path | None = None, *, workers: int | None = None)
             con.close()
         if not runs:
             raise RuntimeError(f"the store at {store_dir} has no val runs for the warning check")
-        frame = predict_fn(store_dir, runs, workers=workers)
+        frame = predict_fn(store_dir, runs, workers=workers).select("specimen_id", "tick_min", "p_miss")
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "risk.parquet"
-            frame.select("specimen_id", "tick_min", "p_miss").write_parquet(path)
-            rung = RiskMethod("rung", FrameRisk(path), monotone=False, fitted_on="train (the rung's best run)")
+            # Sorted parts, so each scenario's lookup reads one or two parts rather than the whole table.
+            for i, part in enumerate(frame.sort("specimen_id").iter_slices(n_rows=WARNING_PART_ROWS)):
+                part.write_parquet(Path(tmp) / f"risk-{i:05d}.parquet")
+            rung = RiskMethod("rung", FrameRisk(Path(tmp) / "risk-*.parquet"), monotone=False,
+                              fitted_on="train (the rung's best run)")
             r = evaluate_split("val", [rung], store_dir=store_dir, budgets=(HEADLINE_BUDGET,), per_100_budgets=(),
                                workers=workers, write=False)
         point = r["operating_points"][f"{HEADLINE_BUDGET}/shift"]["rung"]["3-2-1"]

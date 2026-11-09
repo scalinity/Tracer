@@ -31,7 +31,7 @@ Everything below runs from the frozen dataset, with no API key and no network.
 
 ```sh
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt -r requirements-neural.txt   # the second file pins the v2 neural pipeline's packages
 python -m src.pipeline.store              # load datasets/ into data/store/: an observed file and a truth file
 pytest                                    # the unit and integration tests, all offline; many read the store, so it comes first
 

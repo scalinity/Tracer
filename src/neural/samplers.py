@@ -32,6 +32,7 @@ from pathlib import Path
 import numpy as np
 
 from src.models.tracernet import features as F
+from src.workers import THREAD_VARS, available_cores, one_thread_children  # noqa: F401 (THREAD_VARS re-exported)
 
 ROOT = Path(__file__).resolve().parents[2]
 CACHE_ROOT = ROOT / "data" / "neural" / "cache"
@@ -168,16 +169,6 @@ def tasks_of(t: F.Table, rows: np.ndarray, ticks: np.ndarray, weight: np.ndarray
 
 # --- Workers -----------------------------------------------------------------------------------------------------
 
-def available_cores() -> int:
-    """The cores this process may use: the CPU set a scheduler such as SLURM gave it, not the whole machine."""
-    try:
-        return len(os.sched_getaffinity(0))
-    except AttributeError:      # macOS has no affinity call; the whole machine is ours
-        return os.cpu_count() or 2
-
-
-THREAD_VARS = ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "VECLIB_MAXIMUM_THREADS",
-               "NUMEXPR_NUM_THREADS")   # set to 1 in feature workers: N workers x N threads oversubscribe the cores
 _W: dict = {}
 
 
@@ -227,16 +218,8 @@ class Workers:
         self.pool = None
         if self.workers > 1:
             path = cached_table_dir(t, cache_root)
-            saved = {k: os.environ.get(k) for k in THREAD_VARS}
-            os.environ.update({k: "1" for k in THREAD_VARS})    # one thread per worker; the trainer keeps its own
-            try:
+            with one_thread_children():     # one thread per worker; the trainer keeps its own
                 self.pool = mp.get_context("spawn").Pool(self.workers, initializer=_init, initargs=(str(path), schema))
-            finally:
-                for k, v in saved.items():
-                    if v is None:
-                        os.environ.pop(k, None)
-                    else:
-                        os.environ[k] = v
 
     def map(self, tasks: list[tuple]):
         """Results in task order."""
