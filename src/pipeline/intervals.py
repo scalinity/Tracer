@@ -47,16 +47,52 @@ def clock_events(policy: dict) -> tuple[str, str]:
     return next(iter(pairs))
 
 
-def load_intervals(con, start: str, stop: str) -> list[tuple[str, int, str, float | None]]:
+def load_intervals(con, start: str, stop: str, *, split: str | None = "fit", runs=None, scenarios=None,
+                   roles=None, scored: bool | None = None) -> list[tuple[str, int, str, float | None]]:
     """(specimen type, hour block, priority, minutes from start to stop or None) for every fit specimen
-    whose start event was scanned."""
-    rows = con.execute("""
+    whose start event was scanned.
+
+    The keywords select other rows: `split` (None for every split), `runs` (run numbers), and on the v2 store
+    `scenarios` (scenario ids), `roles` (history, scored) and `scored` (the scored days only, or only traffic).
+    With none given the rows are the v1 fit runs, as before."""
+    if split == "fit" and runs is None and scenarios is None and roles is None and scored is None:
+        rows = con.execute("""
+            select s.specimen_type, s.priority, hour(a.timestamp), epoch(b.timestamp - a.timestamp) / 60.0
+            from specimens s
+            join events a on a.specimen_id = s.specimen_id and a.activity = ?
+            left join events b on b.specimen_id = s.specimen_id and b.activity = ?
+            where s.split = 'fit' order by s.specimen_id""", [start, stop]).fetchall()
+        return [(t, h // BLOCK_HOURS, p, m) for t, p, h, m in rows]
+    where, params = [], [start, stop]
+    if split is not None:
+        where.append("s.split = ?")
+        params.append(split)
+    if runs is not None:
+        where.append("list_contains(?, s.run)")
+        params.append([int(r) for r in runs])
+    if scenarios is not None:
+        where.append("list_contains(?, s.scenario_id)")
+        params.append([str(x) for x in scenarios])
+    if roles is not None:
+        where.append("list_contains(?, s.role)")
+        params.append([str(x) for x in roles])
+    if scored is not None:
+        where.append("s.scored = ?")
+        params.append(bool(scored))
+    rows = con.execute(f"""
         select s.specimen_type, s.priority, hour(a.timestamp), epoch(b.timestamp - a.timestamp) / 60.0
         from specimens s
         join events a on a.specimen_id = s.specimen_id and a.activity = ?
         left join events b on b.specimen_id = s.specimen_id and b.activity = ?
-        where s.split = 'fit' order by s.specimen_id""", [start, stop]).fetchall()
+        {"where " + " and ".join(where) if where else ""} order by s.specimen_id""", params).fetchall()
     return [(t, h // BLOCK_HOURS, p, m) for t, p, h, m in rows]
+
+
+def fit_rows(rows, start: str, stop: str, **meta) -> dict:
+    """Parameters in the shape of results/interval_params.json, fitted on the given rows (a scenario's history
+    replicate, the scored replicates of a split); `meta` adds fields such as policy_hash. Writes nothing."""
+    return rounded({"version": 1, "interval": f"{start} to {stop}, in minutes", "clock_start": start,
+                    "clock_stop": stop, "min_group_size": MIN_GROUP, **meta, **fit_all(rows)})
 
 
 def _logpdf(y: np.ndarray, mu: float, sigma: float) -> np.ndarray:

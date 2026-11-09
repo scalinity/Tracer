@@ -122,6 +122,180 @@ def truth_places(split: str) -> dict[str, list[tuple[float, float | None, str]]]
     return out
 
 
+# --- The v2 store (docs/neural/spec.md §6.4, §8.1) ------------------------------------------------------------
+
+@dataclass(frozen=True)
+class SpecV2(Spec):
+    """A Spec from the v2 store, with its scenario, replicate and the slice fields of spec §8.4."""
+    scenario_id: str = ""
+    replicate: int = 0
+    family_id: str = ""
+    role: str = "scored"
+    unit_kind: str = ""
+    route_kind: str = ""
+    route_id: str = ""
+    outcome_class: str = ""
+    cause: str = ""
+    disruption_ids: tuple = ()
+    horizon_cut: bool = False
+    archetype: str = ""
+    stratum: str = ""
+    specimens_per_weekday: float = 0.0
+    edge_tags: tuple = ()
+
+
+# Spec §5.4: where a specimen is, as the dispatcher would name it, from its truth state and substate.
+PLACE_OF = {("at_unit", "pre_dispatch"): "still_at_unit", ("at_unit", "outage_hold"): "still_at_unit",
+            ("at_unit", "awaiting_pickup"): "waiting_for_courier", ("at_unit", "not_dispatched"): "still_at_unit",
+            ("in_tube", "transit"): "in_tube_system", ("in_tube", "stuck"): "in_tube_system",
+            ("misrouted", "wrong_station"): "misrouted_elsewhere", ("at_station", "lab_station"): "at_lab_tube_station",
+            ("stalled_at_station", "overlooked"): "at_lab_tube_station",
+            ("stalled_at_station", "unattended"): "at_lab_tube_station",
+            ("at_station", "receiving_queue"): "in_lab_awaiting_scan", ("hand_carry", "in_transit"): "with_courier",
+            ("hand_carry", "walk"): "with_courier", ("hand_carry", "receiving_queue"): "in_lab_awaiting_scan",
+            ("at_station", "scanner_backlog"): "in_lab_awaiting_scan",
+            ("hand_carry", "scanner_backlog"): "in_lab_awaiting_scan",
+            ("lost", "in_tube"): "lost", ("lost", "in_transit"): "lost"}
+NOT_ALERTABLE = ("at_receiving_bench", "accessioned", "plated", "not_collected")
+
+
+def _v2_dir(store_dir: Path | None) -> Path:
+    return Path(store_dir) if store_dir is not None else store.STORE_V2_DIR
+
+
+def _check_v2_policy(con, policy_hash: str) -> None:
+    found = dict(con.execute("select key, value from meta").fetchall()).get("policy_hash")
+    if found != policy_hash:
+        raise RuntimeError("the v2 store was built under a different policy; rebuild it before scoring")
+
+
+def load_specs_v2(split: str | None, roles=("scored",), store_dir: Path | None = None,
+                  labels: bool = True, scenarios=None) -> tuple[list[SpecV2], dict]:
+    """The scored-day specimens with a clock of one split of the v2 store, in the given roles (`scored` for
+    replicates 1 and up, `history` for replicate 0). With labels, the breach label, fault, cause and outcome
+    class come from the truth file and the label is checked against the scans, as load_specs does; without,
+    the label is derived from the scans and the window. `scenarios` (scenario ids) narrows the rows, labels
+    included, to those scenarios, so the evaluation driver can load a batch per worker; with it, `split` may be
+    None for every split (the v1-world control, which a store keeps under whatever split it was given)."""
+    loaded = config.load()
+    start, stop = intervals.clock_events(loaded["policy"])
+    d = _v2_dir(store_dir)
+    obs = store.open_observed_v2(d)
+    _check_v2_policy(obs, loaded["policy_hash"])
+    roles = list(roles)
+    if split is None and scenarios is None:
+        raise ValueError("name a split, or the scenarios to load")
+    where, params = ["s.scored", "list_contains(?, s.role)"], [roles]
+    if split is not None:
+        where.insert(0, "s.split = ?")
+        params.insert(0, split)
+    if scenarios is not None:
+        where.append("list_contains(?, s.scenario_id)")
+        params.append([str(x) for x in scenarios])
+    rows = obs.execute(f"""
+        select s.specimen_id, s.run, s.specimen_type, s.priority, hour(a.timestamp), s.window_min,
+               epoch(b.timestamp - a.timestamp) / 60.0, s.urgency_tier, s.planned_route, a.timestamp,
+               s.scenario_id, s.replicate, s.family_id, s.role, s.unit_kind, s.route_kind, s.route_id
+        from specimens s
+        join events a on a.specimen_id = s.specimen_id and a.activity = ?
+        left join events b on b.specimen_id = s.specimen_id and b.activity = ?
+        where {" and ".join(where)} order by s.specimen_id""", [start, stop, *params]).fetchall()
+    total = obs.execute(f"select count(*) from specimens s where {' and '.join(where)}", params).fetchone()[0]
+    truth = {}
+    scen = {}
+    if labels:
+        con = store.open_truth(d)
+        _check_v2_policy(con, loaded["policy_hash"])
+        t_where, t_params = [], []
+        if split is not None:
+            t_where.append("split = ?")
+            t_params.append(split)
+        if scenarios is not None:
+            t_where.append("list_contains(?, scenario_id)")
+            t_params.append([str(x) for x in scenarios])
+        truth = {r[0]: r[1:] for r in con.execute(f"""
+            select specimen_id, breach, planted_fault, outcome_class, cause, disruption_ids, horizon_cut
+            from truth_specimens{" where " + " and ".join(t_where) if t_where else ""}""", t_params).fetchall()}
+        s_where = " where list_contains(?, scenario_id)" if scenarios is not None else ""
+        scen = {r[0]: r[1:] for r in con.execute(f"""
+            select scenario_id, archetype, stratum, specimens_per_weekday, edge_tags from truth_scenarios{s_where}""",
+                                                 [] if scenarios is None else [[str(x) for x in scenarios]]).fetchall()}
+    specs = []
+    for (sid, run, kind, priority, hour, window, minutes, tier, route, collected, scenario_id, replicate, family_id,
+         role, unit_kind, route_kind, route_id) in rows:
+        key = (kind, hour // intervals.BLOCK_HOURS, priority)
+        chain = tuple(intervals.key_name(k) for k in intervals.parent_chain(*key))
+        derived = minutes is None or minutes > window
+        breach, fault, outcome, cause, dis, cut = truth.get(sid, (derived, "unknown", "", "", [], False))
+        if breach != derived:
+            raise RuntimeError(f"{sid}: the breach label disagrees with its scans and its window")
+        archetype, stratum, volume, tags = scen.get(scenario_id, ("", "", 0.0, []))
+        specs.append(SpecV2(sid, run, intervals.key_name(key), chain, int(window),
+                            None if minutes is None else float(minutes), bool(breach), fault, int(tier), route,
+                            collected.isoformat(), kind, scenario_id, int(replicate), family_id, role, unit_kind,
+                            route_kind, route_id, outcome, cause, tuple(dis or ()), bool(cut), archetype or "",
+                            stratum or "", float(volume or 0.0), tuple(tags or ())))
+    return specs, {"specimens": total, "with_a_clock": len(specs), "without_a_clock": total - len(specs)}
+
+
+def truth_places_v2(ticks: dict, store_dir: Path | None = None) -> dict[str, list[str | None]]:
+    """The true place category (spec §5.4) of each specimen at each of its ticks (minutes since the collection
+    scan): ticks maps specimen ids to tick lists. None where the specimen is past its receipt scan (not
+    alertable) or in no segment."""
+    ids = sorted(ticks)
+    if not ids:
+        return {}
+    con = store.open_truth(_v2_dir(store_dir))
+    rows = con.execute("""
+        select g.specimen_id, epoch(g.start - s.collected_at) / 60.0, epoch(g."end" - s.collected_at) / 60.0,
+               g.state, g.substate
+        from truth_segments g join truth_specimens s using (specimen_id)
+        where list_contains(?, g.specimen_id) order by g.specimen_id, g.seq""", [ids]).fetchall()
+    segs: dict[str, list] = {}
+    for sid, begin, end, state, sub in rows:
+        segs.setdefault(sid, []).append((float(begin), math.inf if end is None else float(end), state, sub))
+    out = {}
+    for sid in ids:
+        places = []
+        for t in ticks[sid]:
+            hit = next(((state, sub) for a, b, state, sub in segs.get(sid, []) if a <= t < b), None)
+            if hit is None or hit[0] in NOT_ALERTABLE:
+                places.append(None)
+            else:
+                places.append(PLACE_OF.get(hit, "lost" if hit[0] == "lost" else None))
+        out[sid] = places
+    return out
+
+
+def truth_causes_v2(split: str | None = None, store_dir: Path | None = None) -> dict[str, dict]:
+    """Per specimen: cause (none, independent, disruption, congestion), the disruptions that touched it, its
+    outcome class, whether it was cut at the horizon, and its planted fault."""
+    con = store.open_truth(_v2_dir(store_dir))
+    sql = """select specimen_id, cause, disruption_ids, outcome_class, horizon_cut, planted_fault
+             from truth_specimens""" + (" where split = ?" if split is not None else "")
+    return {sid: {"cause": cause, "disruption_ids": tuple(dis or ()), "outcome_class": outcome,
+                  "horizon_cut": bool(cut), "fault": fault}
+            for sid, cause, dis, outcome, cut, fault in con.execute(sql, [split] if split is not None else []).fetchall()}
+
+
+def truth_disruptions_v2(scenario_id: str | None = None, replicate: int | None = None,
+                         store_dir: Path | None = None) -> list[dict]:
+    """The realized disruption windows, optionally for one scenario and replicate, in time order."""
+    con = store.open_truth(_v2_dir(store_dir))
+    where, params = [], []
+    if scenario_id is not None:
+        where.append("scenario_id = ?")
+        params.append(scenario_id)
+    if replicate is not None:
+        where.append("replicate = ?")
+        params.append(int(replicate))
+    sql = "select * from truth_disruptions" + (" where " + " and ".join(where) if where else "") + \
+          " order by scenario_id, replicate, start_min, disruption_id"
+    cur = con.execute(sql, params)
+    names = [d[0] for d in cur.description]
+    return [dict(zip(names, row)) for row in cur.fetchall()]
+
+
 def load_test_specs(start: str, stop: str) -> tuple[list[Spec], dict]:
     """The held-out specimens with their breach labels and planted faults, for the demo bundle
     (src/api/export.py), which never opens the truth file itself."""
