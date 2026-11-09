@@ -801,6 +801,8 @@ def _loop(t, sampler, ncfg, tcfg, plan, dev, keys, val_batches, run_dir, run_id,
         epochs_this_call += 1
         log(f"{run_id} epoch {epoch}: val_sel {v:.5f} (best {_fmt(state['best'])} at {state['best_epoch']}), "
             f"train loss {_fmt(line['train_total'])}, {n_epoch:,} samples in {line['seconds']} s")
+        if epoch == 1 and status == "running" and cut is None:
+            replan_after_first_epoch(plan, sampler, tcfg, line["seconds"], n_epoch, max_samples, time_box_s, log)
         if status == "diverged":
             pass
         elif cut == "timed_out":
@@ -827,6 +829,38 @@ def _loop(t, sampler, ncfg, tcfg, plan, dev, keys, val_batches, run_dir, run_id,
                        store=info, history=state["history"])
     _write_json(run_dir / "result.json", result.to_json())
     return result
+
+
+def replan_after_first_epoch(plan: dict, sampler, tcfg: dict, seconds: float, n_epoch: int, max_samples, time_box_s,
+                             log) -> bool:
+    """Resize the epochs from the first epoch's measured speed when it took under half its target (spec §7.7: an
+    epoch takes about `epoch_minutes`). The start-up benchmark draws few samples per laboratory week, so rebuilding
+    each week's context dominates it and it can underestimate the real speed many times over. The schedule is
+    stretched to the new size (`max_epochs` epochs), the warm-up already done is kept, and the change is recorded in
+    the plan (saved with every checkpoint, so a resumed run keeps it). Runs with a fixed epoch size, a sample cap or a
+    time box keep their plan."""
+    target = 60.0 * float(tcfg["epoch_minutes"])
+    if tcfg["epoch_samples"] is not None or max_samples is not None or time_box_s is not None or "replanned" in plan:
+        return False
+    if seconds <= 0 or seconds >= 0.5 * target:
+        return False
+    batch = int(tcfg["batch"])
+    cap = int(len(sampler.rows) * sampler.k)                # at most one full draw of every specimen's ticks
+    new_epoch = max(batch, min(cap, int(plan["epoch_samples"] * target / seconds)))
+    if new_epoch <= plan["epoch_samples"]:
+        return False
+    before = {k: plan[k] for k in ("epoch_samples", "steps_per_epoch", "planned_steps", "specimens_per_epoch")}
+    plan["epoch_samples"] = new_epoch
+    plan["steps_per_epoch"] = int(math.ceil(new_epoch / batch))
+    plan["planned_steps"] = int(tcfg["max_epochs"]) * plan["steps_per_epoch"]
+    plan["specimens_per_epoch"] = int(math.ceil(new_epoch / plan["mean_ticks_per_specimen"]))
+    sampler.specimens = plan["specimens_per_epoch"]
+    plan["replanned"] = {"after_epoch": 1, "measured_samples_per_s": round(n_epoch / seconds, 1),
+                         "epoch_seconds": seconds, "target_seconds": target, "before": before}
+    log(f"re-planned after epoch 1: it took {seconds:.0f} s against a {target:.0f}-second target at "
+        f"{n_epoch / seconds:,.0f} samples a second; epochs now {new_epoch:,} samples, schedule "
+        f"{plan['planned_steps']:,} steps")
+    return True
 
 
 def _fmt(x, digits: int = 5) -> str:

@@ -295,3 +295,34 @@ def test_val_sel_samples_a_fixed_set_of_specimens_above_its_limit(tiny):
     some = S.val_sel_rows(t, "val", limit=len(every) // 3)
     assert len(some) == len(every) // 3 and set(some) <= set(every)
     assert np.array_equal(some, S.val_sel_rows(t, "val", limit=len(every) // 3))
+
+
+def test_a_fast_first_epoch_is_replanned_to_the_target_length_once():
+    """Spec §7.7 wants epochs of about epoch_minutes; the start-up benchmark can underestimate speed many times
+    over, so a first epoch under half the target resizes the rest (capped at one full draw), once, and only for a
+    run whose size was computed (no fixed size, sample cap or time box)."""
+    from types import SimpleNamespace
+    import numpy as np
+    tcfg = {"epoch_minutes": 10, "epoch_samples": None, "batch": 2048, "max_epochs": 30}
+
+    def fresh():
+        return {"epoch_samples": 2_486_298, "steps_per_epoch": 1215, "planned_steps": 36_450,
+                "specimens_per_epoch": 900_000, "mean_ticks_per_specimen": 2.76}
+    sampler = SimpleNamespace(rows=np.arange(16_000_000), k=4, specimens=900_000)
+    plan = fresh()
+    assert T.replan_after_first_epoch(plan, sampler, tcfg, 31.0, 2_486_298, None, None, lambda *_: None)
+    assert plan["epoch_samples"] == int(2_486_298 * 600 / 31.0) and plan["planned_steps"] == 30 * plan["steps_per_epoch"]
+    assert sampler.specimens == plan["specimens_per_epoch"] and plan["replanned"]["before"]["epoch_samples"] == 2_486_298
+    assert not T.replan_after_first_epoch(plan, sampler, tcfg, 31.0, plan["epoch_samples"], None, None, lambda *_: None)
+    small = SimpleNamespace(rows=np.arange(1000), k=4, specimens=0)
+    plan = fresh()
+    T.replan_after_first_epoch(plan, small, tcfg, 1.0, 2_486_298, None, None, lambda *_: None)
+    assert "replanned" not in plan or plan["epoch_samples"] <= 4000
+    for kw in ({"max_samples": 1_500_000, "time_box_s": None}, {"max_samples": None, "time_box_s": 600.0}):
+        plan = fresh()
+        assert not T.replan_after_first_epoch(plan, sampler, tcfg, 31.0, 2_486_298, kw["max_samples"], kw["time_box_s"],
+                                              lambda *_: None)
+    plan = fresh()
+    assert not T.replan_after_first_epoch(plan, sampler, tcfg | {"epoch_samples": 4096}, 31.0, 4096, None, None,
+                                          lambda *_: None)
+    assert not T.replan_after_first_epoch(fresh(), sampler, tcfg, 400.0, 2_486_298, None, None, lambda *_: None)
