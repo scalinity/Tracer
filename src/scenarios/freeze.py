@@ -366,3 +366,85 @@ def simulate(workers: int, out_dir: Path | None = None, out=print) -> int:
     out(f"simulated {len(records)} scenarios into {target} in {time.monotonic() - t0:.0f} s")
     out(json.dumps({k: v for k, v in manifest.items() if not isinstance(v, (list, dict))}, indent=1))
     return 0
+
+
+# Ablation A1 (spec §8.8): the same 800 scenario-replicates as 100 x 8, 200 x 4, 400 x 2 and 800 x 1 need more train
+# replicates than the main simulation has. src/neural/ablations.py writes which (`ablate --set`); this simulates them.
+A1_PLAN_PATH = ROOT / "data" / "neural" / "ablations" / "a1-replicates.json"
+A1_SIM_DIR = ROOT / "data" / "sim-a1"
+
+
+def a1_replicates(scenarios: list[dict], plan: dict) -> dict[str, list[int]]:
+    """Scenario id -> the replicates A1's simulation holds: each train scenario the plan lists, 0 to its number; every
+    validation scenario, REPLICATES["val"], exactly as the main simulation has it; nothing else."""
+    want = {str(s): int(n) for s, n in plan["replicates"].items()}
+    split_of = {s["scenario_id"]: s["split"] for s in scenarios}
+    wrong = sorted(s for s in want if split_of.get(s) != "train")
+    if wrong:
+        raise runner.JobError(f"the A1 plan lists scenarios that are not train scenarios of the library: {wrong[:5]}")
+    if any(n < 1 for n in want.values()):
+        raise runner.JobError("the A1 plan asks a scenario for fewer than one scored replicate")
+    out = {}
+    for s in scenarios:
+        if s["split"] == "val":
+            out[s["scenario_id"]] = list(REPLICATES["val"])
+        elif s["scenario_id"] in want:
+            out[s["scenario_id"]] = list(range(want[s["scenario_id"]] + 1))
+    return out
+
+
+def simulate_replicates(scenarios: list[dict], replicates: dict[str, list[int]], out_dir: Path, workers: int, *,
+                        library_sha256: str, extra: dict | None = None) -> dict:
+    """src.sim.run.simulate_library with a replicate list per scenario: one call per (split, replicates) group into
+    one folder, then one manifest over every group, as simulate_library writes it. The simulator seeds each replicate
+    from (master seed, scenario index, replicate) alone, so a replicate another simulation also holds is
+    byte-identical to it."""
+    from src.sim import run as sim_run
+
+    groups: dict[tuple, list[dict]] = {}
+    for s in scenarios:
+        if s["scenario_id"] in replicates:
+            groups.setdefault((s["split"], tuple(replicates[s["scenario_id"]])), []).append(s)
+    if not groups:
+        raise runner.JobError("no scenario to simulate")
+    parts = [sim_run.simulate_library(group, out_dir, {split: list(reps)}, workers, library_sha256=library_sha256)
+             for (split, reps), group in sorted(groups.items())]
+    runs = sorted((e for m in parts for e in m["runs"]), key=lambda e: (e["split"], e["scenario_id"], e["replicate"]))
+    kept = [e for e in runs if "dropped" not in e]
+    manifest = {k: parts[0][k] for k in ("format", "master_seed", "policy_hash", "config_hash", "library_sha256",
+                                         "clinical_review", "note")} | {
+        "scenarios": sum(m["scenarios"] for m in parts), "replicates": len(runs), "replicates_written": len(kept),
+        "replicates_dropped": len(runs) - len(kept), "specimens": sum(e["specimens"] for e in kept),
+        "scored": sum(e["scored"] for e in kept), "scored_breaches": sum(e["scored_breaches"] for e in kept),
+        "runs": runs, "files": sorted((f for m in parts for f in m["files"]), key=lambda f: f["path"])} | (extra or {})
+    sim_run.write_json(manifest, Path(out_dir) / "manifest.json")
+    return manifest
+
+
+def simulate_a1(workers: int, out_dir: Path | None = None, plan_path: Path | None = None, out=print) -> int:
+    """`simulate --a1`: the replicates of data/neural/ablations/a1-replicates.json's train scenarios, 0 to each one's
+    number, and every validation scenario's replicates as the main simulation has them, into data/sim-a1/ with its
+    manifest. `store --a1` then loads it into data/store-v2-a1/. Refuses a splits file made for another library."""
+    import time
+
+    plan_path = Path(plan_path or A1_PLAN_PATH)
+    if not plan_path.is_file():
+        raise runner.JobError(f"no A1 plan at {plan_path}; write it with `ablate --set core`")
+    records = read_library()
+    if not records:
+        raise runner.JobError("no frozen library; run `freeze` first")
+    lib_sha = hashlib.sha256(LIBRARY_PATH.read_bytes()).hexdigest()
+    splits = json.loads(SPLITS_PATH.read_text())
+    if splits["library_sha256"] != lib_sha:
+        raise runner.JobError("the splits file was made for a different library; refreeze")
+    scenarios = simulation_inputs(records, splits)
+    plan_raw = plan_path.read_bytes()
+    replicates = a1_replicates(scenarios, json.loads(plan_raw))
+    target = Path(out_dir or A1_SIM_DIR)
+    t0 = time.monotonic()
+    manifest = simulate_replicates(scenarios, replicates, target, workers, library_sha256=lib_sha,
+                                   extra={"a1_plan_sha256": hashlib.sha256(plan_raw).hexdigest()})
+    out(f"simulated A1's {manifest['replicates']} replicates of {manifest['scenarios']} scenarios into {target} in "
+        f"{time.monotonic() - t0:.0f} s")
+    out(json.dumps({k: v for k, v in manifest.items() if not isinstance(v, (list, dict))}, indent=1))
+    return 0

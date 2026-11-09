@@ -101,8 +101,8 @@ def ledger_totals(ledger_path: Path | None = None, json_path: Path | None = None
 def load(inputs: dict) -> dict:
     ev = {s: _json(p) for s, p in inputs["evaluations"].items()}
     ood = ev.get("test_ood")
-    if ev.get(OOD_FEATURE) is None and ood is not None and (ood.get("subsets") or {}).get("ood_feature"):
-        ev[OOD_FEATURE] = ood["subsets"]["ood_feature"]
+    if ev.get(OOD_FEATURE) is None and ood is not None and (ood.get("subsets") or {}).get(ne.OOD_FEATURE):
+        ev[OOD_FEATURE] = ne.subset_view(ood, ne.OOD_FEATURE)
     return {"ev": ev, "selection": _json(inputs["selection"]), "hpo": _json(inputs["hpo"]),
             "ablations": _json(inputs["ablations"]), "lock": _json(inputs["lock"]),
             "test_runs": _jsonl(inputs["test_runs"]), "ablation_test_runs": _jsonl(inputs["ablation_test_runs"]),

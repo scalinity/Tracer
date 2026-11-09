@@ -324,10 +324,13 @@ def gate_command(job: str, paths: runner.Paths, out=print) -> int:
     return gate.run(job, paths, out)
 
 
-def simulate_command(workers: int, out_dir: str | None, paths: runner.Paths, out=print) -> int:
-    """Simulate the frozen library (spec §5, §6.1); src.scenarios.freeze drives the simulator."""
+def simulate_command(workers: int, out_dir: str | None, paths: runner.Paths, out=print, a1: bool = False) -> int:
+    """Simulate the frozen library (spec §5, §6.1), or with `a1` ablation A1's replicates (spec §8.8);
+    src.scenarios.freeze drives the simulator."""
     from src.scenarios import freeze
 
+    if a1:
+        return freeze.simulate_a1(workers, Path(out_dir) if out_dir else None, out=out)
     return freeze.simulate(workers, Path(out_dir) if out_dir else None, out)
 
 
@@ -356,8 +359,11 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("simulate", help="simulate the frozen library (spec §5, §6.1)")
     p.add_argument("--workers", type=int, default=16)
     p.add_argument("--out", default=None, help="output folder (default: the simulation folder)")
+    p.add_argument("--a1", action="store_true", help="ablation A1's train replicates (its plan, a1-replicates.json) "
+                                                     "and every validation replicate, into A1's own folder (spec §8.8)")
     p = sub.add_parser("store", help="load the simulation into the v2 store (spec §6.3)")
     p.add_argument("--workers", type=int, default=None)
+    p.add_argument("--a1", action="store_true", help="load A1's simulation into A1's own store (spec §8.8)")
     p = sub.add_parser("evaluate", help="score every method on a set (spec §8); test sets go through the lock")
     p.add_argument("--split", required=True,
                    choices=("val", "test", "test_ood", "legacy_v1", "control_v1world"))
@@ -450,9 +456,12 @@ def main(argv: list[str] | None = None, *, paths: runner.Paths | None = None, se
                           workers=args.workers, out=out)
             return 0
         if args.command == "simulate":
-            return simulate_command(args.workers, args.out, pipe.paths, out)
+            return simulate_command(args.workers, args.out, pipe.paths, out, a1=args.a1)
         if args.command == "store":
             from src.pipeline import store
+            if args.a1:
+                return store.command_build_v2(workers=args.workers, sim_dir=store.SIM_A1_DIR,
+                                              store_dir=store.STORE_V2_A1_DIR, out=out)
             return store.command_build_v2(workers=args.workers, out=out)
         if args.command == "evaluate":
             from src.pipeline import neural_eval

@@ -1001,6 +1001,11 @@ SETS = {
     "control_v1world": "the v1-world scenario: replicate 0 sets the knobs, every other replicate is scored",
 }
 V2_SPLIT_SETS = ("val", "test", "test_ood")
+OOD_FEATURE = "ood_feature"             # the subset of test_ood whose scenarios carry the feature themselves
+OOD_ARCHETYPE, OOD_DISRUPTION = "multi_site_system", "scanner_downtime"   # spec §6.2 (src/scenarios/freeze.py is_ood)
+SUBSET_CONTEXT = ("set", "description", "notice", "settings", "methods", "store")
+SUBSET_NOTE = ("the same look as the whole set: every knob as tuned there, every metric over this subset's scenarios, "
+               "the bootstrap resampling them with the same seed; the decision rule is judged on test only")
 SLICE_DIMENSIONS_V2 = ("window_class", "outcome", "tier", "archetype", "stratum", "disruption", "route_kind",
                        "volume_tercile", "edge_tag")
 SLICE_DIMENSIONS_V1 = ("window_class", "outcome", "tier", "route_kind", "fault")
@@ -2011,6 +2016,53 @@ def _set_scenarios(split: str, store_dir: Path, control_scenario: str, scenarios
     return split, found
 
 
+def ood_feature_scenarios(store_dir: Path, split: str = "test_ood") -> list[str]:
+    """The scenarios of a split that carry the out-of-distribution feature themselves (spec §6.2's rule): archetype
+    multi_site_system, or a scanner_downtime disruption in the configuration. Families go to test_ood whole, so the
+    rest of test_ood are ordinary weeks that share a family with one of these."""
+    traits = evaluate.scenario_traits_v2(split, store_dir)
+    return sorted(s for s, t in traits.items()
+                  if t["archetype"] == OOD_ARCHETYPE or OOD_DISRUPTION in t["disruption_types"])
+
+
+def _subset_lists(subsets: Mapping[str, Sequence[str]] | None) -> dict | None:
+    """Named scenario lists by name, each sorted and without repeats; None for none."""
+    if not subsets:
+        return None
+    out = {}
+    for name in sorted(subsets):
+        ids = subsets[name]
+        if not isinstance(name, str) or not name or isinstance(ids, str):
+            raise ValueError("subsets map a name to a list of scenario ids")
+        out[name] = sorted({str(s) for s in ids})
+        if not out[name]:
+            raise ValueError(f"the subset {name!r} names no scenario")
+    return out
+
+
+def _without_a_clock(store_dir: Path, split: str, scenarios: Sequence[str], start: str, stop: str) -> dict:
+    """load_specs_v2's counts of scored-day specimens without a clock, history and scored, over some scenarios of a
+    split (a subset's counts), from the observed store."""
+    where = "s.split = ? and s.scored and list_contains(?, s.scenario_id)"
+    params = [split, [str(s) for s in scenarios]]
+    con = store.open_observed_v2(store_dir)
+    try:
+        total = dict(con.execute(f"select s.role, count(*) from specimens s where {where} group by s.role",
+                                 params).fetchall())
+        clock = dict(con.execute(f"""select s.role, count(*) from specimens s
+                                     join events a on a.specimen_id = s.specimen_id and a.activity = ?
+                                     left join events b on b.specimen_id = s.specimen_id and b.activity = ?
+                                     where {where} group by s.role""", [start, stop, *params]).fetchall())
+    finally:
+        con.close()
+    return {f"{role}_without_a_clock": int(total.get(role, 0) - clock.get(role, 0)) for role in ("scored", "history")}
+
+
+def subset_view(result: Mapping, name: str) -> dict:
+    """A subset of an evaluation read as an evaluation of its own: the look's context with the subset's sections."""
+    return {k: v for k, v in result.items() if k in SUBSET_CONTEXT} | dict(result["subsets"][name])
+
+
 def evaluate_split(split: str, methods: Sequence[Method] | None = None, *, store_dir: Path | None = None,
                    budgets: Sequence[float] = BUDGETS, per_100_budgets: Sequence[float] = PER_100_BUDGETS,
                    out_dir: Path | None = None, workers: int | None = None, matched: bool = False,
@@ -2018,7 +2070,7 @@ def evaluate_split(split: str, methods: Sequence[Method] | None = None, *, store
                    control_scenario: str = CONTROL_SCENARIO, lock_hashes: Mapping | None = None,
                    relock_reason: str | None = None, lock_path: Path | None = None, runs_path: Path | None = None,
                    resamples: int = BOOTSTRAPS, keep_alerts: bool = False, write: bool = True,
-                   test_run: TestRun | None = None) -> dict:
+                   test_run: TestRun | None = None, subsets: Mapping[str, Sequence[str]] | None = None) -> dict:
     """Score every method on one set of spec §8.1, identically, and write `<out_dir>/evaluation.json`.
 
     split          val, test, test_ood (v2 scenarios; test and test_ood only through the test lock: pass
@@ -2038,6 +2090,11 @@ def evaluate_split(split: str, methods: Sequence[Method] | None = None, *, store
                    present); weighted methods are compared at the same weighting
     train_store_dir  the store whose train split gives the global fits (default store_dir)
     keep_alerts    keep every specimen's alert minute per series and budget in result["detail"] (tests)
+    subsets        named scenario lists of a v2 set ({"ood_feature": [...]}). Each is reported from this same look
+                   in result["subsets"][name]: every knob as tuned for the whole set, every metric, interval, slice
+                   and the matched volume computed again over the subset's scenarios from their parts, the
+                   bootstrap resampling the subset's clusters (`resamples`, seed 0), and the subset's counts. The
+                   decision rule is judged on the whole set only. The subsets are part of the lock's configuration
 
     Returns the result, with a "detail" entry (per-group knobs, notes, and alerts if kept) that is not written."""
     t0 = time.perf_counter()
@@ -2056,12 +2113,19 @@ def evaluate_split(split: str, methods: Sequence[Method] | None = None, *, store
     kind = "legacy" if split == "legacy_v1" else "v2"
     store_dir = Path(store_dir) if store_dir is not None else (store.STORE_DIR if kind == "legacy" else store.STORE_V2_DIR)
     train_store_dir = Path(train_store_dir) if train_store_dir is not None else store_dir
+    subsets = _subset_lists(subsets)
+    if subsets and split not in V2_SPLIT_SETS:
+        raise ValueError(f"subsets are scenario lists of a v2 set ({', '.join(V2_SPLIT_SETS)}), not {split}")
+    store_split, ids = _set_scenarios(split, store_dir, control_scenario, scenarios) if kind == "v2" else (None, [])
+    unknown = sorted({s for v in (subsets or {}).values() for s in v} - set(ids))
+    if unknown:
+        raise ValueError(f"subset scenarios that are not among the {split} scenarios evaluated: {unknown[:5]}")
     risk_parts = _pin_risk_tables(methods)
     store_hash = _manifest_hash(store_dir) if kind == "v2" else None
     if split in LOCKED_SPLITS:
         current = _evaluation_hashes(store_dir, methods, store_hash=store_hash, train_store_dir=train_store_dir,
                                      budgets=budgets, per_100_budgets=per_100_budgets, resamples=resamples,
-                                     matched=matched, focus=focus, scenarios=scenarios)
+                                     matched=matched, focus=focus, scenarios=scenarios, subsets=subsets)
         supplied = test_run["hashes"] if test_run is not None else lock_hashes
         differ = [k for k, v in current.items() if supplied.get(k) != v]
         if differ:
@@ -2101,7 +2165,6 @@ def evaluate_split(split: str, methods: Sequence[Method] | None = None, *, store
         results.append(evaluate_group(group, methods, env))
         n_groups = 1
     else:
-        store_split, ids = _set_scenarios(split, store_dir, control_scenario, scenarios)
         env = Env(store_split=store_split, by_run=split == "control_v1world",
                   slice_dimensions=SLICE_DIMENSIONS_V2, **env_args)
         setup = Setup(kind, split, store_dir, train_store_dir, start, stop, loaded["policy_hash"],
@@ -2134,8 +2197,10 @@ def evaluate_split(split: str, methods: Sequence[Method] | None = None, *, store
             results.extend(res)
             for k in counts:
                 counts[k] += c[k]
-    result = _assemble(split, methods, env, results, counts, focus, resamples, n_groups)
-    result["store"] = {"path": _shown(store_dir), "policy_hash": loaded["policy_hash"]}
+    subset_parts = {name: (v, _without_a_clock(store_dir, store_split, v, start, stop))
+                    for name, v in (subsets or {}).items()}
+    result = _assemble(split, methods, env, results, counts, focus, resamples, n_groups, subset_parts)
+    result["store"] ={"path": _shown(store_dir), "policy_hash": loaded["policy_hash"]}
     if kind == "v2":
         result["store"]["manifest_sha256"] = store_hash
         if train_store_dir != store_dir:
@@ -2174,13 +2239,10 @@ def _pin_risk_tables(methods: Sequence[Method]) -> dict:
     return {m.name: m.series.pin() for m in methods if isinstance(getattr(m, "series", None), FrameRisk)}
 
 
-def _assemble(split: str, methods: Sequence[Method], env: Env, results: list[dict], counts: dict, focus: str | None,
-              resamples: int, n_groups: int) -> dict:
+def _stacker(results: list[dict]) -> tuple[list, dict, Callable]:
+    """The clusters of some tuning groups, their shifts, and a function stacking any per-cluster parts over them."""
     clusters = sorted({c for r in results for c in r["clusters"]})
     shifts = {c: r["shifts"][c] for r in results for c in r["clusters"]}
-    volume = {c: r["volume"][c] for r in results for c in r["clusters"]}
-    series_keys = [f"{n}|{w}" for m in methods for n, w in _series_keys(m, env)]
-    by_name = {m.name: m for m in methods}
 
     def stacked(get) -> Series:
         rows = {}
@@ -2188,6 +2250,17 @@ def _assemble(split: str, methods: Sequence[Method], env: Env, results: list[dic
             for c, part in zip(r["clusters"], get(r)):
                 rows[c] = part
         return _stack(clusters, rows, shifts)
+    return clusters, shifts, stacked
+
+
+def _measure(methods: Sequence[Method], env: Env, results: list[dict], focus: str | None,
+             resamples: int) -> tuple[dict, dict]:
+    """Every metric section from the tuning groups' parts: the knobs, the operating points with their cluster
+    bootstrap, the differences from the focus, discrimination, calibration and slices. Returns the sections and
+    each budget's series."""
+    clusters, shifts, stacked = _stacker(results)
+    volume = {c: r["volume"][c] for r in results for c in r["clusters"]}
+    series_keys = [f"{n}|{w}" for m in methods for n, w in _series_keys(m, env)]
 
     operating, differences, knobs = {}, {}, {}
     series_at = {}
@@ -2232,36 +2305,82 @@ def _assemble(split: str, methods: Sequence[Method], env: Env, results: list[dic
             for g in groups_found:
                 slices[d][g] = _nest({k: _slice_metrics(stacked(
                     lambda r, d=d, g=g, k=k: r["slices"].get(d, {}).get(g, {}).get(k, []))) for k in series_keys})
+    sections = {"knobs": knobs, "operating_points": operating, "discrimination": discrimination_out,
+                "calibration": calibration_out, "slices": slices}
+    if focus is not None:
+        sections["differences"] = differences
+    return sections, series_at
 
+
+def _matched(methods: Sequence[Method], env: Env, results: list[dict], focus: str | None, resamples: int,
+             trigger: str) -> dict:
+    """The matched-volume sensitivity check (R4) from the tuning groups' matched parts."""
+    _, _, stacked = _stacker(results)
+    series_keys = [f"{n}|{w}" for m in methods for n, w in _series_keys(m, env)]
+    mseries = {k: stacked(lambda r, k=k: r["matched"][k]["parts"]) for k in series_keys}
+    boot = bootstrap(mseries, series_keys[0], [], resamples=resamples)
+    out = {"budget": env.headline, "note": "knobs re-solved on the scored replicates from alert volume "
+                                           "alone, per tuning group: a sensitivity check (R4), never a replacement",
+           "trigger": trigger,
+           "operating_point": _nest(boot["intervals"]),
+           "knob": _nest({k: _summary([r["matched"][k]["knob"] for r in results]) for k in series_keys}),
+           "no_alert_groups": _nest({k: int(sum(r["matched"][k]["no_alert"] for r in results)) for k in series_keys})}
+    if focus is not None:
+        out["differences"] = _differences(mseries, focus, methods, env, resamples)
+    return out
+
+
+def _counts(results: list[dict], counts: Mapping, n_groups: int) -> dict:
+    shifts = {c: r["shifts"][c] for r in results for c in r["clusters"]}
+    return {"tuning_groups": n_groups, "clusters": len(shifts),
+            "scored_specimens": sum(r["counts"]["scored"] for r in results),
+            "scored_without_a_clock": counts["scored_without_a_clock"],
+            "history_specimens": sum(r["counts"]["history"] for r in results),
+            "history_without_a_clock": counts["history_without_a_clock"],
+            "breaches": sum(r["counts"]["breaches"] for r in results),
+            "never_received": sum(r["counts"]["never_received"] for r in results),
+            "scored_shifts": float(sum(shifts.values())),
+            "history_shifts": float(sum(r["counts"]["history_shifts"] for r in results))}
+
+
+def _local_fit(methods: Sequence[Method], results: list[dict], n_groups: int) -> dict:
+    notes = [n for r in results for n in r["notes"]]
+    return {"fell_back": len(notes), "of": n_groups if any(getattr(m, "fit", "") == "local" for m in methods) else 0,
+            "notes": notes}
+
+
+def _subset(ids: Sequence[str], counts: Mapping, methods: Sequence[Method], env: Env, results: list[dict],
+            focus: str | None, resamples: int, trigger: str | None) -> dict:
+    """One subset of a v2 set from the parts the look computed (a group's key is its scenario)."""
+    keep = set(ids)
+    mine = [r for r in results if r["key"] in keep]
+    out = {"scenarios": list(ids), "note": SUBSET_NOTE, "counts": _counts(mine, counts, len(ids)),
+           "local_fit": _local_fit(methods, mine, len(ids))}
+    if not mine:
+        return out | {"note": "no scenario of this subset has a scored specimen"}
+    sections, _ = _measure(methods, env, mine, focus, resamples)
+    out |= {k: sections[k] for k in ("knobs", "operating_points", "discrimination", "calibration", "slices")}
+    if focus is not None:
+        out |= {"focus": focus, "differences": sections["differences"]}
+    if trigger is not None:
+        out["matched_volume"] = _matched(methods, env, mine, focus, resamples, trigger)
+    return out
+
+
+def _assemble(split: str, methods: Sequence[Method], env: Env, results: list[dict], counts: dict, focus: str | None,
+              resamples: int, n_groups: int, subsets: Mapping[str, tuple] | None = None) -> dict:
+    sections, series_at = _measure(methods, env, results, focus, resamples)
+    by_name = {m.name: m for m in methods}
     decides = TRACERNET in by_name and env.headline is not None and focus == TRACERNET
     r4_failed = decides and not _check_r4(_headline_points(series_at[env.headline],
                                                            {m.name: m.weighted for m in methods}))["held"]
-    matched_out = None
+    trigger = None
     if env.matched_parts and (env.matched or r4_failed):
-        mseries = {k: stacked(lambda r, k=k: r["matched"][k]["parts"]) for k in series_keys}
-        boot = bootstrap(mseries, series_keys[0], [], resamples=resamples)
-        matched_out = {"budget": env.headline, "note": "knobs re-solved on the scored replicates from alert volume "
-                                                       "alone, per tuning group: a sensitivity check (R4), never a replacement",
-                       "trigger": "R4 failed: unequal realized alert volume" if r4_failed else "requested",
-                       "operating_point": _nest(boot["intervals"]),
-                       "knob": _nest({k: _summary([r["matched"][k]["knob"] for r in results]) for k in series_keys}),
-                       "no_alert_groups": _nest({k: int(sum(r["matched"][k]["no_alert"] for r in results))
-                                                 for k in series_keys})}
-        if focus is not None:
-            matched_out["differences"] = _differences(mseries, focus, methods, env, resamples)
+        trigger = "R4 failed: unequal realized alert volume" if r4_failed else "requested"
+    matched_out = _matched(methods, env, results, focus, resamples, trigger) if trigger is not None else None
 
-    notes = [n for r in results for n in r["notes"]]
-    c = {"tuning_groups": n_groups, "clusters": len(clusters),
-         "scored_specimens": sum(r["counts"]["scored"] for r in results),
-         "scored_without_a_clock": counts["scored_without_a_clock"],
-         "history_specimens": sum(r["counts"]["history"] for r in results),
-         "history_without_a_clock": counts["history_without_a_clock"],
-         "breaches": sum(r["counts"]["breaches"] for r in results),
-         "never_received": sum(r["counts"]["never_received"] for r in results),
-         "scored_shifts": float(sum(shifts.values())),
-         "history_shifts": float(sum(r["counts"]["history_shifts"] for r in results))}
     result = {
-        "set": split, "description": SETS[split], "notice": NOTICE, "counts": c,
+        "set": split, "description": SETS[split], "notice": NOTICE, "counts": _counts(results, counts, n_groups),
         "settings": {"tick_min": evaluate.TICK_MIN, "shifts_per_replicate": SHIFTS_PER_REPLICATE,
                      "budgets": [b.key for b in env.budgets], "headline": env.headline,
                      "weightings": {w: {str(t): v for t, v in ws.items()} for w, ws in env.schemes},
@@ -2274,21 +2393,21 @@ def _assemble(split: str, methods: Sequence[Method], env: Env, results: list[dic
                      "discrimination_landmarks_min": list(DISCRIMINATION_LANDMARKS),
                      "calibration_landmarks_min": list(CALIBRATION_LANDMARKS), "min_local_fit": MIN_LOCAL_FIT},
         "methods": {m.name: m.describe() for m in methods},
-        "local_fit": {"fell_back": len(notes), "of": n_groups if any(
-            getattr(m, "fit", "") == "local" for m in methods) else 0, "notes": notes},
-        "knobs": knobs, "operating_points": operating,
-        "discrimination": discrimination_out, "calibration": calibration_out, "slices": slices,
-    }
+        "local_fit": _local_fit(methods, results, n_groups),
+    } | {k: sections[k] for k in ("knobs", "operating_points", "discrimination", "calibration", "slices")}
     if split == "legacy_v1":
         result["local_fit"]["note"] = ("on legacy_v1 the history is fit runs 0 to 23 for every method, so the local "
                                        "and global refits are the same committed fit")
     if focus is not None:
         result["focus"] = focus
-        result["differences"] = differences
+        result["differences"] = sections["differences"]
     if matched_out is not None:
         result["matched_volume"] = matched_out
     if decides:
         result["decision_rule"] = _decision(result, series_at[env.headline], matched_out)
+    if subsets:
+        result["subsets"] = {name: _subset(ids, c, methods, env, results, focus, resamples, trigger)
+                             for name, (ids, c) in subsets.items()}
     result["detail"] = {"groups": [{"key": r["key"], "clusters": r["clusters"], "knobs": r["knobs"],
                                     "counts": r["counts"], "alerts": r["alerts"],
                                     "matched_knobs": {k: v["knob"] for k, v in r["matched"].items()}}
@@ -2399,10 +2518,11 @@ def table(result: dict, budget: str | None = None) -> str:
 
 def _configuration(methods: Sequence[Method], *, train_store_hash: str | None, budgets: Sequence[float],
                    per_100_budgets: Sequence[float], resamples: int, matched: bool, focus: str | None,
-                   scenarios: Sequence[str] | None) -> dict:
+                   scenarios: Sequence[str] | None, subsets: Mapping[str, Sequence[str]] | None = None) -> dict:
     """Every setting of an evaluation that can change a reported number: the methods, the effective urgency
     weights, the training store behind the global fits, the budgets, the bootstrap, the matched-volume request,
-    the focus and the scenario selection. (The risk tables read are recorded with the run, record_risk_parts.)"""
+    the focus, the scenario selection and the subsets reported (names and sorted ids). (The risk tables read are
+    recorded with the run, record_risk_parts.)"""
     names = [m.name for m in methods]
     focus = focus if focus is not None else (TRACERNET if TRACERNET in names else None)
     described = {m.name: {k: v for k, v in m.describe().items() if k != "fitted_on"} | {"fit": getattr(m, "fit", None)}
@@ -2413,14 +2533,15 @@ def _configuration(methods: Sequence[Method], *, train_store_hash: str | None, b
     return {"methods": described, "budgets": [float(b) for b in budgets],
             "per_100": [float(b) for b in per_100_budgets], "bootstrap": [int(resamples), BOOTSTRAP_SEED],
             "weightings": weightings, "train_store_sha256": train_store_hash or "none", "matched": bool(matched),
-            "focus": focus, "scenarios": None if scenarios is None else sorted(str(s) for s in scenarios)}
+            "focus": focus, "scenarios": None if scenarios is None else sorted(str(s) for s in scenarios),
+            "subsets": _subset_lists(subsets)}
 
 
 def _evaluation_hashes(store_dir: Path, methods: Sequence[Method], *, store_hash: str | None,
                        train_store_dir: Path | None = None, budgets: Sequence[float] = BUDGETS,
                        per_100_budgets: Sequence[float] = PER_100_BUDGETS, resamples: int = BOOTSTRAPS,
-                       matched: bool = False, focus: str | None = None,
-                       scenarios: Sequence[str] | None = None) -> dict:
+                       matched: bool = False, focus: str | None = None, scenarios: Sequence[str] | None = None,
+                       subsets: Mapping[str, Sequence[str]] | None = None) -> dict:
     """The part of the lock record an evaluation can rebuild from its own arguments: the configuration, the store
     and this code. evaluate_split compares it with the record it is given."""
     train = Path(train_store_dir) if train_store_dir is not None else Path(store_dir)
@@ -2429,7 +2550,7 @@ def _evaluation_hashes(store_dir: Path, methods: Sequence[Method], *, store_hash
         raise RuntimeError(f"the training store at {train} has no manifest, so the global fits have no identity")
     configuration = _configuration(methods, train_store_hash=train_hash, budgets=budgets,
                                    per_100_budgets=per_100_budgets, resamples=resamples, matched=matched, focus=focus,
-                                   scenarios=scenarios)
+                                   scenarios=scenarios, subsets=subsets)
     hashes = current_hashes("none", "none", sha256_json(configuration), "none", store_hash or "none")
     return {k: hashes[k] for k in ("configuration_sha256", "store_sha256", "neural_eval_blob_sha", "evaluate_blob_sha")}
 
@@ -2438,7 +2559,8 @@ def lock_record(store_dir: Path, methods: Sequence[Method], *, artifact_dir: Pat
                 splits_path: Path | None = None, decision_model: str | None = None,
                 train_store_dir: Path | None = None, budgets: Sequence[float] = BUDGETS,
                 per_100_budgets: Sequence[float] = PER_100_BUDGETS, resamples: int = BOOTSTRAPS, matched: bool = False,
-                focus: str | None = None, scenarios: Sequence[str] | None = None) -> dict:
+                focus: str | None = None, scenarios: Sequence[str] | None = None,
+                subsets: Mapping[str, Sequence[str]] | None = None) -> dict:
     """The hashes guard_test_run compares (§8.7), for an evaluate_split call with the same arguments: the
     artifact's manifest and calibration (or "none" without an artifact), the configuration (_configuration), the
     split manifest, the store and this code. The artifact's and the store's files are checked against their
@@ -2462,7 +2584,7 @@ def lock_record(store_dir: Path, methods: Sequence[Method], *, artifact_dir: Pat
         raise RuntimeError(f"the store at {store_dir} has no manifest, so the lock cannot record its identity")
     own = _evaluation_hashes(store_dir, methods, store_hash=store_hash, train_store_dir=train_store_dir,
                              budgets=budgets, per_100_budgets=per_100_budgets, resamples=resamples, matched=matched,
-                             focus=focus, scenarios=scenarios)
+                             focus=focus, scenarios=scenarios, subsets=subsets)
     return current_hashes(artifact, calibration, own["configuration_sha256"], file_hash(splits_path), store_hash,
                           decision_model=decision_model)
 
@@ -2475,26 +2597,34 @@ def command_evaluate(split: str, *, store_dir: Path | None = None, out_dir: Path
     here by the artifact) on the set, written to <out_dir>/evaluation.json, with the headline table printed. On a
     test set the lock is taken and the run recorded first; only then does the artifact score the set, and the
     evaluation reuses that run. For control_v1world, `store_dir` is the store holding the v1-world scenario and
-    `train_store_dir` the v2 store whose train split gives the global fits."""
+    `train_store_dir` the v2 store whose train split gives the global fits. On test_ood the same look also reports
+    the subset `ood_feature`, the scenarios that carry the out-of-distribution feature themselves, found in the
+    store's truth (ood_feature_scenarios)."""
     score_artifact = tracernet is None and artifact_dir is not None
     if score_artifact:
         tracernet = RISK_DIR / split / "*.parquet"
     methods = baselines() + ([tracernet_method(tracernet)] if tracernet is not None else [])
+    store_path = Path(store_dir) if store_dir is not None else store.STORE_V2_DIR
+    feature = ood_feature_scenarios(store_path) if split == "test_ood" else []
+    subsets = {OOD_FEATURE: feature} if feature else None
     test_run = None
     if split in LOCKED_SPLITS:
-        hashes = lock_record(Path(store_dir) if store_dir is not None else store.STORE_V2_DIR, methods,
-                             artifact_dir=artifact_dir, train_store_dir=train_store_dir, matched=matched)
+        hashes = lock_record(store_path, methods, artifact_dir=artifact_dir, train_store_dir=train_store_dir,
+                             matched=matched, subsets=subsets)
         supplied = None if score_artifact else _pin_risk_tables(methods)   # a table given: checked before logging
         test_run = guard_test_run(split, hashes, relock_reason, risk_parts=supplied)
     if score_artifact:  # after the lock: on a test set, scoring it with the artifact is part of the one look
         risk_table(split, Path(artifact_dir), store_dir=store_dir, workers=workers, test_run=test_run)
     result = evaluate_split(split, methods, store_dir=store_dir, out_dir=out_dir, workers=workers, matched=matched,
-                            train_store_dir=train_store_dir, test_run=test_run)
+                            train_store_dir=train_store_dir, test_run=test_run, subsets=subsets)
     print(table(result))
     if "decision_rule" in result:
         v = result["decision_rule"]["verdict"]
         print(f"\ndecision rule on {split} (binding only on test): R1 to R4 held = {v['held']}; "
               f"primary model: {v['primary_model']}")
+    for name, sub in (result.get("subsets") or {}).items():
+        print(f"\n{name}: {len(sub['scenarios'])} of the {result['counts']['tuning_groups']} {split} scenarios, "
+              f"from the same look\n" + (table(subset_view(result, name)) if "operating_points" in sub else sub["note"]))
     print(f"\nwrote {_shown(Path(result['written']))}")
     return 0
 

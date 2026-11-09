@@ -12,6 +12,8 @@ import torch
 from src.models.tracernet import features as F
 from src.models.tracernet.net import TracerNet, TracerNetConfig
 from src.neural import ablations as A, devlib, train as T
+from src.pipeline import store
+from src.scenarios import freeze, runner
 
 CONFIG = T.load_config()
 TINY = {"epoch_samples": 2048, "batch": 512, "schema_samples": 20000, "max_epochs": 10 ** 6, "patience": 10 ** 6}
@@ -251,3 +253,108 @@ def test_collect_summarizes_seeds_checks_steps_and_records_every_ablation(tmp_pa
     assert doc["ablations"]["A3"] == {"question": "Did round 2 help?", "required": False, "status": "not run",
                                       "reason": "not run: why"}
     assert doc["ablations"]["A2"]["status"] == "not run" and doc["ablations"]["A2"]["required"]
+
+
+# --- A1's store ----------------------------------------------------------------------------------------------------------
+
+A1_PLAN = {"replicates": {"dev-00-example": 3}}
+
+
+@pytest.fixture(scope="module")
+def a1_stores(tmp_path_factory):
+    """One train and one validation scenario simulated as the main simulation does (train replicates 0 to 2,
+    validation 0 to 3) into a store, and A1's simulation and store for a plan giving the train scenario three scored
+    replicates."""
+    d = tmp_path_factory.mktemp("a1")
+    main = devlib.build(d / "main", indices=(0, 7), checked=False, workers=2, replicates=freeze.REPLICATES)
+    library = d / "main" / devlib.LIBRARY_NAME
+    records, sha = store.read_library(library)
+    manifest = freeze.simulate_replicates(records, freeze.a1_replicates(records, A1_PLAN), d / "sim-a1", 2,
+                                          library_sha256=sha)
+    store.build_v2(d / "sim-a1", library, d / "main" / devlib.SPLITS_NAME, d / "store-a1", workers=2)
+    return {"main_sim": d / "main", "main_store": main["store_dir"], "a1_sim": d / "sim-a1", "a1_store": d / "store-a1",
+            "manifest": manifest}
+
+
+def files_of(sim_dir):
+    return {f["path"]: f["sha256"] for f in json.loads((sim_dir / "manifest.json").read_text())["files"]}
+
+
+def test_the_a1_plan_takes_train_scenarios_and_validation_as_the_main_simulation_has_it():
+    scenarios = [{"scenario_id": s, "split": sp} for s, sp in (("t1", "train"), ("t2", "train"), ("v1", "val"),
+                                                                ("x1", "test"), ("o1", "test_ood"))]
+    assert freeze.a1_replicates(scenarios, {"replicates": {"t1": 2}}) == {"t1": [0, 1, 2], "v1": [0, 1, 2, 3]}
+    for plan in ({"x1": 1}, {"missing": 1}, {"t1": 0}):
+        with pytest.raises(runner.JobError):
+            freeze.a1_replicates(scenarios, {"replicates": plan})
+    assert store.STORE_V2_A1_DIR == store.ROOT / CONFIG["ablations"]["a1"]["store"]
+    assert freeze.A1_PLAN_PATH == A.paths()["a1"] and freeze.A1_SIM_DIR == store.SIM_A1_DIR
+
+
+def test_a_replicate_both_simulations_hold_is_byte_identical(a1_stores):
+    """The simulator seeds a replicate from (master seed, scenario index, replicate) alone."""
+    main, a1 = files_of(a1_stores["main_sim"]), files_of(a1_stores["a1_sim"])
+
+    def replicate_files(folder, replicates):
+        return {f"{folder}/{kind}-{r}.{ext}" for r in replicates
+                for kind, ext in (("rep", "jsonl.gz"), ("disruptions-rep", "json"))}
+    both = set(main) & set(a1)
+    assert replicate_files("train/dev-00-example", (0, 1, 2)) | replicate_files("val/dev-07-weekend-050", range(4)) \
+        | {"train/dev-00-example/roster.json", "val/dev-07-weekend-050/roster.json"} == both
+    for path in sorted(both):
+        assert (a1_stores["a1_sim"] / path).read_bytes() == (a1_stores["main_sim"] / path).read_bytes(), path
+    assert set(a1) - set(main) == {"train/dev-00-example/rep-3.jsonl.gz", "train/dev-00-example/disruptions-rep-3.json"}
+    m = a1_stores["manifest"]
+    assert m["replicates_written"] == 8 and m["replicates_dropped"] == 0 and len(m["runs"]) == 8
+
+
+def test_the_a1_store_holds_the_plan_and_exactly_the_main_stores_validation(a1_stores):
+    import duckdb
+
+    con = duckdb.connect()
+    for alias, key in (("m", "main_store"), ("a", "a1_store")):
+        for name in ("observed", "truth"):
+            con.execute(f"attach '{a1_stores[key] / f'{name}.duckdb'}' as {alias}_{name} (read_only)")
+    queries = {
+        "specimens": "select * from {o}.specimens where split = 'val'",
+        "events": "select e.* from {o}.events e join {o}.specimens s using (specimen_id) where s.split = 'val'",
+        "runs": "select * from {o}.runs where split = 'val'",
+        "roster": "select * from {o}.roster where scenario_id in (select scenario_id from {o}.runs where split = 'val')",
+        "truth_specimens": "select * from {t}.truth_specimens where split = 'val'",
+        "truth_segments": "select g.* from {t}.truth_segments g join {t}.truth_specimens s using (specimen_id) "
+                          "where s.split = 'val'",
+        "truth_disruptions": "select * from {t}.truth_disruptions where scenario_id in "
+                             "(select scenario_id from {t}.truth_scenarios where split = 'val')",
+        "truth_scenarios": "select * from {t}.truth_scenarios where split = 'val'"}
+    for name, q in queries.items():
+        m, a = q.format(o="m_observed", t="m_truth"), q.format(o="a_observed", t="a_truth")
+        rows = con.execute(f"select count(*) from ({m})").fetchone()[0]
+        only = con.execute(f"select (select count(*) from (({m}) except all ({a}))), "
+                           f"(select count(*) from (({a}) except all ({m})))").fetchone()
+        assert rows > 0 and only == (0, 0), (name, rows, only)
+    train = con.execute("select scenario_id, replicate from a_observed.runs where split = 'train' order by 2").fetchall()
+    assert train == [("dev-00-example", r) for r in range(4)]
+    A.check_a1_store(a1_stores["a1_store"], A1_PLAN)
+    with pytest.raises(A.AblationError, match="lacks 1 and adds 0"):
+        A.check_a1_store(a1_stores["main_store"], A1_PLAN)
+
+
+def test_an_a1_arm_refuses_to_train_without_the_a1_store(a1_stores, tmp_path):
+    root = tmp_path / "ablations"
+    p = A.paths(root)
+    job = {"id": "A1-1x3-s0", "ablation": "A1", "arm": "1x3", "seed": 0, "rung": "A",
+           "train": {"store": str(a1_stores["main_store"]),
+                     "overrides": TINY | {"max_steps": 1, "train_subset": {"scenarios": ["dev-00-example"],
+                                                                           "replicates": [1, 2, 3]}}},
+           "members": ["A1-1x3-s0"], "evaluate": ["val"], "eval_store": str(a1_stores["main_store"]),
+           "budgets_per_shift": [6], "budgets_per_100": [30], "resamples": 50}
+    A._write(p["jobs"] / f"{job['id']}.json", job)
+    kw = dict(root=root, stage="train", device="cpu", workers=1, out=lambda *_: None)
+    with pytest.raises(A.AblationError, match="no plan"):
+        A.run_arm(job["id"], **kw)
+    A._write(p["a1"], A1_PLAN)
+    with pytest.raises(A.AblationError, match="not the A1 store"):
+        A.run_arm(job["id"], **kw)
+    with pytest.raises(A.AblationError, match="no observed store"):
+        A.run_arm(job["id"], train_store=tmp_path / "nowhere", **kw)
+    assert not p["runs"].exists() and not p["arms"].exists()

@@ -218,7 +218,7 @@ def real(tmp_path_factory):
     stand_in = ne.RiskMethod("tracernet", lambda specs, ctx: {s.specimen_id: np.minimum(1.0, s.ticks / s.window)
                                                               for s in specs})
     r = ne.evaluate_split("val", ne.baselines() + [stand_in], store_dir=out["store_dir"], workers=1, resamples=50,
-                          write=False)
+                          write=False, subsets={ne.OOD_FEATURE: ["dev-07-weekend-050"]})
     return json.loads(json.dumps({k: v for k, v in r.items() if k != "detail"}))
 
 
@@ -231,3 +231,14 @@ def test_the_evaluation_drivers_own_output_renders(tmp_path, real):
     assert "### 30 alerts per 100 specimens" in section(text, 2)
     assert "| tracernet |" in section(text, 3) and "### stratum" in section(text, 4)
     assert "Not run yet" not in text.split("\n\n")[1]
+
+
+def test_the_drivers_subset_renders_as_test_ood_on_its_feature_scenarios(tmp_path, real):
+    """A test_ood evaluation's ood_feature subset is read with the look's settings and never carries the rule."""
+    s5 = section(page(tmp_path, evaluations={"test": real | {"set": "test"}, "test_ood": real | {"set": "test_ood"}}), 5)
+    whole, feature = s5.split("### test_ood, the scenarios that carry")
+    feature = feature.split("### legacy_v1")[0]
+    c = real["subsets"][ne.OOD_FEATURE]["counts"]
+    assert f"{c['clusters']:,} scenarios, {c['scored_specimens']:,} scored specimens" in feature
+    assert "| 6/shift | tracernet | 3-2-1 |" in feature and "Not run yet" not in feature
+    assert "The rule applied here" in whole and "The rule applied here" not in feature

@@ -445,11 +445,15 @@ def build_v2(sim_dir: Path, library, splits, store_dir: Path = STORE_V2_DIR, *, 
 SIM_DIR = ROOT / "data" / "sim"
 LIBRARY_V2 = ROOT / "datasets" / "scenarios-v2.jsonl.gz"
 SPLITS_V2 = ROOT / "datasets" / "scenarios-v2.splits.json"
+SIM_A1_DIR = ROOT / "data" / "sim-a1"            # ablation A1's simulation (src/scenarios/freeze.py simulate_a1)
+STORE_V2_A1_DIR = ROOT / "data" / "store-v2-a1"  # and its store, which A1's arms train on
 
 
-def command_build_v2(*, workers: int | None = None, out=print) -> int:
-    """`store`: the frozen library's simulation (data/sim/) into data/store-v2/, with its splits."""
-    counts = build_v2(SIM_DIR, LIBRARY_V2, SPLITS_V2, STORE_V2_DIR, workers=workers)
+def command_build_v2(*, workers: int | None = None, sim_dir: Path = SIM_DIR, store_dir: Path = STORE_V2_DIR,
+                     out=print) -> int:
+    """`store`: the frozen library's simulation (data/sim/) into data/store-v2/, with its splits. `store --a1`:
+    ablation A1's simulation (data/sim-a1/) into data/store-v2-a1/, with its own manifest."""
+    counts = build_v2(sim_dir, LIBRARY_V2, SPLITS_V2, store_dir, workers=workers)
     out(json.dumps(counts, indent=1, sort_keys=True, default=str))
     return 0
 

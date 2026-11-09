@@ -1376,3 +1376,137 @@ def test_weakspot_rows_and_scenario_cells_read_validation_and_train_only(v2_stor
     cells = json.loads(ne.write_scenario_cells(tmp_path / "cells.json", v2_store).read_text())
     assert cells and {c["split"] for c in cells.values()} <= {"train", "val"}
     assert ne.write_weakspot_rows(tmp_path / "rows.parquet", v2_store).exists()
+
+
+# ---------------------------------------------------------------------------------------------------------
+# A subset reported within the one locked look (test_ood and the scenarios that carry its feature)
+# ---------------------------------------------------------------------------------------------------------
+
+OOD_REPLICATES = {"train": [0, 1], "val": [0, 1], "test": [0, 1], "test_ood": [0, 1, 2]}
+SUBSET_SECTIONS = ("counts", "local_fit", "knobs", "operating_points", "differences", "discrimination", "calibration",
+                   "slices", "matched_volume")
+
+
+@pytest.fixture(scope="module")
+def ood_store(tmp_path_factory):
+    """A store whose test_ood holds three scenarios of two families: one with a scanner_downtime disruption, one of
+    archetype multi_site_system, and an ordinary week; plus a train scenario for the global fits."""
+    from src.neural import devlib
+    from src.sim import run as sim_run
+
+    d = tmp_path_factory.mktemp("ood")
+    scanner = next(i for i, v in enumerate(devlib.VARIANTS) if v[0] == "ood-scanner")
+    records = [devlib.candidate(i)[0] for i in (0, 22, 24, scanner)]
+    for r in records[1:]:
+        r["split"] = "test_ood"
+    records[2]["archetype"] = ne.OOD_ARCHETYPE           # the simulator never reads the archetype
+    raw = store.library_bytes(records)
+    (d / "library.jsonl.gz").write_bytes(raw)
+    sim_run.simulate_library(records, d, OOD_REPLICATES, 2, library_sha256=store._sha256_bytes(raw))
+    store.build_v2(d, d / "library.jsonl.gz", devlib.splits_doc(records), d / "store", workers=2)
+    return {"store": d / "store", "records": records,
+            "feature": sorted(r["scenario_id"] for r in records[2:]), "ordinary": records[1]["scenario_id"]}
+
+
+def ood_args(**extra):
+    return dict(resamples=200, focus="analytic_global", matched=True) | extra
+
+
+@pytest.fixture(scope="module")
+def ood_look(ood_store, tmp_path_factory):
+    files = lock_paths(tmp_path_factory.mktemp("ood-lock"))
+    subsets = {ne.OOD_FEATURE: ood_store["feature"]}
+    hashes = ne.lock_record(ood_store["store"], ne.baselines(), **ood_args(subsets=subsets))
+    r = ne.evaluate_split("test_ood", ne.baselines(), store_dir=ood_store["store"], workers=1, write=False,
+                          lock_hashes=hashes, **files, **ood_args(subsets=subsets))
+    return {"result": r, "files": files, "subsets": subsets, "hashes": hashes}
+
+
+def test_the_ood_feature_is_read_from_the_truth_by_the_pre_registered_rule(ood_store):
+    from src.scenarios import freeze
+
+    found = ne.ood_feature_scenarios(ood_store["store"])
+    assert found == ood_store["feature"] and ood_store["ordinary"] not in found
+    assert found == sorted(r["scenario_id"] for r in ood_store["records"] if r["split"] == "test_ood" and freeze.is_ood(r))
+    traits = evaluate.scenario_traits_v2("test_ood", ood_store["store"])
+    assert set(traits) == {r["scenario_id"] for r in ood_store["records"][1:]}
+    assert ne.OOD_DISRUPTION in traits[ood_store["records"][3]["scenario_id"]]["disruption_types"]
+
+
+def test_a_subset_is_the_same_look_as_its_scenarios_scored_alone(ood_store, ood_look, tmp_path):
+    """Every section of the subset equals an evaluation of those scenarios alone (the same knobs, the bootstrap over
+    the subset's clusters with the same seed), from the one look and its one lock record."""
+    r, sub = ood_look["result"], ood_look["result"]["subsets"][ne.OOD_FEATURE]
+    statuses = [e["status"] for e in logged(ood_look["files"])]
+    assert statuses[0] == "first" and "relock" not in statuses      # one lock record for the set and its subset
+    assert r["counts"]["clusters"] == 3 and sub["counts"]["clusters"] == 2 and sub["scenarios"] == ood_store["feature"]
+    assert "decision_rule" not in sub and "matched_volume" in r and sub["matched_volume"]["trigger"] == "requested"
+    files, ids = lock_paths(tmp_path), ood_store["feature"]
+    hashes = ne.lock_record(ood_store["store"], ne.baselines(), **ood_args(scenarios=ids))
+    alone = ne.evaluate_split("test_ood", ne.baselines(), store_dir=ood_store["store"], workers=1, write=False,
+                              lock_hashes=hashes, **files, **ood_args(scenarios=ids))
+    for k in SUBSET_SECTIONS:
+        assert json.dumps(sub[k], sort_keys=True) == json.dumps(alone[k], sort_keys=True), k
+    assert sub["counts"]["scored_specimens"] < r["counts"]["scored_specimens"]
+    view = ne.subset_view(r, ne.OOD_FEATURE)
+    assert view["settings"] == r["settings"] and view["operating_points"] == sub["operating_points"]
+    assert ne.table(view).count("\n") > 10
+
+
+def test_the_subset_bootstrap_is_reproducible(ood_store, ood_look):
+    again = ne.evaluate_split("test_ood", ne.baselines(), store_dir=ood_store["store"], workers=1, write=False,
+                              lock_hashes=ood_look["hashes"], **ood_look["files"],
+                              **ood_args(subsets=ood_look["subsets"]))
+    assert [e["status"] for e in logged(ood_look["files"])][-1] == "repeat"
+    first = ood_look["result"]["subsets"]
+    assert json.dumps(again["subsets"], sort_keys=True) == json.dumps(first, sort_keys=True)
+    warning = first[ne.OOD_FEATURE]["operating_points"]["6/shift"]["window_rule"]["none"]["median_warning_all_breaches_min"]
+    assert warning["n_used"] + warning["n_excluded"] == 200 and warning["low"] is not None
+
+
+def test_the_subsets_are_part_of_the_locked_configuration(ood_store, ood_look):
+    record = lambda subsets: ne.lock_record(ood_store["store"], ne.baselines(),  # noqa: E731
+                                            **ood_args(subsets=subsets))["configuration_sha256"]
+    feature = ood_store["feature"]
+    assert record(None) == record({}) != record({ne.OOD_FEATURE: feature})
+    assert record({ne.OOD_FEATURE: feature}) == record({ne.OOD_FEATURE: feature[::-1] + feature[:1]})
+    assert record({ne.OOD_FEATURE: feature[:1]}) != record({ne.OOD_FEATURE: feature})
+    assert record({"other": feature}) != record({ne.OOD_FEATURE: feature})
+    look = dict(store_dir=ood_store["store"], workers=1, write=False, **ood_look["files"])
+    with pytest.raises(ne.LockError, match="does not describe"):      # a record made without the subsets
+        ne.evaluate_split("test_ood", ne.baselines(), lock_hashes=ood_look["hashes"], **look,
+                          **ood_args(subsets={ne.OOD_FEATURE: feature[:1]}))
+    other = {ne.OOD_FEATURE: feature[:1]}
+    with pytest.raises(ne.LockError, match="configuration_sha256"):   # another subset needs a relock
+        ne.evaluate_split("test_ood", ne.baselines(), **look, **ood_args(subsets=other),
+                          lock_hashes=ne.lock_record(ood_store["store"], ne.baselines(),
+                                                     **ood_args(subsets=other)))
+    assert [e["status"] for e in logged(ood_look["files"])].count("relock") == 0
+
+
+def test_subsets_are_refused_before_the_lock_where_they_cannot_apply(ood_store, tmp_path):
+    files = lock_paths(tmp_path)
+    with pytest.raises(ValueError, match="v2 set"):
+        ne.evaluate_split("legacy_v1", subsets={"x": ["S0001"]}, write=False)
+    for subsets, message in (({"x": ["not-a-scenario"]}, "not among"), ({"x": []}, "names no scenario"),
+                             ({"x": "S0001"}, "list of scenario ids")):
+        with pytest.raises(ValueError, match=message):
+            ne.evaluate_split("test_ood", ne.baselines(), store_dir=ood_store["store"], write=False, subsets=subsets,
+                              lock_hashes=ne.lock_record(ood_store["store"], ne.baselines()), **files)
+    assert not files["lock_path"].exists() and logged(files) == []
+
+
+def test_evaluate_on_test_ood_reports_the_ood_feature_from_the_same_look(ood_store, tmp_path, monkeypatch, capsys):
+    files = lock_paths(tmp_path)
+    monkeypatch.setattr(ne, "LOCK_PATH", files["lock_path"])
+    monkeypatch.setattr(ne, "TEST_RUNS_PATH", files["runs_path"])
+    assert ne.command_evaluate("test_ood", store_dir=ood_store["store"], out_dir=tmp_path / "out", workers=1) == 0
+    written = json.loads((tmp_path / "out" / "evaluation.json").read_text())
+    sub = written["subsets"][ne.OOD_FEATURE]
+    assert sub["scenarios"] == ood_store["feature"] and sub["counts"]["clusters"] == 2
+    assert written["counts"]["clusters"] == 3 and "detail" not in written
+    locked = json.loads(files["lock_path"].read_text())
+    assert locked["configuration_sha256"] == ne.lock_record(
+        ood_store["store"], ne.baselines(), subsets={ne.OOD_FEATURE: ood_store["feature"]})["configuration_sha256"]
+    assert [e["status"] for e in logged(files)] == ["first"]
+    assert f"{ne.OOD_FEATURE}: 2 of the 3 test_ood scenarios, from the same look" in capsys.readouterr().out

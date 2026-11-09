@@ -14,8 +14,9 @@ one difference, a data subset (`train_subset`), an input cut (`input_mask`, trai
 weights. Three seeds for A1, A2, A5 and A6, one otherwise.
 
   A1  the same 800 scenario-replicates as 100 x 8, 200 x 4, 400 x 2 and 800 x 1: nested train scenario sets (lowest
-      salted hash first) on a store that holds their extra replicates (data/neural/ablations/a1-replicates.json says
-      which; the simulator writes them, at no API cost)
+      salted hash first) on the A1 store, data/store-v2-a1, which holds their extra replicates
+      (data/neural/ablations/a1-replicates.json says which; `simulate --a1` and `store --a1` build it at no API cost,
+      with every validation replicate as the main store has it). An A1 arm refuses any other store
   A2  with and without the edge stratum, the normal stratum downsampled so both arms have the same number of
       scenarios; read overall and on the edge slice. The strata come from the scenario cells file (train and
       validation scenarios only), which the evaluation side writes
@@ -160,6 +161,25 @@ def a1_design(scenarios: list[str], config: dict) -> dict:
     return {"arms": arms, "replicates": dict(sorted(top.items()))}
 
 
+def check_a1_store(store_dir: Path, plan: dict | None) -> None:
+    """A1's arms train on the A1 store alone: its train split must hold exactly the plan's scenarios, each with
+    replicates 0 to its number, so every replicate an arm names exists and all four arms read the same table."""
+    if plan is None:
+        raise AblationError("A1 has no plan (a1-replicates.json); run `ablate --set` first")
+    if not (Path(store_dir) / store.OBSERVED_NAME).is_file():
+        raise AblationError(f"no A1 store at {store_dir}; build it with `simulate --a1` and `store --a1`")
+    con = store.open_observed_v2(store_dir)
+    try:
+        have = set(con.execute("select scenario_id, replicate from runs where split = 'train'").fetchall())
+    finally:
+        con.close()
+    want = {(str(s), r) for s, n in plan["replicates"].items() for r in range(int(n) + 1)}
+    if have != want:
+        raise AblationError(f"{store_dir} is not the A1 store of a1-replicates.json: its train split lacks "
+                            f"{len(want - have)} and adds {len(have - want)} of the plan's scenario-replicates; build "
+                            "it with `simulate --a1` and `store --a1`")
+
+
 def a2_design(scenarios: list[str], cells: dict, config: dict) -> dict:
     """A2's two arms: every train scenario but the edge stratum, and every train scenario with as many normal
     scenarios left out as there are edge ones (lowest salted hash first), so both arms are the same size."""
@@ -210,7 +230,8 @@ def make_jobs(set_name: str, *, config: dict, rung: str, store_dir: Path, eval_s
                 design = a1_design(train_ids, config)
                 a1_plan = {"store": str(a1_store), "replicates": design["replicates"],
                            "note": "simulate each listed train scenario's replicates 0 to the number given, and every "
-                                   "validation scenario as the main store has it, into the A1 store"}
+                                   "validation scenario as the main store has it, into the A1 store: `simulate --a1`, "
+                                   "then `store --a1`"}
                 for arm, (ids, reps) in design["arms"].items():
                     add("A1", arm, core, train_store=a1_store,
                         overrides={"train_subset": {"scenarios": ids, "replicates": reps}})
@@ -333,6 +354,8 @@ def run_arm(job_id: str, *, stage: str = "all", device: str = "auto", workers: i
         if not (store_dir / store.OBSERVED_NAME).is_file():
             raise AblationError(f"no observed store at {store_dir}" + (" (A1 needs its replicates simulated first, see "
                                                                         "a1-replicates.json)" if job["ablation"] == "A1" else ""))
+        if job["ablation"] == "A1":
+            check_a1_store(store_dir, _read(p["a1"]))
         t0 = time.monotonic()
         r = T.train(config, rung=job["rung"], seed=int(job["seed"]), store_dir=store_dir, out_dir=p["runs"],
                     run_id=job_id, resume=True, runs_csv=p["runs_csv"], overrides=job["train"]["overrides"],
@@ -352,8 +375,11 @@ def run_arm(job_id: str, *, stage: str = "all", device: str = "auto", workers: i
         artifact = arm_dir / "artifact"
         t0 = time.monotonic()
         if not (artifact / "manifest.json").is_file():
-            manifest = ensemble.build(config, members, store_dir=Path(train_store or _member_store(job, p)),
-                                      out_dir=artifact, workers=workers, device=device, log=out)
+            build_store = Path(train_store or _member_store(job, p))
+            if job["ablation"] == "A1":
+                check_a1_store(build_store, _read(p["a1"]))
+            manifest = ensemble.build(config, members, store_dir=build_store, out_dir=artifact, workers=workers,
+                                      device=device, log=out)
         else:
             manifest = _read(artifact / "manifest.json")
         sha = ne.sha256_file(artifact / "manifest.json")
