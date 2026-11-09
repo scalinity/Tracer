@@ -1428,9 +1428,11 @@ class FrameRisk:
     def __call__(self, specs: Sequence, context: Mapping) -> dict[str, np.ndarray]:
         import polars as pl
 
-        ids = [s.specimen_id for s in specs]
+        ids = [s.specimen_id for s in specs if len(s.ticks)]    # a specimen received before its first tick needs no rows
+        if not ids:
+            return {s.specimen_id: np.array([]) for s in specs}
         files = self.files if self.files is not None else self.path
-        if self.ranges is not None and ids:
+        if self.ranges is not None:
             first, last = min(ids), max(ids)
             files = [f for f, lo, hi in self.ranges if lo <= last and hi >= first]
             if not files:
@@ -2085,6 +2087,7 @@ def evaluate_split(split: str, methods: Sequence[Method] | None = None, *, store
                 futures = {pool.submit(_run_batch, c): len(c) for c in chunks}
                 done = 0
                 for f in as_completed(futures):
+                    f.result()      # a failed batch raises here, before it is counted as done
                     done += futures[f]
                     workers_.report(stage, done, len(ids), "scenarios")
                 batches = [f.result() for f in futures]

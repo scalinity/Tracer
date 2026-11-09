@@ -1006,6 +1006,23 @@ def test_a_pinned_frame_risk_reads_only_the_parts_that_can_hold_its_specimens(v2
     assert len(read) == 1 and np.array_equal(risk(first, {})[first[0].specimen_id], first[0].ticks / 1000)
 
 
+def test_specimens_without_ticks_need_no_risk_rows_in_a_pinned_table(v2_store, tmp_path):
+    from types import SimpleNamespace
+
+    import polars as pl
+
+    specs = specs_of(v2_store, "dev-07-weekend-050", "scored")[:5]
+    rows = [(s.specimen_id, int(t), 0.5) for s in specs for t in s.ticks]
+    pl.DataFrame(rows, schema=["specimen_id", "tick_min", "p_miss"], orient="row").write_parquet(tmp_path / "risk-0.parquet")
+    risk = ne.FrameRisk(tmp_path / "risk-*.parquet")
+    risk.pin()
+    # received before the first tick: no rows, and an id outside every part's range
+    early = SimpleNamespace(specimen_id="SP-r999999-000001", ticks=np.array([], dtype=np.int64))
+    assert risk([early], {})["SP-r999999-000001"].size == 0
+    got = risk([early, specs[1]], {})
+    assert got["SP-r999999-000001"].size == 0 and np.array_equal(got[specs[1].specimen_id], np.full(len(specs[1].ticks), 0.5))
+
+
 # ---------------------------------------------------------------------------------------------------------
 # The integrity review's findings (F001 to F005): the lock, the record, the manifests, the knobs, R4
 # ---------------------------------------------------------------------------------------------------------
