@@ -787,6 +787,12 @@ class LockError(RuntimeError):
 
 HASH_FIELDS = ("artifact_sha256", "calibration_sha256", "configuration_sha256", "split_manifest_sha256",
                "store_sha256", "neural_eval_blob_sha", "evaluate_blob_sha", "decision_model_sha256")
+SUBSETS_FIELD = "subsets_sha256"    # the subsets one split's look reports; pinned per split (guard_test_run)
+
+
+def subsets_sha256(subsets: Mapping[str, Sequence[str]] | None) -> str:
+    """The hash of the named scenario subsets a look reports (none hashes as null)."""
+    return sha256_json(_subset_lists(subsets))
 
 
 def sha256_file(path: Path) -> str:
@@ -899,6 +905,10 @@ def guard_test_run(split: str, hashes: Mapping, relock_reason: str | None = None
     recorded for this split must match them, as a hash must. Parts written after the lock are recorded with
     record_risk_parts. A relock clears the recorded parts, which belong to the old inputs.
 
+    The scenario subsets a look reports (`hashes[SUBSETS_FIELD]`; test_ood's ood_feature) belong to one split, so
+    they are pinned per split like the risk parts, not in the hashes both splits share: a split's first look under
+    the lock records its subsets, and a later look at that split must report the same ones.
+
     Every test run is appended to test_runs.jsonl (the report lists them all). Returns the run (its log entry) as
     a TestRun, the context the locked steps need."""
     if split not in LOCKED_SPLITS:
@@ -911,22 +921,29 @@ def guard_test_run(split: str, hashes: Mapping, relock_reason: str | None = None
     if relock_reason is not None and not relock_reason.strip():
         raise ValueError("a relock needs a reason")
     new = {k: hashes[k] for k in HASH_FIELDS}
+    subsets = hashes.get(SUBSETS_FIELD) or subsets_sha256(None)
     stamp = _now(now)
-    entry = {"time": stamp, "split": split, "hashes": new}
+    entry = {"time": stamp, "split": split, "hashes": new | {SUBSETS_FIELD: subsets}}
     if risk_parts:
         entry["risk_parts"] = {m: dict(p) for m, p in risk_parts.items()}
     if not lock_path.exists():
         entry |= {"status": "first", "reason": "first evaluation of a test set"}
-        _write_atomic(lock_path, json.dumps({"first_split": split, "time": stamp, "risk_parts": {}} | new, indent=1,
-                                            sort_keys=True) + "\n")
+        _write_atomic(lock_path, json.dumps({"first_split": split, "time": stamp, "risk_parts": {},
+                                             "subsets": {split: subsets}} | new, indent=1, sort_keys=True) + "\n")
     else:
         locked = json.loads(lock_path.read_text(encoding="utf-8"))
         changed = [k for k in HASH_FIELDS if locked.get(k) != new[k]]
+        pinned = (locked.get("subsets") or {}).get(split)
+        if pinned is not None and pinned != subsets:
+            changed.append("subsets")
         recorded = (locked.get("risk_parts") or {}).get(split, {})
         if any(m in recorded and recorded[m] != dict(p) for m, p in (risk_parts or {}).items()):
             changed.append("risk_parts")
         if not changed:
             entry |= {"status": "repeat", "reason": relock_reason or "inputs unchanged"}
+            if pinned is None:      # this split's first look under the lock: pin the subsets it reports
+                _write_atomic(lock_path, json.dumps(locked | {"subsets": (locked.get("subsets") or {}) | {split: subsets}},
+                                                    indent=1, sort_keys=True) + "\n")
         elif relock_reason is None:
             raise LockError(f"the test sets were locked at {locked.get('time')} and these changed: {', '.join(changed)}; "
                             "rerun with a relock reason to record the new inputs")
@@ -934,7 +951,8 @@ def guard_test_run(split: str, hashes: Mapping, relock_reason: str | None = None
             entry |= {"status": "relock", "reason": relock_reason, "changed": changed,
                       "previous": {k: locked.get(k) for k in changed}, "locked_at": locked.get("time")}
             _write_atomic(lock_path, json.dumps({"first_split": locked.get("first_split", split), "time": stamp,
-                                                 "relocked_from": locked.get("time"), "risk_parts": {}} | new,
+                                                 "relocked_from": locked.get("time"), "risk_parts": {},
+                                                 "subsets": {split: subsets}} | new,
                                                 indent=1, sort_keys=True) + "\n")
     _log(runs_path, entry)
     return TestRun(entry, lock_path, runs_path, relock_reason)
@@ -2518,11 +2536,11 @@ def table(result: dict, budget: str | None = None) -> str:
 
 def _configuration(methods: Sequence[Method], *, train_store_hash: str | None, budgets: Sequence[float],
                    per_100_budgets: Sequence[float], resamples: int, matched: bool, focus: str | None,
-                   scenarios: Sequence[str] | None, subsets: Mapping[str, Sequence[str]] | None = None) -> dict:
+                   scenarios: Sequence[str] | None) -> dict:
     """Every setting of an evaluation that can change a reported number: the methods, the effective urgency
     weights, the training store behind the global fits, the budgets, the bootstrap, the matched-volume request,
-    the focus, the scenario selection and the subsets reported (names and sorted ids). (The risk tables read are
-    recorded with the run, record_risk_parts.)"""
+    the focus and the scenario selection. (The subsets a look reports are hashed apart, subsets_sha256, because
+    they belong to one split; the risk tables read are recorded with the run, record_risk_parts.)"""
     names = [m.name for m in methods]
     focus = focus if focus is not None else (TRACERNET if TRACERNET in names else None)
     described = {m.name: {k: v for k, v in m.describe().items() if k != "fitted_on"} | {"fit": getattr(m, "fit", None)}
@@ -2533,8 +2551,7 @@ def _configuration(methods: Sequence[Method], *, train_store_hash: str | None, b
     return {"methods": described, "budgets": [float(b) for b in budgets],
             "per_100": [float(b) for b in per_100_budgets], "bootstrap": [int(resamples), BOOTSTRAP_SEED],
             "weightings": weightings, "train_store_sha256": train_store_hash or "none", "matched": bool(matched),
-            "focus": focus, "scenarios": None if scenarios is None else sorted(str(s) for s in scenarios),
-            "subsets": _subset_lists(subsets)}
+            "focus": focus, "scenarios": None if scenarios is None else sorted(str(s) for s in scenarios)}
 
 
 def _evaluation_hashes(store_dir: Path, methods: Sequence[Method], *, store_hash: str | None,
@@ -2542,17 +2559,18 @@ def _evaluation_hashes(store_dir: Path, methods: Sequence[Method], *, store_hash
                        per_100_budgets: Sequence[float] = PER_100_BUDGETS, resamples: int = BOOTSTRAPS,
                        matched: bool = False, focus: str | None = None, scenarios: Sequence[str] | None = None,
                        subsets: Mapping[str, Sequence[str]] | None = None) -> dict:
-    """The part of the lock record an evaluation can rebuild from its own arguments: the configuration, the store
-    and this code. evaluate_split compares it with the record it is given."""
+    """The part of the lock record an evaluation can rebuild from its own arguments: the configuration, the store,
+    this code and the subsets it reports. evaluate_split compares it with the record it is given."""
     train = Path(train_store_dir) if train_store_dir is not None else Path(store_dir)
     train_hash = store_hash if train.resolve() == Path(store_dir).resolve() else _manifest_hash(train)
     if train_hash is None and train.resolve() != Path(store_dir).resolve():
         raise RuntimeError(f"the training store at {train} has no manifest, so the global fits have no identity")
     configuration = _configuration(methods, train_store_hash=train_hash, budgets=budgets,
                                    per_100_budgets=per_100_budgets, resamples=resamples, matched=matched, focus=focus,
-                                   scenarios=scenarios, subsets=subsets)
+                                   scenarios=scenarios)
     hashes = current_hashes("none", "none", sha256_json(configuration), "none", store_hash or "none")
-    return {k: hashes[k] for k in ("configuration_sha256", "store_sha256", "neural_eval_blob_sha", "evaluate_blob_sha")}
+    return {k: hashes[k] for k in ("configuration_sha256", "store_sha256", "neural_eval_blob_sha", "evaluate_blob_sha")} \
+        | {SUBSETS_FIELD: subsets_sha256(subsets)}
 
 
 def lock_record(store_dir: Path, methods: Sequence[Method], *, artifact_dir: Path | None = None,
@@ -2563,8 +2581,9 @@ def lock_record(store_dir: Path, methods: Sequence[Method], *, artifact_dir: Pat
                 subsets: Mapping[str, Sequence[str]] | None = None) -> dict:
     """The hashes guard_test_run compares (§8.7), for an evaluate_split call with the same arguments: the
     artifact's manifest and calibration (or "none" without an artifact), the configuration (_configuration), the
-    split manifest, the store and this code. The artifact's and the store's files are checked against their
-    manifests first, so a manifest's hash stands for the files it lists."""
+    split manifest, the store and this code, plus the subsets the look reports (pinned per split). The artifact's
+    and the store's files are checked against their manifests first, so a manifest's hash stands for the files it
+    lists."""
     def file_hash(path):
         return sha256_file(path) if path is not None and Path(path).exists() else "none"
     splits_path = Path(splits_path) if splits_path is not None else ROOT / "datasets" / "scenarios-v2.splits.json"
@@ -2586,7 +2605,7 @@ def lock_record(store_dir: Path, methods: Sequence[Method], *, artifact_dir: Pat
                              budgets=budgets, per_100_budgets=per_100_budgets, resamples=resamples, matched=matched,
                              focus=focus, scenarios=scenarios, subsets=subsets)
     return current_hashes(artifact, calibration, own["configuration_sha256"], file_hash(splits_path), store_hash,
-                          decision_model=decision_model)
+                          decision_model=decision_model) | {SUBSETS_FIELD: own[SUBSETS_FIELD]}
 
 
 def command_evaluate(split: str, *, store_dir: Path | None = None, out_dir: Path | None = None,
