@@ -350,6 +350,19 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("simulate", help="simulate the frozen library (spec §5, §6.1)")
     p.add_argument("--workers", type=int, default=16)
     p.add_argument("--out", default=None, help="output folder (default: the simulation folder)")
+    p = sub.add_parser("store", help="load the simulation into the v2 store (spec §6.3)")
+    p.add_argument("--workers", type=int, default=None)
+    p = sub.add_parser("evaluate", help="score every method on a set (spec §8); test sets go through the lock")
+    p.add_argument("--split", required=True,
+                   choices=("val", "test", "test_ood", "legacy_v1", "control_v1world"))
+    p.add_argument("--workers", type=int, default=None)
+    p.add_argument("--store", default=None, help="store folder (default: the v2 store)")
+    p.add_argument("--out", default=None, help="output folder (default: results/neural/<split>/)")
+    p.add_argument("--tracernet", default=None, help="TracerNet's risk table (parquet) for this set")
+    p.add_argument("--artifact", default=None, help="TracerNet artifact: scores the set (after the lock on a test set)")
+    p.add_argument("--matched", action="store_true", help="also tune knobs to matched alert volume (R4)")
+    p.add_argument("--relock-reason", default=None)
+    p.add_argument("--train-store", default=None, help="for control_v1world: the v2 store giving global fits")
     p = sub.add_parser("ledger", help="ledger report or job release")
     lsub = p.add_subparsers(dest="ledger_command", required=True)
     lsub.add_parser("report")
@@ -386,6 +399,17 @@ def main(argv: list[str] | None = None, *, paths: runner.Paths | None = None, se
             return 0
         if args.command == "simulate":
             return simulate_command(args.workers, args.out, pipe.paths, out)
+        if args.command == "store":
+            from src.pipeline import store
+            return store.command_build_v2(workers=args.workers, out=out)
+        if args.command == "evaluate":
+            from src.pipeline import neural_eval
+            opt = (lambda v: Path(v) if v else None)
+            return neural_eval.command_evaluate(args.split, store_dir=opt(args.store), out_dir=opt(args.out),
+                                                workers=args.workers, tracernet=opt(args.tracernet),
+                                                artifact_dir=opt(args.artifact), matched=args.matched,
+                                                relock_reason=args.relock_reason,
+                                                train_store_dir=opt(args.train_store))
         if args.ledger_command == "report":
             return pipe.ledger_report()
         return pipe.release_job(args.job, args.reason)
