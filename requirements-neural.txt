@@ -1,0 +1,5 @@
+# Exact versions for the v2 neural pipeline (docs/neural/spec.md §7.11). Install after requirements.txt.
+openai==3.46.0
+httpx2==2.16.0
+optuna==5.0.0
+torch==2.15.0
