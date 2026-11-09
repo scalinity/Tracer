@@ -147,6 +147,24 @@ def assign_first_splits(families: dict[str, list[dict]]) -> dict[str, str]:
     return split
 
 
+def first_round_left_out(manifest: dict) -> int:
+    """How many accepted first-round items the first freeze left out (near duplicates and failed checks)."""
+    if "first_round_left_out" in manifest:
+        return int(manifest["first_round_left_out"])
+    return int(manifest["near_duplicates"]["left_out"]) + sum(manifest.get("left_out_other", {}).values())
+
+
+def round2_items(items: list[dict], known: set, left_out_before: int) -> list[dict]:
+    """A later freeze adds round-2 items only. Accepted first-round items missing from the library are the ones the
+    first freeze left out, and their count must match its manifest; any other first-round item refuses the freeze."""
+    first = [i for i in items if i["item_id"] not in known and i["job"] not in ROUND2_JOBS]
+    if len(first) != left_out_before:
+        raise runner.JobError(f"a later freeze may only add round-2 (O3, O3b) scenarios: {len(first)} accepted "
+                              f"first-round items are missing from the library, but the first freeze left out "
+                              f"{left_out_before}")
+    return [i for i in items if i["item_id"] not in known and i["job"] in ROUND2_JOBS]
+
+
 def freeze(jobs: tuple[str, ...], *, paths: runner.Paths | None = None, workers: int = 16,
            library_path: Path = LIBRARY_PATH, manifest_path: Path = MANIFEST_PATH, splits_path: Path = SPLITS_PATH,
            random_n: int = RANDOM_REFERENCE_N, out=print) -> dict:
@@ -156,10 +174,13 @@ def freeze(jobs: tuple[str, ...], *, paths: runner.Paths | None = None, workers:
     old_splits = json.loads(splits_path.read_text()) if existing and splits_path.exists() else None
     known = {r["meta"]["item_id"] for r in existing}
     items, counts = accepted_items(jobs, paths)
-    new = [i for i in items if i["item_id"] not in known]
     round2 = bool(existing)
-    if round2 and any(i["job"] not in ROUND2_JOBS for i in new):
-        raise runner.JobError("a later freeze may only add round-2 (O3, O3b) scenarios")
+    first_left_out = None
+    if round2:
+        first_left_out = first_round_left_out(json.loads(manifest_path.read_text(encoding="utf-8")))
+        new = round2_items(items, known, first_left_out)
+    else:
+        new = [i for i in items if i["item_id"] not in known]
     out(f"freeze: {len(existing)} in the library, {len(new)} new accepted items from {', '.join(jobs)}")
 
     # Re-validate layers 1 to 5 (the plausibility layer simulates the full week), keeping the first failure.
@@ -257,7 +278,8 @@ def freeze(jobs: tuple[str, ...], *, paths: runner.Paths | None = None, workers:
               "family_counts": dict(Counter(split_of_family.values()))}
     splits_path.write_text(json.dumps(splits, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     manifest = build_manifest(records, sha, len(data), counts, jobs, paths, loaded, ref, x, kp, splits,
-                              duplicates, left_out, random_n, workers)
+                              duplicates, left_out, random_n, workers,
+                              first_round_left_out=first_left_out if round2 else len(duplicates) + len(left_out))
     manifest_path.write_text(json.dumps(manifest, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     out(f"froze {len(records)} scenarios ({len(duplicates)} near duplicates and {len(left_out)} others left out); "
         f"splits {splits['counts']}; {len(split_of_family)} families, largest "
@@ -266,7 +288,7 @@ def freeze(jobs: tuple[str, ...], *, paths: runner.Paths | None = None, workers:
 
 
 def build_manifest(records, sha, size, counts, jobs, paths, loaded, ref, x, kp, splits, duplicates, left_out,
-                   random_n, workers) -> dict:
+                   random_n, workers, first_round_left_out: int | None = None) -> dict:
     jobs_cfg = runner.load_jobs(paths.jobs_config)
     table = yaml.safe_load(paths.prices.read_text(encoding="utf-8"))
     ledger = runner.ledger_mod.Ledger(paths.ledger, jobs=jobs_cfg)
@@ -305,6 +327,7 @@ def build_manifest(records, sha, size, counts, jobs, paths, loaded, ref, x, kp, 
                             "rule": "same archetype, standardized distance below delta; the later item id is left out",
                             "delta_fitted_on": "the accepted library (half its median nearest-neighbor distance)"},
         "left_out_other": dict(Counter(v.split(":")[0] for v in left_out.values())),
+        "first_round_left_out": first_round_left_out,
         "coverage": signature.coverage([{"brief_id": r["meta"]["brief_id"]} for r in records], planned)
         if planned else None,
         "dispersion": {"library": signature.dispersion(sample(x), None),
