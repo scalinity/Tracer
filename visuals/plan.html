@@ -928,7 +928,66 @@ const TASKS = [
 {id:"T4", tr:"story", day:[11,18], who:{D:0.5, K:0.5}, t:"Presentation day",
  why:"The checklist is short so nothing on it gets skipped.",
  steps:["Arrive early. Test the projector with the demo open and the sound off.","Open the link on a phone and check that the QR code scans from the back of the room.","Have the offline copy and the recording ready.","Afterward, write down every question the class asked."],
- done:"Presented, and the questions are written down.", earns:["T4"]}
+ done:"Presented, and the questions are written down.", earns:["T4"]},
+{id:"N0", tr:"data", day:[11,9], who:{D:0.25}, t:"Neural model: spec, key hygiene, price table", 
+ why:"The v2 build spends real money on two APIs, so the spec, the key guards and verified prices come before any code that calls them.",
+ steps:["Commit `docs/neural/spec.md`, the source of truth for the scenario data and TracerNet.","`.env.example` names `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` and `OPENROUTER_API_KEY` with empty values; `tests/test_no_key_in_site.py` also matches OpenAI and OpenRouter key shapes and their API hosts.","Check OpenAI's pricing and model pages and record every rate with the time checked in `config/openai_prices.yaml`.","Add tasks N0 to N11 here, run `node visuals/plan.check.cjs` and republish."],
+ done:"The spec is committed, `.env.example` lists the three key names, the extended key test passes, the price table is verified today, and the plan check passes.", earns:["P4"]},
+
+{id:"N1", tr:"data", day:[11,9], who:{D:0.25}, t:"Scenario schema, planner, validators, signatures", needs:["N0"],
+ why:"OpenAI writes whole laboratory weeks as JSON; code decides which weeks exist and refuses any that break a bound, a rule, a name check or the brief.",
+ steps:["`src/scenarios/schema.py` keeps a strict-mode API schema and a full schema with every bound (spec §4.3).","`src/scenarios/planner.py` draws seeded briefs over archetype, size, transport, staffing and failure focus, with the out-of-distribution cells held apart (spec §4.2).","`src/scenarios/validate.py` applies schema, semantics, names, plausibility and brief adherence in order; `signature.py` catches near duplicates and forms families (spec §4.8, §4.9)."],
+ done:"The spec's §15.2 tests for the schema, planner, validators and signatures pass offline.", earns:["P3"]},
+
+{id:"N2", tr:"data", day:[11,9], who:{D:0.25}, t:"OpenAI client, spend ledger, dry run, runners", needs:["N0"],
+ why:"The ledger makes overspending impossible rather than unlikely: no request leaves without a reservation that covers its worst case.",
+ steps:["`src/scenarios/ledger.py` reserves, settles, releases and voids in SQLite, under the $76.43 cap less the $2.43 margin and each job's cap (spec §4.6).","`src/scenarios/client.py` calls the Responses API with Structured Outputs on the Flex tier and records usage, never headers or keys.","`python -m src.neural.pipeline dry-run --job O1` builds every request and prices it without sending one."],
+ done:"`test_ledger.py` and `test_runner.py` pass, and the O1 dry run prints its costs and spends nothing.", earns:["P3"]},
+
+{id:"N3", tr:"data", day:[11,10], who:{D:0.5}, t:"Laboratory simulator, v2 validator, plausibility checks", needs:["N1"],
+ why:"Code writes every event: queues, couriers, staffing and disruptions turn each configuration into specimen timelines whose labels follow the policy table.",
+ steps:["`src/sim/` is a seeded discrete-event simulator with common random numbers (spec §5).","`src/sim/v1world.py` rebuilds the v1 world and its trails pass the v1 validator.","`src/sim/kpi.py` gives the plausibility checks the pilot and the main run use."],
+ done:"The `test_sim_*` tests pass and a 1,000-specimen week simulates in 2 seconds or less.", earns:["P3","P5"]},
+
+{id:"N4", tr:"data", day:[11,10], who:{D:0.25}, t:"OpenAI pilot (job O1) and its gate", needs:["N1","N2","N3"],
+ why:"The same 24 briefs go to three models, so their acceptance, adherence and cost compare pairwise before the main run spends.",
+ steps:["Dry run first, then the pilot under its $3.00 cap ($2.00 more only if the gate fails once and the prompt is revised).","The gate report goes to `results/neural/generation/pilot.md` with every gate per model, counts and cost."],
+ done:"Pilot spend is $3.00 or less (plus $2.00 if retried), the gate report is committed and the model mix is chosen.", earns:["F3"]},
+
+{id:"N5", tr:"data", day:[11,10], who:{D:0.25}, t:"OpenAI main run (job O2) and the frozen scenario library", needs:["N4"],
+ why:"At least 2,000 accepted laboratory weeks give the network varied worlds to learn from, frozen so everything downstream regenerates with no API cost.",
+ steps:["A fresh dry run, then O2 under its $44.00 cap on the Flex tier.","Freeze `datasets/scenarios-v2.jsonl.gz` with its manifest and family splits."],
+ done:"2,000 or more accepted, O2 spent $44.00 or less, and the library, manifest and splits are committed.", earns:["P4"]},
+
+{id:"N6", tr:"model", day:[11,11], who:{D:0.25}, t:"Store v2, features, baselines, evaluation harness", needs:["N3","N5"],
+ why:"Every method gets the same history and sets its alert threshold the same label-free way, so the comparison is fair before any network trains.",
+ steps:["`store.build_v2` writes separate observed and truth files; `src/models/tracernet/features.py` reads the observed one only.","`src/pipeline/neural_eval.py` scores every method with cluster-bootstrap intervals and reproduces `evaluate.py` exactly on the v1 held-out runs."],
+ done:"`test_store_v2.py`, `test_features.py` and `test_neural_eval.py` pass, and the baselines are scored on validation.", earns:["F3"]},
+
+{id:"N7", tr:"model", day:[11,11], who:{D:0.5}, t:"TracerNet: training, search, calibration", needs:["N6"],
+ why:"A landmark network reads the laboratory around each silent specimen; it is built as a ladder so each module stays only if validation says it earns its place.",
+ steps:["Train rungs L, A, B and C; search hyperparameters on rung B; choose by the pre-registered rule (spec §7.9).","Calibrate on validation and write the validation report."],
+ done:"Rungs trained, the selection recorded, a calibrated artifact, and a validation report.", earns:["P3","P5"]},
+
+{id:"N8", tr:"model", day:[11,12], who:{D:0.5}, t:"Round 2 (job O3), final ensemble, test set, ablations", needs:["N7"],
+ why:"The test set is scored once, under a lock, against the pre-registered rule; ablations say which parts and which data earned their place.",
+ steps:["O3 targets the worst validation slices under its $18.00 cap.","Train the 3-seed ensemble, lock and score the test sets, and run the ablations inside their 6-hour box."],
+ done:"O3 spent $18.00 or less, the final ensemble exists, the test set was scored once under the lock, the R1 to R4 verdict is written, and the ablations ran inside the box.", earns:["F3","F4"]},
+
+{id:"N9", tr:"model", day:[11,13], who:{D:0.5}, t:"Explanations, interface, export, report", needs:["N8"],
+ why:"An alert is only useful with its reasons; the report states the verdict first, with the synthetic-data notice.",
+ steps:["Integrated gradients over ten named factor groups, with the deletion, randomization and completeness checks.","The predictor API, the command line, both record schemas and `docs/demo/neural.json`.","`results/neural/REPORT.md` and the documents."],
+ done:"The explanation checks pass, the schemas validate, `REPORT.md` is complete and the documents are updated.", earns:["P1","D3","F1"]},
+
+{id:"N10", tr:"model", day:[11,14], who:{D:0.25}, t:"Decision layer (Drex Max): dispatch, audit, forecasting test", needs:["N5","N9"],
+ why:"A decision model may route an alert to the right place and person; whether it could forecast is tested rather than assumed. The network never waits on it.",
+ steps:["X1 audits scenarios, X2 dispatches alerts against hand-written rules, X3 tests zero-shot forecasting, under the $8.00 cap.","Freeze every output so the report and the demo never call the API."],
+ done:"Spend is within $8.00, outputs are frozen, and the adoption verdict and the forecasting comparison are in the report, or marked not run with the reason.", earns:["P2","F5"]},
+
+{id:"N11", tr:"write", day:[11,14], who:{D:0.25}, t:"Neural model close-out", needs:["N10"],
+ why:"The work is finished when the acceptance criteria hold and a fresh clone still reproduces every committed result.",
+ steps:["Check every acceptance criterion of spec §17 and list each check in the report's appendix.","Run `scripts/clean_clone.sh`, the plan check and the exhibit tests; republish the plan; finish the teaming log."],
+ done:"Spec §17 holds, the clean clone passes, the plan is republished and the teaming log is complete.", earns:["P4","F1"]}
 ];
 
 /* work after the presentation: shown as a dated list, never part of the schedule check */
@@ -956,7 +1015,7 @@ const DONE_ALREADY = [
 const GATES = [
  {id:"A", name:"Gate A", title:"The data is real", day:[11,3], need:"Policy first pass in, a 200-specimen pilot that passes the validator and a code audit (Karissa's review was skipped), and the full dataset frozen with its manifest.", tasks:["K1","D1","D6","K2","D9"]},
  {id:"B", name:"Gate B", title:"The headline number", day:[11,8], need:"Risk model against the simple rule on held-out runs, tagged as the first prototype, and the cited policy table.", tasks:["M1","M2","M3","M4","M5","M6","M7","K3"]},
- {id:"C", name:"Gate C", title:"End to end", day:[11,13], need:"Location estimate, search briefs and the exported bundle, shown in a demo page with a real timeline.", tasks:["M8","M8b","V1","M9","K4","D11","D12","P2","P3"]},
+ {id:"C", name:"Gate C", title:"End to end", day:[11,13], need:"Location estimate, search briefs and the exported bundle, shown in a demo page with a real timeline.", tasks:["M8","M8b","V1","M9","K4","D11","D12","P2","P3","N0","N1","N2","N3","N4","N5","N6","N7","N8","N9"]},
  {id:"F", name:"Freeze", title:"Demo complete", day:[11,16], need:"Everything on GitHub Pages and rehearsed once. After 6 PM only bug fixes.", tasks:["P4","P5","P6","P7","K5","K7","T1","T2","P8","G3","K6"]},
  {id:"P", name:"Present", title:"November 18", day:[11,18], need:"Second rehearsal, backups, and the day-of checklist.", tasks:["T3","T4"]}
 ];
