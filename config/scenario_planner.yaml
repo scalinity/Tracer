@@ -1,0 +1,385 @@
+# Coverage planner and scenario validators: every level, share, range and threshold in this file.
+#
+# EVERY number below is an assumption (docs/neural/spec.md §4.2, §4.8, Appendix C and D), marked
+# `source: assumed`. None is fitted to data or taken from a workplace. src/scenarios/planner.py
+# reads the grid and the brief texts; src/scenarios/validate.py reads the names section and the
+# thresholds the planner copies into each brief's predicate list.
+
+version: 1
+source: assumed
+
+# --- Jobs -----------------------------------------------------------------------------------
+# counts: briefs per stratum, or total: split by the stratum shares. ood: whether the job may
+# contain the pre-registered out-of-distribution cells (spec §4.2).
+jobs:
+  O1:  {counts: {normal: 6, stressed: 6, disrupted: 6, edge: 6}, ood: false}   # 24 briefs, 6 per stratum
+  O1b: {counts: {normal: 3, stressed: 3, disrupted: 3, edge: 3}, ood: false}   # 12 new briefs, 3 per stratum
+  O2:  {total: 2250, ood: true}                                                # the main run; counts are reset from pilot costs
+  O3:  {total: 600, ood: false}                                                # round 2: weak spots (§4.12)
+
+# Round 2 shares of the O3 briefs (spec §4.12 step 4).
+round2_shares: {slices: 0.60, general_edge: 0.25, under_covered: 0.15}
+
+# --- The grid (§4.2) --------------------------------------------------------------------------
+strata: {normal: 0.35, stressed: 0.35, disrupted: 0.20, edge: 0.10}
+
+# Shares of the seven in-distribution archetypes within a stratum. In a job with OOD cells,
+# multi_site_system takes ood.archetype_share and these shares are scaled to fill the rest.
+archetypes:
+  academic_medical_center: 0.16
+  community_hospital: 0.20
+  critical_access_rural: 0.10
+  childrens_hospital: 0.12
+  cancer_center: 0.12
+  surgical_specialty: 0.12
+  safety_net_urban: 0.18
+
+ood:
+  archetype: multi_site_system
+  archetype_share: 0.05            # of every stratum; about 5% of the main run
+  focus: scanner_downtime
+  focus_share: {disrupted: 0.10, edge: 0.10}   # of those strata; 0.20*0.10 + 0.10*0.10 = 3% of the main run
+
+size_bands:
+  shares: {small: 0.30, medium: 0.45, large: 0.25}
+  specimens_per_weekday: {small: [30, 120], medium: [120, 350], large: [350, 900]}   # spec §4.2 bands
+  inset: 0.10                      # anchors keep this fraction of the band away from each edge
+
+transport_mix:
+  shares: {tube_dominant: 0.35, courier_dominant: 0.15, mixed: 0.35, offsite_heavy: 0.15}
+
+staffing:
+  shares: {full_24_7: 0.35, reduced_nights: 0.30, weekend_skeleton: 0.15, chronic_short: 0.20}
+  normal_shares: {full_24_7: 0.50, reduced_nights: 0.30, weekend_skeleton: 0.20}   # a normal week is never chronically short
+
+# Failure-focus shares by stratum. `normal` pairs only with random_faults_only or one mild
+# chronic focus (unit_batching). scanner_downtime appears only through the ood section above.
+failure_focus:
+  normal:    {random_faults_only: 0.75, unit_batching: 0.25}
+  stressed:  {random_faults_only: 0.20, understaffing_spikes: 0.25, surge: 0.20, unit_batching: 0.10,
+              station_neglect: 0.10, courier_unreliable: 0.10, instrument_coupling: 0.05}
+  disrupted: {tube_outage: 0.20, tube_degradation: 0.12, station_neglect: 0.10, courier_unreliable: 0.12,
+              unit_batching: 0.06, understaffing_spikes: 0.10, surge: 0.08, instrument_coupling: 0.08,
+              compound: 0.14}
+  edge:      {compound: 0.40, tube_outage: 0.15, courier_unreliable: 0.08, surge: 0.08,
+              understaffing_spikes: 0.08, instrument_coupling: 0.08, tube_degradation: 0.07,
+              station_neglect: 0.06, unit_batching: 0.04}
+
+# --- Compatibility ---------------------------------------------------------------------------
+compatibility:
+  size_by_archetype:
+    academic_medical_center: [medium, large]
+    community_hospital: [small, medium, large]
+    critical_access_rural: [small]
+    childrens_hospital: [medium, large]
+    cancer_center: [medium, large]
+    multi_site_system: [medium, large]
+    surgical_specialty: [small, medium]
+    safety_net_urban: [medium, large]
+  # A courier-dominant network has little tube to fail; a tube-dominant one has few courier rounds to miss.
+  transport_forbidden_by_focus:
+    tube_outage: [courier_dominant]
+    tube_degradation: [courier_dominant]
+    station_neglect: [courier_dominant]
+    courier_unreliable: [tube_dominant]
+  # Chronic shortage needs enough volume for one staff member to be stretched.
+  staffing_sizes:
+    chronic_short: [medium, large]
+
+# --- Anchors (seeded ranges; the model realizes them) -----------------------------------------
+anchors:
+  unit_count: {small: [3, 6], medium: [5, 10], large: [8, 16]}
+  tube_line_count: {tube_dominant: [2, 5], mixed: [1, 3], courier_dominant: [0, 1], offsite_heavy: [1, 2]}
+  courier_route_count: {tube_dominant: [0, 1], mixed: [1, 2], courier_dominant: [2, 4], offsite_heavy: [2, 4]}
+  offsite_van_count: {tube_dominant: [0, 0], mixed: [0, 1], courier_dominant: [0, 1], offsite_heavy: [1, 2]}
+  courier_round_interval_day_min: [20, 120]      # multiples of 5
+  shift_pattern_shares: {"7-15-23": 0.65, "6-14-22": 0.25, "7-19": 0.10}
+  disruption_weekday_share: 0.80                 # chance the main disruption falls on Monday to Friday
+  disruption_hour_bands:                         # [first hour, last hour, share]
+    - [6, 10, 0.35]
+    - [11, 16, 0.30]
+    - [17, 22, 0.20]
+    - [0, 5, 0.15]
+  station_neglect_hours: [0, 5]
+  hour_tolerance_h: 3                            # an anchored disruption must start within this many hours
+
+# Tube lines are needed for these and courier routes for those, whatever the transport range says.
+needs_tube_focus: [tube_outage, tube_degradation, station_neglect]
+needs_courier_focus: [courier_unreliable]
+
+edge_tag_counts: {1: 0.50, 2: 0.35, 3: 0.15}     # tags per edge brief
+
+# --- Brief texts and predicates -----------------------------------------------------------------
+# Each rule pairs a plain sentence for the model with a named predicate (src/scenarios/validate.py,
+# PREDICATES) and its parameters. {placeholders} are filled from the brief.
+
+transport_rules:
+  tube_dominant:
+    predicate: transport_share
+    params: {kind: tube, min: 0.70}
+    sentence: "at least 70% of specimens (by volume) travel by pneumatic tube"
+  courier_dominant:
+    predicate: transport_share
+    params: {kind: courier, min: 0.60}
+    sentence: "at least 60% of specimens (by volume) travel by courier or runner"
+  mixed:
+    predicate: transport_mixed
+    params: {tube_min: 0.25, tube_max: 0.69, courier_min: 0.15}
+    sentence: "tube carries 25% to 69% of specimens and couriers or runners carry at least 15%"
+  offsite_heavy:
+    predicate: transport_share
+    params: {kind: offsite, min: 0.30}
+    sentence: "at least 30% of specimens come from off-site units that travel by van"
+
+staffing_rules:
+  full_24_7:
+    predicate: staffing_pattern
+    params: {pattern: full_24_7}
+    sentence: "full 24/7 coverage: weekday night staff at least half of weekday day staff, and weekend staff at least three quarters of weekday staff in total"
+  reduced_nights:
+    predicate: staffing_pattern
+    params: {pattern: reduced_nights}
+    sentence: "reduced nights: weekday night staff no more than half of weekday day staff (and fewer than day staff)"
+  weekend_skeleton:
+    predicate: staffing_pattern
+    params: {pattern: weekend_skeleton}
+    sentence: "a weekend skeleton crew: total weekend staff across the three shifts no more than 60% of total weekday staff"
+  chronic_short:
+    predicate: staffing_pattern
+    params: {pattern: chronic_short, min_peak_per_staff: 12}
+    sentence: "chronic shortage: in at least one weekday hour, 12 or more specimens arrive per receiving staff member on duty"
+
+# Rules by stratum. disruption_count bounds the number of disruptions[] entries.
+stratum_rules:
+  normal:
+    - {kind: include, predicate: disruption_count, params: {max: 0},
+       sentence: "no disruptions at all (disruptions is an empty list); only ordinary random faults"}
+  stressed:
+    - {kind: include, predicate: disruption_count, params: {max: 2},
+       sentence: "at most 2 disruptions; stress comes from thin staffing and load, not from many failures"}
+    - {kind: avoid, predicate: no_disruption_type, params: {type: tube_line_outage},
+       sentence: "no tube line outage (outages belong to the disrupted and edge strata)"}
+  disrupted:
+    - {kind: include, predicate: disruption_count, params: {min: 2, max: 8},
+       sentence: "between 2 and 8 disruptions in the week"}
+  edge:
+    - {kind: include, predicate: disruption_count, params: {min: 2, max: 14},
+       sentence: "at least 2 disruptions in the week"}
+
+# Rules by failure focus. `anchored: day_hour` adds the brief's weekday and hour (non-recurring
+# disruptions); `anchored: hour` adds the hour only (a recurring daily window). Edge briefs are
+# never anchored, because their tags set the timing.
+focus_rules:
+  random_faults_only: []
+  tube_outage:
+    - predicate: has_disruption
+      params: {types: [tube_line_outage], min_duration_min: 45, max_duration_min: 120}
+      anchored: day_hour
+      sentence: "at least one tube line outage lasting 45 to 120 minutes"
+  tube_degradation:
+    - predicate: has_disruption
+      params: {types: [tube_line_degraded], min_duration_min: 180, min_severity: 0.3}
+      anchored: day_hour
+      sentence: "at least one tube line degradation lasting 180 minutes or more at severity 0.3 or higher"
+  station_neglect:
+    - predicate: has_disruption
+      params: {types: [station_unattended], min_duration_min: 30}
+      anchored: hour
+      sentence: "at least one unattended-station window of 30 minutes or more"
+  courier_unreliable:
+    - predicate: has_disruption
+      params: {types: [courier_missed_rounds, courier_delayed], min_duration_min: 60}
+      anchored: day_hour
+      sentence: "at least one episode of missed or delayed courier rounds lasting 60 minutes or more"
+  unit_batching:
+    - predicate: batching_present
+      params: {min_interval_min: 60}
+      sentence: "at least one unit holds specimens and sends them in batches every 60 minutes or more (a batched unit, or a batching hold disruption)"
+  understaffing_spikes:
+    - predicate: has_disruption
+      params: {types: [receiving_short_staffed], min_duration_min: 120, min_severity: 0.3}
+      anchored: day_hour
+      sentence: "at least one receiving short-staffing episode lasting 120 minutes or more at severity 0.3 or higher"
+  surge:
+    - predicate: has_disruption
+      params: {types: [unit_surge], min_duration_min: 60, min_severity: 0.4}
+      anchored: day_hour
+      sentence: "at least one unit surge lasting 60 minutes or more at severity 0.4 or higher"
+  instrument_coupling:
+    - predicate: instrument_coupling
+      params: {min_pull: 0.15, min_duration_min: 60}
+      sentence: "at least one instrument is down for 60 minutes or more, and staff_pull_from_receiving is 0.15 or more"
+  compound:
+    - predicate: tag_compound_failure
+      params: {}
+      sentence: "two or more different disruption types overlap for at least 30 minutes"
+  scanner_downtime:
+    - predicate: has_disruption
+      params: {types: [scanner_downtime], min_duration_min: 30}
+      sentence: "at least one receiving scanner downtime of 30 minutes or more"
+
+# Always avoided. The first has a predicate; scanner downtime belongs to the out-of-distribution
+# cells only, so it is avoided in every other brief.
+avoid_scanner:
+  predicate: no_disruption_type
+  params: {type: scanner_downtime}
+  sentence: "no scanner downtime disruption"
+avoid_text:
+  - "no real institution, hospital system, person or place names anywhere, including ids"
+  - "no dates of birth, patient details or shift patterns written as dates (such as 7-15-23) in free text"
+
+# --- Edge tags (Appendix C) ---------------------------------------------------------------------
+# focus: failure foci this tag can pair with (null = any); transport: transport mixes it can pair with.
+edge_tags:
+  outage_at_shift_change:
+    sentence: "a tube line outage starts within 30 minutes of a receiving shift change"
+    focus: [tube_outage, compound]
+  outage_during_peak:
+    sentence: "a tube line outage of 45 minutes or more overlaps the three busiest hours of the hourly profile"
+    focus: [tube_outage, compound]
+  unnoticed_outage:
+    sentence: "a tube line outage has noticed_after_min of 60 or more"
+    focus: [tube_outage, compound]
+  mass_casualty_surge:
+    sentence: "a unit surge on an ed unit with severity 0.7 or more lasting 120 minutes or more"
+    focus: [surge, compound]
+  weekend_courier_no_show:
+    sentence: "missed courier rounds on day 5 or day 6 with severity 0.8 or more"
+    focus: [courier_unreliable, compound]
+    transport: [courier_dominant, mixed, offsite_heavy]
+  slow_degradation:
+    sentence: "a degraded tube line for 360 minutes or more at severity 0.4 or more"
+    focus: [tube_degradation, compound]
+  chronic_non_dispatch_unit:
+    sentence: "a unit with not_dispatched_rate of 0.02 or more"
+    focus: null
+  misroute_storm:
+    sentence: "a tube line with misroute_rate of 0.02 or more that also has a degradation disruption"
+    focus: [tube_degradation, compound]
+  night_station_neglect:
+    sentence: "a daily recurring unattended-station window that starts between 00:00 and 05:00 and lasts 45 minutes or more"
+    focus: [station_neglect, compound]
+  holiday_skeleton:
+    sentence: "receiving short-staffed at severity 0.4 or more for 480 minutes or more on a weekday (day 0 to 4)"
+    focus: [understaffing_spikes, compound]
+  offsite_road_closure:
+    sentence: "an off-site van route closed for 180 minutes or more"
+    focus: [courier_unreliable, compound]
+    transport: [offsite_heavy, mixed]
+  instrument_staff_drain:
+    sentence: "an instrument down 120 minutes or more with staff_pull_from_receiving of 0.3 or more"
+    focus: [instrument_coupling, compound]
+  batching_night_unit:
+    sentence: "a unit batching every 120 minutes or more, or a batching hold that covers 4 or more night hours"
+    focus: [unit_batching, compound]
+  compound_failure:
+    sentence: "two or more different disruption types overlap for 30 minutes or more"
+    focus: null
+  courier_capacity_crunch:
+    sentence: "a courier route whose capacity_per_round is below its expected peak load per round"
+    focus: [courier_unreliable, surge, compound]
+    transport: [courier_dominant, mixed, offsite_heavy]
+  stat_heavy_icu_night:
+    sentence: "an icu unit with stat_fraction of 0.6 or more and a disruption that starts during the night shift"
+    focus: null
+  misroute_long_search:
+    sentence: "misroute_found_min median of 60 minutes or more"
+    focus: [tube_degradation, tube_outage, compound]
+  scanner_backlog:
+    sentence: "a receiving scanner downtime of 60 minutes or more"
+    focus: [scanner_downtime]
+    ood_only: true
+
+# Thresholds the tag predicates and the focus predicates share (validate.py reads them).
+thresholds:
+  shift_change_window_min: 30
+  peak_hours: 3
+  compound_overlap_min: 30
+
+# --- Quirks: 40 short texture lines; one per brief --------------------------------------------
+quirks:
+  - "the emergency department has its own tube line"
+  - "night couriers cover two buildings"
+  - "the intensive care units send most of their specimens in the early morning"
+  - "an outpatient surgery center sits two blocks away and uses a van"
+  - "the receiving desk is shared with the blood bank on nights"
+  - "a rooftop link between two towers makes one tube line long"
+  - "oncology infusion clinics collect heavily on Tuesdays and Thursdays"
+  - "the laboratory moved its receiving desk last year and runners still take the old route"
+  - "one older tube line has a history of carriers jamming at a divert"
+  - "the pediatric unit hand-carries everything because its tubes are small-bore"
+  - "weekend elective surgery is rare, so periop volume nearly vanishes on Sunday"
+  - "a dialysis unit sends its culture specimens only on treatment days"
+  - "long-term care sites send urine in batches after the morning rounds"
+  - "the main courier loop is driven by one person per shift"
+  - "a stairwell closure forces runners onto a longer path for the week"
+  - "the receiving technologist also answers the phone for the whole laboratory"
+  - "swab specimens from the outpatient clinics arrive in the afternoon van"
+  - "labor and delivery sends few specimens but nearly all stat"
+  - "the tube system shuts down for a short nightly cleaning cycle"
+  - "an elevator that runners rely on is slow at shift change"
+  - "clinics close at five, so off-site volume stops sharply in the evening"
+  - "a busy tissue pathology service sends operating room specimens in bursts"
+  - "the emergency department fills with respiratory patients in the evening"
+  - "morning blood draws crowd the receiving desk between seven and nine"
+  - "a new electronic ordering system produces slightly more mislabeled specimens"
+  - "the laboratory tube station is in a corridor that is cleaned at night"
+  - "the van driver covers three sites and swaps routes on Fridays"
+  - "a cancer center wing sends many body fluids and few urines"
+  - "bronchoscopy runs only on weekday mornings, so lavage specimens cluster then"
+  - "an older campus has long walks between buildings and no tube to two of them"
+  - "float staff cover the receiving desk on weekends"
+  - "the ICU step-down unit batches specimens until its nurses finish rounds"
+  - "the rural clinic network sends specimens with a volunteer driver twice a day"
+  - "the receiving desk scans on a handheld device that sometimes needs rebooting"
+  - "the tube system has a single transfer unit that is a shared bottleneck"
+  - "the evening shift is the busiest receiving shift because clinics send late"
+  - "orthopedic surgery adds a steady stream of tissue and joint fluid"
+  - "the hospital's urgent care sends urine mostly at lunchtime"
+  - "a winter respiratory season doubles lavage and swab volume"
+  - "the laboratory uses a mix of reusable and disposable carriers"
+
+# --- Names and safety (validate.py layer 3, spec §4.8 and A-16) ----------------------------------
+# A scenario describes a synthetic laboratory. It never names a real institution or person.
+names:
+  denylist:
+    - Mayo
+    - Cleveland Clinic
+    - Johns Hopkins
+    - Kaiser
+    - HCA
+    - Ascension
+    - Baptist
+    - Shands
+    - UF Health
+    - Mass General
+    - Massachusetts General
+    - Cedars-Sinai
+    - Mount Sinai
+    - Sloan Kettering
+    - MD Anderson
+    - St. Jude
+    - Geisinger
+    - Intermountain
+    - Sutter
+    - Providence
+    - Advocate
+    - Atrium
+    - Sanford
+    - Northwell
+    - Langone
+    - Stanford
+    - UCLA
+    - UCSF
+    - Duke
+    - Vanderbilt
+    - Emory
+    - CommonSpirit
+    - Tenet
+    - Trinity Health
+    - Quest Diagnostics
+    - LabCorp
+  # A capitalized word followed by one of these looks like an institution name.
+  institution_suffixes: [Hospital, Medical Center, Clinic, Health System, Health, University]
+  # Capitalized words that open a sentence or a phrase and so do not name anything.
+  institution_stopwords: [The, A, An, This, That, These, Those, Our, Each, Every, One, Both, Its, Their, Local, Main, New, Old, Large, Small, Busy, Quiet, Outpatient, Satellite]

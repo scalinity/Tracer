@@ -1,0 +1,932 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "https://tracer.invalid/scenario.schema.json",
+ "title": "Tracer scenario: one synthetic laboratory-week configuration",
+ "type": "object",
+ "properties": {
+  "archetype": {
+   "type": "string",
+   "enum": [
+    "academic_medical_center",
+    "community_hospital",
+    "critical_access_rural",
+    "childrens_hospital",
+    "cancer_center",
+    "multi_site_system",
+    "surgical_specialty",
+    "safety_net_urban"
+   ]
+  },
+  "size_band": {
+   "type": "string",
+   "enum": [
+    "small",
+    "medium",
+    "large"
+   ]
+  },
+  "transport_mix": {
+   "type": "string",
+   "enum": [
+    "tube_dominant",
+    "courier_dominant",
+    "mixed",
+    "offsite_heavy"
+   ]
+  },
+  "staffing": {
+   "type": "string",
+   "enum": [
+    "full_24_7",
+    "reduced_nights",
+    "weekend_skeleton",
+    "chronic_short"
+   ]
+  },
+  "failure_focus": {
+   "type": "string",
+   "enum": [
+    "random_faults_only",
+    "tube_outage",
+    "tube_degradation",
+    "station_neglect",
+    "courier_unreliable",
+    "unit_batching",
+    "understaffing_spikes",
+    "surge",
+    "instrument_coupling",
+    "compound",
+    "scanner_downtime"
+   ]
+  },
+  "narrative": {
+   "type": "string",
+   "minLength": 40,
+   "maxLength": 600
+  },
+  "volume": {
+   "type": "object",
+   "properties": {
+    "specimens_per_weekday": {
+     "type": "integer",
+     "minimum": 30,
+     "maximum": 900
+    },
+    "hourly_profile": {
+     "type": "array",
+     "items": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+     },
+     "minItems": 24,
+     "maxItems": 24
+    },
+    "weekend_factor": {
+     "type": "number",
+     "minimum": 0.3,
+     "maximum": 1.2
+    }
+   },
+   "required": [
+    "specimens_per_weekday",
+    "hourly_profile",
+    "weekend_factor"
+   ],
+   "additionalProperties": false
+  },
+  "specimen_mix": {
+   "type": "object",
+   "properties": {
+    "urine_room_temp": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 100
+    },
+    "urine_refrigerated": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 100
+    },
+    "urine_boric_acid": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 100
+    },
+    "body_fluid_room_temp": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 100
+    },
+    "body_fluid_refrigerated": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 100
+    },
+    "pleural_anaerobic_vial": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 100
+    },
+    "body_fluid_culture_bottle": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 100
+    },
+    "bal_room_temp": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 100
+    },
+    "bal_refrigerated": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 100
+    },
+    "swab_stuarts": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 100
+    },
+    "swab_eswab": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 100
+    },
+    "tissue": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 100
+    }
+   },
+   "required": [
+    "urine_room_temp",
+    "urine_refrigerated",
+    "urine_boric_acid",
+    "body_fluid_room_temp",
+    "body_fluid_refrigerated",
+    "pleural_anaerobic_vial",
+    "body_fluid_culture_bottle",
+    "bal_room_temp",
+    "bal_refrigerated",
+    "swab_stuarts",
+    "swab_eswab",
+    "tissue"
+   ],
+   "additionalProperties": false
+  },
+  "units": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "properties": {
+     "unit_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{1,29}$"
+     },
+     "kind": {
+      "type": "string",
+      "enum": [
+       "ed",
+       "icu",
+       "med_surg",
+       "periop",
+       "clinic_onsite",
+       "clinic_offsite",
+       "oncology",
+       "pediatrics",
+       "labor_delivery",
+       "dialysis",
+       "long_term_care"
+      ]
+     },
+     "volume_share": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 100
+     },
+     "stat_fraction": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+     },
+     "route": {
+      "type": "string",
+      "enum": [
+       "tube",
+       "courier",
+       "walk_in",
+       "mixed"
+      ]
+     },
+     "tube_line_id": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "courier_route_id": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "tube_share_if_mixed": {
+      "type": [
+       "number",
+       "null"
+      ],
+      "minimum": 0,
+      "maximum": 1
+     },
+     "dispatch": {
+      "type": "object",
+      "properties": {
+       "mode": {
+        "type": "string",
+        "enum": [
+         "immediate",
+         "batched"
+        ]
+       },
+       "median_min": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 120
+       },
+       "p90_min": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 480
+       },
+       "batch_interval_min": {
+        "type": [
+         "integer",
+         "null"
+        ],
+        "minimum": 15,
+        "maximum": 240
+       }
+      },
+      "required": [
+       "mode",
+       "median_min",
+       "p90_min",
+       "batch_interval_min"
+      ],
+      "additionalProperties": false
+     },
+     "not_dispatched_rate": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 0.05
+     },
+     "mix_tilt": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "key": {
+         "type": "string",
+         "enum": [
+          "urine_room_temp",
+          "urine_refrigerated",
+          "urine_boric_acid",
+          "body_fluid_room_temp",
+          "body_fluid_refrigerated",
+          "pleural_anaerobic_vial",
+          "body_fluid_culture_bottle",
+          "bal_room_temp",
+          "bal_refrigerated",
+          "swab_stuarts",
+          "swab_eswab",
+          "tissue"
+         ]
+        },
+        "multiplier": {
+         "type": "number",
+         "minimum": 0,
+         "maximum": 5
+        }
+       },
+       "required": [
+        "key",
+        "multiplier"
+       ],
+       "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 6
+     }
+    },
+    "required": [
+     "unit_id",
+     "kind",
+     "volume_share",
+     "stat_fraction",
+     "route",
+     "tube_line_id",
+     "courier_route_id",
+     "tube_share_if_mixed",
+     "dispatch",
+     "not_dispatched_rate",
+     "mix_tilt"
+    ],
+    "additionalProperties": false
+   },
+   "minItems": 3,
+   "maxItems": 16
+  },
+  "tube_system": {
+   "type": "object",
+   "properties": {
+    "lines": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "properties": {
+       "line_id": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]{1,29}$"
+       },
+       "transit_median_min": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 20
+       },
+       "transit_p90_min": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 45
+       },
+       "misroute_rate": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 0.03
+       },
+       "lost_rate": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 0.01
+       }
+      },
+      "required": [
+       "line_id",
+       "transit_median_min",
+       "transit_p90_min",
+       "misroute_rate",
+       "lost_rate"
+      ],
+      "additionalProperties": false
+     },
+     "minItems": 0,
+     "maxItems": 8
+    },
+    "station_empty_interval_min": {
+     "type": "object",
+     "properties": {
+      "day": {
+       "type": "number",
+       "minimum": 2,
+       "maximum": 90
+      },
+      "evening": {
+       "type": "number",
+       "minimum": 2,
+       "maximum": 90
+      },
+      "night": {
+       "type": "number",
+       "minimum": 2,
+       "maximum": 90
+      }
+     },
+     "required": [
+      "day",
+      "evening",
+      "night"
+     ],
+     "additionalProperties": false
+    },
+    "stalled_rate": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 0.06
+    },
+    "stall_extra_min": {
+     "type": "object",
+     "properties": {
+      "median": {
+       "type": "number",
+       "minimum": 10,
+       "maximum": 240
+      },
+      "p90": {
+       "type": "number",
+       "minimum": 10,
+       "maximum": 720
+      }
+     },
+     "required": [
+      "median",
+      "p90"
+     ],
+     "additionalProperties": false
+    },
+    "misroute_found_min": {
+     "type": "object",
+     "properties": {
+      "median": {
+       "type": "number",
+       "minimum": 10,
+       "maximum": 120
+      },
+      "p90": {
+       "type": "number",
+       "minimum": 10,
+       "maximum": 480
+      }
+     },
+     "required": [
+      "median",
+      "p90"
+     ],
+     "additionalProperties": false
+    }
+   },
+   "required": [
+    "lines",
+    "station_empty_interval_min",
+    "stalled_rate",
+    "stall_extra_min",
+    "misroute_found_min"
+   ],
+   "additionalProperties": false
+  },
+  "couriers": {
+   "type": "object",
+   "properties": {
+    "routes": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "properties": {
+       "route_id": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]{1,29}$"
+       },
+       "kind": {
+        "type": "string",
+        "enum": [
+         "onsite_runner",
+         "campus_loop",
+         "offsite_van"
+        ]
+       },
+       "round_interval_min": {
+        "type": "object",
+        "properties": {
+         "day": {
+          "type": [
+           "integer",
+           "null"
+          ],
+          "minimum": 10,
+          "maximum": 240
+         },
+         "evening": {
+          "type": [
+           "integer",
+           "null"
+          ],
+          "minimum": 10,
+          "maximum": 240
+         },
+         "night": {
+          "type": [
+           "integer",
+           "null"
+          ],
+          "minimum": 10,
+          "maximum": 240
+         }
+        },
+        "required": [
+         "day",
+         "evening",
+         "night"
+        ],
+        "additionalProperties": false
+       },
+       "travel_median_min": {
+        "type": "number",
+        "minimum": 3,
+        "maximum": 120
+       },
+       "travel_p90_min": {
+        "type": "number",
+        "minimum": 3,
+        "maximum": 240
+       },
+       "missed_round_rate": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 0.2
+       },
+       "lost_rate": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 0.01
+       },
+       "capacity_per_round": {
+        "type": "integer",
+        "minimum": 5,
+        "maximum": 200
+       }
+      },
+      "required": [
+       "route_id",
+       "kind",
+       "round_interval_min",
+       "travel_median_min",
+       "travel_p90_min",
+       "missed_round_rate",
+       "lost_rate",
+       "capacity_per_round"
+      ],
+      "additionalProperties": false
+     },
+     "minItems": 0,
+     "maxItems": 6
+    },
+    "on_call_runner": {
+     "type": "boolean"
+    },
+    "on_call_response_median_min": {
+     "type": [
+      "number",
+      "null"
+     ],
+     "minimum": 5,
+     "maximum": 60
+    }
+   },
+   "required": [
+    "routes",
+    "on_call_runner",
+    "on_call_response_median_min"
+   ],
+   "additionalProperties": false
+  },
+  "receiving": {
+   "type": "object",
+   "properties": {
+    "staff_by_shift": {
+     "type": "object",
+     "properties": {
+      "weekday": {
+       "type": "object",
+       "properties": {
+        "day": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 12
+        },
+        "evening": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 12
+        },
+        "night": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 12
+        }
+       },
+       "required": [
+        "day",
+        "evening",
+        "night"
+       ],
+       "additionalProperties": false
+      },
+      "weekend": {
+       "type": "object",
+       "properties": {
+        "day": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 12
+        },
+        "evening": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 12
+        },
+        "night": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 12
+        }
+       },
+       "required": [
+        "day",
+        "evening",
+        "night"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "required": [
+      "weekday",
+      "weekend"
+     ],
+     "additionalProperties": false
+    },
+    "shift_pattern": {
+     "type": "string",
+     "enum": [
+      "7-15-23",
+      "6-14-22",
+      "7-19"
+     ]
+    },
+    "scan_service_min": {
+     "type": "object",
+     "properties": {
+      "median": {
+       "type": "number",
+       "minimum": 0.3,
+       "maximum": 5
+      },
+      "p90": {
+       "type": "number",
+       "minimum": 0.3,
+       "maximum": 30
+      }
+     },
+     "required": [
+      "median",
+      "p90"
+     ],
+     "additionalProperties": false
+    },
+    "shift_change_gap_min": {
+     "type": "integer",
+     "minimum": 0,
+     "maximum": 45
+    }
+   },
+   "required": [
+    "staff_by_shift",
+    "shift_pattern",
+    "scan_service_min",
+    "shift_change_gap_min"
+   ],
+   "additionalProperties": false
+  },
+  "processing": {
+   "type": "object",
+   "properties": {
+    "accession_min": {
+     "type": "object",
+     "properties": {
+      "median": {
+       "type": "number",
+       "minimum": 2,
+       "maximum": 120
+      },
+      "p90": {
+       "type": "number",
+       "minimum": 2,
+       "maximum": 600
+      }
+     },
+     "required": [
+      "median",
+      "p90"
+     ],
+     "additionalProperties": false
+    },
+    "plating_min": {
+     "type": "object",
+     "properties": {
+      "median": {
+       "type": "number",
+       "minimum": 2,
+       "maximum": 120
+      },
+      "p90": {
+       "type": "number",
+       "minimum": 2,
+       "maximum": 600
+      }
+     },
+     "required": [
+      "median",
+      "p90"
+     ],
+     "additionalProperties": false
+    },
+    "instruments": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "properties": {
+       "name": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]{1,29}$"
+       },
+       "downtime_per_week": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 3
+       },
+       "downtime_median_min": {
+        "type": "number",
+        "minimum": 10,
+        "maximum": 480
+       }
+      },
+      "required": [
+       "name",
+       "downtime_per_week",
+       "downtime_median_min"
+      ],
+      "additionalProperties": false
+     },
+     "minItems": 0,
+     "maxItems": 4
+    },
+    "staff_pull_from_receiving": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 1
+    }
+   },
+   "required": [
+    "accession_min",
+    "plating_min",
+    "instruments",
+    "staff_pull_from_receiving"
+   ],
+   "additionalProperties": false
+  },
+  "independent_faults": {
+   "type": "object",
+   "properties": {
+    "never_collected_rate": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 0.02
+    },
+    "content_failure_rate": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 0.05
+    }
+   },
+   "required": [
+    "never_collected_rate",
+    "content_failure_rate"
+   ],
+   "additionalProperties": false
+  },
+  "disruptions": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "properties": {
+     "disruption_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{1,29}$"
+     },
+     "type": {
+      "type": "string",
+      "enum": [
+       "tube_line_outage",
+       "tube_line_degraded",
+       "station_unattended",
+       "receiving_short_staffed",
+       "courier_missed_rounds",
+       "courier_delayed",
+       "unit_surge",
+       "unit_batching_hold",
+       "scanner_downtime",
+       "instrument_down",
+       "offsite_route_closed"
+      ]
+     },
+     "target_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{1,29}$"
+     },
+     "day": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 6
+     },
+     "start": {
+      "type": "string",
+      "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+     },
+     "duration_min": {
+      "type": "integer",
+      "minimum": 10,
+      "maximum": 720
+     },
+     "severity": {
+      "type": "number",
+      "minimum": 0.1,
+      "maximum": 1
+     },
+     "response": {
+      "type": "string",
+      "enum": [
+       "none",
+       "hold_at_unit",
+       "divert_to_courier",
+       "stuck_in_system"
+      ]
+     },
+     "noticed_after_min": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 240
+     },
+     "recurs_daily": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "disruption_id",
+     "type",
+     "target_id",
+     "day",
+     "start",
+     "duration_min",
+     "severity",
+     "response",
+     "noticed_after_min",
+     "recurs_daily"
+    ],
+    "additionalProperties": false
+   },
+   "minItems": 0,
+   "maxItems": 14
+  },
+  "edge_tags": {
+   "type": "array",
+   "items": {
+    "type": "string",
+    "enum": [
+     "outage_at_shift_change",
+     "outage_during_peak",
+     "unnoticed_outage",
+     "mass_casualty_surge",
+     "weekend_courier_no_show",
+     "slow_degradation",
+     "chronic_non_dispatch_unit",
+     "misroute_storm",
+     "night_station_neglect",
+     "holiday_skeleton",
+     "offsite_road_closure",
+     "instrument_staff_drain",
+     "batching_night_unit",
+     "compound_failure",
+     "courier_capacity_crunch",
+     "stat_heavy_icu_night",
+     "misroute_long_search",
+     "scanner_backlog"
+    ]
+   },
+   "minItems": 0,
+   "maxItems": 6
+  },
+  "realism_notes": {
+   "type": "string",
+   "minLength": 0,
+   "maxLength": 400
+  }
+ },
+ "additionalProperties": false,
+ "required": [
+  "archetype",
+  "size_band",
+  "transport_mix",
+  "staffing",
+  "failure_focus",
+  "narrative",
+  "volume",
+  "specimen_mix",
+  "units",
+  "tube_system",
+  "couriers",
+  "receiving",
+  "processing",
+  "independent_faults",
+  "disruptions",
+  "edge_tags",
+  "realism_notes"
+ ]
+}
