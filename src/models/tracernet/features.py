@@ -757,8 +757,9 @@ def _roster_arrays(t: Table, ctx: RunContext) -> dict:
 
 
 def raw_features(t: Table, ctx: RunContext, rows_local: np.ndarray, ticks: np.ndarray, bins=None,
-                 roster: dict | None = None) -> dict:
-    """Unscaled inputs for (row, tick) pairs of one run; rows_local index the run's rows."""
+                 roster: dict | None = None, token_rows: bool = False) -> dict:
+    """Unscaled inputs for (row, tick) pairs of one run; rows_local index the run's rows. With token_rows, also
+    `token_row` [Q, 16]: the table row of each batch-mate token, -1 for padding (explanations name them)."""
     i = np.asarray(rows_local, dtype=np.int64)
     tick = np.asarray(ticks, dtype=np.float64)
     Q = len(i)
@@ -942,10 +943,13 @@ def raw_features(t: Table, ctx: RunContext, rows_local: np.ndarray, ticks: np.nd
                     ctx.stat[i].astype(np.int64), weekday, weekday_tau], 1)
     receipt = (ctx.rs[i] - ctx.cs[i]) / 60.0
     bins = bins or bins_cached()
-    return {"cat": cat, "tests": tests, "num": num, "fingerprint": fp, **series, "tokens": tokens,
-            "token_mask": tmask, "tick": tick, "window": w, "target_bin": bins.index(receipt).astype(np.int64),
-            "breach": ~np.isfinite(receipt) | (receipt > w), "specimen_index": g.astype(np.int64),
-            "run": np.full(Q, ctx.run, dtype=np.int64)}
+    out = {"cat": cat, "tests": tests, "num": num, "fingerprint": fp, **series, "tokens": tokens,
+           "token_mask": tmask, "tick": tick, "window": w, "target_bin": bins.index(receipt).astype(np.int64),
+           "breach": ~np.isfinite(receipt) | (receipt > w), "specimen_index": g.astype(np.int64),
+           "run": np.full(Q, ctx.run, dtype=np.int64)}
+    if token_rows:
+        out["token_row"] = np.where(tmask, ctx.lo + tj, -1).astype(np.int64)
+    return out
 
 
 _VOCAB: dict | None = None

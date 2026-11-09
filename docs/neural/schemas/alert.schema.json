@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TracerNet alert",
+  "description": "One record per alert (docs/neural/spec.md §10.3): a specimen's first tick whose harm reaches the knob, with the factors that raised its risk (§9.3), the batch-mates the network attended to most, and the frozen dispatch decision when one exists. Written as alerts.parquet and alerts.json by src/models/tracernet/predict.py. Synthetic data with no clinical review; every timing parameter is an assumption.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["alert_id", "specimen_id", "run", "scenario_id", "tick_min", "alert_at", "window_min", "warning_min", "p_miss",
+               "p_never", "harm", "weights", "budget_per_shift", "knob", "method", "factors", "related", "dispatch", "notice"],
+  "properties": {
+    "alert_id": {"type": "string", "pattern": "^SP-r[0-9]+-[0-9]+@[0-9]+$", "description": "{specimen_id}@{tick_min}"},
+    "specimen_id": {"type": "string", "pattern": "^SP-r[0-9]+-[0-9]+$"},
+    "run": {"type": "integer", "minimum": 0},
+    "scenario_id": {"type": ["string", "null"], "description": "null on the v1 store"},
+    "tick_min": {"type": "integer", "minimum": 1},
+    "alert_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}$"},
+    "window_min": {"type": "integer", "minimum": 1},
+    "warning_min": {"type": "integer", "description": "window_min - tick_min"},
+    "p_miss": {"type": "number", "minimum": 0, "maximum": 1},
+    "p_never": {"type": "number", "minimum": 0, "maximum": 1},
+    "harm": {"type": "number", "minimum": 0},
+    "weights": {"enum": ["default", "equal", "steep"]},
+    "budget_per_shift": {"type": "number", "exclusiveMinimum": 0},
+    "knob": {"type": "number", "minimum": 0},
+    "method": {"const": "tracernet-v1"},
+    "factors": {
+      "type": "array", "maxItems": 4,
+      "description": "Up to three groups that raise the risk (share of the positive attribution total) and at most one that lowers it (share of the negative total); attribution in logit units of the ensemble's p_miss. Texts come from input values, never from attribution sizes.",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["group", "text", "share", "attribution", "direction"],
+        "properties": {
+          "group": {"enum": ["silence", "window", "specimen", "route_unit", "time_of_day", "batch_mates", "route_flow",
+                             "unit_flow", "lab_flow", "lab_history"]},
+          "text": {"type": "string", "minLength": 1},
+          "share": {"type": "number", "minimum": 0, "maximum": 1},
+          "attribution": {"type": "number"},
+          "direction": {"enum": ["raises", "lowers"]}
+        }
+      }
+    },
+    "related": {
+      "type": "array", "maxItems": 5,
+      "description": "The batch-mates with the largest attention weight. Attention is not an explanation: these are the specimens the network looked at most.",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["specimen_id", "weight"],
+        "properties": {
+          "specimen_id": {"type": "string", "pattern": "^SP-r[0-9]+-[0-9]+$"},
+          "weight": {"type": "number", "minimum": 0, "maximum": 1}
+        }
+      }
+    },
+    "dispatch": {
+      "description": "The frozen dispatch decision (§11), or null when none was merged.",
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["source", "model", "place", "place_p", "action", "action_p", "role", "shared_problem_p", "escalate_p"],
+          "properties": {
+            "source": {"enum": ["drex-max", "distilled", "rules"]},
+            "model": {"type": ["string", "null"]},
+            "place": {"type": "string"},
+            "place_p": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+            "action": {"type": "string"},
+            "action_p": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+            "role": {"type": "string"},
+            "shared_problem_p": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+            "escalate_p": {"type": ["number", "null"], "minimum": 0, "maximum": 1}
+          }
+        }
+      ]
+    },
+    "notice": {"type": "string", "minLength": 1}
+  }
+}

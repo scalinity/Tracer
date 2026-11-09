@@ -43,7 +43,10 @@ Output: a dict.
 
 `embed(batch)` turns the categorical ids into embeddings and returns the continuous inputs the rest of
 the network reads; `forward_embedded(inputs, tick, window)` runs from there. `input_groups()` maps the
-ten factor groups of spec §9.3 onto those inputs, for summing integrated-gradient attributions.
+ten factor groups of spec §9.3 onto those inputs, for summing integrated-gradient attributions. For rung C,
+`inputs` may carry `token_emb` [B, 16, attention_dim] in place of `tokens`: the batch-mate tokens already
+through the token MLP, the space where explanations interpolate from the learned null token
+(src/models/tracernet/explain.py). Without it the forward pass is unchanged.
 """
 
 from __future__ import annotations
@@ -146,9 +149,12 @@ class BatchMateAttention(nn.Module):
         self.query = nn.Linear(query_dim, dim)
         self.cross = nn.MultiheadAttention(dim, heads, batch_first=True)
 
-    def forward(self, tokens, token_mask, query):
-        n = tokens.shape[0]
-        x = torch.cat([self.null.expand(n, -1, -1), self.token(tokens)], 1)
+    def forward(self, tokens, token_mask, query, token_emb=None):
+        """`token_emb`, when given, replaces `self.token(tokens)`: integrated gradients interpolate the tokens in
+        this space, from the null token (spec §9.2). Without it the computation is unchanged."""
+        emb = self.token(tokens) if token_emb is None else token_emb
+        n = emb.shape[0]
+        x = torch.cat([self.null.expand(n, -1, -1), emb], 1)
         ignore = torch.cat([token_mask.new_zeros(n, 1), ~token_mask.bool()], 1)
         h = self.norm(x)
         x = x + self.self_attn(h, h, h, key_padding_mask=ignore, need_weights=False)[0]
@@ -226,7 +232,7 @@ class TracerNet(nn.Module):
                 parts.append(self.temporal_out(torch.cat([enc(inputs[key]) for key, enc in self.temporal.items()],
                                                          -1)))
             if self.rung == "C":
-                att, weights = self.attention(inputs["tokens"], inputs["token_mask"], spec)
+                att, weights = self.attention(inputs.get("tokens"), inputs["token_mask"], spec, inputs.get("token_emb"))
                 parts.append(att)
                 null, attention = weights[:, 0], weights[:, 1:]
             fused = self.fusion(torch.cat(parts, -1))
