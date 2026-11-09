@@ -212,16 +212,19 @@ def model_brief(brief: dict) -> dict:
     return {k: brief[k] for k in MODEL_BRIEF_KEYS if k in brief}
 
 
-def brief_text(brief: dict, repair_errors: str | None = None) -> str:
-    """The brief as JSON, then (on a repair) the checker's reasons."""
+def brief_text(brief: dict, repair_errors: str | list[str] | None = None) -> str:
+    """The brief as JSON, then (on a repair) the checker's reasons: one block of text, or a list of messages, as the
+    runner passes them, written one per line."""
     text = "Brief:\n" + json.dumps(model_brief(brief), ensure_ascii=False)
+    if isinstance(repair_errors, (list, tuple)):
+        repair_errors = "\n".join(f"- {e}" for e in repair_errors if str(e).strip())
     if repair_errors:
         text += ("\n\nYour previous reply was rejected for these reasons:\n" + repair_errors.strip()
                  + "\nWrite the whole configuration again. Fix every item above and keep everything else valid.")
     return text
 
 
-def build_messages(brief: dict, repair_errors: str | None = None) -> list[dict]:
+def build_messages(brief: dict, repair_errors: str | list[str] | None = None) -> list[dict]:
     """Responses API input: the developer message, then the user message holding the brief."""
     return [{"role": "developer", "content": developer_text()},
             {"role": "user", "content": brief_text(brief, repair_errors)}]

@@ -319,6 +319,22 @@ class Pipeline:
         return 0
 
 
+def gate_command(job: str, paths: runner.Paths, out=print) -> int:
+    """Score the pilot's items against G1 to G6, choose the main run's models, and write
+    results/neural/generation/pilot.md and pilot.json (O2 refuses to start unless pilot.json says passed)."""
+    from src.scenarios import gate
+    from src.sim import kpi
+
+    rows = gate.collect(job, paths)
+    result = gate.evaluate(rows, kpi.kpis)
+    cfg = runner.load_jobs(paths.jobs_config)
+    spent = sum(r["cost_usd"] for r in rows)
+    js, md = gate.write(result, spent, float(cfg["jobs"][job]["cap_usd"]), paths.pilot_gate.parent)
+    out(md.read_text(encoding="utf-8"))
+    out(f"wrote {js.relative_to(paths.root)} and {md.relative_to(paths.root)}")
+    return 0 if result["passed"] else 2
+
+
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="python -m src.neural.pipeline", description="Tracer v2 pipeline.")
     sub = ap.add_subparsers(dest="command", required=True)
@@ -338,6 +354,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--tier", choices=TIERS)
     p = sub.add_parser("collect", help="collect finished Batch chunks")
     p.add_argument("--job", required=True)
+    p = sub.add_parser("gate", help="the pilot gate: G1 to G6 per model and the model rule (spec §4.10)")
+    p.add_argument("--job", required=True, choices=("O1", "O1b"))
     p = sub.add_parser("ledger", help="ledger report or job release")
     lsub = p.add_subparsers(dest="ledger_command", required=True)
     lsub.add_parser("report")
@@ -365,6 +383,8 @@ def main(argv: list[str] | None = None, *, paths: runner.Paths | None = None, se
             return pipe.generate(args.job, args.budget_usd, tier=args.tier)
         if args.command == "collect":
             return pipe.collect(args.job)
+        if args.command == "gate":
+            return gate_command(args.job, pipe.paths, out)
         if args.ledger_command == "report":
             return pipe.ledger_report()
         return pipe.release_job(args.job, args.reason)

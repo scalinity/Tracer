@@ -187,6 +187,10 @@ class Clock:
 class Env:
     def __init__(self, tmp_path: Path, jobs_changes=None, script=None):
         cfg = yaml.safe_load((ROOT / "config" / "openai_jobs.yaml").read_text())
+        # These tests are written for O2's shape before the pilot (the planner's count, Sol on the edge stratum); the
+        # live configuration's count and mix come from the pilot gate and must not change what the tests check.
+        cfg["jobs"]["O2"].update(briefs=None, arms={"normal": ["terra-low"], "stressed": ["terra-low"],
+                                                    "disrupted": ["terra-low"], "edge": ["sol-medium"]})
         for fn in jobs_changes or ():
             fn(cfg)
         table = yaml.safe_load((ROOT / "config" / "openai_prices.yaml").read_text())
@@ -692,6 +696,7 @@ def test_the_throttle_keeps_requested_tokens_per_minute_under_eighty_percent():
 def test_item_ids_follow_the_spec():
     assert runner.make_item_id("O2", "S201-004", 1) == "O2-S201-004-1"
     seams, cfg = FakeSeams(), yaml.safe_load((ROOT / "config" / "openai_jobs.yaml").read_text())
+    cfg["jobs"]["O2"]["arms"]["edge"] = ["sol-medium"]  # the pre-pilot shape this test checks, as in Env
     briefs = seams.plan("O1", 101, n=4)
     o1 = runner.plan_requests(seams, cfg, "O1", briefs, "flex")
     assert [r["item_id"] for r in o1[:3]] == ["O1-S101-000.luna-low-1", "O1-S101-000.terra-low-1",
@@ -721,3 +726,15 @@ def test_real_validate_names_each_layer_for_the_runner_and_never_repairs_a_near_
     assert runner.LAYER_NAMES[6] in runner.NO_REPAIR_LAYERS
     assert runner.LAYER_STAGE[runner.LAYER_NAMES[4]] == "validated"
     assert runner.LAYER_STAGE[runner.LAYER_NAMES[5]] == "sim_checked"
+
+
+def test_a_repair_request_through_the_real_planner_and_prompt_carries_every_error():
+    """The runner passes the validator's messages as a list; the real prompt must write them all. The fakes above
+    took any type, so this path broke only against the real modules (the first pilot run stopped on it)."""
+    from src.scenarios import planner
+    cfg = runner.load_jobs(runner.Paths().jobs_config)
+    brief = planner.plan("O1", 101)[0]
+    body = runner.build_request(runner.real_seams(), cfg, "O1", brief, "terra-low", "flex",
+                                ["first reason", "second reason"])
+    user = body["input"][-1]["content"]
+    assert "- first reason" in user and "- second reason" in user and "rejected for these reasons" in user

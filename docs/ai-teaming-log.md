@@ -399,12 +399,19 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** the runner read the validator's layer as a bare name, but N1 reports it as "6 diversity", so a near duplicate would have been sent for a repair it could never pass. The parent's wiring now names each layer for the runner, with a test. The job configuration first gave the pilot a total of 24 briefs, which the planner split by the main run's shares (5, 2, 8, 9 per stratum); the spec's pilot is 6 per stratum, and the configuration now leaves the count to the planner.
 - **Assumed:** near duplicates (validation layer 6) are judged at freeze time in item-id order rather than as each response arrives, so which of two survives never depends on timing; plausibility comes from the simulator and generation refuses to run without it. The Standard tier is sent as `default`, as the docs name it. Cache writes are priced from the usage object's own count when it reports one. A pilot item id is `O1-<brief>.<arm>-<attempt>`. Backoff after a Flex refusal is 40 seconds doubling, about 20 minutes over six tries. Concurrency starts at 8 and rises to at most 32 while the token limit allows.
 
-### Nov 9 · N3 · Add the laboratory simulator, v2 validator, plausibility checks and v1 world (this pull request)
+### Nov 8 · N3 · Add the laboratory simulator, v2 validator, plausibility checks and v1 world (this pull request)
 
 - **Agent:** a subagent (Claude Opus 5.5) built `src/sim/` in its own worktree; the parent session ran an integration check, sent three fixes back, and merged the result. A heap-ordered discrete-event engine turns a scenario into specimen records in the v1 shape plus a `v2` block, with queues at the receiving desk, station emptying, courier rounds with capacity, staffing by shift and the eleven disruption types; each specimen's own random draws are tied to its arrival candidate, so adding or removing a disruption leaves every other specimen's draws unchanged. It runs at about 0.05 seconds per 1,000 specimens against a 2-second target. The v1 world passes v1's nine-check validator on every trail, matches every v1 leg (Kolmogorov-Smirnov p from 0.25 to 0.82 at 5,000 draws) and lands its breach share at 4.42%, inside the 99% interval around v1's 522 of 12,000. 93 tests; the full suite passes (1,198).
 - **Daniel:** set the task through the spec; no review yet.
 - **Went wrong:** the parent fed N1's code-random scenarios through the engine and found three problems. A unit with a dispatch median of 2 minutes and a 90th percentile of 170 left specimens at the unit past the 7,200-minute horizon, which produced invalid trails and dropped whole replicates; by the spec's definition such a specimen is never received, and it now ends open-ended with a `horizon_cut` flag. The plausibility check simulated two days and so never saw a disruption planned later in the week; it now simulates the full week (0.11 seconds). The KPI names did not match what the scenario signature reads, which would have counted them as zero; both sides are now held to one set of names by a test. After the fixes, 120 replicates of 60 random scenarios have no invalid trail.
 - **Assumed:** the plausibility check covers the full scored week rather than the spec's two days; a cut specimen keeps only the faults that happened within its first 7,200 minutes; a carrier caught by a tube outage is stuck until it ends and then completes its transit; a courier round visits every unit on its route at once and takes the oldest specimens first up to capacity; the on-call runner has no capacity limit and never loses a specimen; a night shift takes the staffing of the day it starts on; scanner downtime defers scans to one scanner working through the backlog after the window. Each is listed in full in the pull request.
+
+### Nov 8 · N4 · Run the OpenAI pilot (O1) and its gate (this pull request)
+
+- **Agent:** ran the O1 dry run, then the pilot: the same 24 briefs (6 per stratum) to `gpt-6-luna` at low effort, `gpt-6.1-terra` at low and `gpt-6.1-sol` at medium, on the Flex tier through the ledger. Added `src/scenarios/gate.py` and `python -m src.neural.pipeline gate --job O1`, which scores G1 to G6 per model from the pilot's items and applies the model rule; `results/neural/generation/pilot.md` and `.json` hold the result. 69 of 72 accepted after at most one repair, $0.6003 spent of the $3.00 cap. All three models pass every gate; Terra writes every stratum of the main run, which the configuration now plans at 6,101 briefs by the spec's count formula. Tests for the model rule and for a repair request through the real planner and prompt.
+- **Daniel:** set the pilot design and its gate through the spec; no review yet.
+- **Went wrong:** the first run stopped after 45 seconds: the runner passes a repair's reasons as a list and the prompt expected a string, a path the test fakes accepted. The 12 requests in flight had all completed and their responses were stored before the stop, so the resume settled them at their real cost and sent nothing twice. G3 as first written ("adherent among accepted") is always 100%, because acceptance requires adherence; it now measures the share of first-attempt responses that passed layers 1 to 4 and met their brief. The edge rule first read overall adherence and chose Luna; it now reads the edge briefs, where Luna met 5 of 6.
+- **Assumed:** G3's definition above, and the edge rule reading G3 on edge briefs only (6 per model, so one miss is 83%); G4 counts near duplicates within each model's own accepted set, with delta fitted on all 69 accepted pilot scenarios; the main run's count follows the formula, floor($44 x 0.95 / $0.00715 per accepted), giving 5,846 accepted, about 2.6 times the spec's planning figure, because the measured cost is half the estimate.
 
 ## The Claude API jobs
 
@@ -431,6 +438,15 @@ Total about $3.36 of the $50 soft limit ($2.37 for the dataset, $0.98 for the de
 - It did not catch notes that gave away the hidden path in the first pilot (all 6 stalled and misrouted trails). A person reading the sample found that, and check 8 was added.
 
 **Not done.** A clinical review of twenty pilot timelines (K2) was skipped at Daniel's request, and the manifest says so. Any result built on the dataset says that it is synthetic and had no clinical review.
+
+## The OpenAI API jobs
+
+The v2 scenario jobs (docs/neural/spec.md §4) call OpenAI's Responses API with Structured Outputs on the Flex tier, through a ledger (`data/openai/ledger.sqlite`, kept local) that reserves every request's worst case before it is sent: $76.43 in all, of which $2.43 is never reserved, with a cap per job. Prices are checked on OpenAI's pricing page into `config/openai_prices.yaml` before each spending stage.
+
+| Job | What it wrote | Requests | Cost | Result |
+|---|---|---|---|---|
+| O1 pilot | One laboratory week for each of 24 briefs, on each of three models | 79 (72 plus 7 repairs) | $0.6003 of $3.00 | 69 accepted, 3 dropped; gate passed, Terra chosen for every stratum |
+
 
 ## What has worked, and what to avoid
 
