@@ -22,6 +22,7 @@ it spawns.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import statistics
 import sys
@@ -327,6 +328,28 @@ def gate_command(job: str, paths: runner.Paths, out=print) -> int:
     return 0 if result["passed"] else 2
 
 
+def simulate_command(workers: int, out_dir: str | None, paths: runner.Paths, out=print) -> int:
+    """Simulate every frozen scenario's replicates (history replicate 0; train scores 1 and 2, the other splits
+    1 to 3) into data/sim/ with its manifest."""
+    from src.scenarios import freeze
+    from src.sim import run as sim_run
+
+    records = freeze.read_library()
+    if not records:
+        raise runner.JobError("no frozen library; run `freeze` first")
+    lib_sha = hashlib.sha256(freeze.LIBRARY_PATH.read_bytes()).hexdigest()
+    splits = json.loads(freeze.SPLITS_PATH.read_text())
+    if splits["library_sha256"] != lib_sha:
+        raise runner.JobError("the splits file was made for a different library; refreeze")
+    target = Path(out_dir) if out_dir else paths.root / "data" / "sim"
+    t0 = time.monotonic()
+    manifest = sim_run.simulate_library(freeze.simulation_inputs(records, splits), target, freeze.REPLICATES,
+                                        workers, library_sha256=lib_sha)
+    out(f"simulated {len(records)} scenarios into {target} in {time.monotonic() - t0:.0f} s")
+    out(json.dumps({k: v for k, v in manifest.items() if not isinstance(v, (list, dict))}, indent=1))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="python -m src.neural.pipeline", description="Tracer v2 pipeline.")
     sub = ap.add_subparsers(dest="command", required=True)
@@ -346,6 +369,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--job", required=True)
     p = sub.add_parser("gate", help="the pilot gate: G1 to G6 per model and the model rule (spec §4.10)")
     p.add_argument("--job", required=True, choices=("O1", "O1b"))
+    p = sub.add_parser("freeze", help="freeze accepted scenarios into datasets/scenarios-v2.* (spec §4.11)")
+    p.add_argument("--jobs", required=True, help="comma-separated, for example O1,O2")
+    p.add_argument("--workers", type=int, default=16)
+    p = sub.add_parser("simulate", help="simulate the frozen library into data/sim/ (spec §5, §6.1)")
+    p.add_argument("--workers", type=int, default=16)
+    p.add_argument("--out", default=None, help="output folder (default data/sim)")
     p = sub.add_parser("ledger", help="ledger report or job release")
     lsub = p.add_subparsers(dest="ledger_command", required=True)
     lsub.add_parser("report")
@@ -375,6 +404,13 @@ def main(argv: list[str] | None = None, *, paths: runner.Paths | None = None, se
             return pipe.collect(args.job)
         if args.command == "gate":
             return gate_command(args.job, pipe.paths, out)
+        if args.command == "freeze":
+            from src.scenarios import freeze
+            freeze.freeze(tuple(j.strip() for j in args.jobs.split(",") if j.strip()), paths=pipe.paths,
+                          workers=args.workers, out=out)
+            return 0
+        if args.command == "simulate":
+            return simulate_command(args.workers, args.out, pipe.paths, out)
         if args.ledger_command == "report":
             return pipe.ledger_report()
         return pipe.release_job(args.job, args.reason)
