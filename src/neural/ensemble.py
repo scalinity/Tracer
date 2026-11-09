@@ -41,6 +41,7 @@ import polars as pl
 import torch
 import yaml
 
+from src import workers as workers_
 from src.models.tracernet import features as F
 from src.models.tracernet.predictor import History, Predictor
 from src.neural import calibrate, samplers as S, stages, train as T
@@ -114,7 +115,11 @@ def select(config: dict, runs: dict, *, out_path: Path, median_warning: Callable
         if rung not in runs:
             return None
         fns.setdefault(rung, predict_fn_of(runs[rung]))
-        return median_warning(fns[rung])
+        workers_.label(f"warning check, rung {rung}")
+        try:
+            return median_warning(fns[rung])
+        finally:
+            workers_.label(None)
 
     check = apply_warning_check(first, warning_of, budget=float(ecfg["warning_budget_per_shift"]),
                                 margin=float(ecfg["warning_margin_min"]))
