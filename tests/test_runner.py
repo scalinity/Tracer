@@ -805,6 +805,29 @@ def test_f002_repeated_server_errors_stop_the_job(tmp_path):
     assert lg.open_reservations() == [] and not any(e["kind"] == "void" for e in lg.entries())
 
 
+@pytest.mark.parametrize("failure", ["refusal", "incomplete"])
+def test_f012_repeated_billed_but_unusable_answers_stop_the_job(tmp_path, failure):
+    """An HTTP 200 refusal or truncated reply is billed and unusable; a run of them stops the job like an outage
+    (independent review finding F012), and every call already sent still settles."""
+    env = Env(tmp_path, script={"*": [failure]})
+    ok(env.cli("dry-run", "--job", "O1"))
+    code, out = env.cli("generate", "--job", "O1", "--budget-usd", "3")
+    assert code == 2 and "unusable answer" in out
+    assert len(env.client.calls) < 72  # stopped well before every brief and repair was bought
+    lg = env.ledger()
+    assert lg.open_reservations() == [] and sum(e["kind"] == "settle" for e in lg.entries()) == len(env.client.calls)
+
+
+def test_f012_answers_that_fail_validation_still_count_as_usable(tmp_path):
+    """A configuration that parses but fails a validation layer is a usable answer: it gets its repair and never
+    trips the outage stop."""
+    env = Env(tmp_path)
+    env.seams.validate = lambda scenario, brief: (False, "plausibility", ["too slow"])
+    ok(env.cli("dry-run", "--job", "O1"))
+    code, out = env.cli("generate", "--job", "O1", "--budget-usd", "3")
+    assert "unusable answer" not in out
+
+
 def test_f002_errors_proven_unbilled_are_voided_and_the_rest_are_not():
     c = runner.billing_outcome
     assert c(status=429, kind="http_429") == "void"  # Flex resource unavailable, a rate limit or a quota refusal
@@ -873,6 +896,42 @@ def test_f003_an_uncertain_batch_create_keeps_its_reservations_and_a_list_miss_n
     ok(env.cli("generate", "--job", "O2", "--budget-usd", "44", "--tier", "batch"))
     assert {x["custom_id"][-1] for x in env.client.batch_lines} == {"2"}, "an original request was resubmitted"
     assert not set(sent_hashes(env)) & {i["request_hash"] for i in first.values()}
+
+
+def test_f013_a_crash_while_preparing_a_batch_chunk_is_reconciled_as_unsent(tmp_path, monkeypatch):
+    """Every member moves to in_flight before the create call, so a member still reserved after a crash proves the
+    chunk was never submitted: collect ends it as unsent, voids every hold, and the requests are sent once later
+    (independent review finding F013)."""
+    env = Env(tmp_path)
+    env.pass_gate()
+    ok(env.cli("dry-run", "--job", "O2", "--tier", "batch"))
+    real = runner.ItemStore.transition
+    moved = []
+
+    def crash_on_third_enqueue(self, item_id, state, *a, **k):
+        if state == "in_flight" and "enqueued in" in (a[0] if a else ""):
+            moved.append(item_id)
+            if len(moved) == 3:
+                raise Crash()
+        return real(self, item_id, state, *a, **k)
+
+    monkeypatch.setattr(runner.ItemStore, "transition", crash_on_third_enqueue)
+    with pytest.raises(Crash):
+        env.cli("generate", "--job", "O2", "--budget-usd", "44", "--tier", "batch")
+    monkeypatch.setattr(runner.ItemStore, "transition", real)
+    items = env.items("O2")
+    crashed = next(i["chunk_id"] for i in items.values() if i["state"] == "reserved" and i.get("chunk_id"))
+    members = {iid for iid, i in items.items() if i.get("chunk_id") == crashed}
+    assert members  # the stranded member the review found (with any moved before it)
+    assert not members & {x["custom_id"] for x in env.client.batch_lines}  # that chunk was never submitted
+    ok(env.cli("collect", "--job", "O2"))
+    items, lg = env.items("O2"), env.ledger()
+    assert all(items[iid]["state"] == "unavailable" and not items[iid].get("chunk_id") for iid in members)
+    assert not {r["item_id"] for r in lg.open_reservations()} & members
+    assert not any(e["kind"] == "settle" and e["item_id"] in members for e in lg.entries())
+    ok(env.cli("generate", "--job", "O2", "--budget-usd", "44", "--tier", "batch"))
+    ids = [x["custom_id"] for x in env.client.batch_lines]
+    assert len(ids) == len(set(ids)) and members <= set(ids)  # every request sent exactly once
 
 
 def test_f003_a_definite_pre_execution_refusal_of_the_create_call_voids(tmp_path):

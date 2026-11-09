@@ -61,7 +61,7 @@ STATES = ("planned", "reserved", "refused", "in_flight", "unavailable", "unknown
           "validated", "sim_checked", "accepted", "repair_planned", "dropped")
 TRANSITIONS = {
     "planned": {"reserved"},
-    "reserved": {"refused", "in_flight"},
+    "reserved": {"refused", "in_flight", "unavailable"},  # unavailable: a Batch chunk proven never submitted
     "in_flight": {"unavailable", "unknown", "received"},
     "unavailable": {"reserved"},
     "received": {"parsed", "failed"},
@@ -280,9 +280,11 @@ def estimate_input_tokens(body: dict) -> int:
 
 
 def input_token_bound(body: dict) -> int:
-    """A guaranteed upper bound on the input tokens a request can be billed: the UTF-8 bytes of the whole serialized
-    request (every message's content, the JSON schema and format block, the model name and every other field; JSON
-    escaping only adds bytes) plus 64 tokens of framing per request and 16 per message."""
+    """An upper bound on the input tokens a request can be billed: the UTF-8 bytes of the whole serialized request
+    (every message's content, the JSON schema and format block, the model name and every other field; JSON escaping
+    only adds bytes), which a byte-level tokenizer cannot exceed, plus 64 tokens of framing per request and 16 per
+    message. The framing allowance is assumed (no documented ceiling); the pilot billed about a quarter of the bound,
+    and _check_bound stops the job if a response is ever billed above it (independent review finding F005)."""
     messages = body.get("input")
     n = len(messages) if isinstance(messages, list) else 1
     return len(canonical(body).encode("utf-8")) + FRAMING_PER_REQUEST + FRAMING_PER_MESSAGE * n
@@ -948,9 +950,9 @@ class Runner:
     def _note_answer(self, usable: bool) -> None:
         self.recent.append(not usable)
         if sum(self.recent) >= UNKNOWN_STOP:
-            self.stop(f"{sum(self.recent)} of the last {len(self.recent)} requests ended in server errors or without "
-                      "an answer, each kept as spent; stopped so an outage cannot use up the budget. Rerun generate "
-                      "once the API answers again.")
+            self.stop(f"{sum(self.recent)} of the last {len(self.recent)} requests ended in server errors, without "
+                      "an answer, or with an unusable answer (a refusal, a truncated reply or no configuration); stopped "
+                      "so an outage or a failing prompt cannot use up the budget. Rerun generate once the cause is fixed.")
 
     def _process(self, item: dict, r: CallResult | None = None) -> None:
         """received -> parsed -> validated -> sim_checked -> accepted, or failed at the first failing layer."""
@@ -999,7 +1001,9 @@ class Runner:
                 self.workers += 1
         code = r.http_status
         if code is None and r.status not in ("timeout", "connection"):  # an HTTP 200 body
-            self._note_answer(True)
+            # A refusal, a truncated reply or a body that is not the configuration is billed but unusable; a
+            # configuration that later fails validation is a usable answer.
+            self._note_answer(r.ok)
             self._settle(item, r)
             return
         outcome = billing_outcome(status=code, kind=r.status, usage=r.usage, tokens_consumed=r.tokens_consumed)
@@ -1298,10 +1302,16 @@ class Runner:
         return [i for i in (self.store.get(x) for x in chunk["item_ids"])
                 if i["state"] == "in_flight" and i.get("chunk_id") == chunk_id]
 
+    def _chunk_members(self, chunk_id: str) -> list[dict]:
+        """The chunk's items still owned by it: in flight in it, or reserved for it but not yet moved."""
+        chunk = next(c for c in self.store.chunks() if c["chunk_id"] == chunk_id)
+        return [i for i in (self.store.get(x) for x in chunk["item_ids"])
+                if i["state"] in ("in_flight", "reserved") and i.get("chunk_id") == chunk_id]
+
     def _end_chunk_unsent(self, chunk_id: str, why: str) -> None:
         """A chunk proven never created: its items go back to pending and their reservations are voided. Each item
         moves before its void, so a crash between the two leaves an open reservation that resume voids."""
-        for item in self._chunk_items(chunk_id):
+        for item in self._chunk_members(chunk_id):
             self.store.transition(item["item_id"], "unavailable", why, chunk_id=None)
             self.ledger.void(item["reservation_id"], why)
         self.store.chunk_transition(chunk_id, "failed", finished=True, note=why)
@@ -1320,6 +1330,13 @@ class Runner:
         for chunk in self.store.chunks(self.job, open_only=True):
             cid = chunk["chunk_id"]
             try:
+                if chunk["state"] == "created" and any(i["state"] == "reserved" for i in self._chunk_members(cid)):
+                    # Every member moves to in_flight before the create call is made, so a member still reserved
+                    # proves the chunk's preparation was interrupted and nothing was submitted (review finding F013).
+                    self._end_chunk_unsent(cid, "chunk preparation interrupted before submission; nothing was sent")
+                    self.out(f"chunk {cid}: preparation was interrupted before submission; its items stay pending")
+                    summary["finished"] += 1
+                    continue
                 if chunk["state"] == "created":
                     found = self.client.find_batch(cid)
                     if found is None:
