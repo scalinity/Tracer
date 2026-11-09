@@ -427,6 +427,13 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** the re-review's own test run could not start in its read-only sandbox, so its dispositions rest on reading the code; the tests here were run locally.
 - **Assumed:** a refusal, a truncated reply or a body that is not a configuration is an unusable answer; a configuration that fails a validation layer is a usable one.
 
+### Nov 9 · N5 · Run the main scenario job (O2) and freeze the v2 library (this pull request)
+
+- **Agent:** re-verified prices, ran O2 (6,101 briefs to `gpt-6.1-terra` at low effort, Flex, through the ledger): 6,023 accepted, $43.8659 of the $44.00 cap, 26 requests refused at the cap. Added `src/scenarios/freeze.py` and the `freeze` and `simulate` commands, and froze 6,071 scenarios into `datasets/scenarios-v2.jsonl.gz` with its manifest and splits (train 3,668, validation 772, test 782, out-of-distribution test 849; 5,396 families). Moved the pilot gate's and the simulation's simulator calls out of `src/neural/` so the isolation test needs no exemption, made a long stage record its real finish time, and recorded a non-binding secondary analysis before any real result.
+- **Daniel:** no review yet.
+- **Went wrong:** the first freeze re-validated every scenario on one core and was stopped before it wrote anything; it now uses worker processes (3.4 minutes). A progress estimate told Daniel finishing every request would cost $6.70 more; it had counted repairs already sent as unsent, and the real figure was 26 requests. Stage markers stamped a long stage's start and finish with one time. OpenAI's usage page trailed the ledger by $1.20 just after the run, with the same lag in tokens; twenty minutes later it read $44.98 against the ledger's $44.47, within limits.
+- **Assumed:** the near-duplicate distance is refit on the library itself (half its median nearest-neighbor distance, 1.495), because the pilot's distance would have flagged about half of O2 and chained the rest into one family; families are union-find components at 1.5 times that distance; splits are 70/15/15 by a salted hash within (archetype, stratum) cells; the count follows the spec's formula, about 2.6 times its planning figure because measured cost was half the estimate; `test_ood` results will also be reported on the 482 scenarios that carry the out-of-distribution feature, since 367 of its 849 travel with their families.
+
 ## The Claude API jobs
 
 The dataset jobs (D4 to J2) call `claude-haiku-5-5` at low effort with thinking off. The demo's specimen stories (J3) and search briefs (J4) call `claude-sonnet-5-5`, the model for text a person reads. The reply must match a JSON schema, so replies parse and retries stay rare. Bulk jobs run through the Batch API at half price, and every call is logged to `data/claude/usage.jsonl` (kept local). The order for each job is a token count, a pilot, then the batch, and a job's estimate must be under the plan's gate before it starts.
@@ -460,6 +467,7 @@ The v2 scenario jobs (docs/neural/spec.md §4) call OpenAI's Responses API with 
 | Job | What it wrote | Requests | Cost | Result |
 |---|---|---|---|---|
 | O1 pilot | One laboratory week for each of 24 briefs, on each of three models | 79 (72 plus 7 repairs) | $0.6003 of $3.00 | 69 accepted, 3 dropped; gate passed, Terra chosen for every stratum |
+| O2 main run | One laboratory week for each of 6,101 briefs, `gpt-6.1-terra` at low effort | 7,038 (6,100 plus 938 repairs) | $43.8659 of $44.00 | 6,023 accepted (98.7% of briefs), 52 dropped, 26 left unsent at the cap |
 
 
 ## What has worked, and what to avoid

@@ -191,3 +191,19 @@ def write(result: dict, spent_total: float, cap: float, out_dir: Path) -> tuple[
                   encoding="utf-8")
     md.write_text(markdown(result, spent_total, cap), encoding="utf-8")
     return js, md
+
+
+def run(job: str, paths: runner.Paths, out=print) -> int:
+    """Score the pilot's items against G1 to G6, choose the main run's models, and write
+    results/neural/generation/pilot.md and pilot.json (O2 refuses to start unless pilot.json says passed).
+    Returns 0 when the gate passed, 2 when it failed."""
+    from src.sim import kpi
+
+    rows = collect(job, paths)
+    result = evaluate(rows, kpi.kpis)
+    cfg = runner.load_jobs(paths.jobs_config)
+    spent = sum(r["cost_usd"] for r in rows)
+    js, md = write(result, spent, float(cfg["jobs"][job]["cap_usd"]), paths.pilot_gate.parent)
+    out(md.read_text(encoding="utf-8"))
+    out(f"wrote {js.relative_to(paths.root)} and {md.relative_to(paths.root)}")
+    return 0 if result["passed"] else 2

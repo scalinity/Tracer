@@ -1,0 +1,626 @@
+{
+ "accepted_by_archetype": {
+  "academic_medical_center": 921,
+  "cancer_center": 700,
+  "childrens_hospital": 693,
+  "community_hospital": 1148,
+  "critical_access_rural": 575,
+  "multi_site_system": 301,
+  "safety_net_urban": 1037,
+  "surgical_specialty": 696
+ },
+ "accepted_by_job_and_model": {
+  "O1 gpt-6-luna": 22,
+  "O1 gpt-6.1-sol": 24,
+  "O1 gpt-6.1-terra": 23,
+  "O2 gpt-6.1-terra": 6002
+ },
+ "accepted_by_stratum": {
+  "disrupted": 1237,
+  "edge": 626,
+  "normal": 2066,
+  "stressed": 2142
+ },
+ "bytes": 5197711,
+ "clinical_review": "none",
+ "coverage": {
+  "cells": {
+   "disrupted/academic_medical_center": {
+    "count": 185,
+    "ok": true,
+    "target": 186
+   },
+   "disrupted/cancer_center": {
+    "count": 142,
+    "ok": true,
+    "target": 140
+   },
+   "disrupted/childrens_hospital": {
+    "count": 142,
+    "ok": true,
+    "target": 140
+   },
+   "disrupted/community_hospital": {
+    "count": 234,
+    "ok": true,
+    "target": 232
+   },
+   "disrupted/critical_access_rural": {
+    "count": 119,
+    "ok": true,
+    "target": 117
+   },
+   "disrupted/multi_site_system": {
+    "count": 61,
+    "ok": true,
+    "target": 61
+   },
+   "disrupted/safety_net_urban": {
+    "count": 212,
+    "ok": true,
+    "target": 210
+   },
+   "disrupted/surgical_specialty": {
+    "count": 142,
+    "ok": true,
+    "target": 140
+   },
+   "edge/academic_medical_center": {
+    "count": 96,
+    "ok": true,
+    "target": 94
+   },
+   "edge/cancer_center": {
+    "count": 73,
+    "ok": true,
+    "target": 71
+   },
+   "edge/childrens_hospital": {
+    "count": 69,
+    "ok": true,
+    "target": 69
+   },
+   "edge/community_hospital": {
+    "count": 119,
+    "ok": true,
+    "target": 117
+   },
+   "edge/critical_access_rural": {
+    "count": 61,
+    "ok": true,
+    "target": 59
+   },
+   "edge/multi_site_system": {
+    "count": 31,
+    "ok": true,
+    "target": 31
+   },
+   "edge/safety_net_urban": {
+    "count": 105,
+    "ok": true,
+    "target": 105
+   },
+   "edge/surgical_specialty": {
+    "count": 72,
+    "ok": true,
+    "target": 70
+   },
+   "normal/academic_medical_center": {
+    "count": 314,
+    "ok": true,
+    "target": 326
+   },
+   "normal/cancer_center": {
+    "count": 240,
+    "ok": true,
+    "target": 244
+   },
+   "normal/childrens_hospital": {
+    "count": 236,
+    "ok": true,
+    "target": 244
+   },
+   "normal/community_hospital": {
+    "count": 389,
+    "ok": true,
+    "target": 407
+   },
+   "normal/critical_access_rural": {
+    "count": 194,
+    "ok": true,
+    "target": 204
+   },
+   "normal/multi_site_system": {
+    "count": 103,
+    "ok": true,
+    "target": 106
+   },
+   "normal/safety_net_urban": {
+    "count": 355,
+    "ok": true,
+    "target": 366
+   },
+   "normal/surgical_specialty": {
+    "count": 235,
+    "ok": true,
+    "target": 245
+   },
+   "stressed/academic_medical_center": {
+    "count": 326,
+    "ok": true,
+    "target": 325
+   },
+   "stressed/cancer_center": {
+    "count": 245,
+    "ok": true,
+    "target": 244
+   },
+   "stressed/childrens_hospital": {
+    "count": 246,
+    "ok": true,
+    "target": 244
+   },
+   "stressed/community_hospital": {
+    "count": 406,
+    "ok": true,
+    "target": 407
+   },
+   "stressed/critical_access_rural": {
+    "count": 201,
+    "ok": true,
+    "target": 203
+   },
+   "stressed/multi_site_system": {
+    "count": 106,
+    "ok": true,
+    "target": 107
+   },
+   "stressed/safety_net_urban": {
+    "count": 365,
+    "ok": true,
+    "target": 366
+   },
+   "stressed/surgical_specialty": {
+    "count": 247,
+    "ok": true,
+    "target": 245
+   }
+  },
+  "edge_tags": {
+   "batching_night_unit": {
+    "count": 54,
+    "ok": true,
+    "target": 54
+   },
+   "chronic_non_dispatch_unit": {
+    "count": 58,
+    "ok": true,
+    "target": 56
+   },
+   "compound_failure": {
+    "count": 57,
+    "ok": true,
+    "target": 55
+   },
+   "courier_capacity_crunch": {
+    "count": 55,
+    "ok": true,
+    "target": 54
+   },
+   "holiday_skeleton": {
+    "count": 53,
+    "ok": true,
+    "target": 54
+   },
+   "instrument_staff_drain": {
+    "count": 53,
+    "ok": true,
+    "target": 53
+   },
+   "mass_casualty_surge": {
+    "count": 56,
+    "ok": true,
+    "target": 54
+   },
+   "misroute_long_search": {
+    "count": 57,
+    "ok": true,
+    "target": 55
+   },
+   "misroute_storm": {
+    "count": 53,
+    "ok": true,
+    "target": 53
+   },
+   "night_station_neglect": {
+    "count": 57,
+    "ok": true,
+    "target": 55
+   },
+   "offsite_road_closure": {
+    "count": 53,
+    "ok": true,
+    "target": 53
+   },
+   "outage_at_shift_change": {
+    "count": 57,
+    "ok": true,
+    "target": 55
+   },
+   "outage_during_peak": {
+    "count": 57,
+    "ok": true,
+    "target": 55
+   },
+   "scanner_backlog": {
+    "count": 59,
+    "ok": true,
+    "target": 59
+   },
+   "slow_degradation": {
+    "count": 53,
+    "ok": true,
+    "target": 53
+   },
+   "stat_heavy_icu_night": {
+    "count": 58,
+    "ok": true,
+    "target": 56
+   },
+   "unnoticed_outage": {
+    "count": 54,
+    "ok": true,
+    "target": 54
+   },
+   "weekend_courier_no_show": {
+    "count": 55,
+    "ok": true,
+    "target": 54
+   }
+  },
+  "marginals": {
+   "archetype": {
+    "academic_medical_center": {
+     "count": 921,
+     "ok": true,
+     "target": 931
+    },
+    "cancer_center": {
+     "count": 700,
+     "ok": true,
+     "target": 699
+    },
+    "childrens_hospital": {
+     "count": 693,
+     "ok": true,
+     "target": 697
+    },
+    "community_hospital": {
+     "count": 1148,
+     "ok": true,
+     "target": 1163
+    },
+    "critical_access_rural": {
+     "count": 575,
+     "ok": true,
+     "target": 583
+    },
+    "multi_site_system": {
+     "count": 301,
+     "ok": true,
+     "target": 305
+    },
+    "safety_net_urban": {
+     "count": 1037,
+     "ok": true,
+     "target": 1047
+    },
+    "surgical_specialty": {
+     "count": 696,
+     "ok": true,
+     "target": 700
+    }
+   },
+   "failure_focus": {
+    "compound": {
+     "count": 378,
+     "ok": true,
+     "target": 370
+    },
+    "courier_unreliable": {
+     "count": 392,
+     "ok": true,
+     "target": 389
+    },
+    "instrument_coupling": {
+     "count": 236,
+     "ok": true,
+     "target": 237
+    },
+    "random_faults_only": {
+     "count": 1970,
+     "ok": true,
+     "target": 2034
+    },
+    "scanner_downtime": {
+     "count": 181,
+     "ok": true,
+     "target": 181
+    },
+    "station_neglect": {
+     "count": 360,
+     "ok": true,
+     "target": 356
+    },
+    "surge": {
+     "count": 558,
+     "ok": true,
+     "target": 559
+    },
+    "tube_degradation": {
+     "count": 172,
+     "ok": true,
+     "target": 170
+    },
+    "tube_outage": {
+     "count": 305,
+     "ok": true,
+     "target": 301
+    },
+    "understaffing_spikes": {
+     "count": 691,
+     "ok": true,
+     "target": 689
+    },
+    "unit_batching": {
+     "count": 828,
+     "ok": true,
+     "target": 839
+    }
+   },
+   "size_band": {
+    "large": {
+     "count": 1530,
+     "ok": true,
+     "target": 1532
+    },
+    "medium": {
+     "count": 2732,
+     "ok": true,
+     "target": 2756
+    },
+    "small": {
+     "count": 1809,
+     "ok": true,
+     "target": 1837
+    }
+   },
+   "staffing": {
+    "chronic_short": {
+     "count": 799,
+     "ok": true,
+     "target": 796
+    },
+    "full_24_7": {
+     "count": 2431,
+     "ok": true,
+     "target": 2465
+    },
+    "reduced_nights": {
+     "count": 1819,
+     "ok": true,
+     "target": 1838
+    },
+    "weekend_skeleton": {
+     "count": 1022,
+     "ok": true,
+     "target": 1026
+    }
+   },
+   "stratum": {
+    "disrupted": {
+     "count": 1237,
+     "ok": true,
+     "target": 1226
+    },
+    "edge": {
+     "count": 626,
+     "ok": true,
+     "target": 616
+    },
+    "normal": {
+     "count": 2066,
+     "ok": true,
+     "target": 2142
+    },
+    "stressed": {
+     "count": 2142,
+     "ok": true,
+     "target": 2141
+    }
+   },
+   "transport_mix": {
+    "courier_dominant": {
+     "count": 909,
+     "ok": true,
+     "target": 917
+    },
+    "mixed": {
+     "count": 2131,
+     "ok": true,
+     "target": 2144
+    },
+    "offsite_heavy": {
+     "count": 889,
+     "ok": true,
+     "target": 919
+    },
+    "tube_dominant": {
+     "count": 2142,
+     "ok": true,
+     "target": 2145
+    }
+   }
+  },
+  "ok": true
+ },
+ "created_at": "2026-11-09T01:16:09-05:00",
+ "dispersion": {
+  "code_random": {
+   "all": {
+    "mean_nn": 21.279575145355345,
+    "n": 2000,
+    "vendi": 1973.5475632172477
+   }
+  },
+  "code_random_n": 2000,
+  "library": {
+   "all": {
+    "mean_nn": 3.5087313778715843,
+    "n": 2000,
+    "vendi": 73.44036908697136
+   }
+  },
+  "library_by_stratum": {
+   "disrupted": {
+    "all": {
+     "mean_nn": 3.4586158458039677,
+     "n": 1237,
+     "vendi": 45.27214059024206
+    }
+   },
+   "edge": {
+    "all": {
+     "mean_nn": 3.901604516929543,
+     "n": 626,
+     "vendi": 45.25603414204322
+    }
+   },
+   "normal": {
+    "all": {
+     "mean_nn": 2.9674813625254046,
+     "n": 2000,
+     "vendi": 48.403779045232845
+    }
+   },
+   "stressed": {
+    "all": {
+     "mean_nn": 3.269280662258374,
+     "n": 2000,
+     "vendi": 59.58356409572373
+    }
+   }
+  }
+ },
+ "file": "scenarios-v2.jsonl.gz",
+ "jobs": {
+  "O1": {
+   "arms": {
+    "all": [
+     "luna-low",
+     "terra-low",
+     "sol-medium"
+    ]
+   },
+   "counts": {
+    "accepted": 69,
+    "briefs": 24,
+    "dropped": 3,
+    "refused": 0,
+    "rejections_by_layer": {
+     "adherence": 3,
+     "plausibility": 7
+    },
+    "repaired": 4,
+    "requests": 79,
+    "unknown": 0
+   },
+   "prompt_hashes": [
+    "43ff98b7802148de",
+    "5876a443517f72a4",
+    "c0c8c3a9070ef693"
+   ],
+   "spent_usd": 0.600275,
+   "tier": "flex"
+  },
+  "O2": {
+   "arms": {
+    "disrupted": [
+     "terra-low"
+    ],
+    "edge": [
+     "terra-low"
+    ],
+    "normal": [
+     "terra-low"
+    ],
+    "stressed": [
+     "terra-low"
+    ]
+   },
+   "counts": {
+    "accepted": 6023,
+    "briefs": 6101,
+    "dropped": 52,
+    "refused": 26,
+    "rejections_by_layer": {
+     "adherence": 57,
+     "plausibility": 958
+    },
+    "repaired": 886,
+    "requests": 7038,
+    "unknown": 0
+   },
+   "prompt_hashes": [
+    "5876a443517f72a4"
+   ],
+   "spent_usd": 43.865879,
+   "tier": "flex"
+  }
+ },
+ "ledger": {
+  "cap_usd": 76.43,
+  "spent_usd_by_job": {
+   "O1": 0.600275,
+   "O2": 43.865879
+  },
+  "spent_usd_total": 44.466154
+ },
+ "left_out_other": {},
+ "near_duplicates": {
+  "delta": 1.4945934298430292,
+  "delta_fitted_on": "the accepted library (half its median nearest-neighbor distance)",
+  "left_out": 21,
+  "rule": "same archetype, standardized distance below delta; the later item id is left out"
+ },
+ "notice": "Every parameter in this library is an assumption written by a language model for a synthetic laboratory simulator. No value comes from a real laboratory, and nothing in it had clinical review.",
+ "ood_definition": "archetype multi_site_system, or any scanner_downtime disruption, goes to test_ood",
+ "planner": {
+  "config_hash": "cc72ad931f710895",
+  "seeds": {
+   "O1": 101,
+   "O2": 201
+  }
+ },
+ "policy_hash": "9594d7c019363261",
+ "prices_verified_at": "2026-11-08T23:23:19-05:00",
+ "scenarios": 6071,
+ "schema_hash": "ac7d5fff8cc86db8",
+ "sha256": "443a87f8b15f007826c386184c29dd43555f5329829c709e3c341ccd753b6514",
+ "splits": {
+  "counts": {
+   "test": 782,
+   "test_ood": 849,
+   "train": 3668,
+   "val": 772
+  },
+  "families": 5396,
+  "family_counts": {
+   "test": 742,
+   "test_ood": 441,
+   "train": 3470,
+   "val": 743
+  },
+  "file": "scenarios-v2.splits.json"
+ }
+}
