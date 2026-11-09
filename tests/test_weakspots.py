@@ -87,19 +87,37 @@ def test_the_excess_is_the_log_loss_over_the_slice_base_rate(doc):
     assert sharp["tracernet_log_loss"] == pytest.approx(-math.log(0.9))      # the tick at 300 min is past 240
     assert flat["excess"] == pytest.approx(0.0, abs=1e-12)
     assert worse["excess"] == pytest.approx(0.4 * -math.log(0.6) + 0.6 * -math.log(0.4) - H40)
-    assert worse["breach_share"] == pytest.approx(1 / 3) and worse["score"] == pytest.approx(worse["excess"] / 3)
+    assert worse["breach_share"] == pytest.approx(1 / 3)
+    assert worse["loss_ratio"] == pytest.approx(worse["tracernet_log_loss"] / H40)
+    assert worse["score"] == pytest.approx(worse["loss_ratio"] / 3)
 
 
-def test_slices_rank_by_excess_times_share_and_the_top_four_plannable_are_chosen(doc):
-    top = [(x["dimension"], x["slice"]) for x in doc["ranking"][:6]]
-    assert top == [("archetype_stratum", "safety_net_urban / stressed"), ("window_class", "long (a day or more)"),
-                   ("volume_tercile", "high"), ("archetype_stratum", "community_hospital / disrupted"),
-                   ("disruption_type", "tube_line_outage"), ("volume_tercile", "middle")]
-    assert [x["pins"] for x in doc["chosen"]] == [
-        {"archetype": "safety_net_urban", "stratum": "stressed"}, {"size_band": "large"},
-        {"archetype": "community_hospital", "stratum": "disrupted"}, {"disruption_type": "tube_line_outage"}]
-    assert [(x["slice"], x["why"]) for x in doc["passed_over"]] == [("long (a day or more)",
-                                                                     "no brief factor sets a specimen's window")]
+def test_slices_rank_by_loss_ratio_times_share_and_the_top_four_plannable_are_chosen(doc):
+    ranking = doc["ranking"]
+    assert [x["score"] for x in ranking] == sorted((x["score"] for x in ranking), reverse=True)
+    assert all(x["score"] == pytest.approx(x["loss_ratio"] * x["breach_share"]) for x in ranking)
+    chosen = [(x["dimension"], x["slice"]) for x in doc["chosen"]]
+    passed = {(x["dimension"], x["slice"]) for x in doc["passed_over"]}
+    first = [(x["dimension"], x["slice"]) for x in ranking if (x["dimension"], x["slice"]) not in passed][:4]
+    assert len(chosen) == 4 and chosen == first
+    last = max(i for i, x in enumerate(ranking) if (x["dimension"], x["slice"]) in set(chosen))
+    assert all(i < last for i, x in enumerate(ranking) if (x["dimension"], x["slice"]) in passed)
+
+
+def test_when_tracernet_beats_every_base_rate_a_big_slice_where_it_adds_little_ranks_first():
+    """Spec §4.12's excess x share would rank the small slice first here (its excess is closest to zero); the loss
+    ratio ranks the slice holding most breaches, where TracerNet adds least over the base rate, first."""
+    from src.neural import weakspots as W
+    big = {"dimension": "route_kind", "slice": "tube", "ranked": True, "breach_share": 0.6,
+           "tracernet_log_loss": 0.54, "base_rate_log_loss": 0.6}
+    small = {"dimension": "route_kind", "slice": "courier", "ranked": True, "breach_share": 0.02,
+             "tracernet_log_loss": 0.297, "base_rate_log_loss": 0.3}
+    for s in (big, small):
+        s["excess"] = s["tracernet_log_loss"] - s["base_rate_log_loss"]
+        s["loss_ratio"] = s["tracernet_log_loss"] / s["base_rate_log_loss"]
+        s["score"] = s["loss_ratio"] * s["breach_share"]
+    assert big["excess"] * big["breach_share"] < small["excess"] * small["breach_share"] < 0
+    assert [s["slice"] for s in W.rank([small, big])] == ["tube", "courier"]
 
 
 def test_the_warning_gap_comes_from_the_evaluation_where_it_slices(doc):

@@ -24,7 +24,10 @@ Steps (spec §4.12):
      the slice's own base rate (the binary entropy of its breach share), their difference (the excess: below zero,
      TracerNet beats the base rate there), and TracerNet's median warning over all breaches minus the best
      baseline's at 6 alerts per shift and 3-2-1 weights, read from the evaluation's slices where it has the slice.
-  3. Slices rank by excess times the slice's share of validation breaches, highest first. The top four that the
+  3. Slices rank by their loss ratio (TracerNet's log loss over the base rate's) times the slice's share of
+     validation breaches, highest first. Spec §4.12 ranks by excess times share; when TracerNet beats every base rate
+     (every excess below zero) that ranks the smallest slices first, while the ratio orders a positive excess the
+     same way and still names the slices where TracerNet adds least, weighted by breaches. The top four that the
      planner can target are chosen; a slice no brief factor can produce is listed and passed over.
   4. The O3 targets: the four slices (equal shares of the 60%), and the manifest's cells and edge tags below their
      coverage targets (the 15%); the planner adds the 25% of general edge briefs. The count is Appendix B's formula,
@@ -173,7 +176,7 @@ def slice_keys(rows: pl.DataFrame, dimension: str) -> pl.DataFrame:
 
 def slice_table(losses: pl.DataFrame, rows: pl.DataFrame, dimensions, min_breaches: int) -> list[dict]:
     """Every slice of every dimension: specimens, breaches, base rate, TracerNet's and the base rate's log loss,
-    the excess, the share of all validation breaches, the score (excess x share) and whether it has enough
+    the excess, the loss ratio, the share of all validation breaches, the score (loss ratio x share) and whether it has enough
     breaches to be ranked."""
     total = int(losses["breach"].sum())
     if total == 0:
@@ -189,10 +192,11 @@ def slice_table(losses: pl.DataFrame, rows: pl.DataFrame, dimensions, min_breach
             base = entropy(base_rate)
             excess = float(r["loss"]) - base
             share = r["breaches"] / total
+            ratio = float(r["loss"]) / base if base > 0 else 0.0     # base 0: no breach, share 0, never ranked
             out.append({"dimension": d, "slice": str(r["key"]), "specimens": int(r["specimens"]),
                         "breaches": int(r["breaches"]), "base_rate": base_rate, "tracernet_log_loss": float(r["loss"]),
-                        "base_rate_log_loss": base, "excess": excess, "breach_share": share, "score": excess * share,
-                        "ranked": int(r["breaches"]) >= min_breaches})
+                        "base_rate_log_loss": base, "excess": excess, "loss_ratio": ratio, "breach_share": share,
+                        "score": ratio * share, "ranked": int(r["breaches"]) >= min_breaches})
     return out
 
 
@@ -259,7 +263,7 @@ def pins_for(dimension: str, key: str, cfg: dict, seed: int) -> tuple[dict | Non
 
 
 def rank(slices: list[dict]) -> list[dict]:
-    """The ranked slices (enough breaches), highest excess x share first. Scores are compared to 12 decimals, so two
+    """The ranked slices (enough breaches), highest loss ratio x share first. Scores are compared to 12 decimals, so two
     slices holding the same specimens tie whatever order their sums ran in; ties go in the dimensions' order."""
     order = list(DIMENSIONS)
     return sorted((s for s in slices if s["ranked"]),
@@ -411,34 +415,35 @@ def render(doc: dict) -> str:
              "specimens (val_sel's definition, spec §7.7).",
              "- Excess: that log loss minus the log loss of the slice's own base rate (the binary entropy of its "
              "breach share). Below zero, TracerNet beats the base rate in the slice.",
-             f"- Ranked: slices with at least {doc['settings']['min_breaches']} breaches, by excess times the slice's "
-             "share of all validation breaches, highest first.",
+             f"- Ranked: slices with at least {doc['settings']['min_breaches']} breaches, by the loss ratio (TracerNet's "
+             "log loss over the base rate's) times the slice's share of all validation breaches, highest first. Spec "
+             "§4.12 writes excess times share; when every excess is below zero that would rank the smallest slices "
+             "first, so the ratio is used: it orders a positive excess the same way and names where TracerNet adds least.",
              f"- Warning gap: TracerNet's median warning over all breaches (a miss counting as zero) minus the best "
              f"baseline's, at {doc['settings']['budget']} and {doc['settings']['weighting']} weights, from the "
              "evaluation's slices. Reported, not ranked on.", "",
              "## The four slices", "",
-             "| Rank | Dimension | Slice | Breaches | Share of breaches | Base rate | TracerNet log loss | Base-rate log loss | Excess | Excess x share | Warning gap | Planned as |",
+             "| Rank | Dimension | Slice | Breaches | Share of breaches | Base rate | TracerNet log loss | Base-rate log loss | Excess | Loss ratio x share | Warning gap | Planned as |",
              "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for x in doc["chosen"]:
         lines.append(f"| {x['rank']} | {DIMENSIONS[x['dimension']]} | {x['slice']} | {x['breaches']:,} | "
                      f"{x['breach_share']:.4f} | {x['base_rate']:.4f} | {x['tracernet_log_loss']:.4f} | "
-                     f"{x['base_rate_log_loss']:.4f} | {x['excess']:+.4f} | {x['score']:+.5f} | "
+                     f"{x['base_rate_log_loss']:.4f} | {x['excess']:+.4f} | {x['score']:.5f} | "
                      f"{_gap_cell(x['warning_gap'])} | `{json.dumps(x['pins'], sort_keys=True)}` |")
     if doc["ranking"] and all(x["excess"] < 0 for x in doc["ranking"]):
-        lines += ["", "Every ranked slice has an excess below zero: TracerNet beats each slice's base rate. Excess x "
-                      "share is then closest to zero, and ranks first, for slices with a small share of the breaches; "
-                      "the rule (spec §4.12 step 3) is applied as written."]
+        lines += ["", "Every ranked slice has an excess below zero: TracerNet beats each slice's base rate, which is "
+                      "why the ranking uses the loss ratio rather than the excess itself."]
     if doc["passed_over"]:
         lines += ["", "Ranked above a chosen slice but not plannable:", ""]
-        lines += [f"- Rank {x['rank']}, {DIMENSIONS[x['dimension']]} `{x['slice']}` (excess x share "
-                  f"{x['score']:+.5f}): {x['why']}." for x in doc["passed_over"]]
+        lines += [f"- Rank {x['rank']}, {DIMENSIONS[x['dimension']]} `{x['slice']}` (loss ratio x share "
+                  f"{x['score']:.5f}): {x['why']}." for x in doc["passed_over"]]
     lines += ["", "## Every ranked slice", "",
-              "| Rank | Dimension | Slice | Specimens | Breaches | Share | Base rate | Excess | Excess x share | Warning gap |",
+              "| Rank | Dimension | Slice | Specimens | Breaches | Share | Base rate | Excess | Loss ratio x share | Warning gap |",
               "|---|---|---|---|---|---|---|---|---|---|"]
     for x in doc["ranking"]:
         lines.append(f"| {x['rank']} | {DIMENSIONS[x['dimension']]} | {x['slice']} | {x['specimens']:,} | "
                      f"{x['breaches']:,} | {x['breach_share']:.4f} | {x['base_rate']:.4f} | {x['excess']:+.4f} | "
-                     f"{x['score']:+.5f} | {_gap_cell(x['warning_gap'])} |")
+                     f"{x['score']:.5f} | {_gap_cell(x['warning_gap'])} |")
     if doc["unranked"]:
         lines += ["", f"Slices with fewer than {doc['settings']['min_breaches']} breaches (not ranked): "
                   + ", ".join(f"{DIMENSIONS[x['dimension']]} `{x['slice']}` ({x['breaches']})" for x in doc["unranked"])
@@ -581,8 +586,8 @@ def weakspots_command(*, rows_path: Path | None = None, risk: str | Path | None 
         out(f"weakspots: up to date ({out_dir / PLAN_NAME})")
         return 0
     for x in doc["chosen"]:
-        out(f"slice {x['rank']}: {DIMENSIONS[x['dimension']]} {x['slice']}: excess {x['excess']:+.4f} x share "
-            f"{x['breach_share']:.4f} = {x['score']:+.5f}")
+        out(f"slice {x['rank']}: {DIMENSIONS[x['dimension']]} {x['slice']}: loss ratio {x['loss_ratio']:.4f} x share "
+            f"{x['breach_share']:.4f} = {x['score']:.5f} (excess {x['excess']:+.4f})")
     out(f"O3: {doc['briefs']:,} briefs (expected ${doc['plan']['expected_spend_usd']:.2f} of the "
         f"${doc['count']['cap_usd']:.2f} cap) -> {out_dir / PLAN_NAME} and {out_dir / REPORT_NAME} [{reason}]")
     return 0
