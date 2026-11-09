@@ -1,0 +1,56 @@
+# Spend accounts, job caps and request settings for the v2 API jobs (docs/neural/spec.md §4.5, §4.6, §11.5).
+#
+# The ledger (src/scenarios/ledger.py) loads the accounts and job caps from this file and refuses a cap change for a
+# job that already has entries. Money is USD. An account's margin is never reservable, so the most the openai account
+# can ever settle or hold is cap_usd - margin_usd = $74.00, which is also the sum of its job caps. Jobs with
+# released: false (the retries O1b and O3b) take no reservation until `ledger release-job JOB --reason TEXT`.
+#
+# Every token count below is an estimate (source: assumed) until the O1 pilot measures it; prices live in
+# config/openai_prices.yaml.
+
+api:
+  base_url: "https://api.openai.com/v1"
+  env_file: ".env"            # relative to the repository root; read by python-dotenv inside the client at call time
+  key_name: "OPENAI_API_KEY"
+  flex_timeout_s: 900          # 15 minutes, as the Flex guide's own examples set it
+  standard_timeout_s: 600
+  schema_name: "laboratory_week"
+  default_batch_queue_limit_tokens: 2500000
+
+accounts:
+  openai: {cap_usd: 76.43, margin_usd: 2.43}
+  decide: {cap_usd: 8.00, margin_usd: 0.00}
+
+# Per-model limits at the Build usage tier, from the model pages (notes/neural/api-reference.md §A.5). Sol's batch queue
+# limit is not published, so it takes default_batch_queue_limit_tokens. The runner replaces tpm_limit with the
+# x-ratelimit-limit-tokens header once a response carries it.
+models:
+  gpt-6-luna: {tpm_limit: 2000000, batch_queue_limit_tokens: 20000000}
+  gpt-6.1-terra: {tpm_limit: 1000000, batch_queue_limit_tokens: 3000000}
+  gpt-6.1-sol: {tpm_limit: 1000000, batch_queue_limit_tokens: null}
+
+# A model at a reasoning effort, with its output limit. expected_output_tokens is 2,500 visible tokens plus the
+# reasoning tokens of spec §4.5's table; it prices the dry run's expected cost and nothing else.
+arms:
+  luna-low: {model: gpt-6-luna, effort: low, max_output_tokens: 12000, expected_output_tokens: 3500, source: assumed}
+  terra-low: {model: gpt-6.1-terra, effort: low, max_output_tokens: 16000, expected_output_tokens: 4000, source: assumed}
+  terra-medium: {model: gpt-6.1-terra, effort: medium, max_output_tokens: 20000, expected_output_tokens: 6000, source: assumed}
+  sol-medium: {model: gpt-6.1-sol, effort: medium, max_output_tokens: 24000, expected_output_tokens: 6500, source: assumed}
+
+# arms maps a brief's stratum to the arms that write it; "all" sends every brief to each listed arm (the paired pilot).
+# briefs is the planner's n (null lets the planner size the job). needs names the record a spending command requires.
+jobs:
+  O1:  {account: openai, cap_usd: 3.00, released: true, tier: flex, seed: 101, briefs: null,
+        arms: {all: [luna-low, terra-low, sol-medium]}}
+  O1b: {account: openai, cap_usd: 2.00, released: false, tier: flex, seed: 102, briefs: null,
+        arms: {all: [luna-low, terra-low, sol-medium]}}
+  O2:  {account: openai, cap_usd: 44.00, released: true, tier: flex, seed: 201, briefs: null, needs: pilot_gate,
+        arms: {normal: [terra-low], stressed: [terra-low], disrupted: [terra-low], edge: [sol-medium]}}
+  O3:  {account: openai, cap_usd: 18.00, released: true, tier: flex, seed: 301, briefs: null, needs: weak_spot_plan,
+        arms: {normal: [terra-low], stressed: [terra-low], disrupted: [terra-low], edge: [sol-medium]}}
+  O3b: {account: openai, cap_usd: 7.00, released: false, tier: flex, seed: 302, briefs: null, needs: weak_spot_plan,
+        arms: {normal: [terra-low], stressed: [terra-low], disrupted: [terra-low], edge: [sol-medium]}}
+  X1:  {account: decide, cap_usd: 1.00, released: true}
+  X2:  {account: decide, cap_usd: 4.50, released: true}
+  X3:  {account: decide, cap_usd: 0.75, released: true}
+  X4:  {account: decide, cap_usd: 1.75, released: true}

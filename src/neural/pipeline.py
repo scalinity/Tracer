@@ -1,0 +1,377 @@
+"""The v2 pipeline command line (docs/neural/spec.md §12.1). This module holds the generation commands, up to the dry
+run, generate and collect; the later stages join it with their tasks.
+
+    python -m src.neural.pipeline status
+    python -m src.neural.pipeline plan     --job O1 [--force]
+    python -m src.neural.pipeline dry-run  --job O1 [--tier flex|batch|standard] [--count-tokens-api] [--force]
+    python -m src.neural.pipeline generate --job O1 --budget-usd 3 [--tier flex|batch|standard]
+    python -m src.neural.pipeline collect  --job O1
+    python -m src.neural.pipeline ledger report
+    python -m src.neural.pipeline ledger release-job O1b --reason TEXT
+
+The dry run sends nothing and spends nothing: it builds every request of the job with the real planner and prompt,
+estimates input tokens locally (characters / 2.5, plus 15%), and prices each request's expected and worst case. Only
+`--count-tokens-api` calls the API (OpenAI's input-token counting endpoint, on three requests per model), and each of
+those calls goes through the ledger with its full estimate kept as spent, because the docs do not say whether it is
+billed. `generate` refuses unless a dry run of the same request set and tier exists from the last 24 hours, the price
+table is under 24 hours old and prices every model and tier it may use, `--budget-usd` is no greater than the job's cap,
+the job is released, and (O2) the O1 gate passed or (O3) a weak-spot plan exists.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+import time
+from datetime import datetime
+from decimal import Decimal, InvalidOperation
+from pathlib import Path
+
+from src.neural import stages
+from src.scenarios import ledger as ledger_mod
+from src.scenarios import prices, runner
+from src.scenarios.client import ClientError, OpenAIClient, api_settings
+
+TIERS = ("flex", "batch", "standard")
+
+
+def usd(micros: int) -> str:
+    return f"${micros / 1e6:,.4f}"
+
+
+class Pipeline:
+    def __init__(self, *, paths: runner.Paths, seams=None, client_factory=None, now=None, out=print,
+                 sleep=time.sleep, clock=time.monotonic):
+        self.paths = paths
+        self._seams = seams
+        self.client_factory = client_factory or (lambda: OpenAIClient(env_path=paths.env,
+                                                                      settings=api_settings(paths.jobs_config)))
+        self.now = now or (lambda: datetime.now().astimezone())
+        self.out, self.sleep, self.clock = out, sleep, clock
+
+    # shared ----------------------------------------------------------------------------------------------------------
+
+    @property
+    def seams(self) -> runner.Seams:
+        if self._seams is None:
+            try:
+                self._seams = runner.real_seams()
+            except ImportError as e:
+                raise runner.JobError(f"the scenario planner, prompt, schema and validator (task N1) are not "
+                                      f"importable here: {e}") from None
+        return self._seams
+
+    def cfg(self) -> dict:
+        return runner.load_jobs(self.paths.jobs_config)
+
+    def ledger_exists(self) -> bool:
+        return self.paths.ledger.exists() or ledger_mod.mirror_path(self.paths.ledger).exists()
+
+    def open_ledger(self, cfg: dict, *, create: bool = False) -> ledger_mod.Ledger:
+        return ledger_mod.Ledger(self.paths.ledger, jobs=cfg, create=create)
+
+    def read_briefs(self, job: str) -> list[dict]:
+        path = self.paths.briefs(job)
+        if not path.exists():
+            raise runner.JobError(f"no briefs for {job}; run `plan --job {job}` or the dry run first")
+        return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
+
+    # commands --------------------------------------------------------------------------------------------------------
+
+    def plan(self, job: str, force: bool = False) -> list[dict]:
+        cfg = self.cfg()
+        j = runner.job_settings(cfg, job)
+        targets = None
+        if j.get("needs") == "weak_spot_plan" and self.paths.weak_spot_plan.exists():
+            targets = json.loads(self.paths.weak_spot_plan.read_text(encoding="utf-8"))
+        inputs = {"job": stages.obj_hash({k: j.get(k) for k in ("seed", "briefs", "arms", "needs")}),
+                  "planner_config": stages.file_hash(runner.ROOT / "config" / "scenario_planner.yaml"),
+                  "planner_code": stages.file_hash(runner.ROOT / "src" / "scenarios" / "planner.py"),
+                  "targets": stages.obj_hash(targets) if targets is not None else None}
+        path = self.paths.briefs(job)
+
+        def fn():
+            briefs = self.seams.plan(job, j["seed"], n=j.get("briefs"), targets=targets)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("".join(json.dumps(b, sort_keys=True) + "\n" for b in briefs), encoding="utf-8")
+            return {"briefs": path}, briefs
+
+        ran, briefs, reason = stages.run_stage(self.paths.stages, f"plan-{job}", inputs, fn, force=force,
+                                               now=self.now())
+        if not ran:
+            briefs = self.read_briefs(job)
+        by_stratum: dict[str, int] = {}
+        for b in briefs:
+            by_stratum[b["stratum"]] = by_stratum.get(b["stratum"], 0) + 1
+        mix = ", ".join(f"{k} {v}" for k, v in sorted(by_stratum.items()))
+        self.out(f"plan {job}: {len(briefs)} briefs ({mix}) in {path.relative_to(self.paths.root)} "
+                 f"[{'ran: ' + reason if ran else 'up to date'}]")
+        return briefs
+
+    def dry_run(self, job: str, tier: str | None = None, count_api: bool = False, force: bool = False) -> dict:
+        cfg = self.cfg()
+        tier = tier or runner.job_settings(cfg, job)["tier"]
+        self.plan(job)
+        table = prices.load(self.paths.prices)
+        runner.check_efforts(cfg, job, table)
+        requests = runner.plan_requests(self.seams, cfg, job, self.read_briefs(job), tier)
+        set_hash = runner.request_set_hash(job, tier, requests)
+        created = not self.ledger_exists()
+        with self.open_ledger(cfg, create=created) as lg:
+            totals = lg.totals()
+            balance = {"account": totals["accounts"][cfg["jobs"][job]["account"]], "job": totals["jobs"][job]}
+            inputs = {"briefs": stages.file_hash(self.paths.briefs(job)), "request_set": set_hash,
+                      "prices": stages.file_hash(self.paths.prices), "tier": tier,
+                      "estimator": "count_api" if count_api else "local", "ledger": stages.obj_hash(balance)}
+            path = self.paths.dryrun(job)
+
+            def fn():
+                counter = self._counter(lg, cfg, table, job, tier) if count_api else None
+                d = runner.dry_run(job=job, cfg=cfg, table=table, requests=requests, tier=tier, totals=totals,
+                                   counter=counter, now=self.now(), seams=self.seams,
+                                   ledger_state="created empty by this dry run" if created else "present")
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(json.dumps(d, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+                return {"dryrun": path}, d
+
+            if count_api:  # it calls the API, so it holds the generator lock like any other sender
+                with runner.GeneratorLock(self.paths.lock):
+                    ran, d, _ = stages.run_stage(self.paths.stages, f"dry-run-{job}", inputs, fn, force=force,
+                                                 max_age=runner.DRYRUN_MAX_AGE, now=self.now())
+            else:
+                ran, d, _ = stages.run_stage(self.paths.stages, f"dry-run-{job}", inputs, fn, force=force,
+                                             max_age=runner.DRYRUN_MAX_AGE, now=self.now())
+        if not ran:
+            d = json.loads(path.read_text(encoding="utf-8"))
+            self.out("The dry run is up to date (same inputs, under 24 hours old); here it is again.")
+        self.out(runner.format_dry_run(d))
+        try:
+            prices.check_fresh(table, self.now())
+        except prices.PriceError as e:
+            self.out(f"NOTE: {e}. generate will refuse until the table is re-verified.")
+        return d
+
+    def _counter(self, lg: ledger_mod.Ledger, cfg: dict, table: dict, job: str, tier: str):
+        """The token-counting endpoint, with each call reserved and its estimate kept as spent."""
+        client = self.client_factory()
+
+        def count(body: dict) -> int:
+            est = runner.estimate_input_tokens(body)
+            cost = max(1, prices.micros(Decimal(est) * prices.rates(table, body["model"], tier)["input"]))
+            rid = lg.reserve(job, f"count-{runner.request_hash(body)[:12]}", Decimal(cost) / 1_000_000,
+                             detail={"purpose": "input-token count", "model": body["model"], "tier": tier})
+            try:
+                n = client.count_input_tokens(body)
+            except ClientError as e:
+                if e.kind == "missing_key":
+                    lg.void(rid, "no key; nothing was sent")
+                else:
+                    lg.settle_unknown(rid, f"token count failed ({e.kind}); not proven unbilled", e.request_id)
+                raise
+            lg.settle_unknown(rid, "token count: the docs do not say whether it is billed")
+            return n
+        return count
+
+    def generate(self, job: str, budget_usd: str | None, tier: str | None = None) -> int:
+        cfg = self.cfg()
+        j = runner.job_settings(cfg, job)
+        tier = tier or j["tier"]
+        try:
+            budget = Decimal(str(budget_usd))
+        except (InvalidOperation, ValueError):
+            raise runner.JobError("generate needs --budget-usd as a number of dollars") from None
+        if not budget.is_finite() or budget <= 0:
+            raise runner.JobError("--budget-usd must be a positive number of dollars")
+        if budget > Decimal(str(j["cap_usd"])):
+            raise runner.JobError(f"--budget-usd {budget} is above {job}'s ${j['cap_usd']:.2f} cap")
+        now = self.now()
+        table = prices.load(self.paths.prices)
+        uses = {(cfg["arms"][a]["model"], t) for arms in j["arms"].values() for a in arms
+                for t in {tier, "batch"}}  # any item may fall back to Batch after six unanswered tries
+        prices.require(table, sorted(uses), now)
+        runner.check_efforts(cfg, job, table)
+        if j.get("needs") == "pilot_gate":
+            gate = self.paths.pilot_gate
+            passed = gate.exists() and json.loads(gate.read_text(encoding="utf-8")).get("passed") is True
+            if not passed:
+                raise runner.JobError(f"{job} needs the O1 gate to have passed ({gate.relative_to(self.paths.root)} "
+                                      'with "passed": true)')
+        if j.get("needs") == "weak_spot_plan" and not self.paths.weak_spot_plan.exists():
+            raise runner.JobError(f"{job} needs a weak-spot plan ({self.paths.weak_spot_plan.relative_to(self.paths.root)})")
+        requests = runner.plan_requests(self.seams, cfg, job, self.read_briefs(job), tier)
+        set_hash = runner.request_set_hash(job, tier, requests)
+        dry = runner.check_dry_run(self.paths, job, tier, set_hash, now)
+        with runner.GeneratorLock(self.paths.lock):
+            with self.open_ledger(cfg) as lg:
+                if not lg.totals()["jobs"][job]["released"]:
+                    raise runner.JobError(f"{job} is not released; `ledger release-job {job} --reason TEXT` first")
+                store = runner.ItemStore(self.paths.items, self.paths.items_log)
+                client = self.client_factory()
+                try:
+                    run = runner.Runner(job=job, cfg=cfg, table=table, ledger=lg, store=store, client=client,
+                                        seams=self.seams, paths=self.paths, tier=tier, budget_usd=budget,
+                                        sleep=self.sleep, clock=self.clock, now=self.now, out=self.out)
+                    run.plan_items(requests, dry)
+                    _, summary, _ = stages.run_stage(
+                        self.paths.stages, f"generate-{job}",
+                        {"request_set": set_hash, "tier": tier, "budget_usd": str(budget)},
+                        lambda: ({}, run.generate()), always=True, now=self.now())
+                finally:
+                    store.close()
+                    getattr(client, "close", lambda: None)()
+        self._print_summary(summary)
+        return 2 if summary["stopped"] else 0
+
+    def collect(self, job: str) -> int:
+        cfg = self.cfg()
+        j = runner.job_settings(cfg, job)
+        table = prices.load(self.paths.prices)
+        with runner.GeneratorLock(self.paths.lock):
+            with self.open_ledger(cfg) as lg:
+                store = runner.ItemStore(self.paths.items, self.paths.items_log)
+                client = self.client_factory()
+                try:
+                    run = runner.Runner(job=job, cfg=cfg, table=table, ledger=lg, store=store, client=client,
+                                        seams=self.seams, paths=self.paths, tier=j["tier"], sleep=self.sleep,
+                                        clock=self.clock, now=self.now, out=self.out)
+
+                    def fn():
+                        run.resume()
+                        chunks = run.collect()
+                        return {}, {**run.summary(), "chunks": chunks}
+                    _, summary, _ = stages.run_stage(self.paths.stages, f"collect-{job}", {}, fn, always=True,
+                                                     now=self.now())
+                finally:
+                    store.close()
+                    getattr(client, "close", lambda: None)()
+        self.out(f"collect {job}: {summary['chunks']['finished']} chunks finished, {summary['chunks']['open']} open")
+        self._print_summary(summary)
+        return 2 if summary["stopped"] else 0
+
+    def _print_summary(self, s: dict) -> None:
+        jt = s.get("job_totals") or {}
+        states = ", ".join(f"{k} {v}" for k, v in s["states"].items())
+        self.out(f"{s['job']}: sent {s['sent']} requests this run; items: {states}")
+        self.out(f"{s['job']}: spent {usd(jt.get('spent', 0))}, held {usd(jt.get('held', 0))}, cap "
+                 f"{usd(jt.get('cap', 0))}; {s['open_chunks']} Batch chunks open")
+        if s.get("stopped"):
+            self.out(f"{s['job']}: stopped: {s['stopped']}")
+
+    def status(self) -> int:
+        self.out("Stages:")
+        found = stages.markers(self.paths.stages) if self.paths.stages.exists() else []
+        for m in found:
+            sha = (m.get("git_sha") or "")[:8]
+            self.out(f"  {m['stage']:<18} {m['status']:<8} finished {m.get('finished_at') or '-'}  git {sha or '-'}"
+                     + (f"  ({m['note']})" if m.get("note") else ""))
+        if not found:
+            self.out("  none run yet")
+        if not self.ledger_exists():
+            self.out("Ledger: not created yet (the first dry run creates it).")
+        else:
+            try:
+                with self.open_ledger(self.cfg()) as lg:
+                    self._print_totals(lg.totals())
+            except ledger_mod.LedgerError as e:
+                self.out(f"Ledger: UNAVAILABLE: {e}")
+        if self.paths.items.exists():
+            store = runner.ItemStore(self.paths.items, self.paths.items_log)
+            try:
+                jobs = sorted({i["job"] for i in store.items()})
+                for job in jobs:
+                    counts = ", ".join(f"{k} {v}" for k, v in store.counts(job).items())
+                    chunks = len(store.chunks(job, open_only=True))
+                    self.out(f"Items {job}: {counts}; {chunks} Batch chunks open")
+            finally:
+                store.close()
+        return 0
+
+    def _print_totals(self, totals: dict) -> None:
+        self.out("Ledger:")
+        for account, a in totals["accounts"].items():
+            self.out(f"  account {account:<7} cap {usd(a['cap'])} (margin {usd(a['margin'])}): spent {usd(a['spent'])},"
+                     f" held {usd(a['held'])}, headroom {usd(a['headroom'])}")
+        for job, t in totals["jobs"].items():
+            flag = "" if t["released"] else "  (not released)"
+            self.out(f"  job {job:<4} cap {usd(t['cap'])}: spent {usd(t['spent'])}, held {usd(t['held'])}, "
+                     f"headroom {usd(t['headroom'])}{flag}")
+
+    def ledger_report(self) -> int:
+        with self.open_ledger(self.cfg()) as lg:
+            report = lg.report()
+        self.out(f"{'job':<5} {'model':<15} {'tier':<9} {'requests':>8} {'settled':>11} {'unknown':>7} "
+                 f"{'input':>10} {'cached':>9} {'writes':>9} {'output':>10} {'reasoning':>10}")
+        for r in report["rows"]:
+            t = r["tokens"]
+            self.out(f"{r['job']:<5} {r['model']:<15} {r['tier']:<9} {r['requests']:>8} {usd(r['settled']):>11} "
+                     f"{r['unknown']:>7} {t['input']:>10,} {t['cached']:>9,} {t['cache_write']:>9,} "
+                     f"{t['output']:>10,} {t['reasoning']:>10,}")
+            if r["over_reservation"]:
+                self.out(f"  WARNING: {r['over_reservation']} settlements above their reservations")
+        self._print_totals(report["totals"])
+        return 0
+
+    def release_job(self, job: str, reason: str) -> int:
+        with self.open_ledger(self.cfg()) as lg:
+            changed = lg.release_job(job, reason)
+        self.out(f"{job} released: {reason}" if changed else f"{job} was already released")
+        return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    ap = argparse.ArgumentParser(prog="python -m src.neural.pipeline", description="Tracer v2 pipeline.")
+    sub = ap.add_subparsers(dest="command", required=True)
+    sub.add_parser("status", help="stage markers, ledger totals and item counts")
+    p = sub.add_parser("plan", help="write the job's briefs")
+    p.add_argument("--job", required=True)
+    p.add_argument("--force", action="store_true")
+    p = sub.add_parser("dry-run", help="price every request of a job; sends nothing")
+    p.add_argument("--job", required=True)
+    p.add_argument("--tier", choices=TIERS)
+    p.add_argument("--count-tokens-api", action="store_true",
+                   help="count input tokens with OpenAI's endpoint (calls the API, through the ledger)")
+    p.add_argument("--force", action="store_true")
+    p = sub.add_parser("generate", help="send a job's requests (spends money)")
+    p.add_argument("--job", required=True)
+    p.add_argument("--budget-usd", required=True)
+    p.add_argument("--tier", choices=TIERS)
+    p = sub.add_parser("collect", help="collect finished Batch chunks")
+    p.add_argument("--job", required=True)
+    p = sub.add_parser("ledger", help="ledger report or job release")
+    lsub = p.add_subparsers(dest="ledger_command", required=True)
+    lsub.add_parser("report")
+    r = lsub.add_parser("release-job")
+    r.add_argument("job")
+    r.add_argument("--reason", required=True)
+    return ap
+
+
+def main(argv: list[str] | None = None, *, paths: runner.Paths | None = None, seams=None, client_factory=None,
+         now=None, out=print, sleep=time.sleep, clock=time.monotonic) -> int:
+    args = build_parser().parse_args(argv)
+    pipe = Pipeline(paths=paths or runner.Paths(), seams=seams, client_factory=client_factory, now=now, out=out,
+                    sleep=sleep, clock=clock)
+    try:
+        if args.command == "status":
+            return pipe.status()
+        if args.command == "plan":
+            pipe.plan(args.job, force=args.force)
+            return 0
+        if args.command == "dry-run":
+            pipe.dry_run(args.job, tier=args.tier, count_api=args.count_tokens_api, force=args.force)
+            return 0
+        if args.command == "generate":
+            return pipe.generate(args.job, args.budget_usd, tier=args.tier)
+        if args.command == "collect":
+            return pipe.collect(args.job)
+        if args.ledger_command == "report":
+            return pipe.ledger_report()
+        return pipe.release_job(args.job, args.reason)
+    except (runner.JobError, ledger_mod.LedgerError, prices.PriceError, ClientError) as e:
+        out(f"error: {e}")
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
