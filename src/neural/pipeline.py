@@ -22,7 +22,6 @@ it spawns.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import statistics
 import sys
@@ -313,41 +312,17 @@ class Pipeline:
 
 
 def gate_command(job: str, paths: runner.Paths, out=print) -> int:
-    """Score the pilot's items against G1 to G6, choose the main run's models, and write
-    results/neural/generation/pilot.md and pilot.json (O2 refuses to start unless pilot.json says passed)."""
+    """The pilot gate (spec §4.10); src.scenarios.gate scores it."""
     from src.scenarios import gate
-    from src.sim import kpi
 
-    rows = gate.collect(job, paths)
-    result = gate.evaluate(rows, kpi.kpis)
-    cfg = runner.load_jobs(paths.jobs_config)
-    spent = sum(r["cost_usd"] for r in rows)
-    js, md = gate.write(result, spent, float(cfg["jobs"][job]["cap_usd"]), paths.pilot_gate.parent)
-    out(md.read_text(encoding="utf-8"))
-    out(f"wrote {js.relative_to(paths.root)} and {md.relative_to(paths.root)}")
-    return 0 if result["passed"] else 2
+    return gate.run(job, paths, out)
 
 
 def simulate_command(workers: int, out_dir: str | None, paths: runner.Paths, out=print) -> int:
-    """Simulate every frozen scenario's replicates (history replicate 0; train scores 1 and 2, the other splits
-    1 to 3) into data/sim/ with its manifest."""
+    """Simulate the frozen library (spec §5, §6.1); src.scenarios.freeze drives the simulator."""
     from src.scenarios import freeze
-    from src.sim import run as sim_run
 
-    records = freeze.read_library()
-    if not records:
-        raise runner.JobError("no frozen library; run `freeze` first")
-    lib_sha = hashlib.sha256(freeze.LIBRARY_PATH.read_bytes()).hexdigest()
-    splits = json.loads(freeze.SPLITS_PATH.read_text())
-    if splits["library_sha256"] != lib_sha:
-        raise runner.JobError("the splits file was made for a different library; refreeze")
-    target = Path(out_dir) if out_dir else paths.root / "data" / "sim"
-    t0 = time.monotonic()
-    manifest = sim_run.simulate_library(freeze.simulation_inputs(records, splits), target, freeze.REPLICATES,
-                                        workers, library_sha256=lib_sha)
-    out(f"simulated {len(records)} scenarios into {target} in {time.monotonic() - t0:.0f} s")
-    out(json.dumps({k: v for k, v in manifest.items() if not isinstance(v, (list, dict))}, indent=1))
-    return 0
+    return freeze.simulate(workers, Path(out_dir) if out_dir else None, out)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -372,9 +347,9 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("freeze", help="freeze accepted scenarios into datasets/scenarios-v2.* (spec §4.11)")
     p.add_argument("--jobs", required=True, help="comma-separated, for example O1,O2")
     p.add_argument("--workers", type=int, default=16)
-    p = sub.add_parser("simulate", help="simulate the frozen library into data/sim/ (spec §5, §6.1)")
+    p = sub.add_parser("simulate", help="simulate the frozen library (spec §5, §6.1)")
     p.add_argument("--workers", type=int, default=16)
-    p.add_argument("--out", default=None, help="output folder (default data/sim)")
+    p.add_argument("--out", default=None, help="output folder (default: the simulation folder)")
     p = sub.add_parser("ledger", help="ledger report or job release")
     lsub = p.add_subparsers(dest="ledger_command", required=True)
     lsub.add_parser("report")

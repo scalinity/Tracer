@@ -331,3 +331,29 @@ def simulation_inputs(records: list[dict] | None = None, splits: dict | None = N
                                     "split": splits["scenarios"][m["scenario_id"]],
                                     "scenario_index": m["scenario_index"]})
     return out
+
+
+SIM_DIR = ROOT / "data" / "sim"
+
+
+def simulate(workers: int, out_dir: Path | None = None, out=print) -> int:
+    """Simulate every frozen scenario's replicates (history replicate 0; train scores 1 and 2, the other splits
+    1 to 3) into data/sim/ with its manifest. Refuses a splits file made for another library."""
+    import time
+
+    from src.sim import run as sim_run
+
+    records = read_library()
+    if not records:
+        raise runner.JobError("no frozen library; run `freeze` first")
+    lib_sha = hashlib.sha256(LIBRARY_PATH.read_bytes()).hexdigest()
+    splits = json.loads(SPLITS_PATH.read_text())
+    if splits["library_sha256"] != lib_sha:
+        raise runner.JobError("the splits file was made for a different library; refreeze")
+    target = out_dir or SIM_DIR
+    t0 = time.monotonic()
+    manifest = sim_run.simulate_library(simulation_inputs(records, splits), target, REPLICATES, workers,
+                                        library_sha256=lib_sha)
+    out(f"simulated {len(records)} scenarios into {target} in {time.monotonic() - t0:.0f} s")
+    out(json.dumps({k: v for k, v in manifest.items() if not isinstance(v, (list, dict))}, indent=1))
+    return 0
