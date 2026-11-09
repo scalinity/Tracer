@@ -8,9 +8,10 @@ reasoning tokens); `store: false`; `service_tier` ("flex", or "default" for the 
 Secrets. The key is read from .env with python-dotenv inside the client at the moment of each call, never from or
 into the process environment. Every SDK exception is caught at this boundary and replaced by a ClientError raised
 outside the except block (so no exception chain survives), carrying only the HTTP status, the error type, the error
-code and the request id. Error messages from the server are dropped (a 401's message can quote part of a key).
-Rate-limit header values are parsed into a RateLimits object for the runner's concurrency control and are never
-logged or stored. The SDK's own retries are off (max_retries=0): a retry is the runner's decision, made only where
+code and the request id. Error messages from the server are dropped (a 401's message can quote part of a key). An
+error body's usage object is kept as token counts only (`billing_evidence`), since an error that consumed tokens is
+billed; nothing else of the body is kept. Rate-limit header values are parsed into a RateLimits object for the
+runner's concurrency control and are never logged or stored. The SDK's own retries are off (max_retries=0): a retry is the runner's decision, made only where
 the ledger says the first attempt was not billed.
 """
 
@@ -117,6 +118,7 @@ class CallResult:
     error_type: str | None = None
     error_code: str | None = None
     resource_unavailable: bool = False
+    tokens_consumed: bool = False  # an error body reported usage or a token count: it may be billed
     elapsed_s: float = 0.0
     rate_limits: RateLimits | None = field(default=None, repr=False)
 
@@ -142,6 +144,68 @@ class CallResult:
         out.pop("rate_limits")
         out.pop("scenario")
         return out
+
+
+USAGE_COUNTS = {"input_tokens": None, "output_tokens": None, "total_tokens": None,
+                "input_tokens_details": {"cached_tokens": None, "cache_write_tokens": None,
+                                         "cache_write_tokens_details": {"ttl_30m_tokens": None, "ttl_12h_tokens": None}},
+                "output_tokens_details": {"reasoning_tokens": None}}
+
+
+def _counts(obj, shape: dict) -> dict:
+    """The usage object's token counts that match `shape`, as non-negative integers; everything else is dropped."""
+    out = {}
+    for key, sub in shape.items():
+        value = obj.get(key) if isinstance(obj, dict) else None
+        if sub is None:
+            if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+                out[key] = value
+        elif isinstance(value, dict) and (inner := _counts(value, sub)):
+            out[key] = inner
+    return out
+
+
+CONSUMED_WORDS = ("consumed", "billed", "charged")
+COUNT_KEYS = {"input_tokens", "output_tokens", "total_tokens", "reasoning_tokens", "cached_tokens", "cache_write_tokens"}
+
+
+def _token_indicator(obj, depth: int = 0) -> bool:
+    """A usage count, or a key saying tokens were consumed, billed or charged, with a positive number or True, anywhere
+    in an error body. A rate limit's `limit_tokens` or `remaining_tokens` is not one."""
+    if depth > 4 or not isinstance(obj, (dict, list)):
+        return False
+    items = obj.items() if isinstance(obj, dict) else ((None, v) for v in obj)
+    for key, value in items:
+        named = isinstance(key, str) and (key in COUNT_KEYS or any(w in key.lower() for w in CONSUMED_WORDS))
+        if named and (value is True or (isinstance(value, (int, float)) and not isinstance(value, bool)
+                                        and value > 0)):
+            return True
+        if _token_indicator(value, depth + 1):
+            return True
+    return False
+
+
+def billing_evidence(body) -> tuple[dict | None, bool]:
+    """What an error body (a parsed dict or its raw text) says about billing: (usage, tokens_consumed).
+
+    `usage` is the first usage object found at the top level, under "error" or under "response", reduced to its token
+    counts (numbers only, never text); None when there is none with an input or output count. `tokens_consumed` is true
+    when that usage reports any tokens or `_token_indicator` finds a consumption key."""
+    if isinstance(body, (str, bytes)):
+        try:
+            body = json.loads(body)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return None, False
+    if not isinstance(body, dict):
+        return None, False
+    usage = None
+    for holder in (body, body.get("error"), body.get("response")):
+        counts = _counts((holder or {}).get("usage") if isinstance(holder, dict) else None, USAGE_COUNTS)
+        if "input_tokens" in counts or "output_tokens" in counts:
+            usage = counts
+            break
+    consumed = bool(usage and any(usage.get(k, 0) > 0 for k in ("input_tokens", "output_tokens", "total_tokens")))
+    return usage, consumed or _token_indicator(body)
 
 
 def parse_response(body: dict) -> CallResult:
@@ -285,10 +349,16 @@ class OpenAIClient:
             failure = CallResult(status="connection")
         except openai.APIStatusError as e:
             message = _error_field(e, "message") or ""
+            try:  # the SDK's e.body is only the inner "error" object; usage may sit beside it
+                usage, consumed = billing_evidence(e.response.text)
+            except Exception:  # noqa: BLE001 - an unreadable body is no evidence either way
+                usage, consumed = None, False
+            if usage is None and not consumed:
+                usage, consumed = billing_evidence({"error": e.body} if isinstance(e.body, dict) else None)
             failure = CallResult(status=f"http_{e.status_code}", request_id=_safe(e.request_id),
                                  error_type=_safe(_error_field(e, "type")), error_code=_safe(_error_field(e, "code")),
                                  resource_unavailable="resource unavailable" in str(message).lower(),
-                                 rate_limits=rate_limits(e.response.headers))
+                                 usage=usage, tokens_consumed=consumed, rate_limits=rate_limits(e.response.headers))
             message = None
         except Exception as e:  # noqa: BLE001
             failure = ClientError(kind="exception", error_type=type(e).__name__)
@@ -307,15 +377,6 @@ class OpenAIClient:
         result = parse_response(body_json)
         result.request_id, result.elapsed_s, result.rate_limits = _safe(request_id), elapsed, limits
         return result
-
-    def count_input_tokens(self, body: dict) -> int:
-        """The input-token counting endpoint (POST /responses/input_tokens). Used only behind a dry-run flag."""
-        args = {k: body[k] for k in ("model", "input", "text", "reasoning") if k in body}
-
-        def fn(sdk):
-            raw = sdk.responses.input_tokens.with_raw_response.count(**args)
-            return int(json.loads(raw.text)["input_tokens"])
-        return self._guarded("token count", fn)
 
     # -- Batch API ---------------------------------------------------------------------------------------------------
 
@@ -348,12 +409,21 @@ class OpenAIClient:
         return [json.loads(line) for line in text.splitlines() if line.strip()]
 
     def find_batch(self, chunk_id: str) -> dict | None:
-        """The batch whose metadata names this chunk, among the most recent 100, or None."""
-        page = self._guarded("batch list", lambda sdk: json.loads(sdk.batches.with_raw_response.list(limit=100).text))
-        for batch in page.get("data") or []:
-            if (batch.get("metadata") or {}).get("chunk_id") == chunk_id:
-                return batch
-        return None
+        """The batch whose metadata names this chunk, searching every page of the batch list, or None.
+
+        None means only that no listed batch names the chunk; it is not proof that the chunk never ran."""
+        after = None
+        while True:
+            args = {"limit": 100} if after is None else {"limit": 100, "after": after}
+            page = self._guarded("batch list", lambda sdk: json.loads(sdk.batches.with_raw_response.list(**args).text))
+            data = page.get("data") or []
+            for batch in data:
+                if (batch.get("metadata") or {}).get("chunk_id") == chunk_id:
+                    return batch
+            cursor = page.get("last_id") or (data[-1].get("id") if data else None)
+            if not page.get("has_more") or not cursor or cursor == after:
+                return None
+            after = cursor
 
 
 def _error_field(e, name: str):

@@ -19,7 +19,7 @@ import yaml
 from src.neural import pipeline
 from src.scenarios import ledger as L
 from src.scenarios import prices, runner
-from src.scenarios.client import CallResult, parse_response
+from src.scenarios.client import CallResult, ClientError, parse_response
 
 ROOT = Path(__file__).resolve().parents[1]
 EST = timezone(timedelta(hours=-5))
@@ -107,6 +107,7 @@ class FakeClient:
         self.batches = {}
         self.cancelled = []
         self.crash_after = None
+        self.submit_error = None
         self.lock = threading.Lock()
 
     def outcome(self, body):
@@ -129,7 +130,9 @@ class FakeClient:
             return CallResult(status=o)
         if isinstance(o, tuple) and o[0] == "http":
             return CallResult(status=f"http_{o[1]}", **o[2])
-        served = o[1] if isinstance(o, tuple) and o[0] == "tier" else body.get("service_tier", "default")
+        served = o[1] if isinstance(o, tuple) and o[0] in ("tier", "served") else body.get("service_tier", "default")
+        if isinstance(o, tuple) and o[0] == "served":  # ("served", tier, usage): billed at that tier
+            o = ("usage", o[2])
         resp = response_for(o, body, served)  # the API echoes the tier it actually used
         if on_raw:
             on_raw(json.dumps(resp))
@@ -139,9 +142,11 @@ class FakeClient:
 
     # Batch
     def submit_batch(self, lines, *, metadata):
+        if self.submit_error is not None:  # the create call failed as the client saw it; nothing exists here
+            raise self.submit_error
         bid = f"batch_{len(self.batches) + 1}"
         self.batches[bid] = {"lines": lines, "metadata": metadata, "status": "validating", "lost": set(),
-                             "errors": set()}
+                             "errors": set(), "status_lines": {}}
         self.batch_lines += lines
         return {"id": bid, "status": "validating"}
 
@@ -153,14 +158,24 @@ class FakeClient:
         return out
 
     def file_lines(self, fid):
+        """Output lines: 200s, or a status from `status_lines`. Error lines: `errors` is a set (code
+        batch_cancelled) or a dict of custom_id to code."""
         kind, bid = fid.split("_", 1)
         b = self.batches[bid]
+        errors = b["errors"] if isinstance(b["errors"], dict) else dict.fromkeys(b["errors"], "batch_cancelled")
         if kind == "out":
-            return [{"custom_id": x["custom_id"], "response": {"status_code": 200, "request_id": "req_b",
-                                                               "body": response_for("ok", x["body"], "default")}}
-                    for x in b["lines"] if x["custom_id"] not in b["lost"] | b["errors"]]
-        return [{"custom_id": x["custom_id"], "response": None, "error": {"code": "batch_cancelled"}}
-                for x in b["lines"] if x["custom_id"] in b["errors"]]
+            out = []
+            for x in b["lines"]:
+                if x["custom_id"] in b["lost"] or x["custom_id"] in errors:
+                    continue
+                status = b["status_lines"].get(x["custom_id"], 200)
+                resp = (response_for("ok", x["body"], "default") if status == 200
+                        else {"error": {"message": "gateway timeout", "type": "server_error"}})
+                out.append({"custom_id": x["custom_id"], "response": {"status_code": status, "request_id": "req_b",
+                                                                      "body": resp}})
+            return out
+        return [{"custom_id": x["custom_id"], "response": None, "error": {"code": errors[x["custom_id"]]}}
+                for x in b["lines"] if x["custom_id"] in errors]
 
     def cancel_batch(self, bid):
         self.cancelled.append(bid)
@@ -269,16 +284,16 @@ def test_a_dry_run_spends_nothing_and_makes_no_network_call(tmp_path, monkeypatc
     assert env.client.calls == [] and not env.paths.responses.exists() and not env.paths.items.exists()
 
 
-def test_the_token_count_flag_goes_through_the_ledger(tmp_path):
+def test_the_token_count_option_is_gone(tmp_path):
+    """F009: the counting endpoint's billing is undocumented and the byte bound replaces it, so the dry run has no
+    option that calls the API."""
     env = Env(tmp_path)
-    counted = []
-    env.client.count_input_tokens = lambda body: counted.append(body["model"]) or 700
-    ok(env.cli("dry-run", "--job", "O1", "--count-tokens-api"))
-    assert sorted(Counter(counted).values()) == [3, 3, 3]
-    entries = env.ledger().entries("O1")
-    assert [e["kind"] for e in entries].count("reserve") == 9
-    assert all(e["detail"].get("unknown") for e in entries if e["kind"] == "settle")  # billing unknown: kept
-    assert json.loads(env.paths.dryrun("O1").read_text())["estimator"] == "count_api"
+    env.client_factory = lambda: pytest.fail("the dry run built an API client")
+    with pytest.raises(SystemExit):
+        env.cli("dry-run", "--job", "O1", "--count-tokens-api")
+    assert not hasattr(pipeline.Pipeline, "_counter")
+    ok(env.cli("dry-run", "--job", "O1"))
+    assert env.ledger().entries() == []
 
 
 def test_a_spend_needs_a_fresh_dry_run_of_the_same_requests(tmp_path):
@@ -551,23 +566,32 @@ def test_a_chunk_unfinished_after_six_hours_is_cancelled_and_its_items_return_to
     out = ok(env.cli("collect", "--job", "O2", now=NOW + timedelta(hours=7)))
     assert len(env.client.cancelled) == 2 and "cancelling" in out
     ids = [x["custom_id"] for x in terra["lines"]]
-    terra.update(status="cancelled", errors=set(ids[1:5]), lost={ids[5]})  # one finished, four cancelled, one lost
+    # One finished; two never ran before the window closed (batch_expired, proven unbilled); two carry another error
+    # code, which proves nothing about billing (F002); one has no line at all.
+    terra.update(status="cancelled", errors={ids[1]: "batch_expired", ids[2]: "batch_expired",
+                                             ids[3]: "batch_cancelled", ids[4]: "batch_cancelled"}, lost={ids[5]})
     for b in env.client.batches.values():
         if b is not terra:
             b["status"] = "cancelled"
     ok(env.cli("collect", "--job", "O2", now=NOW + timedelta(hours=7, minutes=10)))
     items = env.items("O2")
     assert items[ids[0]]["state"] == "accepted"
-    for iid in ids[1:5]:
+    for iid in ids[1:3]:
         assert items[iid]["state"] == "unavailable" and items[iid]["tier"] == "flex"
-    assert items[ids[5]]["state"] == "unknown"  # no line at all: not proven unbilled
+    for iid in ids[3:6]:  # not proven unbilled: kept as spent, with a repair attempt
+        assert items[iid]["state"] == "unknown"
+        assert items[iid[:-1] + "2"]["repair_errors"] == [runner.UNKNOWN_TEXT]
     ok(env.cli("dry-run", "--job", "O2"))
     ok(env.cli("generate", "--job", "O2", "--budget-usd", "44"))  # Flex, under fresh reservations
     items = env.items("O2")
-    for iid in ids[1:5]:
+    for iid in ids[1:3]:
         assert items[iid]["state"] == "accepted"
         reserves = [e for e in env.ledger().entries() if e["item_id"] == iid and e["kind"] == "reserve"]
         assert [e["detail"]["tier"] for e in reserves] == ["batch", "flex"]
+    sent = [c[0] for c in env.client.calls] + [runner.request_hash(x["body"]) for x in env.client.batch_lines]
+    for iid in ids[3:6]:
+        assert sent.count(items[iid]["request_hash"]) == 1, "an unknown outcome's request was sent again"
+        assert items[iid[:-1] + "2"]["state"] == "accepted"
     transitions_are_legal(env)
 
 
@@ -660,6 +684,346 @@ def test_the_cap_refuses_requests_it_cannot_cover(tmp_path):
     assert t["spent"] + t["held"] <= L.to_micros("0.30") and t["held"] == 0
     left = [i for i in env.items("O1").values() if i["state"] == "planned"]
     assert left, "items the budget could not cover stay planned for a later run"
+
+
+# -- the spend-control findings of the independent review (F001 to F011) ---------------------------------------------
+
+def standard_worst(env, item_id, job="O1", tier="flex"):
+    """The reservation the runner must hold for an item: its byte bound and max_output_tokens at Standard rates."""
+    briefs = [json.loads(x) for x in env.paths.briefs(job).read_text().splitlines()]
+    req = next(r for r in runner.plan_requests(env.seams, env.cfg, job, briefs, tier) if r["item_id"] == item_id)
+    r = prices.rates(prices.load(env.paths.prices), req["model"], "standard")
+    return prices.worst_case_micros(runner.input_token_bound(req["body"]), req["max_output_tokens"], r)
+
+
+def seed_spent(env, job, usd):
+    with env.ledger() as lg:
+        rid = lg.reserve(job, "earlier-run", usd)
+        lg.settle(rid, usd, None, None, "flex")
+
+
+def sent_hashes(env):
+    return [c[0] for c in env.client.calls] + [runner.request_hash(x["body"]) for x in env.client.batch_lines]
+
+
+def test_f001_a_flex_request_billed_at_standard_never_takes_the_job_past_its_cap(tmp_path):
+    """The reviewer's probe: O1 at $2.94 spent, a Terra request reserved at Flex rates and billed at Standard
+    ($0.0801 for 100 input and 16,000 output tokens) settled the job at $3.0201."""
+    outputs = {"gpt-6-luna": 12000, "gpt-6.1-terra": 16000, "gpt-6.1-sol": 24000}
+    script = {(f"S101-{i:03d}", model, 1): [("served", "default", {"input_tokens": 100, "output_tokens": out,
+                                                                    "input_tokens_details": {"cached_tokens": 0,
+                                                                                             "cache_write_tokens": 0}})]
+              for i in range(24) for model, out in outputs.items()}
+    env = Env(tmp_path, script=script)
+    ok(env.cli("dry-run", "--job", "O1"))
+    seed_spent(env, "O1", "2.94")
+    env.cli("generate", "--job", "O1", "--budget-usd", "3")
+    lg = env.ledger()
+    t = lg.totals()["jobs"]["O1"]
+    assert t["spent"] + t["held"] <= L.to_micros("3.00")
+    settles = [e for e in lg.entries() if e["kind"] == "settle" and e["item_id"] != "earlier-run"]
+    assert settles and not any(e["detail"]["over_reservation"] for e in settles)
+    assert {e["detail"]["tier"] for e in settles} == {"standard"}  # settled at the tier actually served
+    for e in lg.entries():
+        if e["kind"] == "reserve" and e["item_id"] != "earlier-run":
+            assert e["micros"] >= standard_worst(env, e["item_id"]), "a Flex request was reserved below Standard"
+    assert not [c for c in env.client.calls if c[2] != "gpt-6-luna"], "only Luna's Standard worst case fits $0.06"
+
+
+def test_f005_the_input_bound_is_every_byte_sent_plus_framing_whatever_the_script():
+    messages = [{"role": "developer", "content": "Écrivez une semaine 🧪 " * 50},
+                {"role": "user", "content": json.dumps({"brief_id": "B1", "note": "检验科 \"quoted\"\n"})}]
+    body = {"model": "gpt-6.1-terra", "input": messages,
+            "text": {"format": {"type": "json_schema", "name": "laboratory_week", "schema": SCHEMA, "strict": True}},
+            "reasoning": {"effort": "low"}, "max_output_tokens": 16000, "store": False, "service_tier": "flex"}
+    bound = runner.input_token_bound(body)
+    sent_text = (sum(len(m["content"].encode("utf-8")) for m in messages) + len(body["model"].encode())
+                 + len(json.dumps(body["text"]).encode("utf-8")))
+    assert bound >= sent_text + runner.FRAMING_PER_REQUEST + runner.FRAMING_PER_MESSAGE * 2
+    assert bound == len(runner.canonical(body).encode("utf-8")) + 64 + 16 * 2
+    assert not runner.wants_12h_retention(body)
+    assert runner.wants_12h_retention({**body, "prompt_cache_options": {"ttl": "12h"}})
+
+
+def test_f005_billed_input_above_its_bound_stops_the_job(tmp_path):
+    env = Env(tmp_path)
+    ok(env.cli("dry-run", "--job", "O1"))
+    bound = json.loads(env.paths.dryrun("O1").read_text())["items"]["O1-S101-000.luna-low-1"]["input_bound"]
+    over = {"input_tokens": bound + 1, "output_tokens": 10,
+            "input_tokens_details": {"cached_tokens": 0, "cache_write_tokens": 0}}
+    env.client.script = {("S101-000", "gpt-6-luna", 1): [("usage", over)]}
+    code, out = env.cli("generate", "--job", "O1", "--budget-usd", "3")
+    assert code == 2 and "input bound" in out and len(env.client.calls) < 72
+
+
+def test_f005_the_dry_run_prices_the_worst_case_from_the_byte_bound_and_shows_measured_input(tmp_path):
+    env = Env(tmp_path)
+    out = ok(env.cli("dry-run", "--job", "O1"))
+    d = json.loads(env.paths.dryrun("O1").read_text())
+    table = prices.load(env.paths.prices)
+    for iid, info in d["items"].items():
+        assert info["worst_micros"] == standard_worst(env, iid)
+        assert info["input_bound"] > info["est_input_tokens"]
+        flex = prices.rates(table, info["model"], "flex")
+        assert info["expected_micros"] == prices.expected_micros(info["est_input_tokens"],
+                                                                 env.cfg["arms"][iid.split(".")[1][:-2]]
+                                                                 ["expected_output_tokens"], flex)
+    assert "byte" in out and "Standard" in out and "measured" not in out
+    ok(env.cli("generate", "--job", "O1", "--budget-usd", "3"))  # the fake usage reports 600 input tokens each
+    out = ok(env.cli("dry-run", "--job", "O2"))
+    assert "measured median input 600 tokens" in out
+
+
+def test_f002_server_errors_stay_billed_and_get_a_repair_never_a_resend(tmp_path):
+    used = {"input_tokens": 900, "output_tokens": 300, "output_tokens_details": {"reasoning_tokens": 200}}
+    env = Env(tmp_path, script={("S101-000", "gpt-6.1-terra", 1): [("http", 500, {"usage": used,
+                                                                                  "tokens_consumed": True})],
+                                ("S101-001", "gpt-6.1-terra", 1): [("http", 503, {})],
+                                ("S101-002", "gpt-6.1-terra", 1): [("http", 502, {"tokens_consumed": True})]})
+    ok(env.cli("dry-run", "--job", "O1"))
+    ok(env.cli("generate", "--job", "O1", "--budget-usd", "3"))
+    items, lg = env.items("O1"), env.ledger()
+    for n in range(3):
+        first, second = items[f"O1-S101-00{n}.terra-low-1"], items[f"O1-S101-00{n}.terra-low-2"]
+        assert first["state"] == "unknown" and second["state"] == "accepted"
+        assert second["repair_errors"] == [runner.UNKNOWN_TEXT]
+        assert sent_hashes(env).count(first["request_hash"]) == 1
+        settle = next(e for e in lg.entries() if e["ref"] == first["reservation_id"] and e["kind"] == "settle")
+        if n == 0:  # the usage it reported, at Standard rates (an error names no tier): 900 x 1.25 + 300 x 5.00
+            assert settle["micros"] == 1125 + 1500 and not settle["detail"].get("unknown")
+        else:
+            assert settle["detail"]["unknown"] and settle["micros"] == first["worst_micros"]
+    assert not any(e["kind"] == "void" for e in lg.entries())
+
+
+def test_f002_repeated_server_errors_stop_the_job(tmp_path):
+    env = Env(tmp_path, script={"*": [("http", 500, {})]})
+    ok(env.cli("dry-run", "--job", "O1"))
+    code, out = env.cli("generate", "--job", "O1", "--budget-usd", "3")
+    assert code == 2 and "server errors" in out and len(env.client.calls) <= runner.START_WORKERS
+    lg = env.ledger()
+    assert lg.open_reservations() == [] and not any(e["kind"] == "void" for e in lg.entries())
+
+
+def test_f002_errors_proven_unbilled_are_voided_and_the_rest_are_not():
+    c = runner.billing_outcome
+    assert c(status=429, kind="http_429") == "void"  # Flex resource unavailable, a rate limit or a quota refusal
+    for status in (400, 401, 403, 404, 409, 413, 415, 422):
+        assert c(status=status, kind=f"http_{status}") == "void"
+    for status in (408, 500, 502, 503, 504, 524, 402, 410, 499):
+        assert c(status=status, kind=f"http_{status}") == "unknown", status
+    assert c(status=None, kind="timeout") == "unknown" and c(status=None, kind="connection") == "unknown"
+    assert c(status=400, kind="http_400", usage={"input_tokens": 5, "output_tokens": 0}) == "usage"
+    assert c(status=429, kind="http_429", tokens_consumed=True) == "unknown"
+    assert c(status=200, kind="ok") == "usage"
+    assert c(status=None, kind="batch_error", batch_code="batch_expired") == "void"
+    for code in ("batch_cancelled", "batch_failed", None, "server_error"):
+        assert c(status=None, kind="batch_error", batch_code=code) == "unknown"
+    assert c(status=504, kind="batch_line") == "unknown" and c(status=400, kind="batch_line") == "unknown"
+
+
+def test_f002_a_batch_504_line_stays_billed_and_its_request_is_never_resent(tmp_path):
+    env = Env(tmp_path)
+    env.pass_gate()
+    ok(env.cli("dry-run", "--job", "O2", "--tier", "batch"))
+    ok(env.cli("generate", "--job", "O2", "--budget-usd", "44", "--tier", "batch"))
+    terra = next(b for b in env.client.batches.values() if b["lines"][0]["body"]["model"] == "gpt-6.1-terra")
+    ids = [x["custom_id"] for x in terra["lines"]]
+    terra["status_lines"] = {ids[0]: 504}
+    terra["errors"] = {ids[1]: "batch_expired"}
+    for b in env.client.batches.values():
+        b["status"] = "completed"
+    ok(env.cli("collect", "--job", "O2"))
+    items, lg = env.items("O2"), env.ledger()
+    first = items[ids[0]]
+    assert first["state"] == "unknown" and items[ids[0][:-1] + "2"]["repair_errors"] == [runner.UNKNOWN_TEXT]
+    settle = next(e for e in lg.entries() if e["ref"] == first["reservation_id"] and e["kind"] == "settle")
+    assert settle["detail"]["unknown"] and settle["micros"] == first["worst_micros"]
+    assert items[ids[1]]["state"] == "unavailable" and items[ids[1]]["tier"] == "flex"  # expired: never ran
+    ok(env.cli("dry-run", "--job", "O2"))
+    ok(env.cli("generate", "--job", "O2", "--budget-usd", "44"))
+    assert sent_hashes(env).count(first["request_hash"]) == 1
+    assert env.items("O2")[ids[1]]["state"] == "accepted"
+
+
+@pytest.mark.parametrize("failure", [dict(kind="timeout"), dict(kind="http_408", status=408),
+                                     dict(kind="http_500", status=500), dict(kind="exception")])
+def test_f003_an_uncertain_batch_create_keeps_its_reservations_and_a_list_miss_never_resubmits(tmp_path, failure):
+    env = Env(tmp_path)
+    env.pass_gate()
+    ok(env.cli("dry-run", "--job", "O2", "--tier", "batch"))
+    env.client.submit_error = ClientError(stage="create", **failure)
+    ok(env.cli("generate", "--job", "O2", "--budget-usd", "44", "--tier", "batch"))
+    items = env.items("O2")
+    first = {iid: i for iid, i in items.items() if i["attempt"] == 1}
+    assert {i["state"] for i in first.values()} == {"in_flight"}
+    lg = env.ledger()
+    assert lg.totals()["jobs"]["O2"]["held"] == sum(standard_worst(env, iid, "O2", "batch") for iid in first)
+    reserved = {e["item_id"]: e["micros"] for e in lg.entries() if e["kind"] == "reserve"}
+    env.client.submit_error = None
+    ok(env.cli("collect", "--job", "O2"))  # the paged search finds nothing: inconclusive, not proof
+    items = env.items("O2")
+    lg = env.ledger()
+    for iid in first:
+        assert items[iid]["state"] == "unknown"
+        settle = next(e for e in lg.entries() if e["ref"] == items[iid]["reservation_id"] and e["kind"] == "settle")
+        assert settle["detail"]["unknown"] and settle["micros"] == reserved[iid]
+        assert items[iid[:-1] + "2"]["repair_errors"] == [runner.UNKNOWN_TEXT]
+    assert not any(e["kind"] == "void" for e in lg.entries())
+    ok(env.cli("generate", "--job", "O2", "--budget-usd", "44", "--tier", "batch"))
+    assert {x["custom_id"][-1] for x in env.client.batch_lines} == {"2"}, "an original request was resubmitted"
+    assert not set(sent_hashes(env)) & {i["request_hash"] for i in first.values()}
+
+
+def test_f003_a_definite_pre_execution_refusal_of_the_create_call_voids(tmp_path):
+    env = Env(tmp_path)
+    env.pass_gate()
+    ok(env.cli("dry-run", "--job", "O2", "--tier", "batch"))
+    env.client.submit_error = ClientError(stage="create", kind="http_400", status=400)
+    ok(env.cli("generate", "--job", "O2", "--budget-usd", "44", "--tier", "batch"))
+    lg = env.ledger()
+    assert lg.totals()["jobs"]["O2"]["spent"] == 0 and lg.open_reservations() == []
+    assert {i["state"] for i in env.items("O2").values()} == {"unavailable"}
+    env.client.submit_error = None
+    ok(env.cli("generate", "--job", "O2", "--budget-usd", "44", "--tier", "batch"))
+    assert len(env.client.batch_lines) == 8
+
+
+def test_f004_a_resumed_reservation_below_the_current_worst_case_is_topped_up_before_sending(tmp_path):
+    env = Env(tmp_path)
+    ok(env.cli("dry-run", "--job", "O1"))
+    briefs = [json.loads(x) for x in env.paths.briefs("O1").read_text().splitlines()]
+    reqs = runner.plan_requests(env.seams, env.cfg, "O1", briefs, "flex")
+    iid = "O1-S101-000.terra-low-1"
+    with env.ledger() as lg:  # left reserved, as a crash before sending leaves it, under older and lower prices
+        store = env.store()
+        run = runner.Runner(job="O1", cfg=env.cfg, table=prices.load(env.paths.prices), ledger=lg, store=store,
+                            client=env.client, seams=env.seams, paths=env.paths, tier="flex")
+        run.plan_items(reqs)
+        rid = lg.reserve("O1", iid, "0.040124", detail={"tier": "flex"})
+        store.transition(iid, "reserved", reservation_id=rid, reserved_tier="flex")
+        store.close()
+    ok(env.cli("generate", "--job", "O1", "--budget-usd", "3"))
+    entries = [e for e in env.ledger().entries() if e["item_id"] == iid]
+    assert [e["kind"] for e in entries] == ["reserve", "void", "reserve", "settle", "release"]
+    assert entries[1]["ref"] == rid and entries[2]["micros"] == standard_worst(env, iid)
+    assert entries[3]["ref"] == entries[2]["entry_id"]
+
+
+def test_f004_a_top_up_that_does_not_fit_is_refused_and_nothing_is_sent(tmp_path):
+    env = Env(tmp_path, jobs_changes=[lambda c: c["jobs"]["O1"].update(briefs=1)])
+    ok(env.cli("dry-run", "--job", "O1"))
+    briefs = [json.loads(x) for x in env.paths.briefs("O1").read_text().splitlines()]
+    reqs = runner.plan_requests(env.seams, env.cfg, "O1", briefs, "flex")
+    iid = "O1-S101-000.terra-low-1"
+    seed_spent(env, "O1", "2.94")
+    with env.ledger() as lg:
+        store = env.store()
+        run = runner.Runner(job="O1", cfg=env.cfg, table=prices.load(env.paths.prices), ledger=lg, store=store,
+                            client=env.client, seams=env.seams, paths=env.paths, tier="flex")
+        run.plan_items(reqs)
+        rid = lg.reserve("O1", iid, "0.040124", detail={"tier": "flex"})
+        store.transition(iid, "reserved", reservation_id=rid, reserved_tier="flex")
+        store.close()
+    env.cli("generate", "--job", "O1", "--budget-usd", "3")
+    item = env.items("O1")[iid]
+    assert item["state"] == "refused" and item["request_hash"] not in sent_hashes(env)
+    lg = env.ledger()
+    assert [e["kind"] for e in lg.entries() if e["item_id"] == iid] == ["reserve", "void"]
+    t = lg.totals()["jobs"]["O1"]
+    assert t["held"] == 0 and t["spent"] <= L.to_micros("3.00")
+
+
+def test_f006_batch_submission_serves_stored_responses_and_never_uploads_them(tmp_path):
+    env = Env(tmp_path)
+    env.pass_gate()
+    ok(env.cli("dry-run", "--job", "O2", "--tier", "batch"))
+    d = json.loads(env.paths.dryrun("O2").read_text())
+    item_id, info = sorted(d["items"].items())[0]
+    env.paths.responses.mkdir(parents=True)
+    stored = response_for("ok", {"model": info["model"], "input": [
+        {"role": "user", "content": json.dumps({"brief_id": item_id.split("-", 1)[1].rsplit("-", 1)[0]})}]})
+    (env.paths.responses / f"{info['request_hash']}.json").write_text(json.dumps(stored))
+    ok(env.cli("generate", "--job", "O2", "--budget-usd", "44", "--tier", "batch"))
+    assert item_id not in [x["custom_id"] for x in env.client.batch_lines]
+    assert len(env.client.batch_lines) == 7
+    item = env.items("O2")[item_id]
+    assert item["state"] == "accepted" and item["cached"] is True
+    assert not [e for e in env.ledger().entries() if e["item_id"] == item_id and e["kind"] != "void"
+                and e["kind"] != "reserve"]
+    transitions_are_legal(env)
+
+
+def test_f007_batch_collection_resumes_after_a_crash_between_settling_and_moving_an_item(tmp_path, monkeypatch):
+    env = Env(tmp_path)
+    env.pass_gate()
+    ok(env.cli("dry-run", "--job", "O2", "--tier", "batch"))
+    ok(env.cli("generate", "--job", "O2", "--budget-usd", "44", "--tier", "batch"))
+    terra = next(b for b in env.client.batches.values() if b["lines"][0]["body"]["model"] == "gpt-6.1-terra")
+    ids = [x["custom_id"] for x in terra["lines"]]
+    terra["errors"] = {ids[1]: "batch_expired"}
+    for b in env.client.batches.values():
+        b["status"] = "completed"
+    real_transition, real_void = runner.ItemStore.transition, L.Ledger.void
+    crashed = []
+
+    def transition(self, item_id, to, detail=None, **fields):
+        if to == "received" and "settled" not in crashed:  # the settlement committed; the item did not move
+            crashed.append("settled")
+            raise Crash()
+        return real_transition(self, item_id, to, detail, **fields)
+    monkeypatch.setattr(runner.ItemStore, "transition", transition)
+    with pytest.raises(Crash):
+        env.cli("collect", "--job", "O2")
+
+    def void(self, entry_id, reason, request_id=None):
+        if "batch_expired" in reason and "voided" not in crashed:  # the item moved; the void did not commit
+            crashed.append("voided")
+            raise Crash()
+        return real_void(self, entry_id, reason, request_id)
+    monkeypatch.setattr(L.Ledger, "void", void)
+    with pytest.raises(Crash):
+        env.cli("collect", "--job", "O2")
+    monkeypatch.undo()
+    ok(env.cli("collect", "--job", "O2"))
+    items, lg = env.items("O2"), env.ledger()
+    assert crashed == ["settled", "voided"]
+    assert items[ids[1]]["state"] == "unavailable" and items[ids[1]]["tier"] == "flex"
+    assert all(items[i]["state"] == "accepted" for i in items if i != ids[1])
+    closes = Counter(e["ref"] for e in lg.entries() if e["kind"] in ("settle", "void"))
+    assert max(closes.values()) == 1 and lg.open_reservations() == []
+    assert L.replay(lg.mirror) == lg.balances()
+    transitions_are_legal(env)
+
+
+def test_f008_generate_sends_only_the_checked_request_set_and_its_repairs(tmp_path):
+    env = Env(tmp_path, jobs_changes=[lambda c: c["jobs"]["O1"].update(briefs=2)])
+    ok(env.cli("dry-run", "--job", "O1"))
+    code, out = env.cli("generate", "--job", "O1", "--budget-usd", "0.000001")  # stops at once; items stay planned
+    assert code == 2 and len(env.items("O1")) == 6 and env.client.calls == []
+    env.rewrite_jobs(lambda c: c["jobs"]["O1"].update(briefs=1))
+    env.client.script = {("S101-000", "gpt-6-luna", 1): [("invalid", "semantics", ["fix the units"])]}
+    ok(env.cli("dry-run", "--job", "O1"))
+    out = ok(env.cli("generate", "--job", "O1", "--budget-usd", "3"))
+    assert "3 pending items are outside the checked request set" in out
+    assert {c[1] for c in env.client.calls} == {"S101-000"} and len(env.client.calls) == 4  # three and one repair
+    items = env.items("O1")
+    assert {i["state"] for iid, i in items.items() if "S101-001" in iid} == {"planned"}
+
+
+def test_f011_a_dry_run_dated_in_the_future_or_without_a_zone_is_refused(tmp_path):
+    env = Env(tmp_path)
+    ok(env.cli("dry-run", "--job", "O1"))
+    d = json.loads(env.paths.dryrun("O1").read_text())
+    for created, refused in (((NOW + timedelta(days=365)).isoformat(), "future"),
+                             ((NOW + timedelta(minutes=6)).isoformat(), "future"),
+                             (NOW.replace(tzinfo=None).isoformat(), "time zone")):
+        env.paths.dryrun("O1").write_text(json.dumps({**d, "created_at": created}))
+        code, out = env.cli("generate", "--job", "O1", "--budget-usd", "3")
+        assert code == 1 and refused in out, created
+    assert env.client.calls == []
+    env.paths.dryrun("O1").write_text(json.dumps({**d, "created_at": (NOW + timedelta(minutes=4)).isoformat()}))
+    ok(env.cli("generate", "--job", "O1", "--budget-usd", "3"))
 
 
 # -- units -----------------------------------------------------------------------------------------------------------

@@ -230,14 +230,14 @@ Cache writes are listed at 1.25 times the input rate (30-minute retention). Batc
 
 **Per-scenario estimate** (to be replaced by pilot measurements). About 7,000 input tokens (6,500 stable prefix plus 400 of brief), 2,500 visible output tokens, and reasoning tokens that bill as output.
 
-| Model, effort | Reasoning tokens (assumed) | Expected cost at Flex or Batch rates, no caching | `max_output_tokens` | Worst case reserved at Flex rates |
+| Model, effort | Reasoning tokens (assumed) | Expected cost at Flex or Batch rates, no caching | `max_output_tokens` | Worst case reserved, at Standard rates |
 |---|---|---|---|---|
-| `gpt-6-luna`, low | 1,000 | $0.0012 | 12,000 | $0.004 |
-| `gpt-6.1-terra`, low | 1,500 | $0.0135 | 16,000 | $0.050 |
-| `gpt-6.1-terra`, medium | 3,500 | $0.0185 | 20,000 | $0.060 |
-| `gpt-6.1-sol`, medium | 4,000 | $0.0395 | 24,000 | $0.140 |
+| `gpt-6-luna`, low | 1,000 | $0.0012 | 12,000 | $0.0118 |
+| `gpt-6.1-terra`, low | 1,500 | $0.0135 | 16,000 | $0.1381 |
+| `gpt-6.1-terra`, medium | 3,500 | $0.0185 | 20,000 | $0.1581 |
+| `gpt-6.1-sol`, medium | 4,000 | $0.0395 | 24,000 | $0.3562 |
 
-Worst case = 8,000 input tokens priced at the cache-write rate plus `max_output_tokens` at the output rate. A request that falls back to the Standard tier is reserved at Standard rates (twice the above).
+Worst case = the request's input bound priced at the Standard cache-write rate (the highest input rate a request with 30-minute retention can be billed) plus `max_output_tokens` (which include reasoning) at the Standard output rate. The input bound is a guarantee, not an estimate: the UTF-8 byte length of the whole serialized request (every message, the JSON schema and format block, the model name and every other field) plus 64 tokens per request and 16 per message, since a byte-level BPE token covers at least one byte. With the real prompt and schema an O2 request is about 46,400 bytes (46,368 at the median of the 6,101 O2 briefs, 46,782 at most), so its bound is about 46,500 tokens; the figures above are at that median. Every request is reserved at Standard rates whatever tier it asks for, because a Flex request can be served and billed at Standard and Flex and Batch are half of Standard; settlement prices the tier actually served. A bound past 272,000 tokens (long-context pricing, which the price table lacks) cannot be reserved.
 
 **Allocation of $76.43.**
 
@@ -253,19 +253,19 @@ Worst case = 8,000 input tokens priced at the cache-write rate plus `max_output_
 
 Counts are computed at run time as `floor(cap / (measured cost per accepted scenario))` per model and stratum, with the stratum shares above. The contingency is released to an O3b only after O2 and O3 are settled, and only if the round-2 slices on validation are still the worst slices after retraining. Unused money stays unspent.
 
-**Execution tier.** Flex is the default for O1 to O3: Batch prices, synchronous responses, no 24-hour window. A Flex `429 Resource Unavailable` is not billed; retry it with exponential backoff and jitter (up to 6 tries over about 20 minutes), then move the item to Batch. Batch submissions are chunked so the enqueued input tokens stay under the model's queue limit (default 2.5M, or the limit the account shows), and a chunk not finished after 6 hours is cancelled and its unfinished items go back to Flex. Standard tier is used only when a stage would otherwise miss its day, and its reservations are at Standard rates. Client timeout for Flex is 15 minutes.
+**Execution tier.** Flex is the default for O1 to O3: Batch prices, synchronous responses, no 24-hour window. A Flex `429 Resource Unavailable` is not billed; retry it with exponential backoff and jitter (up to 6 tries over about 20 minutes), then move the item to Batch. Batch submissions are chunked so the enqueued input tokens stay under the model's queue limit (default 2.5M, or the limit the account shows), and a chunk not finished after 6 hours is cancelled: its items whose lines say `batch_expired` go back to Flex, and the rest are settled as unknown and get their repair attempt. Standard tier is used only when a stage would otherwise miss its day, and its reservations are at Standard rates. Client timeout for Flex is 15 minutes.
 
 ### 4.6 Ledger and spend control (`src/scenarios/ledger.py`)
 
 The ledger makes overspending impossible: no request leaves the machine without a reservation that covers its worst case.
 
 - **Storage.** SQLite in WAL mode at `data/openai/ledger.sqlite` (local; `data/` is ignored), with a human-readable mirror `data/openai/ledger.jsonl`. Tables: `accounts` (`openai`, `decide`) with `cap_usd`; `jobs` (O1, O1b, O2, O3, O3b, and the decision-model jobs X1 to X4) with `cap_usd` and `released` flag; `entries` (`entry_id`, `account`, `job`, `item_id`, `kind` in `reserve`, `settle`, `release`, `void`, `adjust`, `usd`, `at`, `request_id`, `detail`).
-- **Reserve.** Inside one `BEGIN IMMEDIATE` transaction: compute `spent = sum(settle) + sum(adjust)` and `held = sum(reserve) − sum(release) − sum(settle-matched)`; refuse unless `spent + held + new ≤ account cap − hard margin` and the job's own total stays within the job cap. The reservation is the worst case of §4.5 at the tier actually requested.
+- **Reserve.** Inside one `BEGIN IMMEDIATE` transaction: compute `spent = sum(settle) + sum(adjust)` and `held = sum(reserve) − sum(release) − sum(settle-matched)`; refuse unless `spent + held + new ≤ account cap − hard margin` and the job's own total stays within the job cap. The reservation is the worst case of §4.5, at Standard rates whatever tier is requested. It is recomputed from the current price table and the request's input bound before every send; an unsent reservation smaller than that is replaced (a `void` and a larger `reserve` in one transaction, under the same checks), and if the larger one does not fit, the request is refused and never sent.
 - **Settle.** When a response arrives, price its reported usage with the price table (uncached input at the cache-write rate unless the usage object breaks writes out; cached input at the cached rate; output including reasoning at the output rate; the tier actually served), write `settle`, and `release` the remainder of the reservation.
-- **Unknown outcome.** A client timeout or a dropped connection keeps the full reservation as `settle` (the server may have finished and billed). A Flex 429 or a 4xx validation error is `void` (not billed). A server 5xx is `void` unless the error says tokens were consumed.
-- **Batch.** Reserve the sum of the chunk's worst cases at submission; settle per output line; release the rest when the chunk ends, expires or is cancelled. Expired items are billed only for completed requests, which is what the per-line settlement records.
-- **Price table.** `config/openai_prices.yaml` holds per-model, per-tier rates, `verified_at` (ISO date and time), `source_url` and the person or agent who checked. A spending command refuses to run if the table is older than 24 hours or lacks the model and tier it would use.
-- **Dry run.** `python -m src.neural.pipeline dry-run --job O2` builds every request of the job (deterministic briefs, real prompts), estimates input tokens with the API's input-token counting endpoint if the current docs list one, otherwise locally with a 15% margin, and prints per model and stratum: requests, expected cost, worst-case cost, ledger headroom and job cap. It writes `data/openai/dryrun-O2.json` with the request-set hash and spends nothing. A spending command refuses to run unless a dry run with the same request-set hash exists from the last 24 hours.
+- **Unknown outcome.** One classifier decides every synchronous and Batch outcome. Only outcomes proven unbilled are `void`: any 429 (a Flex `429 Resource Unavailable`, which the docs say is not charged; a rate limit; a quota or spend-limit refusal), a 4xx raised before the request ran (400, 401, 403, 404, 409, 413, 415, 422), and a Batch line coded `batch_expired`. An error that reports usage is settled from that usage (an error names no served tier, so at Standard rates). Everything else (a client timeout, a dropped connection, every 5xx, 408, any other Batch error line, an error that says tokens were consumed without a usable usage object) keeps the full reservation as `settle`, and its brief gets the repair attempt; the identical request is never sent again. The client keeps an error body's usage as token counts only. When half of the last ten answered requests end this way, the job stops.
+- **Batch.** Reserve the sum of the chunk's worst cases at submission; settle per output line; release the rest when the chunk ends, expires or is cancelled. Expired items are billed only for completed requests, which is what the per-line settlement records. A request whose response is stored is answered from the store and never uploaded. A chunk whose creation is uncertain (a timeout, 408, 5xx or crash after the create call) keeps every reservation; collect searches every page of the batch list for its id, and a miss is not proof that nothing ran, so its items are settled as unknown and get their repairs, never a resubmission. Only an upload failure, or a create call refused with one of the 4xx above or a 429, voids the chunk.
+- **Price table.** `config/openai_prices.yaml` holds per-model, per-tier rates, `verified_at` (ISO date and time), `source_url` and the person or agent who checked. A spending command refuses to run if the table is older than 24 hours, is dated more than five minutes ahead or without a time zone, or lacks the model and tier it would use (every reservation needs the model's Standard rates).
+- **Dry run.** `python -m src.neural.pipeline dry-run --job O2` builds every request of the job (deterministic briefs, real prompts) and prints per model and stratum: requests, the estimated input and the input bound per request, expected cost (the local estimate, characters / 2.5 with a 15% margin, at the tier's rates), worst-case cost (§4.5, what generate reserves), ledger headroom and job cap, with the measured median input of stored responses beside the estimate. It writes `data/openai/dryrun-O2.json` with the request-set hash, spends nothing and opens no connection. A spending command refuses to run unless a dry run with the same request-set hash exists from the last 24 hours, dated with a time zone and at most five minutes ahead; it sends only that request set and the repairs it spawns, and leaves any other pending item unsent.
 - **Order.** O1 needs a dry run. O2 needs the O1 gate to have passed (§4.10). O3 needs a trained model's validation weak-spot report (§4.12). Each needs `--budget-usd` no greater than its job cap.
 - **Reconciliation.** After each job, `ledger report` prints settled totals per job and model next to the sums of reported tokens, and the manifest records them. Daniel can compare with OpenAI's usage page; if the two disagree by more than 5% or $1, work stops and Daniel is asked.
 - **Concurrency.** One generator process at a time (a lock file in `data/openai/`); worker threads share the SQLite ledger through the transaction above.
@@ -300,8 +300,8 @@ stateDiagram-v2
   refused --> [*]
 ```
 
-- **Response cache.** Every raw response is stored at `data/openai/responses/<request_hash>.json` before anything parses it. `request_hash` covers model, parameters and messages. A rerun never sends a request whose response is cached.
-- **Resume.** On start the runner rebuilds item states from the store, re-attaches to open batch chunks by id, and treats `unknown` items as billed and finished (they get a repair attempt, never a silent resend).
+- **Response cache.** Every raw response is stored at `data/openai/responses/<request_hash>.json` before anything parses it. `request_hash` covers model, parameters and messages. A rerun never sends a request whose response is cached, by Flex, Standard or Batch.
+- **Resume.** On start the runner rebuilds item states from the store, re-attaches to open batch chunks by id, and treats `unknown` items as billed and finished (they get a repair attempt, never a silent resend). An item whose reservation the ledger already closed (a crash between the ledger write and the item's move) follows that closing entry instead of being settled or voided again.
 - **Repair.** One repair per brief, with the validator's error text appended to the brief, as v1 does. A second failure drops the brief and logs why.
 - **Concurrency.** Start with 8 Flex workers and adapt to the rate-limit headers, keeping requested tokens per minute under 80% of the limit. Requested tokens count input plus `max_output_tokens`.
 - **Logs** never include headers, the key, or full prompts. Exceptions are caught at the client boundary and re-raised with the status, error type and request id only.
@@ -1098,7 +1098,7 @@ Each stage writes `data/neural/stages/<stage>.json` with its input hashes, outpu
 ### 12.3 Other state machines
 
 - **Scenario request:** §4.7.
-- **Batch chunk:** `created` → `submitted` → `validating` → `in_progress` → `finalizing` → `completed`, `failed`, `expired`, or `cancelling` → `cancelled`. At any end state, completed lines are settled and the remaining items return to `reserved` for Flex under a fresh reservation.
+- **Batch chunk:** `created` → `submitted` → `validating` → `in_progress` → `finalizing` → `completed`, `failed`, `expired`, or `cancelling` → `cancelled`. At any end state, completed lines are settled; items whose lines say `batch_expired`, and every item of a batch that failed validation, return to Flex under a fresh reservation; every other item is settled as unknown and gets its repair attempt.
 - **Ledger entry:** `reserve` → `settle` and `release`; or `void` (not billed); or settled at the full reservation when the outcome is unknown.
 - **Training run:** `created` → `running` ↔ `paused` (checkpoint) → `finished`, `stopped_early`, `diverged` (three non-finite losses after reloads) or `timed_out` (time box).
 - **Test lock:** `absent` → `locked` → `relocked` (with a reason, logged).
@@ -1114,12 +1114,15 @@ Each stage writes `data/neural/stages/<stage>.json` with its input hashes, outpu
 | Generation | Flex `429 Resource Unavailable` | Status | Void, back off, retry up to 6 times, then Batch |
 | Generation | Rate limit 429 | Status and headers | Honor `retry-after`; lower concurrency |
 | Generation | Timeout or dropped connection | Client error | Keep the reservation as spent; give the brief its repair attempt; never resend silently |
+| Generation | Server 5xx, 408, or an error that reports usage | Status, error body | Keep the reservation as spent, or settle the reported usage; repair, never resend; half of the last ten answers unusable stops the job |
+| Generation | Batch creation uncertain | Create call timeout, 408, 5xx or crash | Keep the reservations; search every page of the batch list; not found: settle as unknown, repair, never resubmit |
+| Generation | Billed input above the input bound | Usage against the bound | Stop the job; the bound is wrong |
 | Generation | `incomplete` at `max_output_tokens` | Response status | Billed, counted as a failure; repair asks for compact values; above 5% of a job, raise the limit through a new dry run |
 | Generation | Refusal | Refusal content | Failure; one repair; above 2%, review the prompt |
 | Generation | Valid JSON, invalid meaning, implausible, or off-brief | §4.8 layers | One repair with the errors |
 | Generation | Near duplicate | §4.9 | Reject without repair |
 | Generation | A real institution or a personal name | §4.8 layer 3 | Reject; one repair with "no names" |
-| Generation | Batch expired, failed or cancelled | Batch status | Settle completed lines; the rest go to Flex |
+| Generation | Batch expired, failed or cancelled | Batch status | Settle completed lines; `batch_expired` lines and a batch that failed validation go to Flex; any other line, or none, is settled as unknown, with a repair |
 | Generation | Batch queue token limit | Submission error | Smaller chunks; wait for running chunks |
 | Generation | Crash mid-job | Lock file and item store | Resume; unknown items count as billed |
 | Generation | Ledger missing, corrupt or locked | Open or integrity check | Stop; never send without a ledger |
@@ -1226,7 +1229,7 @@ Also: `scripts/clean_clone.sh` passes; `node visuals/plan.check.cjs` passes; `np
 | `test_signature.py` | Signatures are deterministic; near duplicates are caught; families form by union-find; Vendi score on toy sets |
 | `test_ledger.py` | No sequence of reserve, settle, void, timeout, crash and batch expiry can push spend past the cap; 16 threads racing for the last dollars never overspend; replay from the log reproduces the totals; stale prices refuse |
 | `test_openai_client.py` | Request shape (strict schema, effort, `max_output_tokens`, tier, no temperature); usage parsing with cached and reasoning tokens; `incomplete` and refusal handling; no key or header in any log line or exception (fakes only, no network) |
-| `test_runner.py` | A dry run spends nothing; a spend needs a fresh dry run with the same request-set hash; O2 needs the gate; resume is idempotent; Batch chunks respect the queue limit |
+| `test_runner.py` | A dry run spends nothing; a spend needs a fresh dry run with the same request-set hash; O2 needs the gate; resume is idempotent; Batch chunks respect the queue limit; a Flex request billed at Standard never passes a cap; server errors and Batch error lines stay billed and are never resent; an uncertain Batch create is never resubmitted; an under-sized resumed reservation is topped up or refused; only the checked request set is sent |
 | `test_sim_engine.py` | Byte-identical reruns; common random numbers (changing a disruption leaves untouched specimens' draws equal); heap order; every §5.9 invariant on 20 random scenarios |
 | `test_sim_v1_compat.py` | v1-world trails pass `src.generator.validate.validate` 100%; leg KS checks; breach share inside the 99% interval of 522 of 12,000 |
 | `test_sim_disruptions.py` | Each disruption moves outcomes the right way against the same scenario without it (paired by common random numbers) |
@@ -1339,7 +1342,7 @@ Take cuts in this order when the schedule slips:
 ## Appendix B. Cost worksheet
 
 - Expected cost of a request = (uncached input × cache-write rate + cached input × cached rate + (visible output + reasoning) × output rate) / 1,000,000, at the tier served.
-- Worst case reserved = (estimated input × 1.15 × cache-write rate + `max_output_tokens` × output rate) / 1,000,000, at the tier requested.
+- Worst case reserved = (input bound × cache-write rate + `max_output_tokens` × output rate) / 1,000,000, at Standard rates whatever tier is requested (the 12-hour write rate replaces the cache-write rate only for a request that asks for 12-hour retention); input bound = UTF-8 bytes of the serialized request + 64 + 16 × messages.
 - Cost per accepted scenario = everything the job spent, including failures and repairs, divided by the scenarios it got accepted.
 - Count for a job and model = floor(job cap × 0.95 ÷ measured cost per accepted scenario), split by the stratum shares.
 

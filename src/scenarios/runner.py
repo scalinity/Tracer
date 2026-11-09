@@ -6,16 +6,24 @@ and transitions are exactly the §4.7 diagram (TRANSITIONS below); they live in 
 transition is appended to `data/openai/items.jsonl`.
 
 Spend rules the runner keeps:
-- Nothing is sent without a ledger reservation for the request's worst case. The item moves to `in_flight` before
-  the request leaves, so a crash can only ever over-count: on resume an `in_flight` item with no stored response is
-  `unknown`, and its whole reservation stays spent.
+- Nothing is sent without a ledger reservation that covers the most the request could be billed: its input bound
+  (`input_token_bound`: every byte sent plus framing) at the highest input rate and its max_output_tokens at the output
+  rate, all at Standard rates whatever tier is asked for, since a Flex request can be billed at Standard. The worst case
+  is recomputed from the current price table before every send, and a held reservation smaller than it is replaced
+  (`Ledger.cover`) or the request is refused. The item moves to `in_flight` before the request leaves, so a crash can
+  only ever over-count: on resume an `in_flight` item with no stored response is `unknown`, and its whole reservation
+  stays spent.
 - Every HTTP 200 body is written to `data/openai/responses/<request_hash>.json` before anything parses it. A request
-  whose response is stored is never sent again.
-- A Flex 429, another 429 that is not about billing, a server 5xx or any other 4xx is voided (not billed). Timeouts,
-  dropped connections, HTTP 408/504/524 and anything unexpected keep the full reservation.
+  whose response is stored is never sent again, by Flex, Standard or Batch.
+- One classifier (`billing_outcome`) decides every outcome, synchronous or Batch. Voided (proven unbilled): any 429
+  (Flex resource unavailable, a rate limit, a quota refusal), a 4xx raised before the request ran (400, 401, 403, 404,
+  409, 413, 415, 422) and a Batch line coded batch_expired. Reported usage is settled. Everything else (every 5xx,
+  408, timeouts, dropped connections, other Batch error lines, an uncertain Batch create) keeps the full reservation.
 - An `unknown` item is billed and finished; its brief gets the repair attempt, never a silent resend.
-- A settlement above its reservation, an out-of-credit error, a systematic 4xx or an unexpected client error stops the
-  job: in-flight requests finish and are settled, and nothing new is sent.
+- A settlement above its reservation, billed input above its bound, an out-of-credit error, a systematic 4xx, half of
+  the last ten requests ending without a usable answer, or an unexpected client error stops the job: in-flight
+  requests finish and are settled, and nothing new is sent.
+- `generate` sends only the units of the dry run's checked request set (and their repairs); other pending items wait.
 
 The N1 modules (planner, prompt, schema, validate) are reached only through `Seams`; `real_seams()` imports them.
 """
@@ -33,8 +41,9 @@ import sqlite3
 import threading
 import time
 import uuid
+from collections import deque
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -44,7 +53,7 @@ import yaml
 
 from . import ledger as ledger_mod
 from . import prices
-from .client import CallResult, ClientError, build_body, parse_response
+from .client import CallResult, ClientError, billing_evidence, build_body, parse_response
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -72,10 +81,13 @@ BACKOFF_BASE_S = 40.0  # waits of about 40, 80, 160, 320 and 640 s between six t
 JITTER = (0.75, 1.25)
 START_WORKERS, MAX_WORKERS = 8, 32
 TPM_SHARE = 0.8  # requested tokens per minute (input plus max_output_tokens) stay under this share of the limit
-TIMEOUT_STATUSES = {408, 504, 524}
+# 4xx statuses raised before a request runs (malformed, unauthorized, forbidden, unknown model, conflict, too large,
+# wrong media type, unprocessable): proven unbilled. Every other non-429 failure is not.
+PRE_EXECUTION_4XX = {400, 401, 403, 404, 409, 413, 415, 422}
 BILLING_CODES = {"insufficient_quota", "credit_balance_exhausted", "organization_spend_limit_exceeded",
                  "project_spend_limit_exceeded", "organization_usage_limit_exceeded"}
 RATE_LIMIT_CODES = {"rate_limit_exceeded", "slow_down"}
+UNKNOWN_WINDOW, UNKNOWN_STOP = 10, 5  # stop when 5 of the last 10 answered requests ended without a usable response
 
 BATCH_MAX_AGE = timedelta(hours=6)
 BATCH_MAX_REQUESTS = 50_000
@@ -83,8 +95,12 @@ CHUNK_STATES = ("created", "submitted", "validating", "in_progress", "finalizing
                 "failed", "expired", "cancelled")
 CHUNK_END = {"completed", "failed", "expired", "cancelled"}
 
-# Local input-token estimate (the dry run's default): characters of the messages and the schema / 2.5, plus framing,
-# times a 15% margin. 2.5 characters per token is deliberately low for JSON-heavy English (source: assumed).
+# The input bound every reservation uses: a byte-level BPE token covers at least one byte, so a request's text is at most
+# as many tokens as its UTF-8 bytes; framing (roles, message boundaries, hidden system text) adds at most these.
+FRAMING_PER_REQUEST = 64
+FRAMING_PER_MESSAGE = 16
+# The local estimate behind the dry run's expected cost, the throttle and the Batch queue sizing (never a reservation):
+# characters of the messages and the schema / 2.5, plus framing, times a 15% margin (source: assumed).
 CHARS_PER_TOKEN = 2.5
 LOCAL_MARGIN = 1.15
 MESSAGE_OVERHEAD_TOKENS = 16
@@ -259,8 +275,54 @@ def local_raw_tokens(body: dict) -> int:
 
 
 def estimate_input_tokens(body: dict) -> int:
-    """Input tokens with a 15% margin, counted locally (no network)."""
+    """Input tokens with a 15% margin, counted locally (no network). An estimate, never a reservation."""
     return math.ceil(local_raw_tokens(body) * LOCAL_MARGIN)
+
+
+def input_token_bound(body: dict) -> int:
+    """A guaranteed upper bound on the input tokens a request can be billed: the UTF-8 bytes of the whole serialized
+    request (every message's content, the JSON schema and format block, the model name and every other field; JSON
+    escaping only adds bytes) plus 64 tokens of framing per request and 16 per message."""
+    messages = body.get("input")
+    n = len(messages) if isinstance(messages, list) else 1
+    return len(canonical(body).encode("utf-8")) + FRAMING_PER_REQUEST + FRAMING_PER_MESSAGE * n
+
+
+def wants_12h_retention(body: dict) -> bool:
+    """Whether a request asks for cache writes longer than the default 30 minutes (none here does)."""
+    ttl = (body.get("prompt_cache_options") or {}).get("ttl")
+    return ttl not in (None, "30m") or body.get("prompt_cache_retention") is not None
+
+
+def reservation_micros(table: dict, body: dict) -> tuple[int, int]:
+    """(worst case, input bound) of one request from the given price table: the bound at the highest input rate and
+    max_output_tokens at the output rate, at Standard rates (prices.RESERVE_TIER) whatever tier the request asks for."""
+    bound = input_token_bound(body)
+    rates = prices.rates(table, body["model"], prices.RESERVE_TIER)
+    return prices.worst_case_micros(bound, int(body["max_output_tokens"]), rates,
+                                    ttl_12h=wants_12h_retention(body)), bound
+
+
+def billing_outcome(*, status: int | None, kind: str, usage=None, tokens_consumed: bool = False,
+                    batch_code: str | None = None) -> str:
+    """How one outcome is billed, for synchronous calls and Batch lines alike.
+
+    `kind` is the CallResult status ("ok", "http_500", "timeout", "connection", ...) or "batch_line" (an output-file
+    line) or "batch_error" (an error-file line, with its `batch_code`). Returns:
+    - "usage": settle the usage the outcome reports (the whole reservation when it cannot be priced);
+    - "void": proven unbilled. Only any 429 (Flex resource unavailable, which the docs say is not charged; a rate
+      limit; a quota or spend-limit refusal), a 4xx raised before the request ran (PRE_EXECUTION_4XX) and a Batch line
+      coded batch_expired, and only when the body reports no usage and no consumed tokens;
+    - "unknown": everything else, kept as spent at the full reservation."""
+    if status == 200 or isinstance(usage, dict):
+        return "usage"
+    if tokens_consumed:
+        return "unknown"
+    if kind.startswith("batch_"):
+        return "void" if batch_code == "batch_expired" else "unknown"
+    if status == 429 or status in PRE_EXECUTION_4XX:
+        return "void"
+    return "unknown"
 
 
 def make_item_id(job: str, unit: str, attempt: int) -> str:
@@ -306,40 +368,30 @@ def request_set_hash(job: str, tier: str, requests: list[dict]) -> str:
 # -- dry run ----------------------------------------------------------------------------------------------------------
 
 def dry_run(*, job: str, cfg: dict, table: dict, requests: list[dict], tier: str, totals: dict | None,
-            counter: Callable[[dict], int] | None = None, now: datetime | None = None,
-            seams: Seams | None = None, ledger_state: str = "present") -> dict:
-    """Price every request of the job without sending one. `counter`, when given, is the token-counting endpoint
-    (behind a flag): it counts up to three requests per model and scales the local estimates by the worst ratio."""
+            now: datetime | None = None, seams: Seams | None = None, ledger_state: str = "present",
+            measured: dict | None = None) -> dict:
+    """Price every request of the job without sending one or opening a connection.
+
+    The worst case is what generate reserves: the request's input bound and max_output_tokens at Standard rates. The
+    expected cost uses the local estimate at the tier's own rates. `measured` is {model: (median billed input tokens,
+    responses)} from stored responses, shown beside the estimate."""
     now = now or datetime.now().astimezone()
     check_efforts(cfg, job, table)
-    estimator = "local"
-    if counter is not None:
-        estimator = "count_api"
-        ratio: dict[str, float] = {}
-        measured: dict[str, int] = {}
-        for model in sorted({r["model"] for r in requests}):
-            sample = [r for r in requests if r["model"] == model][:3]
-            for r in sample:
-                n = counter(r["body"])
-                measured[r["item_id"]] = n
-                ratio[model] = max(ratio.get(model, 0.0), n / local_raw_tokens(r["body"]))
-        for r in requests:
-            r["est_input_tokens"] = measured.get(r["item_id"]) or math.ceil(
-                local_raw_tokens(r["body"]) * ratio[r["model"]] * LOCAL_MARGIN)
     groups: dict = {}
     items = {}
     for r in requests:
-        rates = prices.rates(table, r["model"], tier)
-        worst = prices.worst_case_micros(r["est_input_tokens"], r["max_output_tokens"], rates)
-        expected = prices.expected_micros(r["est_input_tokens"], r["expected_output_tokens"], rates)
+        worst, bound = reservation_micros(table, r["body"])
+        expected = prices.expected_micros(r["est_input_tokens"], r["expected_output_tokens"],
+                                          prices.rates(table, r["model"], tier))
         items[r["item_id"]] = {"request_hash": r["request_hash"], "est_input_tokens": r["est_input_tokens"],
-                               "worst_micros": worst, "expected_micros": expected, "model": r["model"],
-                               "effort": r["effort"], "stratum": r["stratum"]}
+                               "input_bound": bound, "worst_micros": worst, "expected_micros": expected,
+                               "model": r["model"], "effort": r["effort"], "stratum": r["stratum"]}
         g = groups.setdefault((r["model"], r["effort"], r["stratum"]),
                               {"model": r["model"], "effort": r["effort"], "stratum": r["stratum"], "requests": 0,
-                               "input_tokens": 0, "expected_micros": 0, "worst_micros": 0})
+                               "input_tokens": 0, "input_bound_tokens": 0, "expected_micros": 0, "worst_micros": 0})
         g["requests"] += 1
         g["input_tokens"] += r["est_input_tokens"]
+        g["input_bound_tokens"] += bound
         g["expected_micros"] += expected
         g["worst_micros"] += worst
     j = job_settings(cfg, job)
@@ -350,7 +402,12 @@ def dry_run(*, job: str, cfg: dict, table: dict, requests: list[dict], tier: str
     out = {
         "job": job, "tier": tier, "created_at": now.isoformat(timespec="seconds"),
         "request_set_hash": request_set_hash(job, tier, requests), "requests": len(requests),
-        "estimator": estimator, "chars_per_token": CHARS_PER_TOKEN, "local_margin": LOCAL_MARGIN,
+        "estimator": "local", "chars_per_token": CHARS_PER_TOKEN, "local_margin": LOCAL_MARGIN,
+        "worst_case": "input bound (UTF-8 bytes plus framing) and max_output_tokens at Standard rates",
+        "reserve_tier": prices.RESERVE_TIER,
+        "framing_tokens": {"per_request": FRAMING_PER_REQUEST, "per_message": FRAMING_PER_MESSAGE},
+        "measured_input": {m: {"median_tokens": med, "responses": n} for m, (med, n) in sorted((measured or {}).items())
+                           if m in {r["model"] for r in requests}},
         "prices_verified_at": str(table.get("verified_at")),
         "prices_age_hours": round(prices.age(table, now).total_seconds() / 3600, 2),
         "groups": [groups[k] for k in sorted(groups)],
@@ -374,14 +431,26 @@ def dry_run(*, job: str, cfg: dict, table: dict, requests: list[dict], tier: str
 def format_dry_run(d: dict) -> str:
     usd = lambda m: f"${m / 1e6:,.4f}"  # noqa: E731
     lines = [f"Dry run for {d['job']} at the {d['tier']} tier: {d['requests']} requests, nothing sent, nothing spent.",
-             f"Input tokens estimated {'locally (characters / ' + str(d['chars_per_token']) + ', +15%)' if d['estimator'] == 'local' else 'with the token-counting endpoint (sampled)'}; "
+             "Worst case (what generate reserves per request): its input bound, every UTF-8 byte sent plus "
+             f"{d['framing_tokens']['per_request']} tokens per request and {d['framing_tokens']['per_message']} per "
+             "message, at the highest Standard input rate, plus max_output_tokens at the Standard output rate, "
+             "whatever tier serves it.",
+             f"Expected: input estimated locally (characters / {d['chars_per_token']}, +15%) at {d['tier']} rates; "
              f"prices verified {d['prices_verified_at']} ({d['prices_age_hours']:.1f} h ago).",
-             "", f"{'model':<15} {'effort':<7} {'stratum':<10} {'requests':>8} {'expected':>11} {'worst case':>11}"]
+             "", f"{'model':<15} {'effort':<7} {'stratum':<10} {'requests':>8} {'est input':>10} {'input bound':>12} "
+             f"{'expected':>11} {'worst case':>11}"]
     for g in d["groups"]:
+        n = max(1, g["requests"])
         lines.append(f"{g['model']:<15} {g['effort']:<7} {g['stratum']:<10} {g['requests']:>8} "
+                     f"{g['input_tokens'] // n:>10,} {g['input_bound_tokens'] // n:>12,} "
                      f"{usd(g['expected_micros']):>11} {usd(g['worst_micros']):>11}")
-    lines += [f"{'total':<34} {d['requests']:>8} {usd(d['expected_micros']):>11} {usd(d['worst_micros']):>11}",
-              "", f"Job cap {usd(d['job_cap_micros'])}; job spent {usd(d['job_spent_micros'])}, held "
+    lines.append(f"{'total':<34} {d['requests']:>8} {'':>10} {'':>12} {usd(d['expected_micros']):>11} "
+                 f"{usd(d['worst_micros']):>11}")
+    lines.append("(est input and input bound are tokens per request.)")
+    for model, m in d.get("measured_input", {}).items():
+        lines.append(f"{model}: measured median input {m['median_tokens']:,} tokens over {m['responses']} stored "
+                     "responses, beside the estimate above.")
+    lines += ["", f"Job cap {usd(d['job_cap_micros'])}; job spent {usd(d['job_spent_micros'])}, held "
               f"{usd(d['job_held_micros'])}; {d['account']} account headroom {usd(d['account_headroom_micros'])} "
               f"(ledger {d['ledger']}).",
               "Repairs (one per rejected brief) are not in these numbers. Reservations are per request, so the worst "
@@ -393,13 +462,21 @@ def format_dry_run(d: dict) -> str:
 
 
 def check_dry_run(paths: Paths, job: str, tier: str, set_hash: str, now: datetime | None = None) -> dict:
-    """A spending command's check: a dry run of the same request set and tier, under 24 hours old."""
+    """A spending command's check: a dry run of the same request set and tier, under 24 hours old, dated with a time
+    zone and not more than five minutes ahead of now."""
     path = paths.dryrun(job)
     if not path.exists():
         raise JobError(f"no dry run for {job}; run `python -m src.neural.pipeline dry-run --job {job}` first")
     d = json.loads(path.read_text(encoding="utf-8"))
     now = now or datetime.now().astimezone()
-    made = datetime.fromisoformat(d["created_at"])
+    try:
+        made = datetime.fromisoformat(str(d.get("created_at")))
+    except ValueError:
+        raise JobError(f"the dry run for {job} has no readable created_at; run it again") from None
+    if made.tzinfo is None:
+        raise JobError(f"the dry run for {job} has no time zone in created_at ({d.get('created_at')}); run it again")
+    if made - now > prices.FUTURE_SKEW:
+        raise JobError(f"the dry run for {job} is dated in the future ({d.get('created_at')}); run it again")
     if now - made > DRYRUN_MAX_AGE:
         raise JobError(f"the dry run for {job} is {(now - made).total_seconds() / 3600:.1f} hours old (limit 24); "
                        "run it again")
@@ -632,9 +709,12 @@ class Runner:
     def __init__(self, *, job: str, cfg: dict, table: dict, ledger: ledger_mod.Ledger, store: ItemStore, client,
                  seams: Seams, paths: Paths, tier: str, budget_usd=None, sleep: Callable = time.sleep,
                  clock: Callable = time.monotonic, now: Callable | None = None, rng: random.Random | None = None,
-                 out: Callable = print):
+                 out: Callable = print, units=None):
+        """`units`, when given, are the units of the dry run's checked request set: only their attempts are sent."""
         self.job, self.cfg, self.table, self.ledger, self.store = job, cfg, table, ledger, store
         self.client, self.seams, self.paths, self.tier = client, seams, paths, tier
+        self.units = None if units is None else set(units)
+        self.recent: deque = deque(maxlen=UNKNOWN_WINDOW)  # True for each answer that was not a usable response
         self.budget = None if budget_usd is None else Decimal(str(budget_usd))
         self.sleep, self.clock = sleep, clock
         self.now = now or (lambda: datetime.now().astimezone())
@@ -669,9 +749,17 @@ class Runner:
                            "or brief changed mid-job); run the dry run again")
         return body
 
-    def _worst_micros(self, item: dict, tier: str) -> int:
-        return prices.worst_case_micros(item["est_input_tokens"], item["max_output_tokens"],
-                                        prices.rates(self.table, item["model"], tier))
+    def _allowed(self, item: dict) -> bool:
+        return self.units is None or item["unit"] in self.units
+
+    def _reservation(self, item: dict, body: dict) -> tuple[int, int] | None:
+        """(worst case, input bound) from the current price table, or None after stopping the job if the request
+        cannot be reserved (an input bound in long-context pricing, or a missing rate)."""
+        try:
+            return reservation_micros(self.table, body)
+        except prices.PriceError as e:
+            self.stop(f"{item['item_id']} cannot be reserved ({e}); nothing more is sent")
+            return None
 
     @staticmethod
     def _usd(micros: int) -> Decimal:
@@ -718,32 +806,40 @@ class Runner:
     # resume ----------------------------------------------------------------------------------------------------------
 
     def resume(self) -> None:
-        """Rebuild states after a crash. In-flight Flex items settle from a stored response or become unknown;
-        reservations no item is using are voided (they were never sent); repairs are planned where owed."""
+        """Rebuild states after a crash, without settling or voiding anything twice.
+
+        An in-flight item whose reservation is still open settles from its stored response or becomes unknown (a Batch
+        item waits for its chunk's collection instead). An in-flight item whose reservation the ledger already closed
+        (a crash between the ledger write and the item's move) follows that closing entry: a settlement with a stored
+        response is received, one without is unknown, a void is unavailable. Reservations no item is using are voided:
+        their requests were never sent, or were proven unbilled just before a crash. Repairs are planned where owed."""
         open_res = {r["entry_id"]: r for r in self.ledger.open_reservations(self.job)}
+        closing = None
         claimed = set()
         for item in self.store.items(self.job):
             rid, state = item.get("reservation_id"), item["state"]
-            if state == "in_flight" and item.get("chunk_id"):
-                claimed.add(rid)
-            elif state == "in_flight":
+            if state == "in_flight":
                 claimed.add(rid)
                 text = self.cache.read(item["request_hash"])
                 if rid in open_res:
+                    if item.get("chunk_id"):
+                        continue  # collect settles it from its chunk's lines
                     if text is not None:
                         self._settle(item, self._parse_text(text))
                     else:
                         self.ledger.settle_unknown(rid, "interrupted while in flight; not proven unbilled")
                         self._unknown(item, "interrupted while in flight")
-                else:  # the ledger closed it but the item never moved on
-                    closing = [e for e in self.ledger.entries(self.job) if e["ref"] == rid and e["kind"] in
-                               ("settle", "void")]
-                    if closing and closing[0]["kind"] == "void":
-                        self.store.transition(item["item_id"], "unavailable", "voided before a crash")
-                    elif text is not None:
-                        self.store.transition(item["item_id"], "received", "settled before a crash")
-                    else:
-                        self._unknown(item, "settled as unknown before a crash")
+                    continue
+                if closing is None:
+                    closing = {e["ref"]: e["kind"] for e in self.ledger.entries(self.job)
+                               if e["kind"] in ledger_mod.CLOSING and e["ref"]}
+                if closing.get(rid) == "void":
+                    back = {"chunk_id": None, "tier": "flex", "tries": 0} if item.get("chunk_id") else {}
+                    self.store.transition(item["item_id"], "unavailable", "voided before a crash", **back)
+                elif text is not None:
+                    self.store.transition(item["item_id"], "received", "settled before a crash")
+                else:
+                    self._unknown(item, "settled as unknown before a crash")
             elif state == "reserved":
                 if rid in open_res:
                     claimed.add(rid)
@@ -752,10 +848,11 @@ class Runner:
         for rid, res in open_res.items():
             if rid in claimed:
                 continue
-            if str(res.get("item_id") or "").startswith("count-"):
+            if str(res.get("item_id") or "").startswith("count-"):  # a token count from before the option was removed
                 self.ledger.settle_unknown(rid, "token count interrupted; not proven unbilled")
             else:
-                self.ledger.void(rid, "never sent (open with no request in flight on resume)")
+                self.ledger.void(rid, "open with no request in flight on resume: never sent, or proven unbilled "
+                                      "just before a crash")
         self.process_pending()
 
     def process_pending(self) -> None:
@@ -791,8 +888,8 @@ class Runner:
         tier_key = tier or prices.served_tier(r.service_tier)
         detail = {"served_tier_field": r.service_tier, "response_status": r.response_status,
                   "elapsed_s": round(r.elapsed_s, 3)}
-        if tier_key is None and r.service_tier is None:
-            tier_key, detail["tier_inferred"] = item["tier"], True
+        if tier_key is None and r.service_tier is None:  # no tier reported: priced at the most it could have been
+            tier_key, detail["tier_inferred"] = prices.RESERVE_TIER, True
         cost = None
         try:
             if tier_key is None:
@@ -809,14 +906,51 @@ class Runner:
                 self.ledger.settle_unknown(rid, f"usage cannot be priced: {e}", request_id=r.request_id)
                 self.out(f"LEDGER: {item['item_id']} reported no usable usage ({e}); its whole reservation is kept")
         if cost is not None:
-            s = self.ledger.settle(rid, self._usd(cost), r.usage, r.request_id, tier_key, detail=detail)
-            if s["over"]:
-                self.stop(f"{item['item_id']} cost ${cost / 1e6:.6f}, above its ${s['reserved'] / 1e6:.6f} "
-                          "reservation; the input estimate is too low. Nothing more is sent; rerun the dry run.")
+            self._settle_cost(item, cost, r, tier_key, detail)
+        self._check_bound(item, r.usage)
         item = self.store.transition(item["item_id"], "received", r.status, request_id=r.request_id,
                                      served_tier=r.service_tier, tokens=r.tokens(), elapsed_s=round(r.elapsed_s, 3),
                                      result=r.status)
         self._process(item, r)
+
+    def _settle_cost(self, item: dict, cost: int, r: CallResult, tier_key: str, detail: dict) -> None:
+        s = self.ledger.settle(item["reservation_id"], self._usd(cost), r.usage, r.request_id, tier_key,
+                               detail=detail)
+        if s["over"]:
+            self.stop(f"{item['item_id']} cost ${cost / 1e6:.6f}, above its ${s['reserved'] / 1e6:.6f} "
+                      "reservation; the reservation rule is wrong. Nothing more is sent.")
+
+    def _check_bound(self, item: dict, usage) -> None:
+        billed = usage.get("input_tokens") if isinstance(usage, dict) else None
+        bound = item.get("input_bound")
+        if isinstance(billed, int) and bound and billed > bound:
+            self.stop(f"{item['item_id']} was billed {billed:,} input tokens, above its input bound of {bound:,}; "
+                      "the bound is wrong. Nothing more is sent.")
+
+    def _settle_failure(self, item: dict, outcome: str, usage, why: str, request_id: str | None, tier_key: str):
+        """Close the reservation of an outcome that may be billed but carries no usable response ("usage" settles
+        the usage it reports at `tier_key`; "unknown", or usage that cannot be priced, keeps the whole reservation),
+        then mark the item unknown: its brief gets its repair attempt and the identical request is never sent again."""
+        cost = None
+        if outcome == "usage" and isinstance(usage, dict):
+            try:
+                cost = prices.usage_cost_micros(usage, prices.rates(self.table, item["model"], tier_key))
+            except prices.PriceError as e:
+                why = f"{why}; its usage cannot be priced ({e})"
+        if cost is not None:
+            self._settle_cost(item, cost, CallResult(status="error", usage=usage, request_id=request_id), tier_key,
+                              {"failure": why})
+            self._check_bound(item, usage)
+        else:
+            self.ledger.settle_unknown(item["reservation_id"], f"{why}; not proven unbilled", request_id=request_id)
+        self._unknown(item, why)
+
+    def _note_answer(self, usable: bool) -> None:
+        self.recent.append(not usable)
+        if sum(self.recent) >= UNKNOWN_STOP:
+            self.stop(f"{sum(self.recent)} of the last {len(self.recent)} requests ended in server errors or without "
+                      "an answer, each kept as spent; stopped so an outage cannot use up the budget. Rerun generate "
+                      "once the API answers again.")
 
     def _process(self, item: dict, r: CallResult | None = None) -> None:
         """received -> parsed -> validated -> sim_checked -> accepted, or failed at the first failing layer."""
@@ -864,12 +998,19 @@ class Runner:
             if rl.remaining_tokens > rl.limit_tokens / 2 and self.workers < MAX_WORKERS:
                 self.workers += 1
         code = r.http_status
-        if r.status in ("timeout", "connection") or code in TIMEOUT_STATUSES:
-            self.ledger.settle_unknown(item["reservation_id"], f"{r.status}: outcome unknown", request_id=r.request_id)
-            self._unknown(item, r.status)
-            return
-        if code is None:
+        if code is None and r.status not in ("timeout", "connection"):  # an HTTP 200 body
+            self._note_answer(True)
             self._settle(item, r)
+            return
+        outcome = billing_outcome(status=code, kind=r.status, usage=r.usage, tokens_consumed=r.tokens_consumed)
+        if outcome != "void":  # billed or possibly billed: kept as spent, and never sent again
+            why = r.status + (f" ({r.error_type}/{r.error_code})" if r.error_type or r.error_code else "")
+            self._settle_failure(item, outcome, r.usage, why, r.request_id,
+                                 prices.RESERVE_TIER)  # an error names no served tier: priced at the highest
+            self._note_answer(False)
+            if code is not None and 400 <= code < 500 and code not in (408, 429):
+                self.stop(f"HTTP {code} from OpenAI ({r.error_type}/{r.error_code}): the request itself is wrong or "
+                          "not allowed. Nothing more is sent.")
             return
         if code == 429 and (r.error_code in BILLING_CODES or r.error_type == "insufficient_quota"):
             self._void_to_unavailable(item, r, f"http_429 {r.error_code or r.error_type}")
@@ -878,9 +1019,8 @@ class Runner:
             else:
                 self.stop(f"an OpenAI spend or usage limit was reached ({r.error_code}). Nothing more is sent.")
             return
-        if code == 429 or code >= 500:
-            rate_limited = code == 429 and (r.error_code in RATE_LIMIT_CODES or not r.resource_unavailable and
-                                            item["tier"] != "flex")
+        if code == 429:
+            rate_limited = r.error_code in RATE_LIMIT_CODES or not r.resource_unavailable and item["tier"] != "flex"
             if rate_limited:
                 self.workers = max(1, self.workers // 2)
             tries = item.get("tries", 0) + 1
@@ -903,37 +1043,51 @@ class Runner:
     # Flex and Standard -----------------------------------------------------------------------------------------------
 
     def _prepare(self, item: dict):
-        """Reserve (or reuse a resumed reservation) and move to in_flight. Returns ("send", body), ("cached", None)
-        or ("cap", CapReached)."""
+        """Reserve the request's current worst case (replacing a resumed reservation that is smaller) and move to
+        in_flight. Returns ("send", body), ("cached", None), ("cap", CapReached) or ("stop", None)."""
         tier = item["tier"]
         body = self._body(item, tier)
+        sized = self._reservation(item, body)
+        if sized is None:
+            return "stop", None
+        worst, bound = sized
+        detail = {"model": item["model"], "tier": tier, "attempt": item["attempt"],
+                  "request_hash": item["request_hash"], "input_bound": bound}
         if item["state"] == "reserved" and item.get("reservation_id") and item.get("reserved_tier") != tier:
             self.ledger.void(item["reservation_id"], f"tier changed to {tier} before sending; nothing was sent")
             item = self.store.update(item["item_id"], reservation_id=None)
-        if item["state"] == "reserved" and item.get("reservation_id"):
-            rid = item["reservation_id"]
-        else:
-            worst = self._worst_micros(item, tier)
-            try:
-                rid = self.ledger.reserve(self.job, item["item_id"], self._usd(worst), ceiling_usd=self.budget,
-                                          detail={"model": item["model"], "tier": tier, "attempt": item["attempt"],
-                                                  "request_hash": item["request_hash"]})
-            except ledger_mod.CapReached as e:
-                return "cap", e
-            if item["state"] == "reserved":  # resumed in `reserved` after its reservation was closed
-                item = self.store.update(item["item_id"], reservation_id=rid, worst_micros=worst, reserved_tier=tier)
+        try:
+            if item["state"] == "reserved" and item.get("reservation_id"):  # resumed: never smaller than worst
+                rid = self.ledger.cover(item["reservation_id"], self._usd(worst), ceiling_usd=self.budget,
+                                        detail=detail)
             else:
-                item = self.store.transition(item["item_id"], "reserved", f"${worst / 1e6:.6f}", reservation_id=rid,
-                                             worst_micros=worst, reserved_tier=tier)
+                rid = self.ledger.reserve(self.job, item["item_id"], self._usd(worst), ceiling_usd=self.budget,
+                                          detail=detail)
+        except ledger_mod.CapReached as e:
+            return "cap", e
+        fields = dict(reservation_id=rid, worst_micros=worst, input_bound=bound, reserved_tier=tier)
+        if item["state"] == "reserved":
+            item = self.store.update(item["item_id"], **fields)
+        else:
+            item = self.store.transition(item["item_id"], "reserved", f"${worst / 1e6:.6f}", **fields)
         if self.cache.has(item["request_hash"]):
-            item = self.store.transition(item["item_id"], "in_flight", "response already stored; nothing sent")
-            self.ledger.void(rid, "response already stored; nothing sent")
-            item = self.store.transition(item["item_id"], "received", "from the response cache", cached=True)
-            self._process(item)
+            self._serve_cached(item)
             return "cached", None
         self.store.transition(item["item_id"], "in_flight", f"sent at the {tier} tier",
                               sent_at=ledger_mod.now_iso())
         return "send", body
+
+    def _serve_cached(self, item: dict) -> None:
+        """A request whose response is stored is answered from the store: its reservation, if any, is voided and
+        nothing is sent or reserved."""
+        iid = item["item_id"]
+        if item["state"] == "reserved" and item.get("reservation_id"):
+            self.ledger.void(item["reservation_id"], "response already stored; nothing sent")
+        elif item["state"] != "reserved":
+            self.store.transition(iid, "reserved", "response already stored; nothing reserved")
+        self.store.transition(iid, "in_flight", "response already stored; nothing sent")
+        item = self.store.transition(iid, "received", "from the response cache", cached=True)
+        self._process(item)
 
     def _send(self, item: dict, body: dict) -> CallResult:
         h = item["request_hash"]
@@ -943,19 +1097,30 @@ class Runner:
         if err.scope in ("budget", "released"):
             self.stop(str(err))  # the items stay as they are for a later run
             return
+        item = self.store.get(item["item_id"])  # _prepare may have closed a reservation of another tier
         if item["state"] in ("planned", "unavailable"):
             item = self.store.transition(item["item_id"], "reserved", "reservation refused")
+        elif item.get("reservation_id"):  # a resumed reservation too small to send under, which nothing used
+            self.ledger.void(item["reservation_id"], "refused: the cap cannot cover its current worst case; "
+                                                     "nothing was sent")
         self.store.transition(item["item_id"], "refused", str(err))
         self.out(f"{item['item_id']}: refused ({err})")
 
     def run_flex(self) -> None:
-        """Send every pending non-Batch item, with retries, repairs and concurrency control."""
+        """Send every pending non-Batch item of the checked request set, with retries, repairs and concurrency
+        control. Pending items outside the set are left as they are and counted."""
+        outside = 0
         for item in self.store.items(self.job):
             if item["state"] in TO_SEND and not item.get("chunk_id"):
-                if item["tier"] == "batch":
+                if not self._allowed(item):
+                    outside += 1
+                elif item["tier"] == "batch":
                     self.batch_pending.append(item["item_id"])
                 else:
                     self._push(item["item_id"])
+        if outside:
+            self.out(f"{outside} pending items are outside the checked request set and are not sent; a dry run whose "
+                     "request set includes them clears the way")
         inflight: dict = {}
         with ThreadPoolExecutor(MAX_WORKERS) as pool:
             while self.heap or inflight:
@@ -969,7 +1134,7 @@ class Runner:
                         next_wake = ready
                         break
                     item = self.store.get(iid)
-                    if item["state"] not in TO_SEND:
+                    if item["state"] not in TO_SEND or not self._allowed(item):
                         heapq.heappop(self.heap)
                         continue
                     if item["tier"] == "batch":
@@ -983,6 +1148,8 @@ class Runner:
                         break
                     heapq.heappop(self.heap)
                     kind, payload = self._prepare(item)
+                    if kind == "stop":
+                        continue
                     if kind == "cap":
                         if inflight:  # held reservations may release when in-flight requests settle
                             self._push(iid, now)
@@ -1035,14 +1202,22 @@ class Runner:
 
     @staticmethod
     def _queued_tokens(item: dict) -> int:
-        return math.ceil(item["est_input_tokens"] * float(prices.WORST_CASE_INPUT_FACTOR))
+        return math.ceil(item["est_input_tokens"] * LOCAL_MARGIN)
 
     def submit_batches(self, item_ids: list[str] | None = None) -> int:
         """Put pending Batch items into chunks whose enqueued input tokens stay under each model's queue limit
-        (counting chunks already open). Returns the number of items enqueued; the rest wait for room."""
+        (counting chunks already open). Items whose response is stored are answered from the store first and never
+        uploaded. Returns the number of items enqueued; the rest wait for room."""
         ids = list(dict.fromkeys(item_ids if item_ids is not None else self.batch_pending))
         self.batch_pending = []
-        items = [i for i in (self.store.get(x) for x in ids) if i and i["state"] in TO_SEND and not i.get("chunk_id")]
+        items = []
+        for item in (self.store.get(x) for x in ids):
+            if not item or item["state"] not in TO_SEND or item.get("chunk_id") or not self._allowed(item):
+                continue
+            if self.cache.has(item["request_hash"]):
+                self._serve_cached(item)
+            else:
+                items.append(item)
         enqueued = 0
         for model in sorted({i["model"] for i in items}):
             if self.stop_reason:
@@ -1066,12 +1241,21 @@ class Runner:
 
     def _submit_chunk(self, model: str, items: list[dict], tokens: int) -> bool:
         chunk_id = f"{self.job}-{uuid.uuid4().hex[:10]}"
-        wanted = []
+        prepared = []
         for item in items:
-            worst = self._worst_micros(item, "batch")
-            wanted.append((item["item_id"], self._usd(worst), {"model": model, "tier": "batch", "chunk_id": chunk_id,
-                                                                "attempt": item["attempt"],
-                                                                "request_hash": item["request_hash"]}))
+            body = self._body(item, "batch")
+            sized = self._reservation(item, body)
+            if sized is None:
+                return False
+            prepared.append((item, body, *sized))
+        for item, *_ in prepared:  # a resumed reservation is replaced by the chunk's; its request was never sent
+            if item["state"] == "reserved" and item.get("reservation_id"):
+                self.ledger.void(item["reservation_id"], "replaced by a Batch chunk's reservation; nothing was sent")
+                self.store.update(item["item_id"], reservation_id=None)
+        wanted = [(item["item_id"], self._usd(worst), {"model": model, "tier": "batch", "chunk_id": chunk_id,
+                                                         "attempt": item["attempt"],
+                                                         "request_hash": item["request_hash"], "input_bound": bound})
+                  for item, _, worst, bound in prepared]
         try:
             rids = self.ledger.reserve_many(self.job, wanted, ceiling_usd=self.budget)
         except ledger_mod.CapReached as e:
@@ -1081,33 +1265,53 @@ class Runner:
                               "item_ids": [i["item_id"] for i in items], "input_tokens": tokens,
                               "created_at": self.now().isoformat(timespec="seconds")})
         lines = []
-        for item, rid in zip(items, rids):
-            body = self._body(item, "batch")
-            self.store.transition(item["item_id"], "reserved", "Batch chunk", reservation_id=rid, tier="batch",
-                                  chunk_id=chunk_id)
+        for (item, body, worst, bound), rid in zip(prepared, rids):
+            fields = dict(reservation_id=rid, tier="batch", chunk_id=chunk_id, worst_micros=worst, input_bound=bound,
+                          reserved_tier="batch")
+            if item["state"] == "reserved":
+                self.store.update(item["item_id"], **fields)
+            else:
+                self.store.transition(item["item_id"], "reserved", "Batch chunk", **fields)
             self.store.transition(item["item_id"], "in_flight", f"enqueued in {chunk_id}")
             lines.append({"custom_id": item["item_id"], "method": "POST", "url": "/v1/responses", "body": body})
         try:
             batch = self.client.submit_batch(lines, metadata={"chunk_id": chunk_id, "job": self.job})
         except ClientError as e:
-            if e.stage == "upload" or (e.status is not None and 400 <= e.status < 500):
-                self._end_chunk_unsent(chunk_id, f"Batch submission refused ({e.kind}); nothing ran")
+            # Only an upload failure (the create call never happened), a key that was never read, or a create call
+            # refused before it ran proves that no batch exists. Anything else keeps every reservation.
+            if (e.stage == "upload" or e.kind == "missing_key"
+                    or (e.stage == "create" and (e.status in PRE_EXECUTION_4XX or e.status == 429))):
+                self._end_chunk_unsent(chunk_id, f"Batch {e.stage} refused ({e.kind}); no batch was created")
                 self.out(f"chunk {chunk_id} was not created ({e.kind}); its items stay pending")
             else:
-                self.out(f"chunk {chunk_id}: submission outcome unknown ({e.kind}); collect will look for it")
+                self.out(f"chunk {chunk_id}: creation uncertain ({e.kind}); its reservations stay held and collect "
+                         "looks for it (if no batch names it, its requests count as billed)")
             return False
         self.store.chunk_transition(chunk_id, "submitted", batch_id=batch.get("id"),
                                     submitted_at=self.now().isoformat(timespec="seconds"))
         self.out(f"chunk {chunk_id}: {len(items)} {model} requests, about {tokens:,} input tokens, enqueued")
         return True
 
-    def _end_chunk_unsent(self, chunk_id: str, why: str) -> None:
+    def _chunk_items(self, chunk_id: str) -> list[dict]:
+        """The chunk's items still in flight in it."""
         chunk = next(c for c in self.store.chunks() if c["chunk_id"] == chunk_id)
-        for iid in chunk["item_ids"]:
-            item = self.store.get(iid)
-            if item["state"] == "in_flight" and item.get("chunk_id") == chunk_id:
-                self.ledger.void(item["reservation_id"], why)
-                self.store.transition(iid, "unavailable", why, chunk_id=None)
+        return [i for i in (self.store.get(x) for x in chunk["item_ids"])
+                if i["state"] == "in_flight" and i.get("chunk_id") == chunk_id]
+
+    def _end_chunk_unsent(self, chunk_id: str, why: str) -> None:
+        """A chunk proven never created: its items go back to pending and their reservations are voided. Each item
+        moves before its void, so a crash between the two leaves an open reservation that resume voids."""
+        for item in self._chunk_items(chunk_id):
+            self.store.transition(item["item_id"], "unavailable", why, chunk_id=None)
+            self.ledger.void(item["reservation_id"], why)
+        self.store.chunk_transition(chunk_id, "failed", finished=True, note=why)
+
+    def _end_chunk_unknown(self, chunk_id: str, why: str) -> None:
+        """A chunk whose creation is uncertain and which no listed batch names: not proof that it never ran, so each
+        item keeps its whole reservation as spent and its brief gets the repair attempt."""
+        for item in self._chunk_items(chunk_id):
+            self.ledger.settle_unknown(item["reservation_id"], f"{why}; not proven unbilled")
+            self._unknown(item, why)
         self.store.chunk_transition(chunk_id, "failed", finished=True, note=why)
 
     def collect(self) -> dict:
@@ -1119,7 +1323,9 @@ class Runner:
                 if chunk["state"] == "created":
                     found = self.client.find_batch(cid)
                     if found is None:
-                        self._end_chunk_unsent(cid, "Batch never created")
+                        self._end_chunk_unknown(cid, "Batch creation uncertain and no listed batch names the chunk")
+                        self.out(f"chunk {cid}: no batch names it; its requests count as billed and get repairs")
+                        summary["finished"] += 1
                         continue
                     chunk = self.store.chunk_transition(cid, "submitted", batch_id=found["id"],
                                                         submitted_at=self.now().isoformat(timespec="seconds"))
@@ -1147,14 +1353,19 @@ class Runner:
         return summary
 
     def _to_flex(self, iid: str, why: str) -> None:
-        item = self.store.get(iid)
+        """A Batch item proven unbilled goes back to Flex. It moves before its void (see _end_chunk_unsent)."""
+        item = self.store.transition(iid, "unavailable", why, tier="flex", tries=0, chunk_id=None)
         self.ledger.void(item["reservation_id"], why)
-        self.store.transition(iid, "unavailable", why, tier="flex", tries=0, chunk_id=None)
+
+    def _batch_failure(self, iid: str, outcome: str, usage, why: str, request_id: str | None) -> None:
+        if outcome == "void":
+            self._to_flex(iid, f"{why}; not billed")
+        else:
+            self._settle_failure(self.store.get(iid), outcome, usage, why, request_id, "batch")
 
     def _finish_chunk(self, chunk: dict, batch: dict) -> None:
         cid = chunk["chunk_id"]
-        pending = {iid for iid in chunk["item_ids"]
-                   if (i := self.store.get(iid)) and i["state"] == "in_flight" and i.get("chunk_id") == cid}
+        pending = {i["item_id"] for i in self._chunk_items(cid)}
         if batch.get("output_file_id"):
             for line in self.client.file_lines(batch["output_file_id"]):
                 iid = line.get("custom_id")
@@ -1162,23 +1373,34 @@ class Runner:
                     continue
                 pending.discard(iid)
                 resp = line.get("response") or {}
+                status, body = resp.get("status_code"), resp.get("body")
                 item = self.store.get(iid)
-                if resp.get("status_code") == 200 and isinstance(resp.get("body"), dict):
-                    self.cache.write(item["request_hash"], json.dumps(resp["body"]))
-                    r = parse_response(resp["body"])
+                if status == 200 and isinstance(body, dict):
+                    self.cache.write(item["request_hash"], json.dumps(body))
+                    r = parse_response(body)
                     r.request_id = resp.get("request_id")
                     self._settle(item, r, tier="batch")
                 else:
-                    self._to_flex(iid, f"Batch line status {resp.get('status_code')}; not billed")
+                    usage, consumed = billing_evidence(body)
+                    self._batch_failure(iid, billing_outcome(status=status, kind="batch_line", usage=usage,
+                                                             tokens_consumed=consumed),
+                                        usage, f"Batch line status {status}", resp.get("request_id"))
         if batch.get("error_file_id"):
             for line in self.client.file_lines(batch["error_file_id"]):
                 iid = line.get("custom_id")
-                if iid in pending:
-                    pending.discard(iid)
-                    code = (line.get("error") or {}).get("code") or (line.get("response") or {}).get("status_code")
-                    self._to_flex(iid, f"Batch error {code}; not billed")
+                if iid not in pending:
+                    continue
+                pending.discard(iid)
+                resp = line.get("response") or {}
+                code = (line.get("error") or {}).get("code")
+                usage, consumed = billing_evidence(resp.get("body"))
+                if usage is None and not consumed:
+                    usage, consumed = billing_evidence(line)
+                self._batch_failure(iid, billing_outcome(status=resp.get("status_code"), kind="batch_error",
+                                                         usage=usage, tokens_consumed=consumed, batch_code=code),
+                                    usage, f"Batch error {code}", resp.get("request_id"))
         for iid in sorted(pending):
-            if batch.get("status") == "failed":
+            if batch.get("status") == "failed":  # the input file failed validation, so no request ran
                 self._to_flex(iid, "Batch failed validation; nothing ran")
             else:
                 item = self.store.get(iid)
