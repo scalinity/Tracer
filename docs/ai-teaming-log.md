@@ -378,6 +378,13 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** nothing failed. A docs check found three differences from the spec, recorded for the client task: a one-off prompt is billed at the cache-write rate under OpenAI's default caching, Flex's capacity error has no machine-readable code, and exhausted credit arrives as `credit_balance_exhausted`.
 - **Assumed:** disruptions with no line, route, unit or instrument target use the ids `lab_station` and `receiving`; a `mixed` unit's non-tube share goes by its courier route if it has one, else on foot; one shift clock from `receiving.shift_pattern` governs every shift-indexed field, and under `7-19` evening values are unused; N10 and N11 join no gate. torch has a wheel for the venv's Python 3.14, so it will go into `requirements.txt` and no Python 3.13 venv is needed.
 
+### Nov 8 · Plan · Bring the published Nov 8 rework into the repository's plan (this pull request)
+
+- **Agent:** the first republish of the plan after N0 was refused because the published page held work main did not: the November 8 rework section, tasks R1 to R7 (spec and build the network, then rebuild the 3D bench, demo and QR pages on it, decide on Beat Tracer, cut the talk), a rewritten API section and the freeze gate's new list. `visuals/plan.html` is now rebuilt from the published page exactly, with tasks N0 to N11 added after R7, N0 to N9 under Gate C, and one step on R2 pointing to its breakdown in N0 to N11. A diff against the published page shows only those three changes. The plan check passes with 67 tasks.
+- **Daniel:** published the rework from another session on Nov 8; it had not been committed.
+- **Went wrong:** N0 had been written on main's older plan, so publishing it as it stood would have erased the rework. The publish step's own check caught it, and nothing was overwritten.
+- **Assumed:** the published page is the newer plan and wins over main's copy. R2 stays as the umbrella task and is done when N8 and N9 are. The plan's slack goes negative at Gates C and F because the N tasks add Daniel's review hours; the hours are the spec's and are left as they are.
+
 ## The Claude API jobs
 
 The dataset jobs (D4 to J2) call `claude-haiku-5-5` at low effort with thinking off. The demo's specimen stories (J3) and search briefs (J4) call `claude-sonnet-5-5`, the model for text a person reads. The reply must match a JSON schema, so replies parse and retries stay rare. Bulk jobs run through the Batch API at half price, and every call is logged to `data/claude/usage.jsonl` (kept local). The order for each job is a token count, a pilot, then the batch, and a job's estimate must be under the plan's gate before it starts.
