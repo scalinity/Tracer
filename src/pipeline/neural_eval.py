@@ -1504,6 +1504,45 @@ def baselines() -> list[Method]:
             QuantileRule("quantile_local", "local"), QuantileRule("quantile_global", "global")]
 
 
+WEAKSPOT_ROWS = ROOT / "data" / "neural" / "weakspots" / "val-rows.parquet"
+SCENARIO_CELLS = ROOT / "data" / "neural" / "scenario-cells.json"
+
+
+def weakspot_rows(store_dir: Path | None = None):
+    """Spec §4.12's rows for the weak-spot analysis (src/neural/weakspots.py, which may not read labels itself):
+    every scored validation specimen with a clock, its breach label and its slice attributes. Validation only."""
+    import polars as pl
+    specs, _ = evaluate.load_specs_v2("val", ("scored",), store_dir, labels=True)
+    types = {}
+    for sid in sorted({s.scenario_id for s in specs}):
+        for d in evaluate.truth_disruptions_v2(sid, store_dir=store_dir):
+            types[(sid, int(d["replicate"]), d["disruption_id"])] = d["type"]
+    return pl.DataFrame({
+        "specimen_id": [s.specimen_id for s in specs], "scenario_id": [s.scenario_id for s in specs],
+        "run": [s.run for s in specs], "breach": [s.breach for s in specs], "window_min": [s.window for s in specs],
+        "receipt_min": [s.receipt_min for s in specs], "route_kind": [s.route_kind or s.route for s in specs],
+        "archetype": [s.archetype for s in specs], "stratum": [s.stratum for s in specs],
+        "edge_tags": [list(s.edge_tags) for s in specs],
+        "disruption_types": [sorted({types[(s.scenario_id, s.replicate, i)] for i in s.disruption_ids}) for s in specs]},
+        schema_overrides={"edge_tags": pl.List(pl.Utf8), "disruption_types": pl.List(pl.Utf8),
+                          "receipt_min": pl.Float64})
+
+
+def write_weakspot_rows(path: Path = WEAKSPOT_ROWS, store_dir: Path | None = None) -> Path:
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    weakspot_rows(store_dir).write_parquet(path)
+    return path
+
+
+def write_scenario_cells(path: Path = SCENARIO_CELLS, store_dir: Path | None = None) -> Path:
+    """The train and validation scenarios' planned cells, for the ablations' data subsets (never a test split)."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(evaluate.scenario_cells_v2(("train", "val"), store_dir), indent=1, sort_keys=True) + "\n")
+    return path
+
+
 def tracernet_method(risk_table: Path | str, value: str = "p_miss") -> RiskMethod:
     """TracerNet as a method, from its RiskTable written as parquet (every tick of the history and scored
     replicates of the set): `evaluate_split(split, baselines() + [tracernet_method(path)])`."""

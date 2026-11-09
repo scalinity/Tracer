@@ -1364,3 +1364,15 @@ def test_r3_a_separate_training_store_without_a_manifest_is_refused(v2_store, tm
     (other_train / store.STORE_V2_MANIFEST).unlink()
     with pytest.raises(RuntimeError, match="no manifest"):
         ne.lock_record(v2_store, ne.baselines(), train_store_dir=other_train)
+
+
+def test_weakspot_rows_and_scenario_cells_read_validation_and_train_only(v2_store, tmp_path):
+    """The exports src/neural/weakspots.py and the ablations read: validation rows only, and the train and
+    validation scenarios' cells only, never a test split."""
+    rows = ne.weakspot_rows(v2_store)
+    specs, _ = evaluate.load_specs_v2("val", ("scored",), v2_store, labels=True)
+    assert rows.height == len(specs) and set(rows["scenario_id"]) == {s.scenario_id for s in specs}
+    assert rows["breach"].sum() == sum(s.breach for s in specs)
+    cells = json.loads(ne.write_scenario_cells(tmp_path / "cells.json", v2_store).read_text())
+    assert cells and {c["split"] for c in cells.values()} <= {"train", "val"}
+    assert ne.write_weakspot_rows(tmp_path / "rows.parquet", v2_store).exists()
