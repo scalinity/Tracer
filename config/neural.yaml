@@ -1,0 +1,9 @@
+# Settings for Tracer v2: scenario data and the TracerNet risk network (docs/neural/spec.md).
+#
+# EVERY value below is an assumption, chosen for a synthetic simulator; none is fitted to
+# a dataset or taken from a workplace. Other v2 tasks add their own sections here.
+
+# The discrete-event simulator (src/sim/, spec §5).
+simulation:
+  master_seed: 20261108         # ASSUMED: any fixed integer; every replicate's random streams start
+                                # from SeedSequence([master_seed, scenario_index, replicate])
