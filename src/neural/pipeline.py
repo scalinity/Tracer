@@ -368,6 +368,25 @@ def own_store_risk(split: str, artifact_dir: Path, store_dir: Path | None, worke
     return out_dir / "*.parquet"
 
 
+def risk_snapshot(files) -> tuple:
+    """The risk table's parts read once into memory: (their rows, {TracerNet: {part: SHA-256 of the bytes read}}).
+    The hashes the guard compares and the rows decoded come from the same bytes, so a part replaced on disk after
+    the guard cannot be read under the old part's hash."""
+    import hashlib
+    import io
+
+    import polars as pl
+
+    from src.pipeline import neural_eval as ne
+
+    frames, hashes = [], {}
+    for f in files:
+        raw = Path(f).read_bytes()
+        hashes[Path(f).name] = hashlib.sha256(raw).hexdigest()
+        frames.append(pl.read_parquet(io.BytesIO(raw)))
+    return (pl.concat(frames) if frames else pl.DataFrame()), {ne.TRACERNET: hashes}
+
+
 def alert_inputs(files, store_dir: Path, split: str):
     """The risk table's rows (parquet `files`), each with its specimen's urgency tier and window from the observed
     store. The risk table keeps a slim projection, and Predictor.alerts also needs the tier (for harm) and the
@@ -377,7 +396,7 @@ def alert_inputs(files, store_dir: Path, split: str):
 
     from src.pipeline import store
 
-    risk = pl.scan_parquet(list(files)).collect()
+    risk = files if isinstance(files, pl.DataFrame) else pl.scan_parquet(list(files)).collect()
     if risk.height == 0:
         raise ValueError(f"the risk table holds no rows ({', '.join(map(str, files))})")
     con = store.open_observed_v2(store_dir)
@@ -422,7 +441,10 @@ def explain_command(split: str, *, store_dir: Path | None = None, artifact_dir: 
     out_path = Path(out_path) if out_path is not None else (     # the report reads test's; other sets beside it
         explain.RESULTS_PATH if split == "test" else explain.RESULTS_PATH.with_name(f"explanations-{split}.json"))
     methods = ne.baselines() + [ne.tracernet_method(tracernet)]
-    parts = ne._pin_risk_tables(methods)        # the parts read below are the parts hashed
+    pinned = ne._pin_risk_tables(methods)       # resolves the table's parts
+    table, parts = risk_snapshot(methods[-1].series.files)
+    if pinned != parts:
+        raise ValueError(f"the risk table at {tracernet} changed while it was read; run explain again")
     run = None
     if split in ne.LOCKED_SPLITS:
         lock_path, runs_path = ne.LOCK_PATH, ne.TEST_RUNS_PATH
@@ -443,8 +465,18 @@ def explain_command(split: str, *, store_dir: Path | None = None, artifact_dir: 
         if run["status"] != "repeat":
             raise ne.LockError(f"the {split} look was logged as {run['status']!r}, not as a repeat of the locked one")
         out(f"{split} run: {run['status']} at {run['time']}")
+        # inside the lock's mutex: the lock still records exactly the parts read, the run still holds for this
+        # artifact and store, and only then is the store read (the guard admits a repeat whose split has no
+        # recorded table, so this closes a relock that cleared the parts between the check above and the guard)
+        with ne._lock_transaction(runs_path):
+            locked = json.loads(lock_path.read_text(encoding="utf-8"))
+            if ((locked.get("risk_parts") or {}).get(split) or {}).get(ne.TRACERNET) != parts[ne.TRACERNET]:
+                raise ne.LockError(f"the test lock no longer records the {split} risk table this run read")
+            run.check(split, artifact_dir=artifact_dir, store_dir=store_dir)
+            risk = alert_inputs(table, store_dir, split)
+    else:
+        risk = alert_inputs(table, store_dir, split)
     pred = Predictor.load(artifact_dir)
-    risk = alert_inputs(methods[-1].series.files, store_dir, split)
     history = pl.col("replicate") == HISTORY_REPLICATE
     alerts = pred.alerts(risk.filter(~history), budget_per_shift=ne.HEADLINE_BUDGET, weights="default",
                          tune_on=risk.filter(history))

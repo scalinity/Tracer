@@ -196,7 +196,8 @@ def test_explain_writes_test_checks_where_the_report_reads_and_other_sets_beside
     monkeypatch.setattr(explain, "RESULTS_PATH", tmp_path / "explanations.json")
     monkeypatch.setattr(ne, "baselines", lambda: [])
     monkeypatch.setattr(ne, "tracernet_method", lambda path: SimpleNamespace(series=SimpleNamespace(files=[path])))
-    monkeypatch.setattr(ne, "_pin_risk_tables", lambda methods: {})
+    monkeypatch.setattr(ne, "_pin_risk_tables", lambda methods: {"tracernet": {}})
+    monkeypatch.setattr(pipeline, "risk_snapshot", lambda files: (pl.DataFrame({"replicate": [0, 1]}), {"tracernet": {}}))
     monkeypatch.setattr(pipeline, "alert_inputs", lambda *a, **k: pl.DataFrame({"replicate": [0, 1]}))
     fake = SimpleNamespace(alerts=lambda risk, **k: pl.DataFrame({"x": [1]}))
     monkeypatch.setattr(Predictor, "load", classmethod(lambda cls, *a, **k: fake))
@@ -236,3 +237,58 @@ def test_evaluate_scores_the_own_store_sets_before_evaluating_them(monkeypatch, 
     calls.clear()
     assert pipeline.main(["evaluate", "--split", "legacy_v1", "--tracernet", "given.parquet", "--store", str(v1)]) == 0
     assert calls == [("evaluate", "legacy_v1", Path("given.parquet"))]       # a given table is not rescored
+
+
+def _after_guard(monkeypatch, action, before=False):
+    """Run `action` just before (or just after) the real guard, as another process would."""
+    real = ne.guard_test_run
+
+    def guard(*a, **k):
+        if before:
+            action()
+        run = real(*a, **k)
+        if not before:
+            action()
+        return run
+    monkeypatch.setattr(ne, "guard_test_run", guard)
+
+
+def test_a_risk_part_replaced_after_the_guard_is_not_read(env, monkeypatch):
+    env.look("test")
+    part = sorted((ne.RISK_DIR / "test").glob("*.parquet"))[0]
+    seen = []
+    real_inputs = pipeline.alert_inputs
+    monkeypatch.setattr(pipeline, "alert_inputs", lambda table, *a: seen.append(table) or real_inputs(table, *a))
+    original = pl.read_parquet(part)
+    _after_guard(monkeypatch, lambda: part.write_bytes(b"not the recorded table"))
+    code, out = env.cli("test")
+    assert code == 0, out
+    assert seen[0].head(original.height).equals(original)      # the rows decoded are the bytes the guard hashed
+
+
+def test_a_relock_that_cleared_the_recorded_table_before_the_guard_is_refused(env, monkeypatch):
+    env.look("test")
+
+    def clear():
+        doc = json.loads(env.lock["lock_path"].read_text())
+        doc["risk_parts"] = {}
+        env.lock["lock_path"].write_text(json.dumps(doc))
+    _after_guard(monkeypatch, clear, before=True)
+    called = []
+    monkeypatch.setattr(pipeline, "alert_inputs", lambda *a: called.append(a))
+    code, out = env.cli("test")
+    assert code == 1 and "no longer records the test risk table" in out and not called
+
+
+def test_a_relock_after_the_guard_is_refused_before_the_store_is_read(env, monkeypatch):
+    env.look("test")
+
+    def relock():
+        doc = json.loads(env.lock["lock_path"].read_text())
+        doc["configuration_sha256"] = "0" * 64
+        env.lock["lock_path"].write_text(json.dumps(doc))
+    _after_guard(monkeypatch, relock)
+    called = []
+    monkeypatch.setattr(pipeline, "alert_inputs", lambda *a: called.append(a))
+    code, out = env.cli("test")
+    assert code == 1 and "changed since this run was recorded" in out and not called
