@@ -57,7 +57,7 @@ def default_inputs(root: Path = ROOT) -> dict:
             "pilot": neural / "generation" / "pilot.json", "round2": neural / "generation" / "round2-plan.json",
             "artifact": root / "artifacts" / "tracernet" / "v1" / "manifest.json",
             "manifest": root / "datasets" / "scenarios-v2.manifest.json",
-            "explanations": neural / "explanations.json", "decisions": neural / "decisions",
+            "explanations": neural / "explanations.json", "decisions": neural / "decisions", "limits": neural / "limits.md",
             "ledger": root / "data" / "openai" / "ledger.sqlite", "ledger_json": None,
             "plots": neural / "plots", "root": root}
 
@@ -110,6 +110,8 @@ def load(inputs: dict) -> dict:
             "artifact_sha256": (hashlib.sha256(Path(inputs["artifact"]).read_bytes()).hexdigest()
                                 if Path(inputs["artifact"]).is_file() else None),
             "manifest": _json(inputs["manifest"]), "ledger": ledger_totals(inputs["ledger"], inputs["ledger_json"]),
+            "limits": [line.rstrip() for line in Path(inputs["limits"]).read_text(encoding="utf-8").splitlines()
+                       if line.strip()] if inputs.get("limits") and Path(inputs["limits"]).is_file() else [],
             "explanations": _json(inputs["explanations"]), "decisions": Path(inputs["decisions"]).exists(),
             "config": (yaml.safe_load(Path(CONFIG_PATH).read_text(encoding="utf-8")) or {}).get("ablations") or {}}
 
@@ -593,7 +595,10 @@ def section_ablations(data: dict) -> list[str]:
     for aid, ab in (a.get("ablations") or {}).items():
         out += [f"### {aid}. {ab.get('question', '')}", ""]
         if ab.get("status") != "done":
-            out += [f"{ab.get('status', NOT_RUN).capitalize()}: {ab.get('reason', 'no reason recorded')}.", ""]
+            why = str(ab.get("reason", "no reason recorded"))
+            status = ab.get("status", NOT_RUN)
+            out += [(why[0].upper() + why[1:] if why.lower().startswith(status.lower()) else f"{status.capitalize()}: {why}")
+                    + ("" if why.endswith(".") else "."), ""]
         arms = ab.get("arms") or {}
         if not arms:
             continue
@@ -603,8 +608,9 @@ def section_ablations(data: dict) -> list[str]:
                 s = ((arm.get(split) or {}).get(key)) or {}
                 if not s or s.get("mean") is None:
                     return "n/a"
-                rng = f" ({num(s['min'], 2)} to {num(s['max'], 2)})" if s.get("n", 1) > 1 else ""
-                return f"{num(s['mean'], 2)}{rng}"
+                d = 4 if key in ("val_sel", "brier_30", "brier_60") else 2    # these differ in the third decimal
+                rng = f" ({num(s['min'], d)} to {num(s['max'], d)})" if s.get("n", 1) > 1 else ""
+                return f"{num(s['mean'], d)}{rng}"
             rows.append([name, str(arm.get("seeds_done", 0)), stat("val", "val_sel"), stat("val", "capped_mean_warning_min"),
                          stat("val", "median_warning_all_breaches_min"), stat("test", "capped_mean_warning_min"),
                          stat("test", "median_warning_all_breaches_min"), stat("test", "brier_30"),
@@ -827,6 +833,15 @@ def section_limits(data: dict) -> list[str]:
            "- `legacy_v1` has 6 clusters, so its intervals are wide.",
            "- Under the strict 6-per-shift budget a laboratory with more breaches per shift than alerts gets no alerts "
            "from a method with no in-budget knob; section 1 counts those scenarios per method."]
+    for split, rec in sorted(((data["ablations"] or {}).get("scoring") or {}).items()):
+        shares = [s for s in rec.get("shares") or [] if s is not None and float(s) < 1.0]
+        if shares:
+            counts = ", ".join(str(n) for n in rec.get("scenarios_scored") or [])
+            out.append(f"- The ablation arms were scored on {split} on a fixed salted share of its scenarios "
+                       f"({', '.join(f'{float(s):.0%}' for s in shares)}; {counts} scenarios), the same for every arm, "
+                       "so their intervals are wider than the main evaluation's"
+                       + ("." if rec.get("same_selection") else "; the arms were NOT all scored on one selection."))
+    out += [line if line.startswith("- ") else f"- {line}" for line in data.get("limits") or []]
     test = data["ev"].get("test")
     rule = (test or {}).get("decision_rule")
     out += ["", "### Recommendation (spec §8.9)", ""]

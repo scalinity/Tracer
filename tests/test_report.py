@@ -177,6 +177,19 @@ def test_missing_inputs_render_as_not_run_yet_and_never_as_numbers(tmp_path):
     assert not re.search(r"\d+\.\d+ min|\$\d", text)
 
 
+def test_limits_name_the_ablation_scoring_share_and_carry_the_written_notes(tmp_path):
+    scoring = {"val": {"arms": 43, "selections": ["a"], "same_selection": True, "shares": [0.25],
+                       "salts": ["s"], "scenarios_scored": [273]},
+               "test": {"arms": 43, "selections": ["a", "b"], "same_selection": False, "shares": [0.25],
+                        "salts": ["s"], "scenarios_scored": [196]}}
+    text = section(page(tmp_path, evaluations={"test": make()}, ablations={"scoring": scoring},
+                        limits="- The ensemble's training was unstable.\nA note without its bullet.\n"), 10)
+    assert "on val on a fixed salted share of its scenarios (25%; 273 scenarios)" in text
+    assert "196 scenarios), the same for every arm" in text and "NOT all scored on one selection" in text
+    assert "- The ensemble's training was unstable." in text and "- A note without its bullet." in text
+    assert "salted share" not in section(page(tmp_path / "none", evaluations={"test": make()}), 10)
+
+
 def test_validation_alone_is_shown_for_reference_and_never_as_the_claim(tmp_path):
     text = page(tmp_path, evaluations={"val": make("val")})
     assert text.split("\n\n")[1].startswith("**Verdict: not run yet.**")

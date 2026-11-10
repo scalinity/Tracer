@@ -64,11 +64,12 @@ QUESTIONS = {"A1": "More data or more variety?", "A2": "Do the hard edge cases m
 CORE = ("A1", "A2", "A5", "A6")
 SETS = {"core": CORE, "all": CORE + ("A7",)}
 NOT_BUILT = {
-    "A3": "not run: it needs each train scenario's job (O2 or O3), which the scenario cells do not carry, and O3's data",
-    "A4": "not run: it needs code-random scenarios simulated into their own store and a code-random test set, which "
-          "the pipeline cannot build yet",
-    "A8": "not run: it needs a store holding the v1 fit runs 0 to 23 as one extra training scenario, which store v2 "
-          "cannot build yet",
+    "A3": "not run (time box; spec §18 cuts A3): it needs each train scenario's generation job (O2 or O3), which the "
+          "scenario cells do not carry",
+    "A4": "not run (time box; spec §18 cuts A4): it needs code-random scenarios simulated into their own store and a "
+          "code-random test set, which the pipeline cannot build yet",
+    "A8": "not run (cut): it trains on the Claude-written v1 trails, which Anthropic's Usage Policy does not allow "
+          "without prior authorization (spec §18 cuts A8 second among the ablations)",
     "A9": "not run: the gradient-boosted reference is first on the cut list (spec §18)"}
 METRICS = ("median_warning_all_breaches_min", "capped_mean_warning_min", "catch_rate", "realized_alerts_per_shift",
            "missed_loss_rate")
@@ -461,6 +462,12 @@ def _seconds(r: dict) -> float:
         sum(float((r.get(s) or {}).get("score_s") or 0) for s in ("val", "test"))
 
 
+def _lead(x: dict) -> str:
+    """A lead with its 95% interval, rounded to a tenth of a minute."""
+    r = lambda v: "n/a" if v is None else f"{float(v):.1f}"  # noqa: E731
+    return f"{r(x.get('point'))} (95% interval {r(x.get('low'))} to {r(x.get('high'))})"
+
+
 def control_lead(control: dict | None, margin: float) -> dict | None:
     """The negative control of A6: TracerNet minus the local analytic refit on control_v1world at its headline budget,
     3-2-1 weights, and whether it is large (at least `margin` minutes with the interval's lower end above zero)."""
@@ -552,8 +559,8 @@ def collect(*, root: Path = ABLATION_DIR, out_path: Path | None = None, control_
         ablations["A6"].setdefault("notes", []).append(
             "Negative control: " + ("not run yet (no control_v1world evaluation with TracerNet)." if control is None else
                                     f"TracerNet's lead over the local analytic refit on control_v1world at {control['budget']}"
-                                    f" is {control['median_warning_all_breaches_min']['point']} min (median, all breaches) "
-                                    f"and {control['capped_mean_warning_min']['point']} min (capped mean); "
+                                    f" is {_lead(control['median_warning_all_breaches_min'])} min (median, all breaches) "
+                                    f"and {_lead(control['capped_mean_warning_min'])} min (capped mean); "
                                     + ("large: treated as leakage until shown otherwise." if control["leakage_suspected"]
                                        else "small.")))
     steps = sorted({(r.get("train") or {}).get("steps") for r in results.values() if r.get("train")})
