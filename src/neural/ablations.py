@@ -64,11 +64,12 @@ QUESTIONS = {"A1": "More data or more variety?", "A2": "Do the hard edge cases m
 CORE = ("A1", "A2", "A5", "A6")
 SETS = {"core": CORE, "all": CORE + ("A7",)}
 NOT_BUILT = {
-    "A3": "not run: it needs each train scenario's job (O2 or O3), which the scenario cells do not carry, and O3's data",
-    "A4": "not run: it needs code-random scenarios simulated into their own store and a code-random test set, which "
-          "the pipeline cannot build yet",
-    "A8": "not run: it needs a store holding the v1 fit runs 0 to 23 as one extra training scenario, which store v2 "
-          "cannot build yet",
+    "A3": "not run (time box; spec §18 cuts A3): it needs each train scenario's generation job (O2 or O3), which the "
+          "scenario cells do not carry",
+    "A4": "not run (time box; spec §18 cuts A4): it needs code-random scenarios simulated into their own store and a "
+          "code-random test set, which the pipeline cannot build yet",
+    "A8": "not run (cut): it trains on the Claude-written v1 trails, which Anthropic's Usage Policy does not allow "
+          "without prior authorization (spec §18 cuts A8 second among the ablations)",
     "A9": "not run: the gradient-boosted reference is first on the cut list (spec §18)"}
 METRICS = ("median_warning_all_breaches_min", "capped_mean_warning_min", "catch_rate", "realized_alerts_per_shift",
            "missed_loss_rate")
