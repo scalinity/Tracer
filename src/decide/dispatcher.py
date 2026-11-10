@@ -5,8 +5,8 @@
     rows = dispatcher.decisions(outcomes, items, cfg)                   # the decision for every alert
 
 The alerts are TracerNet's at the headline budget (6 per 8-hour shift, 3-2-1 weights), each with its factors from
-src/models/tracernet/explain.py. A sample is drawn as whole scenarios, in an order fixed by the seed, until it holds
-at least n alerts, so a cluster bootstrap over scenarios can score it. Each item's state is render.alert_state with
+src/models/tracernet/explain.py. A sample takes runs (laboratory weeks) in an order fixed by the seed and at most
+`samples.X2_per_run` alerts of each, until it holds at least n alerts; a cluster bootstrap over scenarios scores it. Each item's state is render.alert_state with
 TracerNet's p_miss, p_never and its top 3 factor texts (the groups that raise the risk); its meta keeps the alert's
 identifiers (never sent) and the decisions of rules R1 and R2 on the same facts, so any question can fall back.
 

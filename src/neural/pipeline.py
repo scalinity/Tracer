@@ -687,7 +687,8 @@ def decide_items(job: str, split: str, cfg: dict, *, store_dir: Path, artifact_d
     sample = dispatcher.sample_alerts(alerts, n if n is not None else int(cfg["samples"]["X2"][split]), seed,
                                       per_run=cfg["samples"].get("X2_per_run"))
     out(f"X2 on {split}: {sample.height:,} of {alerts.height:,} alerts at {ne.HEADLINE_BUDGET} per 8-hour shift, from "
-        f"{sample['scenario_id'].n_unique():,} whole scenarios; explaining them")
+        f"{sample['run'].n_unique():,} runs of {sample['scenario_id'].n_unique():,} scenarios (at most "
+        f"{cfg['samples'].get('X2_per_run') or 'every'} alerts of a run); explaining them")
     runs = sorted({int(r) for r in sample["run"].to_list()})
 
     def reads():                                   # the features (with their lock check) and the facts

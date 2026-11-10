@@ -962,7 +962,7 @@ Writes `docs/demo/neural.json` with `docs/demo/neural.schema.json`, beside `bund
 - Use: labels for coverage accounting regardless. Plausibility works as a soft filter only if its AUROC on the controls is at least 0.80, and then flagged scenarios go to a review list rather than being deleted. Agreement with the planner's tags is reported.
 
 **X2. Alert dispatcher.**
-- When: for every TracerNet alert at the headline budget, on a validation sample (for prompt work), on a test sample after the lock (clusters of whole scenarios, about 20,000 alerts), and on the `legacy_v1` and demo sets.
+- When: for every TracerNet alert at the headline budget, on a validation sample (for prompt work), on a test sample after the lock (about 20,000 alerts: runs in a seeded order, at most 10 alerts of each, so the sample spans most test scenarios; intervals resample whole scenarios), and on the `legacy_v1` and demo sets.
 - State (at most 1,200 tokens; facts computed by code; numbers stated with their comparisons; no raw timestamps, no ids, no truth, no hidden scenario parameters):
   - specimen: type, tier, priority, unit kind, route kind
   - time: "silent 45 min; usually 18 min for this route here, longer than 95% of past arrivals; 75 min left of a 120-min window"
