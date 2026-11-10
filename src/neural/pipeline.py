@@ -11,6 +11,8 @@ run, generate and collect; the later stages join it with their tasks.
     python -m src.neural.pipeline weakspots   (src/neural/weakspots.py: round 2's slices and the O3 plan)
     python -m src.neural.pipeline ablate --set core|all | --run ID | --collect   (src/neural/ablations.py)
     python -m src.neural.pipeline report      (src/neural/report.py: results/neural/REPORT.md)
+    python -m src.neural.pipeline explain --split val|test|test_ood   (spec §9.4's checks: explain_command below)
+    python -m src.neural.pipeline export ...  (src/api/export_neural.py's own arguments: docs/demo/neural.json)
 
 The dry run sends nothing, spends nothing and opens no connection: it builds every request of the job with the real
 planner and prompt and prices each one's worst case (what generate reserves: its input bound, every UTF-8 byte sent
@@ -334,6 +336,137 @@ def simulate_command(workers: int, out_dir: str | None, paths: runner.Paths, out
     return freeze.simulate(workers, Path(out_dir) if out_dir else None, out)
 
 
+UNLOCKED_OWN_STORES = ("legacy_v1", "control_v1world")   # sets whose store is not the v2 store's own split
+RISK_KEEP = ("specimen_id", "run", "scenario_id", "replicate", "tick_min", "p_miss", "harm_default", "harm_equal",
+             "ensemble_sd")                              # the columns neural_eval.risk_table writes
+
+
+def own_store_risk(split: str, artifact_dir: Path, store_dir: Path | None, workers: int | None, out=print) -> Path:
+    """TracerNet's RiskTable for `evaluate --split legacy_v1|control_v1world --artifact`, whose stores the v2 risk
+    table cannot read by split name: on the v1 store every run (fit runs 0 to 23 are the history, 24 to 29 scored)
+    through Predictor.score; on the control store its v1-world scenario, which that store keeps in val. Written
+    under data/neural/risk/<split>/ with risk_table's columns; returns the parts' glob."""
+    from src.models.tracernet.predictor import Predictor
+    from src.pipeline import neural_eval as ne, store
+
+    out_dir = ne.RISK_DIR / split
+    if split == "control_v1world":
+        return ne.risk_table("val", artifact_dir, store_dir=store_dir or store.CONTROL_STORE_DIR, out_dir=out_dir,
+                             workers=workers)
+    store_dir = Path(store_dir) if store_dir is not None else store.STORE_DIR
+    con = store.open_observed(store_dir)
+    try:
+        runs = sorted(int(r[0]) for r in con.execute("select distinct run from specimens").fetchall())
+    finally:
+        con.close()
+    frame = Predictor.load(artifact_dir).score(store_dir, runs, workers=workers)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for old in out_dir.glob("*.parquet"):
+        old.unlink()
+    frame.select(RISK_KEEP).write_parquet(out_dir / "part-0000.parquet")
+    out(f"risk {split}: {frame.height:,} rows over runs {runs[0]} to {runs[-1]}")
+    return out_dir / "*.parquet"
+
+
+def alert_inputs(files, store_dir: Path, split: str):
+    """The risk table's rows (parquet `files`), each with its specimen's urgency tier and window from the observed
+    store. The risk table keeps a slim projection, and Predictor.alerts also needs the tier (for harm) and the
+    window; `at` and `p_never` stay empty, since neither the knob nor the checks read them. Refuses an empty table
+    and rows that are not specimens of `split` in the store."""
+    import polars as pl
+
+    from src.pipeline import store
+
+    risk = pl.scan_parquet(list(files)).collect()
+    if risk.height == 0:
+        raise ValueError(f"the risk table holds no rows ({', '.join(map(str, files))})")
+    con = store.open_observed_v2(store_dir)
+    try:
+        rows = con.execute("select specimen_id, urgency_tier, window_min from specimens where split = ?",
+                           [split]).fetchall()
+    finally:
+        con.close()
+    spec = pl.DataFrame(rows, schema={"specimen_id": pl.Utf8, "tier": pl.Int64, "window_min": pl.Int64}, orient="row")
+    joined = risk.join(spec, on="specimen_id", how="left").with_columns(
+        at=pl.lit(None, dtype=pl.Datetime), p_never=pl.lit(None, dtype=pl.Float64))
+    stray = joined["tier"].null_count()
+    if stray:
+        raise ValueError(f"{stray:,} of {risk.height:,} risk rows are not {split} specimens in {store_dir}: the risk "
+                         f"table is not the {split} one")
+    return joined
+
+
+def explain_command(split: str, *, store_dir: Path | None = None, artifact_dir: Path | None = None,
+                    tracernet: str | None = None, matched: bool = False, limit: int | None = None, workers: int = 1,
+                    out_path: Path | None = None, out=print) -> int:
+    """`explain --split SPLIT`: spec §9.4's checks on TracerNet's alerts on the split's scored replicates at the
+    headline budget (6 alerts per 8-hour shift, the default 3-2-1 weights), each scenario's knob tuned on its history
+    replicate from alert volume alone, written to results/neural/explanations.json (`out_path`). The alerts come
+    from the risk table an evaluation of the split wrote (`evaluate --split SPLIT --artifact ...`, by default
+    data/neural/risk/<split>/*.parquet), read part by part as hashed; `limit` explains a seeded sample of them.
+
+    On test and test_ood this is a later look at a scored test set (spec §8.7). It needs the lock, with TracerNet's
+    risk table recorded for the split; the lock record is rebuilt from the arguments of that split's look (every
+    baseline and TracerNet, `matched` as that look had it, test_ood's ood_feature subset), and guard_test_run
+    logs the look as a repeat only when every hash and the risk table match, refusing otherwise. It never takes
+    the first lock and never relocks."""
+    import polars as pl
+
+    from src.models.tracernet import explain
+    from src.models.tracernet.predictor import DEFAULT_ARTIFACT, HISTORY_REPLICATE, Predictor
+    from src.pipeline import neural_eval as ne, store
+
+    store_dir = Path(store_dir) if store_dir is not None else store.STORE_V2_DIR
+    artifact_dir = Path(artifact_dir) if artifact_dir is not None else DEFAULT_ARTIFACT
+    tracernet = str(tracernet) if tracernet is not None else str(ne.RISK_DIR / split / "*.parquet")
+    out_path = Path(out_path) if out_path is not None else (     # the report reads test's; other sets beside it
+        explain.RESULTS_PATH if split == "test" else explain.RESULTS_PATH.with_name(f"explanations-{split}.json"))
+    methods = ne.baselines() + [ne.tracernet_method(tracernet)]
+    parts = ne._pin_risk_tables(methods)        # the parts read below are the parts hashed
+    run = None
+    if split in ne.LOCKED_SPLITS:
+        lock_path, runs_path = ne.LOCK_PATH, ne.TEST_RUNS_PATH
+        if not lock_path.exists():
+            raise ne.LockError(f"no test lock at {lock_path}: explain looks again at a test set an evaluation has "
+                               f"scored, so run `evaluate --split {split} --artifact ...` first")
+        locked = json.loads(lock_path.read_text(encoding="utf-8"))
+        if ne.TRACERNET not in ((locked.get("risk_parts") or {}).get(split) or {}):
+            raise ne.LockError(f"the test lock records no TracerNet risk table for {split}: no look has scored "
+                               "TracerNet on it, so there are no alerts to explain")
+        feature = ne.ood_feature_scenarios(store_dir) if split == "test_ood" else []
+        hashes = ne.lock_record(store_dir, methods, artifact_dir=artifact_dir, matched=matched,
+                                subsets={ne.OOD_FEATURE: feature} if feature else None)
+        try:
+            run = ne.guard_test_run(split, hashes, lock_path=lock_path, runs_path=runs_path, risk_parts=parts)
+        except ne.LockError as e:
+            raise ne.LockError(f"{e} (explain never relocks: it explains only the look the lock holds)") from None
+        if run["status"] != "repeat":
+            raise ne.LockError(f"the {split} look was logged as {run['status']!r}, not as a repeat of the locked one")
+        out(f"{split} run: {run['status']} at {run['time']}")
+    pred = Predictor.load(artifact_dir)
+    risk = alert_inputs(methods[-1].series.files, store_dir, split)
+    history = pl.col("replicate") == HISTORY_REPLICATE
+    alerts = pred.alerts(risk.filter(~history), budget_per_shift=ne.HEADLINE_BUDGET, weights="default",
+                         tune_on=risk.filter(history))
+    out(f"{alerts.height:,} {split} alerts at {ne.HEADLINE_BUDGET} per 8-hour shift (3-2-1 weights)")
+    doc = explain.run_checks(pred, alerts, store_dir=store_dir, test_run=run, set_name=split, out_path=out_path,
+                             workers=workers, limit=limit)
+    verdicts = ", ".join(f"{name} {'passed' if c['passed'] else 'failed'}" for name, c in doc["checks"].items())
+    out(f"explained {doc['alerts']:,} of {doc['alerts_given']:,} alerts ({doc['attributed_alerts']:,} attributed, "
+        f"{doc['steps']} steps): {verdicts}; all passed: {doc['passed']}")
+    out(f"wrote {out_path}")
+    return 0
+
+
+def _limit(value: str) -> int | None:
+    if value == "all":
+        return None
+    n = int(value)
+    if n < 1:
+        raise argparse.ArgumentTypeError("--limit is a positive number of alerts, or all")
+    return n
+
+
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="python -m src.neural.pipeline", description="Tracer v2 pipeline.")
     sub = ap.add_subparsers(dest="command", required=True)
@@ -420,6 +553,20 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--device", default="auto")
     p.add_argument("--workers", type=int, default=None)
     p.add_argument("--relock-reason", default=None)
+    p = sub.add_parser("explain", help="the explanation checks on a set's alerts at 6 alerts per 8-hour shift "
+                                       "(spec §9.4); test sets only as a repeat of their locked look")
+    p.add_argument("--split", required=True, choices=("val", "test", "test_ood"))
+    p.add_argument("--store", default=None, help="store folder (default: the v2 store)")
+    p.add_argument("--artifact", default=None, help="TracerNet artifact (default artifacts/tracernet/v1)")
+    p.add_argument("--tracernet", default=None, help="the set's risk table, a parquet file or glob (default "
+                                                     "data/neural/risk/<split>/*.parquet)")
+    p.add_argument("--matched", action="store_true", help="as the set's locked look was run (its lock record)")
+    p.add_argument("--limit", type=_limit, default=None, help="explain a seeded sample of N alerts, or all (default)")
+    p.add_argument("--workers", type=int, default=1)
+    p.add_argument("--out", default=None, help="default results/neural/explanations.json for test (the report's), "
+                                               "explanations-<split>.json otherwise")
+    sub.add_parser("export", add_help=False, help="TracerNet's demo file, docs/demo/neural.json: every argument goes "
+                                                  "to python -m src.api.export_neural")
     p = sub.add_parser("report", help="render results/neural/REPORT.md (spec §8.10)")
     p.add_argument("--out", default=None)
     p.add_argument("--ledger-json", default=None, help="ledger totals as JSON, when the ledger mirror is elsewhere")
@@ -434,6 +581,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None, *, paths: runner.Paths | None = None, seams=None, client_factory=None,
          now=None, out=print, sleep=time.sleep, clock=time.monotonic) -> int:
+    argv = sys.argv[1:] if argv is None else list(argv)
+    if argv[:1] == ["export"]:     # its arguments, --help included, are export_neural's own
+        from src.api import export_neural
+        return export_neural.main(argv[1:])
     args = build_parser().parse_args(argv)
     pipe = Pipeline(paths=paths or runner.Paths(), seams=seams, client_factory=client_factory, now=now, out=out,
                     sleep=sleep, clock=clock)
@@ -472,8 +623,11 @@ def main(argv: list[str] | None = None, *, paths: runner.Paths | None = None, se
         if args.command == "evaluate":
             from src.pipeline import neural_eval
             opt = (lambda v: Path(v) if v else None)
+            tracernet = opt(args.tracernet)
+            if tracernet is None and args.artifact and args.split in UNLOCKED_OWN_STORES:
+                tracernet = own_store_risk(args.split, Path(args.artifact), opt(args.store), args.workers, out=out)
             return neural_eval.command_evaluate(args.split, store_dir=opt(args.store), out_dir=opt(args.out),
-                                                workers=args.workers, tracernet=opt(args.tracernet),
+                                                workers=args.workers, tracernet=tracernet,
                                                 artifact_dir=opt(args.artifact), matched=args.matched,
                                                 relock_reason=args.relock_reason,
                                                 train_store_dir=opt(args.train_store))
@@ -519,6 +673,16 @@ def main(argv: list[str] | None = None, *, paths: runner.Paths | None = None, se
                                             rung=args.rung, cells_path=opt(args.cells), device=args.device,
                                             workers=args.workers, relock_reason=args.relock_reason,
                                             evaluate=args.evaluate, out=out)
+        if args.command == "explain":
+            from src.pipeline import neural_eval
+            try:
+                return explain_command(args.split, store_dir=Path(args.store) if args.store else None,
+                                       artifact_dir=Path(args.artifact) if args.artifact else None,
+                                       tracernet=args.tracernet, matched=args.matched, limit=args.limit,
+                                       workers=args.workers, out_path=Path(args.out) if args.out else None, out=out)
+            except (neural_eval.LockError, ValueError, FileNotFoundError) as e:
+                out(f"error: {e}")
+                return 1
         if args.command == "report":
             from src.neural import report
             return report.report_command(out_path=Path(args.out) if args.out else None,

@@ -865,14 +865,17 @@ COMMANDS = ("python -m src.neural.pipeline freeze --jobs O1,O2,O3", "python -m s
             "python -m src.neural.pipeline store", "python -m src.neural.pipeline train --hpo",
             "python -m src.neural.pipeline train --rung A|B|C --seeds 0,1,2", "python -m src.neural.pipeline select",
             "python -m src.neural.pipeline calibrate",
-            "python -m src.neural.pipeline evaluate --split val --artifact artifacts/tracernet/v1",
+            "python -m src.neural.pipeline evaluate --split val --artifact artifacts/tracernet/v1 --matched",
             "python -m src.neural.pipeline weakspots",
-            "python -m src.neural.pipeline evaluate --split test --artifact artifacts/tracernet/v1",
-            "python -m src.neural.pipeline evaluate --split test_ood --artifact artifacts/tracernet/v1",
-            "python -m src.neural.pipeline evaluate --split legacy_v1 --artifact artifacts/tracernet/v1",
+            "python -m src.neural.pipeline evaluate --split test --artifact artifacts/tracernet/v1 --matched",
+            "python -m src.neural.pipeline evaluate --split test_ood --artifact artifacts/tracernet/v1 --matched",
+            "python -m src.neural.pipeline evaluate --split legacy_v1 --artifact artifacts/tracernet/v1 --matched",
+            "python -m src.neural.pipeline store --control",
             "python -m src.neural.pipeline evaluate --split control_v1world --artifact artifacts/tracernet/v1 "
-            "--store STORE_WITH_THE_V1_WORLD_SCENARIO --train-store data/store-v2",
+            "--store data/store-v2-control --train-store data/store-v2 --matched",
             "python -m src.neural.pipeline ablate --set core", "python -m src.neural.pipeline ablate --collect",
+            "python -m src.neural.pipeline explain --split test --matched",
+            "python -m src.neural.pipeline export --source legacy_v1",
             "python -m src.neural.pipeline report")
 
 
