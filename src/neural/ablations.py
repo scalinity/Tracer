@@ -479,6 +479,9 @@ def control_lead(control: dict | None, margin: float) -> dict | None:
     return out
 
 
+SCORE_METADATA = ("evaluation", "score_s", "scenarios_scored", "selection_sha256", "score_share", "score_salt")
+
+
 def scoring_record(results: dict) -> dict:
     """Per scored set, the scenario selections, shares and salts the arms were scored with, as recorded with each
     result, and whether every arm used the same selection (the arms are compared only on one sample)."""
@@ -526,7 +529,7 @@ def collect(*, root: Path = ABLATION_DIR, out_path: Path | None = None, control_
             val_sel = [(r.get("train") or {}).get("best_val_sel") if r.get("train") else
                        (r.get("artifact") or {}).get("ensemble_val_sel") for r in rs]
             keys = sorted({k for r in rs for s in ("val", "test") for k in (r.get(s) or {})
-                           if k not in ("evaluation", "score_s")})
+                           if k not in SCORE_METADATA})
             entry["arms"][arm] = {"seeds": len(rs), "seeds_done": len(finished),
                                   "val": {"val_sel": _stats(val_sel)} | {k: _stats([(r.get("val") or {}).get(k) for r in rs])
                                                                          for k in keys},

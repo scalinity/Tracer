@@ -276,11 +276,14 @@ def test_collect_summarizes_seeds_checks_steps_and_records_every_ablation(tmp_pa
     root, p = tmp_path / "ablations", A.paths(tmp_path / "ablations")
     jobs = [{"id": f"A6-{arm}-s{s}", "ablation": "A6", "arm": arm, "seed": s} for arm in ("no_context",) for s in (0, 1)]
     jobs += [{"id": f"A5-B-s{s}", "ablation": "A5", "arm": "B", "seed": s} for s in (0, 1)]
+    scored = {"evaluation": "eval.json", "score_s": 0.0, "scenarios_scored": 3, "selection_sha256": "abc",
+              "score_share": 0.25, "score_salt": "tracer-score-v1"}      # the metadata run_arm records with a score
     for j in jobs:
         A._write(p["jobs"] / f"{j['id']}.json", j)
         A._write(p["arms"] / j["id"] / "result.json",
                  {"train": {"steps": 100, "best_val_sel": 0.1 + 0.01 * j["seed"], "call_s": 1800},
-                  "val": {"capped_mean_warning_min": 10.0 + j["seed"]}, "test": {"capped_mean_warning_min": 9.0}})
+                  "val": {"capped_mean_warning_min": 10.0 + j["seed"]} | scored,
+                  "test": {"capped_mean_warning_min": 9.0} | scored})
     A._write(p["index"], {"set": "core", "rung": "B", "steps": 100, "time_box_h": 6, "jobs": [j["id"] for j in jobs],
                           "not_run": {"A3": "not run: why", "A2": "blocked: no cells"}})
     control = {"settings": {"headline": "6/shift"}, "differences": {"6/shift": {"3-2-1": {"analytic_local": {
@@ -297,6 +300,8 @@ def test_collect_summarizes_seeds_checks_steps_and_records_every_ablation(tmp_pa
     assert doc["ablations"]["A3"] == {"question": "Did round 2 help?", "required": False, "status": "not run",
                                       "reason": "not run: why"}
     assert doc["ablations"]["A2"]["status"] == "not run" and doc["ablations"]["A2"]["required"]
+    assert "score_salt" not in a6["arms"]["no_context"]["val"] and doc["scoring"]["test"]["same_selection"]
+    assert doc["scoring"]["val"]["shares"] == [0.25] and doc["scoring"]["val"]["arms"] == 4
 
 
 # --- A1's store ----------------------------------------------------------------------------------------------------------
