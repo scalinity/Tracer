@@ -8,6 +8,9 @@ run, generate and collect; the later stages join it with their tasks.
     python -m src.neural.pipeline collect  --job O1
     python -m src.neural.pipeline ledger report
     python -m src.neural.pipeline ledger release-job O1b --reason TEXT
+    python -m src.neural.pipeline weakspots   (src/neural/weakspots.py: round 2's slices and the O3 plan)
+    python -m src.neural.pipeline ablate --set core|all | --run ID | --collect   (src/neural/ablations.py)
+    python -m src.neural.pipeline report      (src/neural/report.py: results/neural/REPORT.md)
 
 The dry run sends nothing, spends nothing and opens no connection: it builds every request of the job with the real
 planner and prompt and prices each one's worst case (what generate reserves: its input bound, every UTF-8 byte sent
@@ -84,17 +87,20 @@ class Pipeline:
     def plan(self, job: str, force: bool = False) -> list[dict]:
         cfg = self.cfg()
         j = runner.job_settings(cfg, job)
-        targets = None
+        targets, n = None, j.get("briefs")
         if j.get("needs") == "weak_spot_plan" and self.paths.weak_spot_plan.exists():
             targets = json.loads(self.paths.weak_spot_plan.read_text(encoding="utf-8"))
+            if isinstance(targets, dict):   # the weak-spot record: its targets, and its count when the job sets none
+                n = targets["briefs"] if n is None else n
+                targets = targets["targets"]
         inputs = {"job": stages.obj_hash({k: j.get(k) for k in ("seed", "briefs", "arms", "needs")}),
                   "planner_config": stages.file_hash(runner.ROOT / "config" / "scenario_planner.yaml"),
                   "planner_code": stages.file_hash(runner.ROOT / "src" / "scenarios" / "planner.py"),
-                  "targets": stages.obj_hash(targets) if targets is not None else None}
+                  "targets": stages.obj_hash({"targets": targets, "briefs": n}) if targets is not None else None}
         path = self.paths.briefs(job)
 
         def fn():
-            briefs = self.seams.plan(job, j["seed"], n=j.get("briefs"), targets=targets)
+            briefs = self.seams.plan(job, j["seed"], n=n, targets=targets)
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("".join(json.dumps(b, sort_keys=True) + "\n" for b in briefs), encoding="utf-8")
             return {"briefs": path}, briefs
@@ -318,10 +324,13 @@ def gate_command(job: str, paths: runner.Paths, out=print) -> int:
     return gate.run(job, paths, out)
 
 
-def simulate_command(workers: int, out_dir: str | None, paths: runner.Paths, out=print) -> int:
-    """Simulate the frozen library (spec §5, §6.1); src.scenarios.freeze drives the simulator."""
+def simulate_command(workers: int, out_dir: str | None, paths: runner.Paths, out=print, a1: bool = False) -> int:
+    """Simulate the frozen library (spec §5, §6.1), or with `a1` ablation A1's replicates (spec §8.8);
+    src.scenarios.freeze drives the simulator."""
     from src.scenarios import freeze
 
+    if a1:
+        return freeze.simulate_a1(workers, Path(out_dir) if out_dir else None, out=out)
     return freeze.simulate(workers, Path(out_dir) if out_dir else None, out)
 
 
@@ -350,8 +359,13 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("simulate", help="simulate the frozen library (spec §5, §6.1)")
     p.add_argument("--workers", type=int, default=16)
     p.add_argument("--out", default=None, help="output folder (default: the simulation folder)")
+    p.add_argument("--a1", action="store_true", help="ablation A1's train replicates (its plan, a1-replicates.json) "
+                                                     "and every validation replicate, into A1's own folder (spec §8.8)")
     p = sub.add_parser("store", help="load the simulation into the v2 store (spec §6.3)")
     p.add_argument("--workers", type=int, default=None)
+    p.add_argument("--a1", action="store_true", help="load A1's simulation into A1's own store (spec §8.8)")
+    p.add_argument("--control", action="store_true", help="simulate the v1-world scenario's replicates into the "
+                                                          "control_v1world store (spec §8.1)")
     p = sub.add_parser("evaluate", help="score every method on a set (spec §8); test sets go through the lock")
     p.add_argument("--split", required=True,
                    choices=("val", "test", "test_ood", "legacy_v1", "control_v1world"))
@@ -386,6 +400,29 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--rung", choices=("A", "B", "C"), default=None)
     p.add_argument("--out", default=None, help="artifact folder (default artifacts/tracernet/v1)")
     p.add_argument("--workers", type=int, default=None)
+    p = sub.add_parser("weakspots", help="validation weak spots and the O3 plan (spec §4.12)")
+    p.add_argument("--rows", default=None, help="validation rows (default data/neural/weakspots/val-rows.parquet)")
+    p.add_argument("--risk", default=None, help="TracerNet's validation RiskTable (default data/neural/risk/val/*.parquet)")
+    p.add_argument("--evaluation", default=None, help="default results/neural/val/evaluation.json")
+    p.add_argument("--store", default=None, help="the observed store whose validation split is checked")
+    p.add_argument("--out", default=None, help="default results/neural/generation/ (dev stores: data/neural/dev-generation/)")
+    p.add_argument("--force", action="store_true")
+    p = sub.add_parser("ablate", help="ablation job specs, one arm, or the collected results (spec §8.8)")
+    p.add_argument("--set", dest="ablation_set", choices=("core", "all"), default=None)
+    p.add_argument("--run", default=None, help="run one job (arm and seed) by its id")
+    p.add_argument("--stage", choices=("train", "score", "all"), default="all")
+    p.add_argument("--collect", action="store_true", help="gather every arm into results/neural/ablations.json")
+    p.add_argument("--store", default=None, help="the training store")
+    p.add_argument("--eval-store", default=None, help="the store holding labels for scoring")
+    p.add_argument("--rung", default=None, help="default: the chosen rung in results/neural/selection.json")
+    p.add_argument("--cells", default=None, help="scenario cells (default data/neural/scenario-cells.json)")
+    p.add_argument("--evaluate", default="val,test", help="sets: the jobs --set writes, or the sets --run scores")
+    p.add_argument("--device", default="auto")
+    p.add_argument("--workers", type=int, default=None)
+    p.add_argument("--relock-reason", default=None)
+    p = sub.add_parser("report", help="render results/neural/REPORT.md (spec §8.10)")
+    p.add_argument("--out", default=None)
+    p.add_argument("--ledger-json", default=None, help="ledger totals as JSON, when the ledger mirror is elsewhere")
     p = sub.add_parser("ledger", help="ledger report or job release")
     lsub = p.add_subparsers(dest="ledger_command", required=True)
     lsub.add_parser("report")
@@ -421,9 +458,16 @@ def main(argv: list[str] | None = None, *, paths: runner.Paths | None = None, se
                           workers=args.workers, out=out)
             return 0
         if args.command == "simulate":
-            return simulate_command(args.workers, args.out, pipe.paths, out)
+            return simulate_command(args.workers, args.out, pipe.paths, out, a1=args.a1)
         if args.command == "store":
             from src.pipeline import store
+            if args.control:
+                counts = store.build_control_v2(workers=args.workers or 1)
+                out(f"control_v1world store {store.CONTROL_STORE_DIR}: {json.dumps(counts, sort_keys=True)}")
+                return 0
+            if args.a1:
+                return store.command_build_v2(workers=args.workers, sim_dir=store.SIM_A1_DIR,
+                                              store_dir=store.STORE_V2_A1_DIR, out=out)
             return store.command_build_v2(workers=args.workers, out=out)
         if args.command == "evaluate":
             from src.pipeline import neural_eval
@@ -457,6 +501,28 @@ def main(argv: list[str] | None = None, *, paths: runner.Paths | None = None, se
             return ensemble.calibrate_command(store_dir=Path(args.store) if args.store else None, rung=args.rung,
                                               out_dir=Path(args.out) if args.out else None, workers=args.workers,
                                               out=out)
+        if args.command == "weakspots":
+            from src.neural import weakspots
+            opt = (lambda v: Path(v) if v else None)
+            try:
+                return weakspots.weakspots_command(rows_path=opt(args.rows), risk=args.risk,
+                                                   evaluation_path=opt(args.evaluation), store_dir=opt(args.store),
+                                                   out_dir=opt(args.out), force=args.force, out=out)
+            except weakspots.WeakSpotError as e:
+                out(f"error: {e}")
+                return 1
+        if args.command == "ablate":
+            from src.neural import ablations
+            opt = (lambda v: Path(v) if v else None)
+            return ablations.ablate_command(set_name=args.ablation_set, run=args.run, collect_results=args.collect,
+                                            stage=args.stage, store_dir=opt(args.store), eval_store=opt(args.eval_store),
+                                            rung=args.rung, cells_path=opt(args.cells), device=args.device,
+                                            workers=args.workers, relock_reason=args.relock_reason,
+                                            evaluate=args.evaluate, out=out)
+        if args.command == "report":
+            from src.neural import report
+            return report.report_command(out_path=Path(args.out) if args.out else None,
+                                         ledger_json=Path(args.ledger_json) if args.ledger_json else None, out=out)
         if args.ledger_command == "report":
             return pipe.ledger_report()
         return pipe.release_job(args.job, args.reason)

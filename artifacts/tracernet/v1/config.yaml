@@ -2,8 +2,12 @@ version: tracernet-v1
 rung: C
 seeds:
 - 0
+- 1
+- 2
 runs:
-- C-s0-dfa4ebb1-20261109-042246
+- C-s0-dfa4ebb1-20261109-182017
+- C-s1-dfa4ebb1-20261109-162219
+- C-s2-dfa4ebb1-20261109-190159
 net:
   rung: C
   edges: null

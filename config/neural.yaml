@@ -77,3 +77,44 @@ ensemble:
   warning_margin_min: 5         # spec §7.9: more than 5 minutes below rung A's median warning chooses rung A
   calibration_max_ticks: 3000000  # ASSUMED: above this many validation ticks a fixed uniform sample fits the temperature
   max_artifact_mb: 10           # spec §10.4
+
+# Round 2's weak spots and the O3 plan (src/neural/weakspots.py, spec §4.12, Appendix B). Validation only.
+weakspots:
+  dimensions: [archetype_stratum, disruption_type, route_kind, window_class, volume_tercile, edge_tag]  # spec §4.12
+  min_breaches: 30              # spec §4.12 step 2: a slice needs at least 30 validation breaches
+  top: 4                        # spec §4.12 step 3
+  max_tick_min: 240             # the miss log loss is val_sel's (spec §7.7): ticks up to min(window, 240)
+  budget: 6/shift               # the warning gap is read at the headline budget (spec §8.3)
+  weighting: 3-2-1              # and TracerNet's default urgency weights
+  cap_share: 0.95               # spec Appendix B: accepted = floor(cap x 0.95 / cost per accepted scenario)
+  # ASSUMED: the planner has no route-kind or volume factor, so these slices are planned through the nearest
+  # brief factor; window classes and walk-in routes have none and are never planned.
+  transport_of_route_kind: {tube: tube_dominant, courier: courier_dominant}
+  size_of_volume_tercile: {low: small, middle: medium, high: large}
+
+# Ablations A1 to A9 (src/neural/ablations.py, spec §8.8).
+ablations:
+  time_box_h: 6                 # spec §8.8: 6 hours of compute in all
+  seeds_core: [0, 1, 2]         # spec §8.8: three seeds for A1, A2, A5 and A6
+  seeds_optional: [0]           # one seed otherwise
+  step_samples: 1500000         # ASSUMED: every arm takes the gradient steps of 1.5 million samples at the configured
+                                # batch (an HPO trial's cap, spec §7.8), so arms differ only in what they test
+  epochs: 6                     # ASSUMED: those steps in 6 epochs, each followed by val_sel
+  budgets_per_shift: [6]        # ASSUMED: arms are scored at the headline budget
+  budgets_per_100: [30]         # and the non-binding 30 per 100 specimens (docs/neural/build-log.md)
+  resamples: 200                # ASSUMED: bootstrap resamples per arm (arm numbers are descriptive)
+  score_share: 0.25             # ASSUMED: every arm is scored on the same fixed share of the val and test scenarios
+                                # (lowest salted SHA-256), so 43 arms' CPU scoring (~163 core-hours each in full) fits
+                                # the box; the arms stay paired on one sample
+  score_salt: tracer-score-v1   # ASSUMED: which scenarios that share is
+  a1:                           # spec §8.8 A1: the same 800 scenario-replicates as 100 x 8 ... 800 x 1
+    designs: [[100, 8], [200, 4], [400, 2], [800, 1]]
+    store: data/store-v2-a1     # the train scenarios with their extra replicates, plus validation
+    salt: tracer-a1-v1          # ASSUMED: the nested scenario sets are the lowest salted SHA-256 of the scenario ids
+  a2_salt: tracer-a2-v1         # ASSUMED: which normal train scenarios are left out to equal the edge arm's size
+  # A6's cuts in spec §7.4's groups. Aggregates are the numeric columns of these feature groups; the roster is
+  # spec §7.4 group 7 (minutes to the next shift change stays with the elapsed features, as §7.4 lists it).
+  aggregate_groups: [batch_mates, route_flow, unit_flow, lab_flow]
+  roster_columns: [round_interval, no_round, staff_this_shift, tube_lines, courier_routes, roster_missing]
+  leakage_lead_min: 5           # ASSUMED: on control_v1world a lead over the local analytic refit of 5 minutes or more
+                                # with its interval above zero is "large" (R1's margin) and treated as leakage

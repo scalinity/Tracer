@@ -37,6 +37,10 @@ store other than data/store-v2.
 
 On CPU the run is bit-reproducible (deterministic algorithms, seeded Python, numpy and torch), and a run
 resumed from its checkpoint equals an uninterrupted one exactly. MPS is not bit-reproducible.
+
+Ablations (spec §8.8, src/neural/ablations.py) pass three more training keys, each absent from ordinary runs:
+`max_steps` stops every arm after the same number of gradient steps (and sizes the schedule to it), `train_subset`
+trains on named scenarios and replicates only, and `input_mask` cuts input groups out of the network (`mask_inputs`).
 """
 
 from __future__ import annotations
@@ -364,6 +368,66 @@ def miss_log_loss(logit_miss: np.ndarray, breach: np.ndarray, specimen: np.ndarr
     return float(per.mean())
 
 
+def subset_rows(t: F.Table, rows: np.ndarray, subset: dict) -> np.ndarray:
+    """Ablations A1 and A2: the training rows of the named scenarios (`scenarios`) and replicates (`replicates`);
+    a key left out keeps every value. A scenario the table lacks is an error."""
+    keep = np.ones(len(rows), dtype=bool)
+    if subset.get("scenarios") is not None:
+        names = list(t.names["scenarios"])
+        missing = sorted(set(subset["scenarios"]) - set(names))
+        if missing:
+            raise RuntimeError(f"the training subset names {len(missing)} scenarios the table lacks: {missing[:5]}")
+        keep &= np.isin(np.asarray(t.a["scenario"])[rows], [names.index(s) for s in subset["scenarios"]])
+    if subset.get("replicates") is not None:
+        keep &= np.isin(np.asarray(t.a["replicate"])[rows], [int(r) for r in subset["replicates"]])
+    if not keep.any():
+        raise RuntimeError("the training subset keeps no scored specimen")
+    return rows[keep]
+
+
+def mask_inputs(model: TracerNet, cut: dict | None) -> TracerNet:
+    """Ablation A6: cut input groups out of a network. The weights that first read a cut input are set to zero and
+    every gradient that would move them is zeroed, so a cut input cannot change any output; AdamW leaves a weight
+    at zero when its gradient is zero. `cut["num"]` names numeric columns (features.NUM_COLUMNS), cut at the
+    encoder's first layer (rung L: the linear map); `cut["branches"]` names whole branches ("fingerprint",
+    "series", "tokens"), cut where the fusion layer reads them (rung L: the fingerprint's columns). The saved
+    weights carry the cut, so the predictor scores an ablated network unchanged."""
+    if not cut:
+        return model
+    cfg = model.config
+    cat = sum(d for _, _, d in cfg.vocab)
+    n_num = sum(n for _, n in cfg.num_groups)
+    num = [F.NUM_INDEX[c] for c in cut.get("num", ())]
+    branches = set(cut.get("branches", ()))
+    unknown = branches - {"fingerprint", "series", "tokens"}
+    if unknown:
+        raise ValueError(f"unknown branches {sorted(unknown)}")
+    if model.rung == "L":
+        first = cat + cfg.n_tests
+        cols = [first + i for i in num]
+        if "fingerprint" in branches:
+            cols += list(range(first + n_num, first + n_num + cfg.n_fingerprint))
+        targets = [(model.linear.weight, cols)]
+    else:
+        spans, start = {"fingerprint": (cfg.width, cfg.width + cfg.fingerprint_dim)}, cfg.width + cfg.fingerprint_dim
+        if model.rung in ("B", "C"):
+            spans["series"] = (start, start + cfg.temporal_dim)
+            start += cfg.temporal_dim
+        if model.rung == "C":
+            spans["tokens"] = (start, start + cfg.attention_dim)
+        targets = [(model.encoder[0].weight, [cat + cfg.tests_dim + i for i in num]),
+                   (model.fusion[0].weight, [c for b in sorted(branches) if b in spans for c in range(*spans[b])])]
+    for weight, cols in targets:
+        if not cols:
+            continue
+        keep = torch.ones_like(weight)
+        keep[:, cols] = 0.0
+        with torch.no_grad():
+            weight.mul_(keep)
+        weight.register_hook(lambda g, keep=keep: g * keep)
+    return model
+
+
 def predict_chunks(model: TracerNet, chunks, keys: tuple, device: str) -> dict:
     """logit_miss and p_miss of every tick, with the chunks' labels and ids, as float64 numpy arrays."""
     model.eval()
@@ -577,6 +641,8 @@ def train(config: dict, *, rung: str, seed: int, store_dir: Path | None = None, 
                              cache_root=cache_root)
     lookahead = max(4, 2 * sampler.workers.workers)
     try:
+        if tcfg.get("train_subset"):
+            sampler.rows = subset_rows(t, sampler.rows, tcfg["train_subset"])
         mean_k = expected_ticks(t, sampler.rows, sampler.k, sampler.factor)
         if ckpt is None:
             plan = _plan(t, sampler, ncfg, tcfg, device, mean_k, max_samples, time_box_s, lookahead, log)
@@ -672,6 +738,8 @@ def _plan(t, sampler, ncfg, tcfg, device, mean_k, max_samples, time_box_s, looka
         planned = min(planned, int(math.ceil(max_samples / batch)))
     if time_box_s is not None and tcfg["epoch_samples"] is None:   # the steps the box is expected to hold
         planned = min(planned, max(steps_per_epoch, int(math.ceil(BOX_SHARE * time_box_s * sps / batch))))
+    if tcfg.get("max_steps"):
+        planned = min(planned, int(tcfg["max_steps"]))
     return {"device": chosen, "throughput": throughput, "epoch_samples": epoch_samples,
             "specimens_per_epoch": int(math.ceil(epoch_samples / mean_k)), "mean_ticks_per_specimen": mean_k,
             "steps_per_epoch": steps_per_epoch, "planned_steps": planned,
@@ -686,7 +754,7 @@ def _loop(t, sampler, ncfg, tcfg, plan, dev, keys, val_batches, run_dir, run_id,
     base_lr = float(tcfg["learning_rate"])
     if ckpt is None:
         seed_everything(seed)
-        model = TracerNet(ncfg).to(dev)
+        model = mask_inputs(TracerNet(ncfg).to(dev), tcfg.get("input_mask"))
         opt = torch.optim.AdamW(model.parameters(), lr=base_lr, weight_decay=float(tcfg["weight_decay"]))
         state = {"epoch": 0, "step": 0, "samples": 0, "lr_scale": 1.0, "best": None, "best_epoch": None,
                  "bad_epochs": 0, "reloads": 0, "history": [], "elapsed_s": 0.0}
@@ -701,7 +769,7 @@ def _loop(t, sampler, ncfg, tcfg, plan, dev, keys, val_batches, run_dir, run_id,
         F.save_schema(schema, run_dir / "feature_schema.json")
         _save(run_dir, model, opt, sampler, state, plan, tcfg, "running")
     else:
-        model = TracerNet(ncfg).to(dev)
+        model = mask_inputs(TracerNet(ncfg).to(dev), tcfg.get("input_mask"))
         opt = torch.optim.AdamW(model.parameters(), lr=base_lr, weight_decay=float(tcfg["weight_decay"]))
         model.load_state_dict(ckpt["model"])
         opt.load_state_dict(ckpt["optimizer"])
@@ -776,6 +844,9 @@ def _loop(t, sampler, ncfg, tcfg, plan, dev, keys, val_batches, run_dir, run_id,
                 cut = "timed_out"
                 break
             if max_samples is not None and state["samples"] >= max_samples:
+                cut = "budget"
+                break
+            if tcfg.get("max_steps") and state["step"] >= int(tcfg["max_steps"]):
                 cut = "budget"
                 break
         feed.close()

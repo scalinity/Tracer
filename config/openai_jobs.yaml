@@ -49,8 +49,10 @@ jobs:
   # accepted) / 0.958 acceptance) = ceil(5,846 / 0.958) (spec Appendix B). The cap still stops spending first.
   O2:  {account: openai, cap_usd: 44.00, released: true, tier: flex, seed: 201, briefs: 6101, needs: pilot_gate,
         arms: {normal: [terra-low], stressed: [terra-low], disrupted: [terra-low], edge: [terra-low]}}
+  # O3's mix follows the same gate (spec §4.10's model rule): terra-low met the edge rule (G3 6 of 6) and is cheaper
+  # than sol-medium, so it writes the edge stratum too. Its briefs come from the weak-spot plan (round2-plan.json).
   O3:  {account: openai, cap_usd: 18.00, released: true, tier: flex, seed: 301, briefs: null, needs: weak_spot_plan,
-        arms: {normal: [terra-low], stressed: [terra-low], disrupted: [terra-low], edge: [sol-medium]}}
+        arms: {normal: [terra-low], stressed: [terra-low], disrupted: [terra-low], edge: [terra-low]}}
   O3b: {account: openai, cap_usd: 7.00, released: false, tier: flex, seed: 302, briefs: null, needs: weak_spot_plan,
         arms: {normal: [terra-low], stressed: [terra-low], disrupted: [terra-low], edge: [sol-medium]}}
   X1:  {account: decide, cap_usd: 1.00, released: true}

@@ -164,3 +164,20 @@ def test_a_stage_given_a_clock_records_its_real_finish(tmp_path):
     stages.run_stage(tmp_path, "generate-X", {}, lambda: ({}, {}), always=True, now=lambda: next(times))
     m = stages.markers(tmp_path)[0]
     assert (datetime.fromisoformat(m["finished_at"]) - datetime.fromisoformat(m["started_at"])) == timedelta(minutes=98)
+
+
+def test_simulate_and_store_take_a1_to_ablation_a1s_own_folders(tmp_path, monkeypatch):
+    from src.pipeline import store
+    from src.scenarios import freeze
+
+    calls = []
+    monkeypatch.setattr(freeze, "simulate_a1", lambda workers, out_dir=None, plan_path=None, out=print:
+                        calls.append(("simulate_a1", workers, out_dir)) or 0)
+    monkeypatch.setattr(store, "command_build_v2", lambda **k: calls.append(
+        ("store", k["workers"], k.get("sim_dir", store.SIM_DIR), k.get("store_dir", store.STORE_V2_DIR))) or 0)
+    env = Env(tmp_path)
+    ok(env.cli("simulate", "--a1", "--workers", "3"))
+    ok(env.cli("store", "--a1", "--workers", "2"))
+    ok(env.cli("store"))
+    assert calls == [("simulate_a1", 3, None), ("store", 2, store.SIM_A1_DIR, store.STORE_V2_A1_DIR),
+                     ("store", None, store.SIM_DIR, store.STORE_V2_DIR)]

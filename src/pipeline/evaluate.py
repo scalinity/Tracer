@@ -296,6 +296,29 @@ def truth_disruptions_v2(scenario_id: str | None = None, replicate: int | None =
     return [dict(zip(names, row)) for row in cur.fetchall()]
 
 
+def scenario_cells_v2(splits=("train", "val"), store_dir: Path | None = None) -> dict[str, dict]:
+    """Each scenario's planned cell (archetype, stratum and the planner's factors), for the named splits only."""
+    con = store.open_truth(_v2_dir(store_dir))
+    rows = con.execute("""select scenario_id, split, archetype, stratum, size_band, transport_mix, staffing,
+                                 failure_focus, edge_tags from truth_scenarios
+                          where list_contains(?, split) order by scenario_id""", [list(splits)]).fetchall()
+    return {r[0]: {"split": r[1], "archetype": r[2], "stratum": r[3], "size_band": r[4], "transport_mix": r[5],
+                   "staffing": r[6], "failure_focus": r[7], "edge_tags": list(r[8] or [])} for r in rows}
+
+
+def scenario_traits_v2(split: str | None = None, store_dir: Path | None = None) -> dict[str, dict]:
+    """Each scenario's archetype and the types of the disruptions its configuration plans (truth_scenarios), for one
+    split or every split: what the out-of-distribution rule of docs/neural/spec.md §6.2 reads."""
+    con = store.open_truth(_v2_dir(store_dir))
+    sql = "select scenario_id, archetype, parameters from truth_scenarios" + (" where split = ?" if split else "")
+    out = {}
+    for sid, archetype, parameters in con.execute(sql + " order by scenario_id", [split] if split else []).fetchall():
+        flat = json.loads(parameters)
+        types = {v for k, v in flat.items() if k.startswith("disruptions[") and k.endswith("].type")}
+        out[sid] = {"archetype": archetype or "", "disruption_types": sorted(types)}
+    return out
+
+
 def load_test_specs(start: str, stop: str) -> tuple[list[Spec], dict]:
     """The held-out specimens with their breach labels and planted faults, for the demo bundle
     (src/api/export.py), which never opens the truth file itself."""

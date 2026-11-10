@@ -12,28 +12,28 @@ clinical tool, and must not be used to make decisions about real specimens.
 
 ## Model
 
-Rung C of the TracerNet ladder (spec §7.3), 1 seeds (0),
-their receipt-time distributions averaged. Rung C was chosen by the pre-registered rule (spec §7.9); see `selection.json`. Calibration: temperature 1.148 on the log of
+Rung C of the TracerNet ladder (spec §7.3), 3 seeds (0, 1, 2),
+their receipt-time distributions averaged. Rung C was chosen by the pre-registered rule (spec §7.9); see `selection.json`. Calibration: temperature 1.113 on the log of
 the averaged distribution, fitted on validation ticks.
 Inference runs on CPU and is bit-reproducible.
 
 ## Data
 
-Observed scans of the scenario store `e8a3e5d96e13169c` (library `443a87f8b15f0078`, splits
-`36775fc5101440c5`, policy `9594d7c019363261`): train for fitting, validation for early stopping,
+Observed scans of the scenario store `e5a083c4088c0021` (library `257290db3d69618b`, splits
+`2d495f203ad64fc8`, policy `9594d7c019363261`): train for fitting, validation for early stopping,
 selection and calibration. Test and test_ood were never read. Features: `tracernet-features-1`.
 
 ## Validation metrics
 
 | Metric | Value |
 |---|---|
-| val_sel (miss log loss, ticks up to min(window, 240), per specimen) | 0.08245 |
-| Members' val_sel | 0.08245 |
-| Expected calibration error of p_miss, before | 0.0171 |
-| Expected calibration error of p_miss, after | 0.0129 |
-| Brier at 30 and 60 min, after | 0.0474, 0.0238 |
-| Calibration slope and intercept, after | 0.920, 0.309 |
-| Calibration ticks | 3,000,000 of 45,158,897 |
+| val_sel (miss log loss, ticks up to min(window, 240), per specimen) | 0.08124 |
+| Members' val_sel | 0.08227, 0.08196, 0.08317 |
+| Expected calibration error of p_miss, before | 0.0170 |
+| Expected calibration error of p_miss, after | 0.0138 |
+| Brier at 30 and 60 min, after | 0.0484, 0.0242 |
+| Calibration slope and intercept, after | 0.943, 0.357 |
+| Calibration ticks | 3,000,000 of 67,286,117 |
 
 ## Limits
 

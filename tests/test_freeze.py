@@ -4,6 +4,8 @@ import copy
 import json
 from pathlib import Path
 
+import pytest
+
 from src.scenarios import freeze
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -42,3 +44,16 @@ def test_simulation_inputs_carry_id_family_split_and_index_beside_the_configurat
     rec = {"meta": {"scenario_id": "S0007", "family_id": "F0003", "scenario_index": 7}, "scenario": EXAMPLE}
     out = freeze.simulation_inputs([rec], {"scenarios": {"S0007": "val"}})
     assert out[0]["split"] == "val" and out[0]["scenario_index"] == 7 and out[0]["units"] == EXAMPLE["units"]
+
+
+def test_a_later_freeze_skips_the_first_freezes_left_out_items_and_refuses_any_other_first_round_item():
+    from src.scenarios import runner
+
+    items = [{"item_id": f"O2-{k}", "job": "O2"} for k in range(5)] + [{"item_id": "O3-0", "job": "O3"}]
+    known = {"O2-0", "O2-1", "O2-2"}                      # O2-3 and O2-4 were left out by the first freeze
+    assert [i["item_id"] for i in freeze.round2_items(items, known, 2)] == ["O3-0"]
+    with pytest.raises(runner.JobError, match="only add round-2"):
+        freeze.round2_items(items, known, 1)              # one first-round item the first freeze never left out
+    manifest = {"near_duplicates": {"left_out": 21}, "left_out_other": {"plausibility": 2}}
+    assert freeze.first_round_left_out(manifest) == 23
+    assert freeze.first_round_left_out(manifest | {"first_round_left_out": 21}) == 21
