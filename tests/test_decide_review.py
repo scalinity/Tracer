@@ -242,3 +242,79 @@ def test_every_call_records_its_request_bytes_its_bound_and_its_billed_input_tok
     b = dc.billing_summary(r.outcomes)
     assert b["calls_with_usage"] == 2 and b["billed_input_tokens"] == 1800
     assert 0 < b["max_cost_over_reservation"] < 1 and b["max_billed_over_bound"] == 900 / o.input_bound
+
+
+# --- F009 (second round): a spend is bound to the configuration and wording its dry run froze -------------------------
+
+def _spend(tmp, cfg, transport, job="X2", set_name="val"):
+    """spend_step with a mock transport; each row keeps its request hash, as every job's rows do."""
+    return dc.spend_step(job, set_name, cfg, "1", tmp / "ledger.sqlite",
+                         lambda outcomes, its, result: [{"item_id": o.item_id, "request_hash": o.request_hash,
+                                                         "answers": o.answers} for o in outcomes],
+                         client_factory=lambda: dc.DecisionClient(cfg, env_path=tmp / ".env",
+                                                                  transport=httpx2.MockTransport(transport)),
+                         decide_dir=tmp / "decide", results_dir=tmp / "results", env_path=tmp / ".env",
+                         sleep=lambda s: None, concurrency=1, now=lambda: NOW, out=lambda s: None)
+
+
+def test_f009_a_spend_after_the_wording_and_prompt_version_change_needs_a_new_dry_run(env, monkeypatch):
+    """Sol's sequence: freeze and send p1, revise a question's wording and set p2, spend again with no new dry
+    run. The second spend is refused before any cache lookup or request, and nothing is relabeled."""
+    tmp, ledger = env
+    p1 = config()
+    dc.dry_run_step("X2", "val", items(2), p1, tmp / "ledger.sqlite", decide_dir=tmp / "decide", now=NOW,
+                    out=lambda s: None)
+    t = Transport()
+    first = _spend(tmp, p1, t)
+    assert len(t.requests) == 2 and first["provenance"]["config_hash"] == dc.config_hash(p1)
+    summary_before = (tmp / "results" / "X2-val.json").read_bytes()
+    outputs_before = (tmp / "decide" / "outputs" / "X2-val.jsonl").read_bytes()
+    real = render.x2_questions
+
+    def reworded():
+        q = real()
+        q["escalate"]["instructions"] = "Should a supervisor be called right away?"
+        return q
+    monkeypatch.setattr(render, "x2_questions", reworded)
+    p2 = config()
+    p2["decisions"]["prompt_version"] = "p2"
+    with pytest.raises(dc.JobError, match="run the dry run again"):
+        _spend(tmp, p2, t)
+    assert len(t.requests) == 2                                     # no request, no cache answer relabeled
+    assert (tmp / "results" / "X2-val.json").read_bytes() == summary_before
+    assert (tmp / "decide" / "outputs" / "X2-val.jsonl").read_bytes() == outputs_before
+    with pytest.raises(dc.ProvenanceError):
+        dc.verified_outputs("X2", "val", p2, decide_dir=tmp / "decide", results_dir=tmp / "results")
+
+
+def test_f009_a_changed_wording_alone_is_refused_at_the_spend_and_at_scoring(env, monkeypatch):
+    """X1's wording is in neither config_hash nor lock_hash: only the question binding catches it."""
+    from src.decide import critic
+    from test_decide import _record
+
+    tmp, ledger = env
+    cfg = config()
+    cfg["samples"] = {**cfg["samples"], "X1_controls_each": 1}
+    its = critic.build_items([_record(i) for i in range(3)], cfg)
+    dc.dry_run_step("X1", "library", its, cfg, tmp / "ledger.sqlite", decide_dir=tmp / "decide", now=NOW,
+                    out=lambda s: None)
+    _spend(tmp, cfg, Transport(), job="X1", set_name="library")
+    dc.verified_outputs("X1", "library", cfg, decide_dir=tmp / "decide", results_dir=tmp / "results")
+    monkeypatch.setattr(render, "PLAUSIBILITY_LEVELS", ["Implausible", "Odd", "Fair", "Plausible", "Very plausible"])
+    with pytest.raises(dc.ProvenanceError, match="question wording"):
+        dc.verified_outputs("X1", "library", cfg, decide_dir=tmp / "decide", results_dir=tmp / "results")
+    with pytest.raises(dc.JobError, match="questions_hash"):
+        _spend(tmp, cfg, Transport(), job="X1", set_name="library")
+
+
+def test_f009_the_frozen_items_are_bound_to_the_bytes_the_dry_run_froze(env):
+    tmp, ledger = env
+    cfg = config()
+    dc.dry_run_step("X2", "val", items(2), cfg, tmp / "ledger.sqlite", decide_dir=tmp / "decide", now=NOW,
+                    out=lambda s: None)
+    path = dc.items_path(tmp / "decide", "X2", "val")
+    frozen = dc.load_items(path)
+    frozen[0].meta = {"edited": True}                              # same requests, other bytes
+    dc.save_items(path, frozen)
+    with pytest.raises(dc.JobError, match="not the bytes the dry run froze"):
+        _spend(tmp, cfg, Transport())

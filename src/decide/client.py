@@ -52,9 +52,12 @@ transport boundary, before the cache, the ledger, an exception or an output sees
 a sanitized error code, never a message from the server, a header or the key; contract errors name the field and the
 expected type, never the value; nothing here logs a request.
 
-Provenance. A spending run records, beside its outputs, the SHA-256 of the output bytes and of the frozen items, the
-request set, the decision configuration (config_hash and lock_hash), and the dry run and test run it sent under.
-verified_outputs refuses outputs whose bytes, items, configuration, dry run or lock no longer match.
+Provenance. A dry run binds the items it freezes to the decision configuration (config_hash), the test-lock hash
+(lock_hash) and the job's question wording (questions_hash), and records the frozen items' SHA-256. A spending run
+refuses, before any cache lookup or request, items whose bytes or bindings differ from now: a changed configuration
+or wording needs a new dry run. It records, beside its outputs, the SHA-256 of the output bytes, and takes the rest of
+its provenance (items, request set, bindings, dry run, test run) from the validated dry run. verified_outputs refuses
+outputs whose bytes, items, bindings, dry run or lock no longer match.
 """
 
 from __future__ import annotations
@@ -170,6 +173,32 @@ def lock_hash(cfg: dict) -> str:
 
     return sha256_text(canonical({"config": config_hash(cfg), "x2": render.x2_questions(),
                                   "x3": render.x3_questions(0)}))
+
+
+def questions_hash(job: str) -> str:
+    """The exact wording of the job's question templates. Frozen items carry questions built from them, so a
+    changed wording means the items must be built again."""
+    from src.decide import render
+
+    sentences = render.edge_sentences()
+    q = {"X1": lambda: render.x1_questions(sorted(sentences), sentences), "X2": render.x2_questions,
+         "X3": lambda: render.x3_questions(0)}.get(job, lambda: None)()
+    return sha256_text(canonical({"job": job, "questions": q}))
+
+
+BINDING = ("config_hash", "lock_hash", "questions_hash")
+
+
+def binding(cfg: dict, job: str) -> dict:
+    """What a dry run, its frozen items and the outputs sent from them are bound to: the decision configuration,
+    the test-lock hash and the job's question wording, as they are now."""
+    return {"config_hash": config_hash(cfg), "lock_hash": lock_hash(cfg), "questions_hash": questions_hash(job)}
+
+
+def unbound(recorded: dict, cfg: dict, job: str) -> list[str]:
+    """The bindings `recorded` lacks or holds differently from the current configuration and wording."""
+    now = binding(cfg, job)
+    return [k for k in BINDING if recorded.get(k) != now[k]]
 
 
 def model_names(cfg: dict) -> dict:
@@ -580,7 +609,7 @@ def dry_run(job: str, set_name: str, items, cfg: dict, totals: dict | None, *, d
             "job_spent_micros": jt.get("spent", 0), "job_held_micros": jt.get("held", 0),
             "account_headroom_micros": at.get("headroom"), "price_verified_at": raw,
             "prices": {k: str(v) for k, v in rates(cfg, model).items()}, "contract": CONTRACT,
-            "prompt_version": cfg["decisions"]["prompt_version"], "config_hash": config_hash(cfg)}
+            "prompt_version": cfg["decisions"]["prompt_version"], **binding(cfg, job)}
 
 
 def format_dry_run(d: dict) -> str:
@@ -1141,6 +1170,7 @@ def dry_run_step(job: str, set_name: str, items: list[Item], cfg: dict, ledger_p
         totals = lg.totals()
     save_items(items_path(decide_dir, job, set_name), items)
     d = dry_run(job, set_name, items, cfg, totals, decide_dir=decide_dir, now=now)
+    d["items_sha256"] = file_sha256(items_path(decide_dir, job, set_name))
     write_atomic(dryrun_path(decide_dir, job, set_name), json.dumps(d, indent=1, sort_keys=True) + "\n")
     out(format_dry_run(d))
     return d
@@ -1163,8 +1193,15 @@ def spend_checks(job: str, set_name: str, cfg: dict, budget_usd, *, decide_dir: 
     if not key_present(cfg, env_path):
         raise JobError(f"no {cfg['key_name']} in .env: {job} is skipped and dispatch uses the rules (spec §13)")
     check_price(cfg, now)
-    items = load_items(items_path(decide_dir, job, set_name))
+    ipath = items_path(decide_dir, job, set_name)
+    items = load_items(ipath)
     dry = check_dry_run(dryrun_path(decide_dir, job, set_name), request_set_hash(job, set_name, items), now)
+    if dry.get("items_sha256") != file_sha256(ipath):
+        raise JobError("the frozen items are not the bytes the dry run froze; run the dry run again")
+    changed = unbound(dry, cfg, job)
+    if changed:          # before the job is built: no cache lookup, no reservation, no request
+        raise JobError(f"the decision configuration or question wording changed since the dry run froze these items "
+                       f"({', '.join(changed)}); run the dry run again")
     return items, budget, dry
 
 
@@ -1183,8 +1220,12 @@ def read_outputs(path: Path) -> list[dict]:
 
 
 def summary(result: JobResult, items: list[Item], set_name: str, cfg: dict, totals: dict | None,
-            now: datetime | None = None) -> dict:
-    """The committed record of one run: counts, refusals, versions and the ledger's totals for the job."""
+            now: datetime | None = None, dry: dict | None = None) -> dict:
+    """The committed record of one run: counts, refusals, versions and the ledger's totals for the job. With `dry`,
+    the validated dry run the items were frozen by, its request set, prompt version and configuration hash are the
+    ones recorded."""
+    frozen = dry or {"request_set_hash": request_set_hash(result.job, set_name, items),
+                     "prompt_version": cfg["decisions"]["prompt_version"], "config_hash": config_hash(cfg)}
     reasons: dict = {}
     refusals: dict = {}
     for o in result.outcomes:
@@ -1200,8 +1241,8 @@ def summary(result: JobResult, items: list[Item], set_name: str, cfg: dict, tota
             "items": len(items), "counts": counts, "fallback_reasons": dict(sorted(reasons.items())),
             "refusals": dict(sorted(refusals.items())), "requests_sent": result.sent,
             "model": result.model, "resolved_model": result.resolved_model, "versions": result.versions,
-            "request_set_hash": request_set_hash(result.job, set_name, items), "contract": CONTRACT,
-            "prompt_version": cfg["decisions"]["prompt_version"], "config_hash": config_hash(cfg),
+            "request_set_hash": frozen["request_set_hash"], "contract": CONTRACT,
+            "prompt_version": frozen["prompt_version"], "config_hash": frozen["config_hash"],
             "ledger": {"spent_usd": jt.get("spent", 0) / 1e6, "held_usd": jt.get("held", 0) / 1e6,
                        "cap_usd": float(cfg["caps"]["jobs"][result.job])},
             "billing": billing_summary(result.outcomes)}
@@ -1255,12 +1296,14 @@ def verified_outputs(job: str, set_name: str, cfg: dict, *, decide_dir: Path = D
     if file_sha256(ipath) != prov.get("items_sha256") or request_set_hash(job, set_name, items) != prov.get(
             "request_set_hash"):
         stale.append("the frozen items")
-    if prov.get("config_hash") != config_hash(cfg) or prov.get("lock_hash") != lock_hash(cfg):
-        stale.append("the decision configuration")
+    if unbound(prov, cfg, job):
+        stale.append("the decision configuration or question wording")
     dpath = dryrun_path(decide_dir, job, set_name)
     dry = json.loads(dpath.read_text(encoding="utf-8")) if dpath.exists() else {}
-    if dry.get("created_at") != prov.get("dryrun_created_at") or dry.get("test_run") != prov.get("test_run"):
-        stale.append("the dry run (and its test run)")
+    if (dry.get("created_at") != prov.get("dryrun_created_at") or dry.get("test_run") != prov.get("test_run")
+            or dry.get("items_sha256") != prov.get("items_sha256") or unbound(dry, cfg, job)
+            or any(dry.get(k) != prov.get(k) for k in BINDING)):
+        stale.append("the dry run (its items, bindings or test run)")
     if [r.get("request_hash") for r in rows] != [i.request_hash for i in items]:
         stale.append("the requests behind each row")
     if stale:
@@ -1300,12 +1343,11 @@ def spend_step(job: str, set_name: str, cfg: dict, budget_usd, ledger_path: Path
     rows = decide_fn(result.outcomes, items, result)
     for row, o in zip(rows, result.outcomes, strict=True):
         row["billing"] = o.billing()
-    doc = summary(result, items, set_name, cfg, totals, clock())
+    doc = summary(result, items, set_name, cfg, totals, clock(), dry=dry)
     doc["provenance"] = {"outputs_sha256": write_outputs(outputs_path(decide_dir, job, set_name), rows),
-                         "items_sha256": file_sha256(items_path(decide_dir, job, set_name)),
-                         "request_set_hash": doc["request_set_hash"], "config_hash": config_hash(cfg),
-                         "lock_hash": lock_hash(cfg), "dryrun_created_at": dry.get("created_at"),
-                         "test_run": dry.get("test_run")}
+                         "items_sha256": dry["items_sha256"], "request_set_hash": dry["request_set_hash"],
+                         **{k: dry[k] for k in BINDING}, "dryrun_created_at": dry.get("created_at"),
+                         "test_run": dry.get("test_run")}          # from the validated frozen run
     write_atomic(summary_path(results_dir, job, set_name), json.dumps(doc, indent=1, sort_keys=True) + "\n")
     c = doc["counts"]
     out(f"{job} on {set_name}: {c['answered']:,} answered, {c['cached']:,} from the cache, {c['fallback']:,} on the "

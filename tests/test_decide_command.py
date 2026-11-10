@@ -328,3 +328,70 @@ def test_f009_scores_carry_the_provenance_they_were_checked_against(env):
     assert summary["billing"]["calls_with_usage"] == summary["counts"]["answered"]
     rows = dc.read_outputs(env.decide / "outputs" / "X2-val.jsonl")
     assert all(r["billing"]["billed_input_tokens"] == 900 and r["billing"]["request_bytes"] > 0 for r in rows)
+
+
+def test_f008_every_read_of_the_locked_store_happens_inside_the_locks_mutex(env, monkeypatch):
+    """Every store read of a decision-layer look at test, X2 and X3, dry run and scoring alike, records the lock's
+    transaction depth: X3's sample and facts, X2's alert inputs, feature table, history runs and facts, and the
+    scoring's labels, TracerNet values and analytic inputs. Each must be inside the mutex (depth 1), after its final
+    checks; the explanations, p_never and the fits are computed on what those reads returned."""
+    from contextlib import contextmanager
+
+    from src.models.tracernet import features as F
+    from src.models.tracernet import predictor as P
+    from src.pipeline import evaluate
+
+    env.look("test")
+    depth, seen = {"n": 0}, []
+    real_tx = ne._lock_transaction
+
+    @contextmanager
+    def tracked(path):
+        with real_tx(path):
+            depth["n"] += 1
+            try:
+                yield
+            finally:
+                depth["n"] -= 1
+    monkeypatch.setattr(ne, "_lock_transaction", tracked)
+    real_connect = duckdb.connect
+
+    def connect(path=":memory:", *a, **k):
+        if str(path).startswith(str(env.store)):
+            seen.append((phase["name"], "store", depth["n"]))
+        return real_connect(path, *a, **k)
+    monkeypatch.setattr(duckdb, "connect", connect)
+    phase = {"name": ""}
+
+    def spy(module, name):
+        real = getattr(module, name, None)
+        if real is None:
+            return
+
+        def wrapped(*a, **k):
+            seen.append((phase["name"], name, depth["n"]))
+            return real(*a, **k)
+        monkeypatch.setattr(module, name, wrapped)
+    for module, name in ((facts, "snapshot"), (facts, "alert_facts"), (F, "load_table"), (P, "_history_runs"),
+                         (zeroshot, "sample_ticks"), (pipeline, "alert_inputs"), (dispatch_eval, "x2_labels"),
+                         (dispatch_eval, "x3_labels"), (dispatch_eval, "tracernet_at"), (evaluate, "load_specs_v2")):
+        spy(module, name)
+    for name, args in (("X2 dry run", ("--job", "X2", "--set", "test", "--dry-run", "--relock-reason", "X2 joins")),
+                       ("X2 spend", ("--job", "X2", "--set", "test", "--budget-usd", "0.10")),
+                       ("X2 scoring", ("--job", "X2", "--set", "test", "--score-only")),
+                       ("X3 dry run", ("--job", "X3", "--set", "test", "--dry-run", "--n", "20")),
+                       ("X3 spend", ("--job", "X3", "--set", "test", "--budget-usd", "0.10")),
+                       ("X3 scoring", ("--job", "X3", "--set", "test", "--score-only"))):
+        phase["name"] = name
+        code, out = env.cli(*args)
+        assert code == 0, (name, out)
+    outside = [s for s in seen if s[2] != 1]
+    assert outside == [], outside                       # nothing read outside the mutex, or nested in it twice
+    readers = {(p, n) for p, n, _ in seen}
+    for want in (("X2 dry run", "alert_inputs"), ("X2 dry run", "load_table"), ("X2 dry run", "_history_runs"),
+                 ("X2 dry run", "snapshot"), ("X3 dry run", "snapshot"),
+                 ("X2 dry run", "store"), ("X2 scoring", "x2_labels"), ("X3 dry run", "sample_ticks"),
+                 ("X3 dry run", "store"), ("X3 scoring", "x3_labels"), ("X3 scoring", "tracernet_at"),
+                 ("X3 scoring", "load_specs_v2")):
+        assert want in readers, want
+    assert not [s for s in seen if s[0].endswith("spend")]       # a spend reads nothing from the store

@@ -627,12 +627,16 @@ def _sample(ids: Sequence[str], limit: int | None, seed: int) -> np.ndarray:
 def explain_alerts(pred: P.Predictor, alerts: pl.DataFrame, *, store_dir: Path, history: P.History | None = None,
                    test_run=None, top_k: int = TOP_K, checks: bool = False, seed: int = 0,
                    randomization_alerts: int | None = RANDOMIZATION_ALERTS, workers: int = 1,
-                   steps: int | None = None) -> Explained:
+                   steps: int | None = None, table: F.Table | None = None) -> Explained:
     """Integrated gradients for every alert (spec §9), from the observed store the alerts were scored on. With
     `checks`, also the deletion resets and, for a seeded sample of `randomization_alerts` alerts (None: all), the
     attributions of a re-initialized network. Unless `steps` is given, the steps start at 64 and double while the
     median alert misses completeness by more than 1%, up to MAX_STEPS: chosen on a seeded sample of STEP_SAMPLE
-    alerts, then confirmed on all of them. Runs of a locked split need `test_run`, as Predictor.score does."""
+    alerts, then confirmed on all of them. Runs of a locked split need `test_run`, as Predictor.score does.
+
+    `table`, when given, is the feature table the caller already read from the store (on a locked split, inside the
+    lock's mutex with its run checked), and `history.runs` must name the history runs it holds: nothing here reads
+    the store then, so the integration can run on that snapshot outside the mutex."""
     store_dir = Path(store_dir)
     history = history or P.History()
     if history.store_dir is not None and Path(history.store_dir).resolve() != store_dir.resolve():
@@ -640,9 +644,14 @@ def explain_alerts(pred: P.Predictor, alerts: pl.DataFrame, *, store_dir: Path, 
     if alerts.height == 0:
         return Explained([], steps or STEPS, None)
     runs = sorted({int(r) for r in alerts["run"].to_list()})
-    hist_runs = list(history.runs) if history.runs is not None else P._history_runs(store_dir, runs)
-    pred.check_lock(store_dir, runs, hist_runs, history, test_run)
-    t = F.load_table(store_dir, runs=sorted(set(runs) | {int(r) for r in hist_runs}))
+    if table is None:
+        hist_runs = list(history.runs) if history.runs is not None else P._history_runs(store_dir, runs)
+        pred.check_lock(store_dir, runs, hist_runs, history, test_run)
+        t = F.load_table(store_dir, runs=sorted(set(runs) | {int(r) for r in hist_runs}))
+    else:
+        if history.runs is None:
+            raise ValueError("a feature table given to explain needs its history runs named")
+        hist_runs, t = list(history.runs), table
     ids = alerts["alert_id"].to_list()
     rows = t.rows_of(alerts["specimen_id"].to_list())
     ticks = alerts["tick_min"].to_numpy().astype(np.float64)

@@ -333,14 +333,26 @@ def x3_labels(rows: Sequence[dict], split: str, store_dir: Path, *, test_run=Non
     return {r["item_id"]: {"miss": bool(by_id[r["specimen_id"]].breach)} for r in rows}
 
 
-def tracernet_at(rows: Sequence[dict], files: Sequence) -> dict[str, float]:
-    """TracerNet's p_miss at each tick, from the parts of the set's risk table (on test, the parts the lock
-    recorded, which the caller has checked)."""
+def tracernet_at(rows: Sequence[dict], files: Sequence, expected: dict | None = None) -> dict[str, float]:
+    """TracerNet's p_miss at each tick, from the parts of the set's risk table, each decoded from the bytes read.
+    With `expected` ({part name: SHA-256}, the parts a test lock recorded), the parts must be exactly those, and
+    each part's bytes are checked against its hash before they are decoded."""
+    import hashlib
+    import io
+
     import polars as pl
 
     ids = sorted({r["specimen_id"] for r in rows})
-    frame = (pl.scan_parquet([str(f) for f in files]).filter(pl.col("specimen_id").is_in(ids))
-             .select("specimen_id", "tick_min", "p_miss").collect())
+    if expected is not None and {Path(f).name for f in files} != set(expected):
+        raise ne.LockError("the risk table's parts are not the ones the test lock recorded")
+    frames = []
+    for f in files:
+        raw = Path(f).read_bytes()
+        if expected is not None and hashlib.sha256(raw).hexdigest() != expected[Path(f).name]:
+            raise ne.LockError(f"the risk table part {Path(f).name} is not the one the test lock recorded")
+        frames.append(pl.read_parquet(io.BytesIO(raw)).filter(pl.col("specimen_id").is_in(ids))
+                      .select("specimen_id", "tick_min", "p_miss"))
+    frame = pl.concat(frames) if frames else pl.DataFrame()
     table = {(s, int(t)): float(v) for s, t, v in frame.iter_rows()}
     out = {}
     for r in rows:
@@ -352,19 +364,21 @@ def tracernet_at(rows: Sequence[dict], files: Sequence) -> dict[str, float]:
 
 
 def analytic_local_at(rows: Sequence[dict], split: str, store_dir: Path, *, train_store_dir: Path | None = None,
-                      test_run=None) -> tuple[dict[str, float], dict]:
+                      test_run=None, read=None) -> tuple[dict[str, float], dict]:
     """The analytic model refit on each scenario's own history replicate (spec §8.2), its risk at each tick; the
     global fit on train is used, and noted, where the history has fewer than MIN_LOCAL_FIT specimens with a clock,
-    the refit fails or its risk is not a number at a tick, as neural_eval's local method does."""
+    the refit fails or its risk is not a number at a tick, as neural_eval's local method does. Every store read goes
+    through `read(fn)` (the pipeline runs each inside the test lock's mutex on a locked split); the fits are computed
+    on what it returned."""
     guard(split, test_run, store_dir)
     from src.generator import config
     from src.pipeline import intervals
 
+    read = read or (lambda fn: fn())
     scenarios = sorted({r["scenario_id"] for r in rows})
-    history, _ = evaluate.load_specs_v2(split, roles=("history",), store_dir=store_dir, labels=False,
-                                        scenarios=scenarios)
-    scored, _ = evaluate.load_specs_v2(split, roles=("scored",), store_dir=store_dir, labels=False,
-                                       scenarios=scenarios)
+    history, scored = read(lambda: (
+        evaluate.load_specs_v2(split, roles=("history",), store_dir=store_dir, labels=False, scenarios=scenarios)[0],
+        evaluate.load_specs_v2(split, roles=("scored",), store_dir=store_dir, labels=False, scenarios=scenarios)[0]))
     need = {r["specimen_id"] for r in rows}
     hist_of: dict = {}
     for s in history:
@@ -382,7 +396,8 @@ def analytic_local_at(rows: Sequence[dict], split: str, store_dir: Path, *, trai
             global_fit["setup"] = ne.Setup("v2", split, Path(store_dir), Path(train_store_dir or store_dir), start,
                                            stop, loaded["policy_hash"], groups)
         setup = global_fit["setup"]
-        return ne.complete_groups(setup.analytic_params(), setup.rows(), groups)
+        train_rows = read(setup.rows)              # the store read; the fit below runs on the rows it returned
+        return ne.complete_groups(setup.analytic_params(), train_rows, groups)
 
     risk, notes = {}, {}
     for scenario in scenarios:

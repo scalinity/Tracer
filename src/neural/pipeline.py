@@ -544,13 +544,36 @@ def _lock_still_holds(split: str, dry: dict, cfg: dict) -> None:
         raise ne.LockError(f"the test lock changed since the {split} dry run built these states; run the dry run again")
 
 
+class Look:
+    """A decision-layer look at a set: TracerNet's risk table (`frame`, read once as hashed, or None), its parts'
+    files and hashes, the test run on a locked split, and `checked(fn)`, which runs one read of the set's store.
+
+    On a locked split each read runs inside the lock's mutex, after the final checks that the lock still records
+    the risk table this look read and still holds the run for this artifact and store, as explain_command reads, so
+    no relock can slip between a check and a read. Every store-dependent input goes through it and comes back as an
+    in-memory snapshot; computation on the snapshot happens outside the mutex. On an unlocked set it just reads."""
+
+    def __init__(self, split, store_dir, artifact_dir, frame, files, parts, run):
+        self.split, self.store_dir, self.artifact_dir = split, Path(store_dir), Path(artifact_dir)
+        self.frame, self.files, self.parts, self.run = frame, files, parts, run
+
+    def checked(self, fn):
+        from src.pipeline import neural_eval as ne
+
+        if self.run is None:
+            return fn()
+        with ne._lock_transaction(ne.TEST_RUNS_PATH):
+            locked = json.loads(ne.LOCK_PATH.read_text(encoding="utf-8"))
+            if ((locked.get("risk_parts") or {}).get(self.split) or {}).get(ne.TRACERNET) != self.parts[ne.TRACERNET]:
+                raise ne.LockError(f"the test lock no longer records the {self.split} risk table this run read")
+            self.run.check(self.split, artifact_dir=self.artifact_dir, store_dir=self.store_dir)
+            return fn()
+
+
 def _decide_risk(split: str, store_dir: Path, artifact_dir: Path, tracernet: str | None, cfg: dict, *,
-                 matched: bool, relock_reason: str | None, table: bool = True, read=None, out=print):
-    """TracerNet's risk table for the set (read once as hashed, when `table`; otherwise only its parts' hashes), its
-    parts' files, the test run on a locked split, and `read(frame, run)`: the caller's first read of the set's
-    store. On a locked split that read runs inside the lock's mutex, after the final checks that the lock still
-    records the risk table read and still holds the run for this artifact and store, as explain_command reads, so
-    no relock can slip between the check and the read."""
+                 matched: bool, relock_reason: str | None, table: bool = True, out=print) -> Look:
+    """The look at `split`: TracerNet's risk table (read once as hashed when `table`; otherwise its parts' hashes
+    alone), and on a locked split the test run decision_look takes."""
     from src.pipeline import neural_eval as ne
 
     tracernet = str(tracernet) if tracernet is not None else str(ne.RISK_DIR / split / "*.parquet")
@@ -563,40 +586,27 @@ def _decide_risk(split: str, store_dir: Path, artifact_dir: Path, tracernet: str
     if split in ne.LOCKED_SPLITS:
         run = decision_look(split, store_dir, artifact_dir, methods, parts, cfg, matched=matched,
                             relock_reason=relock_reason, out=out)
-        with ne._lock_transaction(ne.TEST_RUNS_PATH):
-            locked = json.loads(ne.LOCK_PATH.read_text(encoding="utf-8"))
-            if ((locked.get("risk_parts") or {}).get(split) or {}).get(ne.TRACERNET) != parts[ne.TRACERNET]:
-                raise ne.LockError(f"the test lock no longer records the {split} risk table this run read")
-            run.check(split, artifact_dir=artifact_dir, store_dir=store_dir)
-            first = read(frame, run) if read is not None else None
-    else:
-        first = read(frame, run) if read is not None else None
-    return frame, methods[-1].series.files, run, first
+    return Look(split, store_dir, artifact_dir, frame, methods[-1].series.files, parts, run)
 
 
-def alert_p_never(pred, alerts, store_dir: Path, test_run=None):
+def alert_p_never(pred, alerts, table):
     """The alerts with TracerNet's p_never at their ticks. The risk table keeps p_miss alone, so the alert ticks go
-    through the predictor's members as `score` sends every tick (features from the observed store, calibrated), with
-    the same lock check; only these ticks are scored."""
+    through the predictor's members as `score` sends every tick (features calibrated), from `table`, the feature
+    table already read from the store (under the lock on a locked split); nothing here reads the store."""
     import numpy as np
     import polars as pl
 
     from src.models.tracernet import features as F
-    from src.models.tracernet import predictor as P
 
     if alerts.height == 0:
         return alerts
-    runs = sorted({int(r) for r in alerts["run"].to_list()})
-    hist = P._history_runs(store_dir, runs)
-    pred.check_lock(store_dir, runs, hist, P.History(), test_run)
-    t = F.load_table(store_dir, runs=sorted(set(runs) | set(hist)))
-    rows = t.rows_of(alerts["specimen_id"].to_list())
+    rows = table.rows_of(alerts["specimen_id"].to_list())
     ticks = alerts["tick_min"].to_numpy().astype(np.float64)
     owner = alerts["run"].to_numpy()
     never = np.empty(len(rows))
     for run in np.unique(owner):
         sel = np.flatnonzero(owner == run)
-        batch = F.features_for_run(t, int(run), rows[sel], ticks[sel], pred.schema, bins=pred.bins)
+        batch = F.features_for_run(table, int(run), rows[sel], ticks[sel], pred.schema, bins=pred.bins)
         never[sel] = pred.outputs(batch)["p_never"]
     return alerts.with_columns(p_never=pl.Series(np.minimum(never, alerts["p_miss"].to_numpy())))
 
@@ -604,41 +614,52 @@ def alert_p_never(pred, alerts, store_dir: Path, test_run=None):
 def decide_items(job: str, split: str, cfg: dict, *, store_dir: Path, artifact_dir: Path, tracernet: str | None,
                  matched: bool, relock_reason: str | None, n: int | None, seed: int, workers: int, out=print):
     """The job's items, built from the observed store (X2, X3) or the library (X1), and the test run on a locked
-    split."""
+    split. Every read of the set's store goes through Look.checked; the alerts, the explanations, p_never, the
+    facts and the states are computed outside the mutex on the snapshots it returns."""
     import polars as pl
 
     from src.decide import critic, dispatcher, facts, zeroshot
-    from src.models.tracernet.predictor import HISTORY_REPLICATE, Predictor
+    from src.models.tracernet import features as F
+    from src.models.tracernet import predictor as P
     from src.pipeline import neural_eval as ne
 
     if job == "X1":
         from src.scenarios import audit
         return critic.build_items(audit.records(), cfg, label_n=n, seed=seed), None
     if job == "X3":
-        sample = lambda _frame, run: zeroshot.sample_ticks(store_dir, split, n or int(cfg["samples"]["X3"]),  # noqa: E731
-                                                           seed, test_run=run)
-        if split in ne.LOCKED_SPLITS:
-            _t, _f, run, ticks = _decide_risk(split, store_dir, artifact_dir, tracernet, cfg, matched=matched,
-                                              relock_reason=relock_reason, table=False, read=sample, out=out)
-        else:                                      # X3 needs no risk table until it is scored
-            run, ticks = None, sample(None, None)
-        rows = facts.alert_facts(store_dir, [(t.specimen_id, t.run, t.tick_min) for t in ticks], test_run=run)
+        look = (_decide_risk(split, store_dir, artifact_dir, tracernet, cfg, matched=matched,
+                             relock_reason=relock_reason, table=False, out=out) if split in ne.LOCKED_SPLITS
+                else Look(split, store_dir, artifact_dir, None, [], {}, None))   # no risk table until it is scored
+
+        def reads():
+            ticks = zeroshot.sample_ticks(store_dir, split, n or int(cfg["samples"]["X3"]), seed, test_run=look.run)
+            return ticks, facts.snapshot(store_dir, {t.run for t in ticks}, test_run=look.run)
+        ticks, snap = look.checked(reads)
+        rows = facts.from_snapshot(snap, [(t.specimen_id, t.run, t.tick_min) for t in ticks])
         out(f"X3 on {split}: {len(ticks):,} ticks from {len({t.scenario_id for t in ticks}):,} scenarios")
-        return zeroshot.build_items(ticks, rows, cfg), run
-    _t, _f, run, risk = _decide_risk(split, store_dir, artifact_dir, tracernet, cfg, matched=matched,
-                                     relock_reason=relock_reason, table=True,
-                                     read=lambda frame, run: alert_inputs(frame, store_dir, split), out=out)
-    pred = Predictor.load(artifact_dir)
-    history = pl.col("replicate") == HISTORY_REPLICATE
+        return zeroshot.build_items(ticks, rows, cfg), look.run
+    look = _decide_risk(split, store_dir, artifact_dir, tracernet, cfg, matched=matched, relock_reason=relock_reason,
+                        table=True, out=out)
+    risk = look.checked(lambda: alert_inputs(look.frame, store_dir, split))
+    pred = P.Predictor.load(artifact_dir)
+    history = pl.col("replicate") == P.HISTORY_REPLICATE
     alerts = pred.alerts(risk.filter(~history), budget_per_shift=ne.HEADLINE_BUDGET, weights="default",
                          tune_on=risk.filter(history))
     sample = dispatcher.sample_alerts(alerts, n if n is not None else int(cfg["samples"]["X2"][split]), seed)
     out(f"X2 on {split}: {sample.height:,} of {alerts.height:,} alerts at {ne.HEADLINE_BUDGET} per 8-hour shift, from "
         f"{sample['scenario_id'].n_unique():,} whole scenarios; explaining them")
-    explained = alert_p_never(pred, pred.explain(sample, store_dir=store_dir, test_run=run, workers=workers),
-                              store_dir, test_run=run)
-    rows = facts.alert_facts(store_dir, explained.select("specimen_id", "run", "tick_min").rows(), test_run=run)
-    return dispatcher.build_items(explained, rows, cfg), run
+    runs = sorted({int(r) for r in sample["run"].to_list()})
+
+    def reads():                                   # the features and the facts of the sampled alerts' runs
+        hist = P._history_runs(store_dir, runs)
+        return (hist, F.load_table(store_dir, runs=sorted(set(runs) | set(hist))),
+                facts.snapshot(store_dir, runs, test_run=look.run))
+    hist, table, snap = look.checked(reads)
+    explained = pred.explain(sample, store_dir=store_dir, history=P.History(store_dir, tuple(hist)), test_run=look.run,
+                             workers=workers, table=table)
+    explained = alert_p_never(pred, explained, table)
+    rows = facts.from_snapshot(snap, explained.select("specimen_id", "run", "tick_min").rows())
+    return dispatcher.build_items(explained, rows, cfg), look.run
 
 
 def decide_command(job: str, set_name: str | None, *, mode: str, paths: runner.Paths, budget_usd: str | None = None,
@@ -710,25 +731,26 @@ def decide_command(job: str, set_name: str | None, *, mode: str, paths: runner.P
                                          f"{(prov.get('test_run') or {}).get('lock_time')}, not the current one "
                                          f"({locked.get('time')}); send the current items again before scoring")
 
-        def read(_frame, run):
-            if run is not None:
-                same_lock()
-            return label(rows, set_name, store_dir, test_run=run)
         if set_name in ne.LOCKED_SPLITS:           # the look: its guard pins and checks the risk table's parts
             same_lock()
-            _table, files, run, labels = _decide_risk(set_name, store_dir, artifact_dir, tracernet, cfg,
-                                                      matched=matched, relock_reason=None, table=False, read=read,
-                                                      out=out)
+            look = _decide_risk(set_name, store_dir, artifact_dir, tracernet, cfg, matched=matched, relock_reason=None,
+                                table=False, out=out)
+            expected = look.parts[ne.TRACERNET]
         else:
             glob = Path(tracernet) if tracernet is not None else ne.RISK_DIR / set_name / "*.parquet"
-            files, run = sorted(glob.parent.glob(glob.name)) if any(c in glob.name for c in "*?[") else [glob], None
-            labels = read(None, None)
+            files = sorted(glob.parent.glob(glob.name)) if any(c in glob.name for c in "*?[") else [glob]
+            look, expected = Look(set_name, store_dir, artifact_dir, None, files, {}, None), None
+
+        def checked(fn):                           # every read of the set: the lock as the outputs were sent under it
+            return look.checked(lambda: (same_lock() if look.run is not None else None, fn())[1])
+        run = look.run
+        labels = checked(lambda: label(rows, set_name, store_dir, test_run=run))
         if job == "X2":
             scores = dispatch_eval.x2_scores(rows, labels, set_name, cfg)
         else:
-            tn = dispatch_eval.tracernet_at(rows, files)
+            tn = checked(lambda: dispatch_eval.tracernet_at(rows, look.files, expected=expected))
             analytic, notes = dispatch_eval.analytic_local_at(rows, set_name, store_dir, train_store_dir=train_store_dir,
-                                                              test_run=run)
+                                                              test_run=run, read=checked)
             scores = dispatch_eval.x3_scores(rows, labels, tn, analytic, set_name, notes=notes)
     scores |= {"job": job, "notice": dc.NOTICE, "created_at": now().isoformat(timespec="seconds"),
                "config_hash": dc.config_hash(cfg), "provenance": prov}

@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import json
 import math
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -148,16 +149,27 @@ def _roster(con, scenario_id: str) -> dict:
     return out
 
 
-def alert_facts(store_dir: Path, items, *, test_run=None) -> list[dict]:
-    """Facts for each (specimen_id, run, tick_min) of `items`, in their order."""
+@dataclass
+class Snapshot:
+    """Everything the facts of some runs need, read from the store once: each run and its scenario's history run
+    as arrays, the history runs' scored spans, and each scenario's roster. Computing facts from it reads nothing."""
+    meta: dict          # run -> (scenario id, replicate)
+    hist: dict          # scenario id -> its history run
+    spans: dict         # history run -> (scored start, scored end), minutes since the epoch
+    runs: dict          # run -> _Run, the asked runs and their history runs
+    rosters: dict       # scenario id -> roster
+
+
+def snapshot(store_dir: Path, runs, *, test_run=None) -> Snapshot:
+    """Read what the facts of `runs` need (every store read the facts make happens here). A locked split's runs are
+    read only with the test run the lock recorded; a caller on a locked split calls this inside the lock's mutex."""
     store_dir = Path(store_dir)
-    items = [(str(s), int(r), float(t)) for s, r, t in items]
-    if not items:
-        return []
+    runs = {int(r) for r in runs}
     start, stop = intervals.clock_events(config.load()["policy"])
     con = store.open_observed_v2(store_dir)
     try:
-        runs = {r for _, r, _ in items}
+        if not runs:
+            return Snapshot({}, {}, {}, {}, {})
         check_lock(con, store_dir, runs, test_run)
         meta = {r: (sid, rep) for r, sid, rep in con.execute(
             "select run, scenario_id, replicate from runs where list_contains(?, run)", [sorted(runs)]).fetchall()}
@@ -171,25 +183,32 @@ def alert_facts(store_dir: Path, items, *, test_run=None) -> list[dict]:
         spans = {run: (a, b) for run, a, b in con.execute(
             "select run, epoch(scored_start) / 60.0, epoch(scored_end) / 60.0 from runs "
             "where list_contains(?, run)", [sorted(hist.values())]).fetchall()}
-        loaded: dict[int, _Run] = {}
-        rosters: dict[str, dict] = {}
-
-        def run_of(r: int) -> _Run:
-            if r not in loaded:
-                loaded[r] = _load_run(con, r, start, stop)
-            return loaded[r]
-
-        out = []
-        for sid, run, tick in items:
-            scenario = meta[run][0]
-            if scenario not in rosters:
-                rosters[scenario] = _roster(con, scenario)
-            h_run = hist.get(scenario)
-            out.append(_facts(run_of(run), sid, tick, run_of(h_run) if h_run is not None else None,
-                              spans.get(h_run), rosters[scenario]))
-        return out
+        loaded = {r: _load_run(con, r, start, stop) for r in sorted(runs | set(hist.values()))}
+        rosters = {sid: _roster(con, sid) for sid in scenarios}
+        return Snapshot(meta, hist, spans, loaded, rosters)
     finally:
         con.close()
+
+
+def from_snapshot(snap: Snapshot, items) -> list[dict]:
+    """Facts for each (specimen_id, run, tick_min) of `items`, in their order, from a snapshot holding their runs."""
+    out = []
+    for sid, run, tick in [(str(s), int(r), float(t)) for s, r, t in items]:
+        if run not in snap.meta:
+            raise FactsError(f"run {run} is not in the snapshot")
+        scenario = snap.meta[run][0]
+        h_run = snap.hist.get(scenario)
+        out.append(_facts(snap.runs[run], sid, tick, snap.runs.get(h_run) if h_run is not None else None,
+                          snap.spans.get(h_run), snap.rosters[scenario]))
+    return out
+
+
+def alert_facts(store_dir: Path, items, *, test_run=None) -> list[dict]:
+    """Facts for each (specimen_id, run, tick_min) of `items`, in their order: snapshot, then from_snapshot."""
+    items = [(str(s), int(r), float(t)) for s, r, t in items]
+    if not items:
+        return []
+    return from_snapshot(snapshot(store_dir, {r for _, r, _ in items}, test_run=test_run), items)
 
 
 def _facts(x: _Run, sid: str, tick: float, h: _Run | None, span: tuple | None, roster: dict) -> dict:

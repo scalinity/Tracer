@@ -369,14 +369,16 @@ class Predictor:
         ).sort(["alert_at", "specimen_id"])
 
     def explain(self, alerts: pl.DataFrame, *, top_k: int = 3, store_dir: Path, history: History | None = None,
-                test_run=None, workers: int = 1) -> pl.DataFrame:
+                test_run=None, workers: int = 1, table: F.Table | None = None) -> pl.DataFrame:
         """The alerts with `factors` (spec §9.3: the top_k groups that raise the risk and the one that lowers it most)
         and `related` (up to 5 batch-mates by attention weight, which is not an explanation) filled in, explained
-        from `store_dir`, the store they were scored on. Runs of a locked split need `test_run`, as score does."""
+        from `store_dir`, the store they were scored on. Runs of a locked split need `test_run`, as score does; or
+        `table`, a feature table already read from that store, with `history.runs` naming its history runs (then the
+        store is not read here)."""
         from src.models.tracernet import explain as X
 
         ex = X.explain_alerts(self, alerts, store_dir=store_dir, history=history, test_run=test_run, top_k=top_k,
-                              workers=workers)
+                              workers=workers, table=table)
         return alerts.with_columns(
             factors=pl.Series([r["factors"] for r in ex.records], dtype=pl.List(FACTOR)),
             related=pl.Series([r["related"] for r in ex.records], dtype=pl.List(RELATED)))
