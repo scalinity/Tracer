@@ -659,18 +659,24 @@ def test_x4_is_not_built_and_says_why():
         distill.run()
 
 
-def test_the_x2_sample_takes_whole_runs_in_the_seeds_order_across_many_scenarios():
+def test_the_x2_sample_takes_capped_runs_in_the_seeds_order_across_many_scenarios():
     import polars as pl
 
     from src.decide import dispatcher
-    rows = [{"scenario_id": f"S{s:03d}", "run": s * 10 + r, "alert_id": f"a{s}-{r}-{i}"}
-            for s in range(40) for r in range(10) for i in range(5)]          # 40 scenarios x 10 runs x 5 alerts
+    rows = [{"scenario_id": f"S{s:03d}", "run": s * 10 + r, "alert_id": f"a{s}-{r}-{i:03d}"}
+            for s in range(40) for r in range(10) for i in range(120)]       # 40 scenarios x 10 runs x 120 alerts
     alerts = pl.DataFrame(rows)
-    sample = dispatcher.sample_alerts(alerts, 100, seed=0)
-    assert 100 <= sample.height < 105                                          # whole runs until n is reached
-    per_run = sample.group_by("run").len()["len"].to_list()
-    assert set(per_run) == {5}                                                 # every alert of each chosen run
-    assert sample["scenario_id"].n_unique() >= 8                               # spread; whole scenarios gave 2
-    assert sample.equals(dispatcher.sample_alerts(alerts, 100, seed=0))        # seeded
-    assert not sample.equals(dispatcher.sample_alerts(alerts, 100, seed=1))
-    assert dispatcher.sample_alerts(alerts, None, seed=0).height == alerts.height
+    whole = dispatcher.sample_alerts(alerts, 1000, seed=0)
+    assert set(whole.group_by("run").len()["len"].to_list()) == {120}          # every alert of each chosen run
+    assert whole["scenario_id"].n_unique() <= 9                                # about 9 weeks only
+    sample = dispatcher.sample_alerts(alerts, 1000, seed=0, per_run=10)
+    assert sample.height == 1000
+    assert set(sample.group_by("run").len()["len"].to_list()) == {10}          # at most 10 of each run
+    assert sample["scenario_id"].n_unique() >= 35                              # spread over most scenarios
+    assert sample.equals(dispatcher.sample_alerts(alerts, 1000, seed=0, per_run=10))     # seeded
+    assert not sample.equals(dispatcher.sample_alerts(alerts, 1000, seed=1, per_run=10))
+    assert dispatcher.sample_alerts(alerts, None, seed=0, per_run=10).height == alerts.height
+    shuffled = alerts.sample(fraction=1.0, shuffle=True, seed=3)
+    kept = dispatcher.sample_alerts(shuffled, 1000, seed=0, per_run=10)
+    assert kept["alert_id"].to_list() == [a for a in shuffled["alert_id"].to_list() if a in set(kept["alert_id"])]
+    assert set(kept["alert_id"]) == set(sample["alert_id"])                    # the choice ignores row order

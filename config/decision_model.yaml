@@ -85,5 +85,7 @@ budgets:
 samples:
   X1_controls_each: 150      # corrupted scenarios, and the same number of accepted ones beside them
   X2: {val: 5000, test: 20000}
+  X2_per_run: 10           # at most this many alerts of one run (a laboratory week holds about 126), so the sample
+                           # spans hundreds of scenarios rather than about 40 weeks (assumed)
   X3: 4000
   seed: 0

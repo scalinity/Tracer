@@ -1,6 +1,6 @@
 """X2, the alert dispatcher (docs/neural/spec.md §11.3): where to look, what to do, who to call, for each alert.
 
-    sample = dispatcher.sample_alerts(alerts, n=5000, seed=0)           # whole scenarios, seeded order
+    sample = dispatcher.sample_alerts(alerts, n=5000, seed=0, per_run=10)   # capped runs, seeded order
     items = dispatcher.build_items(sample, facts_rows, cfg)             # X2's state and questions per alert
     rows = dispatcher.decisions(outcomes, items, cfg)                   # the decision for every alert
 
@@ -26,22 +26,29 @@ import polars as pl
 from src.decide import render, rules
 from src.decide.client import Item
 
-def sample_alerts(alerts: pl.DataFrame, n: int | None, seed: int) -> pl.DataFrame:
-    """Whole runs (one laboratory week of one scenario: every alert in it) in the seed's order until at least n
-    alerts are in (n None: every alert). A scenario's replicates hold hundreds of alerts between them, so whole
-    scenarios would fill a 5,000-alert sample from a dozen laboratories; whole runs spread it over hundreds, and the
-    cluster bootstrap still resamples by scenario."""
+def sample_alerts(alerts: pl.DataFrame, n: int | None, seed: int, per_run: int | None = None) -> pl.DataFrame:
+    """Runs (one laboratory week of one scenario) in the seed's order, taking at most `per_run` alerts of each (in
+    the seed's order of alert ids; None: every alert), until at least n alerts are in (n None: every alert). A week
+    holds about 126 alerts at 6 per 8-hour shift, so whole runs would fill a 5,000-alert sample from about 40 weeks;
+    capping each run spreads it over hundreds of scenarios. Every score is per alert and every state is written from
+    the store, so no alert needs the others of its week; the cluster bootstrap resamples by scenario."""
     if n is None or alerts.height <= n:
         return alerts
     counts = alerts.group_by("scenario_id", "run").len().rows()
     order = sorted(counts, key=lambda r: (zlib.crc32(f"{seed}:{r[0]}:{r[1]}".encode()), r[0], r[1]))
     keep, total = [], 0
-    for scenario, run, k in order:
+    for _scenario, run, k in order:
         if total >= n:
             break
         keep.append(run)
-        total += k
-    return alerts.filter(pl.col("run").is_in(keep))
+        total += k if per_run is None else min(k, per_run)
+    chosen = alerts.filter(pl.col("run").is_in(keep))
+    if per_run is None:
+        return chosen
+    rank = pl.col("alert_id").map_elements(lambda a: zlib.crc32(f"{seed}:{a}".encode()), return_dtype=pl.Int64)
+    ids = (chosen.select("run", "alert_id").with_columns(_rank=rank).sort("run", "_rank", "alert_id")
+           .group_by("run", maintain_order=True).head(per_run)["alert_id"])
+    return chosen.filter(pl.col("alert_id").is_in(ids.implode()))           # in the alerts' own order
 
 
 def raising_texts(factors) -> list[str]:

@@ -93,7 +93,11 @@ def test_x2_on_validation_freezes_prices_sends_and_scores(env):
     code, out = env.cli("--job", "X2", "--set", "val", "--dry-run", "--n", "30")
     assert code == 0 and "nothing sent, nothing spent, no connection" in out and env.sent == []
     rows = frozen(env, "X2", "val")
-    assert len(rows) >= 30 and len({r["meta"]["scenario_id"] for r in rows}) == 1
+    per_run = {}
+    for r in rows:
+        per_run[r["meta"]["run"]] = per_run.get(r["meta"]["run"], 0) + 1
+    assert len(rows) >= 20 and max(per_run.values()) <= 10            # the tiny store's val runs, capped at 10 each
+    assert len({r["meta"]["scenario_id"] for r in rows}) == 1
     for r in rows:
         render.check_alert_text(r["state"])                       # no id, time, date or hidden word
         assert r["meta"]["alert_id"] not in r["state"] and r["meta"]["r2"]["role"]

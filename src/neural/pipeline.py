@@ -684,7 +684,8 @@ def decide_items(job: str, split: str, cfg: dict, *, store_dir: Path, artifact_d
     history = pl.col("replicate") == P.HISTORY_REPLICATE
     alerts = pred.alerts(risk.filter(~history), budget_per_shift=ne.HEADLINE_BUDGET, weights="default",
                          tune_on=risk.filter(history))
-    sample = dispatcher.sample_alerts(alerts, n if n is not None else int(cfg["samples"]["X2"][split]), seed)
+    sample = dispatcher.sample_alerts(alerts, n if n is not None else int(cfg["samples"]["X2"][split]), seed,
+                                      per_run=cfg["samples"].get("X2_per_run"))
     out(f"X2 on {split}: {sample.height:,} of {alerts.height:,} alerts at {ne.HEADLINE_BUDGET} per 8-hour shift, from "
         f"{sample['scenario_id'].n_unique():,} whole scenarios; explaining them")
     runs = sorted({int(r) for r in sample["run"].to_list()})
