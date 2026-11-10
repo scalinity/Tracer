@@ -364,6 +364,8 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("store", help="load the simulation into the v2 store (spec §6.3)")
     p.add_argument("--workers", type=int, default=None)
     p.add_argument("--a1", action="store_true", help="load A1's simulation into A1's own store (spec §8.8)")
+    p.add_argument("--control", action="store_true", help="simulate the v1-world scenario's replicates into the "
+                                                          "control_v1world store (spec §8.1)")
     p = sub.add_parser("evaluate", help="score every method on a set (spec §8); test sets go through the lock")
     p.add_argument("--split", required=True,
                    choices=("val", "test", "test_ood", "legacy_v1", "control_v1world"))
@@ -414,7 +416,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--eval-store", default=None, help="the store holding labels for scoring")
     p.add_argument("--rung", default=None, help="default: the chosen rung in results/neural/selection.json")
     p.add_argument("--cells", default=None, help="scenario cells (default data/neural/scenario-cells.json)")
-    p.add_argument("--evaluate", default="val,test")
+    p.add_argument("--evaluate", default="val,test", help="sets: the jobs --set writes, or the sets --run scores")
     p.add_argument("--device", default="auto")
     p.add_argument("--workers", type=int, default=None)
     p.add_argument("--relock-reason", default=None)
@@ -459,6 +461,10 @@ def main(argv: list[str] | None = None, *, paths: runner.Paths | None = None, se
             return simulate_command(args.workers, args.out, pipe.paths, out, a1=args.a1)
         if args.command == "store":
             from src.pipeline import store
+            if args.control:
+                counts = store.build_control_v2(workers=args.workers or 1)
+                out(f"control_v1world store {store.CONTROL_STORE_DIR}: {json.dumps(counts, sort_keys=True)}")
+                return 0
             if args.a1:
                 return store.command_build_v2(workers=args.workers, sim_dir=store.SIM_A1_DIR,
                                               store_dir=store.STORE_V2_A1_DIR, out=out)

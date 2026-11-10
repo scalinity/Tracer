@@ -1464,24 +1464,80 @@ def test_the_subset_bootstrap_is_reproducible(ood_store, ood_look):
     assert warning["n_used"] + warning["n_excluded"] == 200 and warning["low"] is not None
 
 
-def test_the_subsets_are_part_of_the_locked_configuration(ood_store, ood_look):
-    record = lambda subsets: ne.lock_record(ood_store["store"], ne.baselines(),  # noqa: E731
-                                            **ood_args(subsets=subsets))["configuration_sha256"]
+def test_the_subsets_are_pinned_per_split_in_the_lock(ood_store, ood_look, tmp_path):
+    record = lambda subsets: ne.lock_record(ood_store["store"], ne.baselines(), **ood_args(subsets=subsets))  # noqa: E731
+    sub = lambda subsets: record(subsets)[ne.SUBSETS_FIELD]  # noqa: E731
     feature = ood_store["feature"]
-    assert record(None) == record({}) != record({ne.OOD_FEATURE: feature})
-    assert record({ne.OOD_FEATURE: feature}) == record({ne.OOD_FEATURE: feature[::-1] + feature[:1]})
-    assert record({ne.OOD_FEATURE: feature[:1]}) != record({ne.OOD_FEATURE: feature})
-    assert record({"other": feature}) != record({ne.OOD_FEATURE: feature})
+    assert record(None)["configuration_sha256"] == record({ne.OOD_FEATURE: feature})["configuration_sha256"]
+    assert sub(None) == sub({}) != sub({ne.OOD_FEATURE: feature})
+    assert sub({ne.OOD_FEATURE: feature}) == sub({ne.OOD_FEATURE: feature[::-1] + feature[:1]})
+    assert sub({ne.OOD_FEATURE: feature[:1]}) != sub({ne.OOD_FEATURE: feature})
+    assert sub({"other": feature}) != sub({ne.OOD_FEATURE: feature})
     look = dict(store_dir=ood_store["store"], workers=1, write=False, **ood_look["files"])
     with pytest.raises(ne.LockError, match="does not describe"):      # a record made without the subsets
         ne.evaluate_split("test_ood", ne.baselines(), lock_hashes=ood_look["hashes"], **look,
                           **ood_args(subsets={ne.OOD_FEATURE: feature[:1]}))
     other = {ne.OOD_FEATURE: feature[:1]}
-    with pytest.raises(ne.LockError, match="configuration_sha256"):   # another subset needs a relock
-        ne.evaluate_split("test_ood", ne.baselines(), **look, **ood_args(subsets=other),
-                          lock_hashes=ne.lock_record(ood_store["store"], ne.baselines(),
-                                                     **ood_args(subsets=other)))
+    with pytest.raises(ne.LockError, match="subsets"):               # another subset on the split needs a relock
+        ne.evaluate_split("test_ood", ne.baselines(), **look, **ood_args(subsets=other), lock_hashes=record(other))
     assert [e["status"] for e in logged(ood_look["files"])].count("relock") == 0
+
+    # test and test_ood share one lock: test locks first and reports no subset, test_ood then pins its own
+    files = lock_paths(tmp_path)
+    first = ne.guard_test_run("test", record(None), **files)
+    ood = ne.guard_test_run("test_ood", record({ne.OOD_FEATURE: feature}), **files)
+    again = ne.guard_test_run("test", record(None), **files)
+    assert (first["status"], ood["status"], again["status"]) == ("first", "repeat", "repeat")
+    locked = json.loads(files["lock_path"].read_text())
+    assert locked["subsets"] == {"test": sub(None), "test_ood": sub({ne.OOD_FEATURE: feature})}
+    for split, subsets in (("test_ood", other), ("test", {ne.OOD_FEATURE: feature})):
+        with pytest.raises(ne.LockError, match="subsets"):
+            ne.guard_test_run(split, record(subsets), **files)
+    ood.check("test_ood")
+    assert [e["status"] for e in logged(files)] == ["first", "repeat", "repeat"]
+
+
+def test_a_run_whose_subsets_the_lock_no_longer_pins_is_refused(ood_store, tmp_path):
+    record = lambda subsets: ne.lock_record(ood_store["store"], ne.baselines(), **ood_args(subsets=subsets))  # noqa: E731
+    feature = ood_store["feature"]
+    files = lock_paths(tmp_path)
+    plain = ne.guard_test_run("test", record(None), **files)
+    old = ne.guard_test_run("test_ood", record({ne.OOD_FEATURE: feature}), **files)
+    ne.guard_test_run("test_ood", record({ne.OOD_FEATURE: feature[:1]}), "the subset was narrowed", **files)
+    with pytest.raises(ne.LockError, match="subsets"):     # re-pinned by a subset-only relock of its own split
+        old.check("test_ood")
+    with pytest.raises(ne.LockError, match="subsets"):     # cleared by the other split's relock
+        plain.check("test")
+
+
+def test_lock_transactions_wait_for_each_other(ood_store, tmp_path):
+    import threading
+
+    files = lock_paths(tmp_path)
+    hashes = ne.lock_record(ood_store["store"], ne.baselines(), **ood_args())
+    release, done = threading.Event(), []
+    with ne._lock_transaction(files["runs_path"]):
+        worker = threading.Thread(target=lambda: done.append(ne.guard_test_run("test", hashes, **files)))
+        worker.start()
+        worker.join(0.3)
+        assert worker.is_alive() and not files["lock_path"].exists()   # held off while another transaction runs
+    worker.join(10)
+    assert done[0]["status"] == "first" and files["lock_path"].exists()
+
+
+def test_a_risk_table_refuses_a_scenario_selection_its_test_run_did_not_record(tmp_path, monkeypatch):
+    files = lock_paths(tmp_path)
+    run = ne.guard_test_run("test", {k: "x" for k in ne.HASH_FIELDS} | {ne.SCENARIOS_FIELD: ne.scenarios_sha256(["A"])},
+                            **files)
+    loaded = []
+    monkeypatch.setattr("src.models.tracernet.predictor.Predictor.load", lambda *a, **k: loaded.append(1))
+    with pytest.raises(ne.LockError, match="scenario selection"):
+        ne.risk_table("test", tmp_path / "artifact", store_dir=tmp_path / "store", out_dir=tmp_path / "risk",
+                      test_run=run, scenarios=["B"])
+    assert not loaded and not (tmp_path / "risk").exists()
+    run.check("test", scenarios=["A", "A"])              # the recorded selection, repeats ignored
+    with pytest.raises(ne.LockError, match="scenario selection"):
+        run.check("test", scenarios=None)               # the whole set is another selection
 
 
 def test_subsets_are_refused_before_the_lock_where_they_cannot_apply(ood_store, tmp_path):

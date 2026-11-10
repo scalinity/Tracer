@@ -99,6 +99,24 @@ def _read(path: Path):
     return json.loads(Path(path).read_text(encoding="utf-8")) if Path(path).is_file() else None
 
 
+def score_scenarios(eval_store: Path, split: str, config: dict) -> list[str] | None:
+    """The scenarios every arm is scored on for `split`: the lowest salted SHA-256 share (ablations.score_share) of
+    the split's scenarios, read from the observed runs table, the same for every arm so the arms stay paired; None
+    scores them all."""
+    a = config["ablations"]
+    share = float(a.get("score_share") or 1.0)
+    if share >= 1.0:
+        return None
+    con = store.open_observed_v2(Path(eval_store))
+    try:
+        ids = [r[0] for r in con.execute("select distinct scenario_id from runs where split = ?", [split]).fetchall()]
+    finally:
+        con.close()
+    if not ids:
+        raise AblationError(f"no {split} scenarios in {eval_store}")
+    return sorted(_salted(ids, a["score_salt"])[:max(1, math.ceil(share * len(ids)))])
+
+
 def train_scenarios(store_dir: Path) -> list[str]:
     con = store.open_observed_v2(store_dir)
     try:
@@ -335,7 +353,7 @@ def _member_store(job: dict, p: dict) -> Path:
 def run_arm(job_id: str, *, stage: str = "all", device: str = "auto", workers: int | None = None,
             train_store: Path | None = None, eval_store: Path | None = None, relock_reason: str | None = None,
             root: Path = ABLATION_DIR, config_path: Path = T.CONFIG_PATH, main_lock: Path | None = None,
-            test_runs: Path = TEST_RUNS_PATH, out=print) -> dict:
+            test_runs: Path = TEST_RUNS_PATH, splits=None, out=print) -> dict:
     """`ablate --run ID`: train the arm (stage train), then build its artifact and score it on validation and,
     after the main lock, on test (stage score). Idempotent: a finished run is not retrained and a scored set is not
     rescored unless its artifact changed. Writes the arm's result.json."""
@@ -390,8 +408,17 @@ def run_arm(job_id: str, *, stage: str = "all", device: str = "auto", workers: i
                                   "build_s": round(time.monotonic() - t0, 1)}
         budgets, per_100, resamples = job["budgets_per_shift"], job["budgets_per_100"], int(job["resamples"])
         for split in job["evaluate"]:
+            if splits is not None and split not in splits:
+                continue
+            chosen = score_scenarios(eval_dir, split, config)
+            selection = ne.scenarios_sha256(chosen)
             if split in result and relock_reason is None:
-                continue                      # scored with this artifact already: no second look
+                if result[split].get("selection_sha256") == selection:
+                    continue                  # scored with this artifact and selection already: no second look
+                if split in ne.LOCKED_SPLITS:
+                    raise AblationError(f"{job_id} scored {split} on another scenario selection; a new one needs a "
+                                        "relock reason")
+                # validation is not locked: score it again on the current selection
             t0 = time.monotonic()
             risk_dir = arm_dir / "risk" / split
             method = arm_method(risk_dir / "*.parquet")
@@ -401,14 +428,20 @@ def run_arm(job_id: str, *, stage: str = "all", device: str = "auto", workers: i
                 if not lock.is_file():
                     raise AblationError(f"ablations score {split} only after the main test lock exists ({lock}): spec §8.7")
                 hashes = ne.lock_record(eval_dir, [method], artifact_dir=artifact, budgets=budgets,
-                                        per_100_budgets=per_100, resamples=resamples)
+                                        per_100_budgets=per_100, resamples=resamples, scenarios=chosen)
                 test_run = ne.guard_test_run(split, hashes, relock_reason, lock_path=arm_dir / f"{split}_lock.json",
                                              runs_path=test_runs)
-            ne.risk_table(split, artifact, store_dir=eval_dir, out_dir=risk_dir, workers=workers, test_run=test_run)
+            ne.risk_table(split, artifact, store_dir=eval_dir, out_dir=risk_dir, workers=workers, test_run=test_run,
+                          scenarios=chosen)
             ev = ne.evaluate_split(split, [method], store_dir=eval_dir, budgets=budgets, per_100_budgets=per_100,
                                    resamples=resamples, out_dir=arm_dir / "eval" / split, workers=workers,
-                                   test_run=test_run)
-            result[split] = summarize(ev) | {"evaluation": ev["written"], "score_s": round(time.monotonic() - t0, 1)}
+                                   test_run=test_run, scenarios=chosen)
+            a = config["ablations"]
+            result[split] = summarize(ev) | {"evaluation": ev["written"], "score_s": round(time.monotonic() - t0, 1),
+                                             "scenarios_scored": len(chosen) if chosen is not None else None,
+                                             "selection_sha256": selection,
+                                             "score_share": float(a.get("score_share") or 1.0),
+                                             "score_salt": a.get("score_salt")}
             _write(arm_dir / "result.json", result)
     out(f"ablate {job_id}: " + ", ".join(k for k in ("train", "artifact", "val", "test") if k in result))
     return result
@@ -446,6 +479,24 @@ def control_lead(control: dict | None, margin: float) -> dict | None:
     return out
 
 
+SCORE_METADATA = ("evaluation", "score_s", "scenarios_scored", "selection_sha256", "score_share", "score_salt")
+
+
+def scoring_record(results: dict) -> dict:
+    """Per scored set, the scenario selections, shares and salts the arms were scored with, as recorded with each
+    result, and whether every arm used the same selection (the arms are compared only on one sample)."""
+    out = {}
+    for split in ("val", "test"):
+        rs = [r[split] for r in results.values() if isinstance(r.get(split), dict)]
+        if rs:
+            selections = sorted({str(r.get("selection_sha256")) for r in rs})
+            out[split] = {"arms": len(rs), "selections": selections, "same_selection": len(selections) == 1,
+                          "shares": sorted({r.get("score_share") for r in rs}, key=str),
+                          "salts": sorted({str(r.get("score_salt")) for r in rs}),
+                          "scenarios_scored": sorted({r.get("scenarios_scored") for r in rs}, key=str)}
+    return out
+
+
 def collect(*, root: Path = ABLATION_DIR, out_path: Path | None = None, control_path: Path = CONTROL_PATH,
             config_path: Path = T.CONFIG_PATH, out=print) -> dict:
     """`ablate --collect`: every arm's seeds summarized (mean, min, max), the steps check, the compute against the
@@ -478,7 +529,7 @@ def collect(*, root: Path = ABLATION_DIR, out_path: Path | None = None, control_
             val_sel = [(r.get("train") or {}).get("best_val_sel") if r.get("train") else
                        (r.get("artifact") or {}).get("ensemble_val_sel") for r in rs]
             keys = sorted({k for r in rs for s in ("val", "test") for k in (r.get(s) or {})
-                           if k not in ("evaluation", "score_s")})
+                           if k not in SCORE_METADATA})
             entry["arms"][arm] = {"seeds": len(rs), "seeds_done": len(finished),
                                   "val": {"val_sel": _stats(val_sel)} | {k: _stats([(r.get("val") or {}).get(k) for r in rs])
                                                                          for k in keys},
@@ -510,6 +561,7 @@ def collect(*, root: Path = ABLATION_DIR, out_path: Path | None = None, control_
     doc = {"set": index["set"], "rung": index["rung"], "steps": steps[0] if len(steps) == 1 else index["steps"],
            "steps_seen": steps, "steps_equal": len(steps) <= 1, "time_box_h": index["time_box_h"],
            "compute": {"hours": hours, "over_box": hours > float(index["time_box_h"])}, "ablations": ablations,
+           "scoring": scoring_record(results),
            "notice": "Synthetic data, no clinical review. Ablation numbers are descriptive; test was scored after the "
                      "lock and never changes the headline model."}
     _write(out_path, doc)
@@ -526,7 +578,7 @@ def ablate_command(*, set_name: str | None = None, run: str | None = None, colle
     try:
         if run is not None:
             run_arm(run, stage=stage, device=device, workers=workers, train_store=store_dir, eval_store=eval_store,
-                    relock_reason=relock_reason, out=out)
+                    relock_reason=relock_reason, splits=tuple(s for s in evaluate.split(",") if s), out=out)
         elif collect_results:
             collect(out=out)
         else:

@@ -103,6 +103,10 @@ ablations:
   budgets_per_shift: [6]        # ASSUMED: arms are scored at the headline budget
   budgets_per_100: [30]         # and the non-binding 30 per 100 specimens (docs/neural/build-log.md)
   resamples: 200                # ASSUMED: bootstrap resamples per arm (arm numbers are descriptive)
+  score_share: 0.25             # ASSUMED: every arm is scored on the same fixed share of the val and test scenarios
+                                # (lowest salted SHA-256), so 43 arms' CPU scoring (~163 core-hours each in full) fits
+                                # the box; the arms stay paired on one sample
+  score_salt: tracer-score-v1   # ASSUMED: which scenarios that share is
   a1:                           # spec §8.8 A1: the same 800 scenario-replicates as 100 x 8 ... 800 x 1
     designs: [[100, 8], [200, 4], [400, 2], [800, 1]]
     store: data/store-v2-a1     # the train scenarios with their extra replicates, plus validation

@@ -216,6 +216,9 @@ def test_an_arm_scores_test_only_after_the_main_lock_and_through_its_own(tiny, t
         A.run_arm(job["id"], **kw)
     result = json.loads((root / "arms" / job["id"] / "result.json").read_text())
     assert result["train"]["steps"] == 6 and "val" in result and "test" not in result and not runs.exists()
+    assert result["val"]["scenarios_scored"] == 1                  # the scoring share of a one-scenario set
+    result = A.run_arm(job["id"], stage="score", splits=("val",), **kw)    # --evaluate val: test is not tried
+    assert "test" not in result and not runs.exists()
     lock.write_text("{}")
     result = A.run_arm(job["id"], stage="score", **kw)
     logged = [json.loads(x) for x in runs.read_text().splitlines()]
@@ -226,17 +229,61 @@ def test_an_arm_scores_test_only_after_the_main_lock_and_through_its_own(tiny, t
     assert [json.loads(x) for x in runs.read_text().splitlines()] == logged
 
 
+def test_a_cached_score_on_another_selection_is_rescored_on_val_and_refused_on_test(tiny, tmp_path):
+    root = tmp_path / "ablations"
+    job = {"id": "A6-no_roster-s0", "ablation": "A6", "arm": "no_roster", "seed": 0, "rung": "A",
+           "train": {"store": str(tiny["store"]), "overrides": TINY | {"max_steps": 6}},
+           "members": ["A6-no_roster-s0"], "evaluate": ["val", "test"], "eval_store": str(tiny["store"]),
+           "budgets_per_shift": [6], "budgets_per_100": [30], "resamples": 50}
+    A._write(A.paths(root)["jobs"] / f"{job['id']}.json", job)
+    lock, runs = tmp_path / "test_lock.json", tmp_path / "test_runs.jsonl"
+    lock.write_text("{}")
+    kw = dict(root=root, device="cpu", workers=1, main_lock=lock, test_runs=runs, out=lambda *_: None)
+    first = A.run_arm(job["id"], **kw)
+    assert first["val"]["score_share"] == CONFIG["ablations"]["score_share"] and first["test"]["selection_sha256"]
+    whole = tmp_path / "neural.yaml"
+    whole.write_text(T.CONFIG_PATH.read_text().replace("score_share: 0.25", "score_share: 1.0"))
+    with pytest.raises(A.AblationError, match="another scenario selection"):
+        A.run_arm(job["id"], stage="score", config_path=whole, **kw)
+    again = json.loads((root / "arms" / job["id"] / "result.json").read_text())
+    assert again["val"]["selection_sha256"] != first["val"]["selection_sha256"] and again["val"]["score_share"] == 1.0
+    assert again["test"] == first["test"]                # the test look stands until a relock reason is given
+    record = A.scoring_record({"x": first, "y": again})
+    assert record["val"]["same_selection"] is False and record["test"]["same_selection"] is True
+
+
+def test_arms_are_scored_on_one_fixed_salted_share_of_each_set(tiny):
+    config = {"ablations": {**CONFIG["ablations"], "score_share": 0.5, "score_salt": "a-salt"}}
+    chosen = A.score_scenarios(tiny["store"], "train", config)
+    ids = A.train_scenarios(tiny["store"])
+    assert chosen == sorted(A._salted(ids, "a-salt")[:1]) == A.score_scenarios(tiny["store"], "train", config)
+    assert A.score_scenarios(tiny["store"], "train", {"ablations": {**config["ablations"], "score_share": 1.0}}) is None
+    with pytest.raises(A.AblationError, match="no test_ood scenarios"):
+        A.score_scenarios(tiny["store"], "test_ood", config)
+
+
+def test_a_risk_table_refuses_scenarios_outside_its_set_before_loading_the_artifact(tiny, tmp_path):
+    from src.pipeline import neural_eval as ne
+    for scenarios, message in ((["nope"], "not among"), ([], "empty")):
+        with pytest.raises(ValueError, match=message):
+            ne.risk_table("val", tmp_path / "no-artifact", store_dir=tiny["store"], out_dir=tmp_path / "risk",
+                          scenarios=scenarios)
+
+
 # --- Collecting --------------------------------------------------------------------------------------------------------
 
 def test_collect_summarizes_seeds_checks_steps_and_records_every_ablation(tmp_path):
     root, p = tmp_path / "ablations", A.paths(tmp_path / "ablations")
     jobs = [{"id": f"A6-{arm}-s{s}", "ablation": "A6", "arm": arm, "seed": s} for arm in ("no_context",) for s in (0, 1)]
     jobs += [{"id": f"A5-B-s{s}", "ablation": "A5", "arm": "B", "seed": s} for s in (0, 1)]
+    scored = {"evaluation": "eval.json", "score_s": 0.0, "scenarios_scored": 3, "selection_sha256": "abc",
+              "score_share": 0.25, "score_salt": "tracer-score-v1"}      # the metadata run_arm records with a score
     for j in jobs:
         A._write(p["jobs"] / f"{j['id']}.json", j)
         A._write(p["arms"] / j["id"] / "result.json",
                  {"train": {"steps": 100, "best_val_sel": 0.1 + 0.01 * j["seed"], "call_s": 1800},
-                  "val": {"capped_mean_warning_min": 10.0 + j["seed"]}, "test": {"capped_mean_warning_min": 9.0}})
+                  "val": {"capped_mean_warning_min": 10.0 + j["seed"]} | scored,
+                  "test": {"capped_mean_warning_min": 9.0} | scored})
     A._write(p["index"], {"set": "core", "rung": "B", "steps": 100, "time_box_h": 6, "jobs": [j["id"] for j in jobs],
                           "not_run": {"A3": "not run: why", "A2": "blocked: no cells"}})
     control = {"settings": {"headline": "6/shift"}, "differences": {"6/shift": {"3-2-1": {"analytic_local": {
@@ -253,6 +300,8 @@ def test_collect_summarizes_seeds_checks_steps_and_records_every_ablation(tmp_pa
     assert doc["ablations"]["A3"] == {"question": "Did round 2 help?", "required": False, "status": "not run",
                                       "reason": "not run: why"}
     assert doc["ablations"]["A2"]["status"] == "not run" and doc["ablations"]["A2"]["required"]
+    assert "score_salt" not in a6["arms"]["no_context"]["val"] and doc["scoring"]["test"]["same_selection"]
+    assert doc["scoring"]["val"]["shares"] == [0.25] and doc["scoring"]["val"]["arms"] == 4
 
 
 # --- A1's store ----------------------------------------------------------------------------------------------------------
