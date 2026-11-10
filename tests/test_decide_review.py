@@ -277,7 +277,7 @@ def test_f009_a_spend_after_the_wording_and_prompt_version_change_needs_a_new_dr
         return q
     monkeypatch.setattr(render, "x2_questions", reworded)
     p2 = config()
-    p2["decisions"]["prompt_version"] = "p2"
+    p2["decisions"]["prompt_version"] += "-revised"
     with pytest.raises(dc.JobError, match="run the dry run again"):
         _spend(tmp, p2, t)
     assert len(t.requests) == 2                                     # no request, no cache answer relabeled

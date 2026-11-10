@@ -193,13 +193,43 @@ def alert_state(f: dict, tracernet: dict | None = None, *, budget: int | None = 
     return check_budget(text, budget, "X2" if tracernet is not None else "X3") if budget else text
 
 
+# Prompt p2 (validation round two; spec §8.7: prompt work uses validation only). Round one's answers chose
+# check_receiving_queue for 67% of validation alerts and placed 30% in the laboratory against 6% truly there, so the
+# action now says to act where the specimen most likely is, each option says when it fits, and the receiving queue's
+# place says what a long silence usually means. The option keys are rules.PLACES and rules.ACTIONS unchanged.
+X2_PLACE_CRITERIA = {**rules.PLACES, "in_lab_awaiting_scan": "Inside the laboratory, waiting in the receiving queue for "
+                     "its receipt scan. Receiving usually scans a specimen within minutes of its arrival, so a long "
+                     "silence seldom means this."}
+X2_ACTION_CRITERIA = {
+    "call_unit_confirm_sent": "Call the unit to confirm the specimen was sent: when it is probably still on the unit, "
+                              "or sent and waiting there for a pickup.",
+    "contact_courier_coordinator": "Contact the courier coordinator about the round carrying it: when it probably "
+                                   "travels by courier or hand carry and is waiting for or on that round.",
+    "check_lab_tube_station": "Check the laboratory's tube station: when it probably arrived by tube and sits at the "
+                              "station unscanned.",
+    "check_misroute_station": "Check the station where misrouted carriers end up: when it was probably sent by tube to "
+                              "the wrong station.",
+    "check_receiving_queue": "Check the receiving queue inside the laboratory: only when it has probably already reached "
+                             "the laboratory.",
+    "escalate_tube_system": "Report a tube system problem to facilities: when the tube system is probably failing or "
+                            "holding it.",
+    "request_recollection": "Ask the unit to collect the specimen again: when it is probably lost or cannot arrive in "
+                            "time.",
+    "wait_and_recheck": "Wait and check again at the next score: when it is probably moving normally and no call "
+                        "would help yet.",
+    "other": rules.ACTIONS["other"],
+}
+assert list(X2_ACTION_CRITERIA) == list(rules.ACTIONS) and list(X2_PLACE_CRITERIA) == list(rules.PLACES)
+
+
 def x2_questions() -> dict:
     return {
         "place": {"type": "choice", "instructions": "Where is this specimen most likely to be right now?",
-                  "criteria": dict(rules.PLACES)},
+                  "criteria": dict(X2_PLACE_CRITERIA)},
         "action": {"type": "choice", "instructions": "What should the laboratory do first to recover this specimen "
-                                                     "before its window closes?",
-                   "criteria": dict(rules.ACTIONS)},
+                                                     "before its window closes? Act where the specimen most likely "
+                                                     "is now.",
+                   "criteria": dict(X2_ACTION_CRITERIA)},
         "shared_problem": {"type": "noul",
                            "instructions": "Is this delay likely part of a problem affecting other specimens on the "
                                            "same route or unit right now?",

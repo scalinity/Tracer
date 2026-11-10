@@ -294,7 +294,7 @@ def test_f008_the_first_test_store_read_happens_inside_the_locks_mutex(env, monk
 def test_f009_score_only_refuses_outputs_from_another_decision_configuration(env):
     assert env.cli("--job", "X2", "--set", "val", "--dry-run", "--n", "10")[0] == 0
     assert env.cli("--job", "X2", "--set", "val", "--budget-usd", "0.10")[0] == 0
-    env.cfg["decisions"]["prompt_version"] = "p2"          # revised on validation, never sent
+    env.cfg["decisions"]["prompt_version"] += "-revised"   # revised on validation, never sent
     code, out = env.cli("--job", "X2", "--set", "val", "--score-only")
     assert code == 1 and "the decision configuration" in out
     assert not (env.results / "X2-val-scores.json").exists()
@@ -313,7 +313,7 @@ def test_f009_on_test_outputs_sent_before_a_relock_are_never_scored_under_it(env
     env.look("test")
     assert env.cli("--job", "X2", "--set", "test", "--dry-run", "--relock-reason", "X2 joins the lock")[0] == 0
     assert env.cli("--job", "X2", "--set", "test", "--budget-usd", "0.10")[0] == 0
-    env.cfg["decisions"]["prompt_version"] = "p2"          # a new configuration relocks and rebuilds the states
+    env.cfg["decisions"]["prompt_version"] += "-revised"   # a new configuration relocks and rebuilds the states
     code, out = env.cli("--job", "X2", "--set", "test", "--dry-run", "--relock-reason", "p2 on test")
     assert code == 0 and "test run: relock" in out
     before = len(logged(env))
