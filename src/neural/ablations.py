@@ -410,9 +410,15 @@ def run_arm(job_id: str, *, stage: str = "all", device: str = "auto", workers: i
         for split in job["evaluate"]:
             if splits is not None and split not in splits:
                 continue
-            if split in result and relock_reason is None:
-                continue                      # scored with this artifact already: no second look
             chosen = score_scenarios(eval_dir, split, config)
+            selection = ne.scenarios_sha256(chosen)
+            if split in result and relock_reason is None:
+                if result[split].get("selection_sha256") == selection:
+                    continue                  # scored with this artifact and selection already: no second look
+                if split in ne.LOCKED_SPLITS:
+                    raise AblationError(f"{job_id} scored {split} on another scenario selection; a new one needs a "
+                                        "relock reason")
+                # validation is not locked: score it again on the current selection
             t0 = time.monotonic()
             risk_dir = arm_dir / "risk" / split
             method = arm_method(risk_dir / "*.parquet")
@@ -430,8 +436,12 @@ def run_arm(job_id: str, *, stage: str = "all", device: str = "auto", workers: i
             ev = ne.evaluate_split(split, [method], store_dir=eval_dir, budgets=budgets, per_100_budgets=per_100,
                                    resamples=resamples, out_dir=arm_dir / "eval" / split, workers=workers,
                                    test_run=test_run, scenarios=chosen)
+            a = config["ablations"]
             result[split] = summarize(ev) | {"evaluation": ev["written"], "score_s": round(time.monotonic() - t0, 1),
-                                             "scenarios_scored": len(chosen) if chosen is not None else None}
+                                             "scenarios_scored": len(chosen) if chosen is not None else None,
+                                             "selection_sha256": selection,
+                                             "score_share": float(a.get("score_share") or 1.0),
+                                             "score_salt": a.get("score_salt")}
             _write(arm_dir / "result.json", result)
     out(f"ablate {job_id}: " + ", ".join(k for k in ("train", "artifact", "val", "test") if k in result))
     return result
@@ -466,6 +476,21 @@ def control_lead(control: dict | None, margin: float) -> dict | None:
         out[k] = {"point": x.get("point"), "low": x.get("low"), "high": x.get("high"),
                   "large": x.get("point") is not None and x["point"] >= margin and (x.get("low") or 0) > 0}
     out["leakage_suspected"] = any(out[k]["large"] for k in ("median_warning_all_breaches_min", "capped_mean_warning_min"))
+    return out
+
+
+def scoring_record(results: dict) -> dict:
+    """Per scored set, the scenario selections, shares and salts the arms were scored with, as recorded with each
+    result, and whether every arm used the same selection (the arms are compared only on one sample)."""
+    out = {}
+    for split in ("val", "test"):
+        rs = [r[split] for r in results.values() if isinstance(r.get(split), dict)]
+        if rs:
+            selections = sorted({str(r.get("selection_sha256")) for r in rs})
+            out[split] = {"arms": len(rs), "selections": selections, "same_selection": len(selections) == 1,
+                          "shares": sorted({r.get("score_share") for r in rs}, key=str),
+                          "salts": sorted({str(r.get("score_salt")) for r in rs}),
+                          "scenarios_scored": sorted({r.get("scenarios_scored") for r in rs}, key=str)}
     return out
 
 
@@ -533,7 +558,7 @@ def collect(*, root: Path = ABLATION_DIR, out_path: Path | None = None, control_
     doc = {"set": index["set"], "rung": index["rung"], "steps": steps[0] if len(steps) == 1 else index["steps"],
            "steps_seen": steps, "steps_equal": len(steps) <= 1, "time_box_h": index["time_box_h"],
            "compute": {"hours": hours, "over_box": hours > float(index["time_box_h"])}, "ablations": ablations,
-           "score_share": float(T.load_config(config_path)["ablations"].get("score_share") or 1.0),
+           "scoring": scoring_record(results),
            "notice": "Synthetic data, no clinical review. Ablation numbers are descriptive; test was scored after the "
                      "lock and never changes the headline model."}
     _write(out_path, doc)

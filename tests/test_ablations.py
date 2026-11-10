@@ -229,6 +229,29 @@ def test_an_arm_scores_test_only_after_the_main_lock_and_through_its_own(tiny, t
     assert [json.loads(x) for x in runs.read_text().splitlines()] == logged
 
 
+def test_a_cached_score_on_another_selection_is_rescored_on_val_and_refused_on_test(tiny, tmp_path):
+    root = tmp_path / "ablations"
+    job = {"id": "A6-no_roster-s0", "ablation": "A6", "arm": "no_roster", "seed": 0, "rung": "A",
+           "train": {"store": str(tiny["store"]), "overrides": TINY | {"max_steps": 6}},
+           "members": ["A6-no_roster-s0"], "evaluate": ["val", "test"], "eval_store": str(tiny["store"]),
+           "budgets_per_shift": [6], "budgets_per_100": [30], "resamples": 50}
+    A._write(A.paths(root)["jobs"] / f"{job['id']}.json", job)
+    lock, runs = tmp_path / "test_lock.json", tmp_path / "test_runs.jsonl"
+    lock.write_text("{}")
+    kw = dict(root=root, device="cpu", workers=1, main_lock=lock, test_runs=runs, out=lambda *_: None)
+    first = A.run_arm(job["id"], **kw)
+    assert first["val"]["score_share"] == CONFIG["ablations"]["score_share"] and first["test"]["selection_sha256"]
+    whole = tmp_path / "neural.yaml"
+    whole.write_text(T.CONFIG_PATH.read_text().replace("score_share: 0.25", "score_share: 1.0"))
+    with pytest.raises(A.AblationError, match="another scenario selection"):
+        A.run_arm(job["id"], stage="score", config_path=whole, **kw)
+    again = json.loads((root / "arms" / job["id"] / "result.json").read_text())
+    assert again["val"]["selection_sha256"] != first["val"]["selection_sha256"] and again["val"]["score_share"] == 1.0
+    assert again["test"] == first["test"]                # the test look stands until a relock reason is given
+    record = A.scoring_record({"x": first, "y": again})
+    assert record["val"]["same_selection"] is False and record["test"]["same_selection"] is True
+
+
 def test_arms_are_scored_on_one_fixed_salted_share_of_each_set(tiny):
     config = {"ablations": {**CONFIG["ablations"], "score_share": 0.5, "score_salt": "a-salt"}}
     chosen = A.score_scenarios(tiny["store"], "train", config)

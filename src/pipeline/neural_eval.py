@@ -790,11 +790,18 @@ class LockError(RuntimeError):
 HASH_FIELDS = ("artifact_sha256", "calibration_sha256", "configuration_sha256", "split_manifest_sha256",
                "store_sha256", "neural_eval_blob_sha", "evaluate_blob_sha", "decision_model_sha256")
 SUBSETS_FIELD = "subsets_sha256"    # the subsets one split's look reports; pinned per split (guard_test_run)
+SCENARIOS_FIELD = "scenarios_sha256"    # the scenario selection a look scores (None: the whole set)
+_ANY = object()
 
 
 def subsets_sha256(subsets: Mapping[str, Sequence[str]] | None) -> str:
     """The hash of the named scenario subsets a look reports (none hashes as null)."""
     return sha256_json(_subset_lists(subsets))
+
+
+def scenarios_sha256(scenarios: Sequence[str] | None) -> str:
+    """The hash of the scenario selection a look scores, sorted and without repeats (the whole set hashes as null)."""
+    return sha256_json(None if scenarios is None else sorted({str(s) for s in scenarios}))
 
 
 def sha256_file(path: Path) -> str:
@@ -852,11 +859,15 @@ class TestRun(dict):
         super().__init__(entry)
         self.lock_path, self.runs_path, self.relock_reason = Path(lock_path), Path(runs_path), relock_reason
 
-    def check(self, split: str, *, artifact_dir: Path | None = None, store_dir: Path | None = None) -> None:
-        """Refuse unless the run is this split's, still in the lock and the log, and (when given) the artifact
-        and the store being used are the ones its hashes record."""
+    def check(self, split: str, *, artifact_dir: Path | None = None, store_dir: Path | None = None,
+              scenarios=_ANY) -> None:
+        """Refuse unless the run is this split's, still in the lock and the log, and (when given) the artifact,
+        the store and the scenario selection being used are the ones its hashes record."""
         self._check_run(split)
         recorded = self["hashes"]
+        if scenarios is not _ANY and scenarios_sha256(scenarios) != (recorded.get(SCENARIOS_FIELD)
+                                                                    or scenarios_sha256(None)):
+            raise LockError("the scenario selection is not the one this test run recorded")
         if artifact_dir is not None:
             manifest_path = Path(artifact_dir) / "manifest.json"
             files = json.loads(manifest_path.read_text(encoding="utf-8")).get("files") or {}
@@ -942,7 +953,8 @@ def guard_test_run(split: str, hashes: Mapping, relock_reason: str | None = None
     new = {k: hashes[k] for k in HASH_FIELDS}
     subsets = hashes.get(SUBSETS_FIELD) or subsets_sha256(None)
     stamp = _now(now)
-    entry = {"time": stamp, "split": split, "hashes": new | {SUBSETS_FIELD: subsets}}
+    entry = {"time": stamp, "split": split,
+             "hashes": new | {SUBSETS_FIELD: subsets, SCENARIOS_FIELD: hashes.get(SCENARIOS_FIELD) or scenarios_sha256(None)}}
     if risk_parts:
         entry["risk_parts"] = {m: dict(p) for m, p in risk_parts.items()}
     with _lock_transaction(runs_path):    # read, check and write the lock as one step
@@ -1512,7 +1524,7 @@ def risk_table(split: str, artifact_dir: Path, *, store_dir: Path | None = None,
 
     store_dir = Path(store_dir) if store_dir is not None else store.STORE_V2_DIR
     if split in LOCKED_SPLITS:
-        _check_run(test_run, split, artifact_dir=Path(artifact_dir), store_dir=store_dir)
+        _check_run(test_run, split, artifact_dir=Path(artifact_dir), store_dir=store_dir, scenarios=scenarios)
     out_dir = Path(out_dir) if out_dir is not None else RISK_DIR / split
     con = store.open_observed_v2(store_dir)
     try:
@@ -2599,7 +2611,7 @@ def _evaluation_hashes(store_dir: Path, methods: Sequence[Method], *, store_hash
                                    scenarios=scenarios)
     hashes = current_hashes("none", "none", sha256_json(configuration), "none", store_hash or "none")
     return {k: hashes[k] for k in ("configuration_sha256", "store_sha256", "neural_eval_blob_sha", "evaluate_blob_sha")} \
-        | {SUBSETS_FIELD: subsets_sha256(subsets)}
+        | {SUBSETS_FIELD: subsets_sha256(subsets), SCENARIOS_FIELD: scenarios_sha256(scenarios)}
 
 
 def lock_record(store_dir: Path, methods: Sequence[Method], *, artifact_dir: Path | None = None,
@@ -2634,7 +2646,8 @@ def lock_record(store_dir: Path, methods: Sequence[Method], *, artifact_dir: Pat
                              budgets=budgets, per_100_budgets=per_100_budgets, resamples=resamples, matched=matched,
                              focus=focus, scenarios=scenarios, subsets=subsets)
     return current_hashes(artifact, calibration, own["configuration_sha256"], file_hash(splits_path), store_hash,
-                          decision_model=decision_model) | {SUBSETS_FIELD: own[SUBSETS_FIELD]}
+                          decision_model=decision_model) | {SUBSETS_FIELD: own[SUBSETS_FIELD],
+                                                            SCENARIOS_FIELD: own[SCENARIOS_FIELD]}
 
 
 def command_evaluate(split: str, *, store_dir: Path | None = None, out_dir: Path | None = None,

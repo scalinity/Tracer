@@ -1525,6 +1525,21 @@ def test_lock_transactions_wait_for_each_other(ood_store, tmp_path):
     assert done[0]["status"] == "first" and files["lock_path"].exists()
 
 
+def test_a_risk_table_refuses_a_scenario_selection_its_test_run_did_not_record(tmp_path, monkeypatch):
+    files = lock_paths(tmp_path)
+    run = ne.guard_test_run("test", {k: "x" for k in ne.HASH_FIELDS} | {ne.SCENARIOS_FIELD: ne.scenarios_sha256(["A"])},
+                            **files)
+    loaded = []
+    monkeypatch.setattr("src.models.tracernet.predictor.Predictor.load", lambda *a, **k: loaded.append(1))
+    with pytest.raises(ne.LockError, match="scenario selection"):
+        ne.risk_table("test", tmp_path / "artifact", store_dir=tmp_path / "store", out_dir=tmp_path / "risk",
+                      test_run=run, scenarios=["B"])
+    assert not loaded and not (tmp_path / "risk").exists()
+    run.check("test", scenarios=["A", "A"])              # the recorded selection, repeats ignored
+    with pytest.raises(ne.LockError, match="scenario selection"):
+        run.check("test", scenarios=None)               # the whole set is another selection
+
+
 def test_subsets_are_refused_before_the_lock_where_they_cannot_apply(ood_store, tmp_path):
     files = lock_paths(tmp_path)
     with pytest.raises(ValueError, match="v2 set"):
