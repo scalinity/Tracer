@@ -216,6 +216,9 @@ def test_an_arm_scores_test_only_after_the_main_lock_and_through_its_own(tiny, t
         A.run_arm(job["id"], **kw)
     result = json.loads((root / "arms" / job["id"] / "result.json").read_text())
     assert result["train"]["steps"] == 6 and "val" in result and "test" not in result and not runs.exists()
+    assert result["val"]["scenarios_scored"] == 1                  # the scoring share of a one-scenario set
+    result = A.run_arm(job["id"], stage="score", splits=("val",), **kw)    # --evaluate val: test is not tried
+    assert "test" not in result and not runs.exists()
     lock.write_text("{}")
     result = A.run_arm(job["id"], stage="score", **kw)
     logged = [json.loads(x) for x in runs.read_text().splitlines()]
@@ -224,6 +227,24 @@ def test_an_arm_scores_test_only_after_the_main_lock_and_through_its_own(tiny, t
     assert result["test"]["evaluation"].endswith("eval/test/evaluation.json")
     A.run_arm(job["id"], stage="score", **kw)            # scored with this artifact already: no second look
     assert [json.loads(x) for x in runs.read_text().splitlines()] == logged
+
+
+def test_arms_are_scored_on_one_fixed_salted_share_of_each_set(tiny):
+    config = {"ablations": {**CONFIG["ablations"], "score_share": 0.5, "score_salt": "a-salt"}}
+    chosen = A.score_scenarios(tiny["store"], "train", config)
+    ids = A.train_scenarios(tiny["store"])
+    assert chosen == sorted(A._salted(ids, "a-salt")[:1]) == A.score_scenarios(tiny["store"], "train", config)
+    assert A.score_scenarios(tiny["store"], "train", {"ablations": {**config["ablations"], "score_share": 1.0}}) is None
+    with pytest.raises(A.AblationError, match="no test_ood scenarios"):
+        A.score_scenarios(tiny["store"], "test_ood", config)
+
+
+def test_a_risk_table_refuses_scenarios_outside_its_set_before_loading_the_artifact(tiny, tmp_path):
+    from src.pipeline import neural_eval as ne
+    for scenarios, message in ((["nope"], "not among"), ([], "empty")):
+        with pytest.raises(ValueError, match=message):
+            ne.risk_table("val", tmp_path / "no-artifact", store_dir=tiny["store"], out_dir=tmp_path / "risk",
+                          scenarios=scenarios)
 
 
 # --- Collecting --------------------------------------------------------------------------------------------------------

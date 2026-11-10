@@ -414,7 +414,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--eval-store", default=None, help="the store holding labels for scoring")
     p.add_argument("--rung", default=None, help="default: the chosen rung in results/neural/selection.json")
     p.add_argument("--cells", default=None, help="scenario cells (default data/neural/scenario-cells.json)")
-    p.add_argument("--evaluate", default="val,test")
+    p.add_argument("--evaluate", default="val,test", help="sets: the jobs --set writes, or the sets --run scores")
     p.add_argument("--device", default="auto")
     p.add_argument("--workers", type=int, default=None)
     p.add_argument("--relock-reason", default=None)

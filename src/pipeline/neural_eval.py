@@ -1498,12 +1498,14 @@ RISK_DIR = store.ROOT / "data" / "neural" / "risk"
 
 
 def risk_table(split: str, artifact_dir: Path, *, store_dir: Path | None = None, out_dir: Path | None = None,
-               workers: int | None = None, scenarios_per_part: int = 50, test_run: TestRun | None = None) -> Path:
+               workers: int | None = None, scenarios_per_part: int = 50, test_run: TestRun | None = None,
+               scenarios: Sequence[str] | None = None) -> Path:
     """TracerNet's RiskTable for a set: every tick of every specimen of its history and scored replicates, scored
     on CPU by the artifact, written as parquet parts (one per group of scenarios, to bound memory) under
     data/neural/risk/<split>/. Returns the parts' glob, which `tracernet_method` reads. A locked split (test,
     test_ood) is scored only with `test_run`, the run guard_test_run recorded, and the parts' SHA-256 are
-    recorded with that run once written (record_risk_parts), so a later look must produce the same table."""
+    recorded with that run once written (record_risk_parts), so a later look must produce the same table.
+    `scenarios` scores a selection of the set's scenarios instead (the ablations' fixed scoring share)."""
     import polars as pl
 
     from src.models.tracernet.predictor import Predictor
@@ -1524,6 +1526,12 @@ def risk_table(split: str, artifact_dir: Path, *, store_dir: Path | None = None,
     for sid, run in runs:
         by_scenario.setdefault(sid, []).append(int(run))
     sids = sorted(by_scenario)
+    if scenarios is not None:       # a selection of the set's scenarios (the ablations' scoring share)
+        unknown = sorted(set(scenarios) - set(sids))
+        if unknown or not scenarios:
+            raise ValueError(f"scenarios not among the {split} scenarios of {store_dir}: {unknown[:5]}" if unknown
+                             else "an empty scenario selection")
+        sids = sorted(set(scenarios))
     out_dir.mkdir(parents=True, exist_ok=True)
     for old in out_dir.glob("*.parquet"):
         old.unlink()
