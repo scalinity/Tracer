@@ -312,10 +312,10 @@ def test_429_503_and_529_back_off_with_jitter_and_retry(env, status):
 
 
 def test_after_six_tries_the_item_falls_back_to_the_rules_and_the_job_goes_on(env):
-    t = Transport(ok(), *[(503, {})] * 6, ok())
+    t = Transport(ok(), *[(429, {})] * 6, ok())               # 429s are void, so they never count as unknown
     r = make_job(env, t).run(items(3))
     assert [o.status for o in r.outcomes] == ["answered", "fallback", "answered"]
-    assert r.outcomes[1].reason == "http_503 after 6 tries" and r.outcomes[1].attempts == 6 and not r.stopped
+    assert r.outcomes[1].reason == "http_429 after 6 tries" and r.outcomes[1].attempts == 6 and not r.stopped
 
 
 def test_a_400_falls_back_for_its_item_and_is_never_billed(env, caplog):
@@ -371,11 +371,14 @@ def test_drex_max_silent_at_the_start_hands_the_job_to_the_fallback_model_and_re
     lines = []
     r = dc.Job("X2", cfg, ledger, client_factory=lambda: client, budget_usd="1", decide_dir=tmp / "decide",
                sleep=lambda s: None, concurrency=1, out=lines.append).run(items(2))
-    assert seen == ["nace-ai/drex-max"] * 6 + ["typesafe/jev-1.14"] * 2
+    assert seen == ["nace-ai/drex-max"] * 5 + ["typesafe/jev-1.14"] * 2     # five unknown outcomes end Drex Max
     assert [o.status for o in r.outcomes] == ["answered", "answered"] and r.model == "typesafe/jev-1.14"
     state = dc.read_state(tmp / "decide", "X2")
     assert state["model"] == "typesafe/jev-1.14" and state["resolved_model"] == jev
-    assert any(e["kind"] == "fallback_model" for e in state["events"]) and "fallback" in lines[0]
+    assert any(e["kind"] == "fallback_model" and "unknown outcome" in e["why"] for e in state["events"])
+    assert any("using the fallback" in line for line in lines)
+    unknown = [e for e in ledger.entries("X2") if e["kind"] == "settle" and e["detail"].get("unknown")]
+    assert len(unknown) == 5                                  # the 503s stay settled as spent
     row = dispatcher.decide(r.outcomes[0], _x2_item(), cfg, r.model)
     assert row["source"] == "jev-fallback"
 
@@ -404,8 +407,8 @@ def test_spending_needs_the_key_a_fresh_price_and_a_fresh_dry_run_of_the_same_it
     with pytest.raises(dc.JobError, match="frozen items"):
         dc.spend_checks("X2", "val", cfg, "1", decide_dir=d, env_path=tmp / ".env", now=NOW)
     dc.dry_run_step("X2", "val", items(2), cfg, tmp / "ledger.sqlite", decide_dir=d, now=NOW, out=lambda s: None)
-    got, budget = dc.spend_checks("X2", "val", cfg, "1", decide_dir=d, env_path=tmp / ".env", now=NOW)
-    assert len(got) == 2 and str(budget) == "1"
+    got, budget, dry = dc.spend_checks("X2", "val", cfg, "1", decide_dir=d, env_path=tmp / ".env", now=NOW)
+    assert len(got) == 2 and str(budget) == "1" and dry["request_set_hash"] == dc.request_set_hash("X2", "val", got)
     later = NOW + timedelta(hours=25)
     rechecked = config()
     rechecked["price"]["verified_at"] = later.isoformat(timespec="seconds")
@@ -427,11 +430,12 @@ def test_spending_needs_the_key_a_fresh_price_and_a_fresh_dry_run_of_the_same_it
         dc.spend_checks("X2", "val", cfg, "1", decide_dir=d, env_path=tmp / ".env", now=NOW)
 
 
-def test_the_committed_configuration_refuses_to_spend_until_the_price_is_checked():
+def test_a_price_never_verified_refuses_to_spend_and_the_committed_settings_hold():
+    unverified = config()
+    unverified["price"]["verified_at"] = None
+    with pytest.raises(dc.JobError, match="never been verified"):
+        dc.check_price(unverified)
     cfg = dc.load_config()
-    assert cfg["price"]["verified_at"] is None
-    with pytest.raises(dc.JobError):
-        dc.check_price(cfg)
     assert cfg["base_url"].startswith("https://") and cfg["key_name"] == "OPENROUTER_API_KEY"
     assert cfg["counterfactual"] == {"found_after_alert_min": 10, "received_after_found_min": 5, "source": "assumed"}
     assert cfg["decisions"]["noul_yes"] == 0.7 and cfg["operations"]["retry_statuses"] == [429, 503, 529]

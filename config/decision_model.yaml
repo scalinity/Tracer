@@ -30,8 +30,11 @@ fallback:
 contract: "decisions-alpha-2026-11-09"  # the response shape the client checks (notes: the API is labeled alpha)
 
 price:
-  verified_at: null          # set when the pages are checked (Appendix A item 4); null refuses every spending job
-  checked_by: null
+  verified_at: "2026-11-10T12:14:00-05:00"   # Appendix A item 4; a spending job refuses a price older than 24 hours
+  checked_by: "the build session, from both pages rendered in a browser (a plain fetch meets a bot check)"
+  # As read on Nov 10, 2026: Drex Max $0.06 in / $0 out per 1M, shown as "50% off" $0.12 (DeepInfra, US, the one
+  # provider), context 262K, released Oct 21, 2026. Jev 1.14 $0.042 in / $0 out per 1M, no discount shown, context
+  # 262K, released Oct 14, 2026.
   source_urls:
     nace-ai/drex-max: "https://openrouter.ai/nace-ai/drex-max"
     typesafe/jev-1.14: "https://openrouter.ai/typesafe/jev-1.14"

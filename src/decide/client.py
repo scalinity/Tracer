@@ -3,8 +3,8 @@
     from src.decide import client as dc
     cfg = dc.load_config()
     d = dc.dry_run("X2", "val", items, cfg, totals)                 # prices every request; no connection
-    job = dc.Job("X2", cfg, ledger, client_factory=lambda: dc.DecisionClient(cfg), budget_usd="1.00")
-    result = job.run(items)                                         # cached answers, then live calls
+    doc = dc.spend_step("X2", "val", cfg, "1.00", ledger_path, decide_fn)     # the supported way to spend
+    rows, provenance = dc.verified_outputs("X2", "val", cfg)                   # what --score-only reads
 
 The request is `{model, state, questions}` and the response `{id, model, provider, answers, usage}`, as the API
 reference gives them (an alpha API: "the shape may change"). `parse_response` checks every response against that
@@ -24,9 +24,15 @@ else that brings no usage (a 5xx, a timeout, a dropped connection, a 402) keeps 
 Operations. 429, 503 and 529 back off exponentially with jitter, up to six tries in all, each try under its own
 reservation; then the item falls back to the rules. A 400 is logged (status and error code only) and the item falls
 back. A 402 (no credits) stops the job, which is Daniel's to resolve. Half of the last ten attempts ending with an
-unknown outcome, a settlement above its reservation, or a contract mismatch stops the job too. Concurrency starts at 8,
-halves on each 429 and grows back by one after every 20 answers. A stopped job sends nothing more; requests already
-in flight finish and are settled.
+unknown billing outcome (whatever the status, retryable ones included), a settlement above its reservation (on every
+path, error responses included), or a contract mismatch stops the job too. Concurrency starts at 8, halves on each 429
+and grows back by one after every 20 answers. Admission to the transport happens after the concurrency gate, under
+the same lock `stop()` takes: a request admitted before a stop finishes and is settled; once the job stops, nothing
+more is admitted and an unsent reservation is voided. `Job` enforces its own money rules (caps that agree with the
+ledger's, a budget within the job's cap, a released job, and a price verified within 24 hours, checked at every
+admission, retries and the fallback model included); the dry run of exactly the items sent is the caller's to require,
+which spend_step does. Each call records its request bytes, input bound, reservation and billed input tokens, so a
+pilot can compare the worst case with what was billed.
 
 Versions. Every response's resolved model is recorded. The first answer pins it in the job's state file; a later
 answer from another version stops the job, both versions are recorded, and the job's next run starts from scratch on
@@ -34,12 +40,21 @@ the new version (answers are cached per resolved version, so the old version's n
 (`typesafe/jev-1.14`) is used only when Drex Max gives no answer to a job's first request, before anything else is
 sent, and the switch is recorded.
 
-Cache. Every answered body is written to data/decide/<resolved model>/<sha256 of state and questions>.json before it
-is parsed; a request whose answer is stored is never sent again, so reruns are free.
+Cache. Every answered body is kept before it is parsed: a receipt at data/decide/receipts/<sha256 of state and
+questions>.json first, then the body at data/decide/<resolved model>/<sha256>.json (data/decide/_unresolved/ when the
+model string cannot name a folder). The receipt makes a stored answer discoverable with or without a model pin, so a
+request whose answer is stored is never sent again and reruns are free. A stored answer off the contract is a recorded
+failure with the rules' decision; it is never resent and never ends the run.
 
 Secrets. The key is read from .env with python-dotenv inside the client at the moment of each call (only its name
-lives in config/decision_model.yaml). Errors carry the HTTP status and a sanitized error code, never a message from
-the server, a header or the key; nothing here logs a request.
+lives in config/decision_model.yaml). Every response body, success or error, has the key's value scrubbed at the
+transport boundary, before the cache, the ledger, an exception or an output sees it. Errors carry the HTTP status and
+a sanitized error code, never a message from the server, a header or the key; contract errors name the field and the
+expected type, never the value; nothing here logs a request.
+
+Provenance. A spending run records, beside its outputs, the SHA-256 of the output bytes and of the frozen items, the
+request set, the decision configuration (config_hash and lock_hash), and the dry run and test run it sent under.
+verified_outputs refuses outputs whose bytes, items, configuration, dry run or lock no longer match.
 """
 
 from __future__ import annotations
@@ -249,14 +264,17 @@ def expected_micros(body: dict, cfg: dict) -> int:
 
 def usage_micros(usage: dict, cfg: dict, model: str) -> tuple[int, str]:
     """A response's cost: its `usage.cost` (credits, one per dollar) when it reports one, else its tokens at the
-    standard price. Returns (micros, the source used)."""
-    cost = usage.get("cost") if isinstance(usage, dict) else None
+    standard price. Returns (micros, the source used). Raises ContractError for anything else, a usage that is not
+    an object included."""
+    if not isinstance(usage, dict):
+        raise ContractError("usage is not an object")
+    cost = usage.get("cost")
     if isinstance(cost, (int, float)) and not isinstance(cost, bool) and math.isfinite(cost) and cost >= 0:
         return _micros(Decimal(str(cost)) * 1_000_000), "usage.cost"
     r = rates(cfg, model)
-    inp, out = (usage or {}).get("input_tokens"), (usage or {}).get("output_tokens")
+    inp, out = usage.get("input_tokens"), usage.get("output_tokens")
     if not all(isinstance(v, int) and not isinstance(v, bool) and v >= 0 for v in (inp, out)):
-        raise ContractError("usage lacks input_tokens or output_tokens")
+        raise ContractError("usage.input_tokens and usage.output_tokens are not both non-negative integers")
     return _micros(Decimal(inp) * r["standard_input"] + Decimal(out) * r["output"]), "tokens at the standard price"
 
 
@@ -264,41 +282,43 @@ def usage_micros(usage: dict, cfg: dict, model: str) -> tuple[int, str]:
 
 def _prob(v, what: str) -> float:
     if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) or not 0 <= v <= 1:
-        raise ContractError(f"{what} is {v!r}, not a probability")
+        raise ContractError(f"{what} is not a number between 0 and 1")
     return float(v)
 
 
 def parse_answer(name: str, question: dict, a) -> dict:
     """One answer, checked against its question: {"type", ...} normalized, or {"type": "refusal"}."""
-    if not isinstance(a, dict) or "type" not in a:
-        raise ContractError(f"answer {name} is not an object with a type")
+    if not isinstance(a, dict) or not isinstance(a.get("type"), str):
+        raise ContractError(f"answers.{name} is not an object with a string type")
     if a["type"] == "refusal":
         return {"type": "refusal"}
     kind = question["type"]
     if a["type"] != kind:
-        raise ContractError(f"answer {name} has type {a['type']!r}, the question {kind!r}")
+        raise ContractError(f"answers.{name}.type is not {kind!r} or 'refusal'")
     conf = a.get("confidence")
     if conf is not None:
-        conf = _prob(conf, f"{name}.confidence")
+        conf = _prob(conf, f"answers.{name}.confidence")
     if kind == "noul":
-        return {"type": "noul", "p": _prob(a.get("noul"), f"{name}.noul")}
+        return {"type": "noul", "p": _prob(a.get("noul"), f"answers.{name}.noul")}
     probs = a.get("probabilities")
     if not isinstance(probs, dict) or not probs:
-        raise ContractError(f"answer {name} has no probabilities")
-    probs = {str(k): _prob(v, f"{name}.probabilities[{k}]") for k, v in probs.items()}
+        raise ContractError(f"answers.{name}.probabilities is not a non-empty object")
+    probs = {str(k): _prob(v, f"answers.{name}.probabilities.<option>") for k, v in probs.items()}
     if abs(sum(probs.values()) - 1) > PROB_SLACK:
-        raise ContractError(f"answer {name}'s probabilities sum to {sum(probs.values()):.3f}")
+        raise ContractError(f"answers.{name}.probabilities do not sum to 1")
     if kind == "choice":
         options = set(question["criteria"])
-        if not set(probs) <= options or a.get("choice") not in options:
-            raise ContractError(f"answer {name} names an option the question does not offer")
+        if not set(probs) <= options or not isinstance(a.get("choice"), str) or a["choice"] not in options:
+            raise ContractError(f"answers.{name}.choice or a key of its probabilities is not one of the question's "
+                                "options")
         return {"type": "choice", "choice": a["choice"], "probabilities": {k: probs.get(k, 0.0) for k in sorted(options)},
                 "confidence": conf}
     levels = {str(i) for i in range(len(question["criteria"]))}
     score = a.get("score")
     if not set(probs) <= levels or isinstance(score, bool) or not isinstance(score, (int, float)) \
             or not 0 <= score <= len(levels) - 1 + 1e-9:
-        raise ContractError(f"answer {name} has levels or a score outside the question's {len(levels)} levels")
+        raise ContractError(f"answers.{name}.score or a key of its probabilities is not one of the question's "
+                            f"{len(levels)} levels")
     return {"type": "score", "score": float(score), "probabilities": {k: probs.get(k, 0.0) for k in sorted(levels, key=int)},
             "confidence": conf}
 
@@ -310,16 +330,16 @@ def parse_response(body, questions: dict, prefix: str) -> dict:
         raise ContractError("the body is not a JSON object")
     model = body.get("model")
     if not isinstance(model, str) or not SAFE_MODEL.match(model) or not model.startswith(prefix):
-        raise ContractError(f"the resolved model {model!r} does not start with {prefix!r}")
+        raise ContractError(f"model is not a model name starting with {prefix!r}")
     answers = body.get("answers")
     if not isinstance(answers, dict):
-        raise ContractError("no answers object")
+        raise ContractError("answers is not an object")
     missing = sorted(set(questions) - set(answers))
     if missing:
-        raise ContractError(f"no answer for {missing}")
+        raise ContractError(f"answers lacks the questions {missing}")
     usage = body.get("usage")
     if not isinstance(usage, dict):
-        raise ContractError("no usage object")
+        raise ContractError("usage is not an object")
     parsed = {name: parse_answer(name, q, answers[name]) for name, q in questions.items()}
     return {"id": _safe(body.get("id")), "model": model, "provider": _safe(body.get("provider")),
             "answers": parsed, "refusals": sorted(n for n, a in parsed.items() if a["type"] == "refusal"),
@@ -385,10 +405,11 @@ class DecisionClient:
         url = self.cfg["base_url"].rstrip("/") + self.cfg["path"]
         payload = canonical(body).encode("utf-8")
         start = time.monotonic()
-        failure, response = None, None
+        failure, response, key = None, None, None
         try:
+            key = self._key()
             response = self._client().post(url, content=payload, headers={
-                "Authorization": f"Bearer {self._key()}", "Content-Type": "application/json"})
+                "Authorization": f"Bearer {key}", "Content-Type": "application/json"})
         except DecisionError as e:
             failure = DecisionError(e.kind)
         except httpx2.TimeoutException:
@@ -400,11 +421,15 @@ class DecisionClient:
         if failure is not None:
             raise failure
         elapsed = time.monotonic() - start
-        text = response.text
+        text = scrub(response.text, key)          # before the cache, the ledger, an exception or an output sees it
         try:
             parsed = json.loads(text)
         except json.JSONDecodeError:
             parsed = None
+        if key and _holds(parsed, key):           # the key in an escaped form the text replace could not see
+            parsed = _scrub_obj(parsed, key)
+            text = json.dumps(parsed, sort_keys=True)
+        key = None
         if response.status_code == 200:
             return CallResult(status="ok", http_status=200, body=parsed if isinstance(parsed, dict) else None,
                               raw=text, elapsed_s=elapsed)
@@ -413,6 +438,43 @@ class DecisionClient:
         code = err.get("code") if isinstance(err, dict) else None
         return CallResult(status=f"http_{response.status_code}", http_status=response.status_code, usage=usage,
                           tokens_consumed=consumed, error_code=_safe(code), elapsed_s=elapsed)
+
+
+REDACTED = "[redacted]"
+
+
+def scrub(text: str, key: str | None) -> str:
+    """A response body with every occurrence of the key's value replaced. Keys hold only letters, digits, '-' and
+    '_', which JSON never escapes, so the plain occurrence is the only form a JSON body can carry."""
+    return text.replace(key, REDACTED) if key else text
+
+
+def _holds(obj, key: str) -> bool:
+    if isinstance(obj, str):
+        return key in obj
+    if isinstance(obj, dict):
+        return any(_holds(k, key) or _holds(v, key) for k, v in obj.items())
+    if isinstance(obj, list):
+        return any(_holds(v, key) for v in obj)
+    return False
+
+
+def _scrub_obj(obj, key: str):
+    if isinstance(obj, str):
+        return obj.replace(key, REDACTED)
+    if isinstance(obj, dict):
+        return {_scrub_obj(k, key): _scrub_obj(v, key) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_scrub_obj(v, key) for v in obj]
+    return obj
+
+
+def usage_numbers(usage) -> dict | None:
+    """The token counts and cost of a usage object, numbers only: what the ledger records."""
+    if not isinstance(usage, dict):
+        return None
+    return {k: usage[k] for k in ("input_tokens", "output_tokens", "cost")
+            if isinstance(usage.get(k), (int, float)) and not isinstance(usage.get(k), bool)}
 
 
 def _error_usage(parsed) -> tuple[dict | None, bool]:
@@ -433,7 +495,7 @@ def _error_usage(parsed) -> tuple[dict | None, bool]:
 
 def cache_path(decide_dir: Path, resolved: str, h: str) -> Path:
     if not SAFE_MODEL.match(resolved) or ".." in resolved:
-        raise ContractError(f"resolved model {resolved!r} is not a safe folder name")
+        raise ContractError("model is not a safe folder name")
     return Path(decide_dir) / resolved / f"{h}.json"
 
 
@@ -446,15 +508,6 @@ def write_atomic(path: Path, text: str) -> None:
         f.flush()
         os.fsync(f.fileno())
     os.replace(tmp, path)
-
-
-def write_cache(decide_dir: Path, resolved: str, h: str, raw: str) -> Path:
-    """Store an answered body; the first copy is never replaced."""
-    path = cache_path(decide_dir, resolved, h)
-    if path.exists():
-        path = path.with_name(f"{h}.extra-{uuid.uuid4().hex[:8]}.json")
-    write_atomic(path, raw)
-    return path
 
 
 def state_path(decide_dir: Path, job: str) -> Path:
@@ -506,7 +559,7 @@ def dry_run(job: str, set_name: str, items, cfg: dict, totals: dict | None, *, d
     est, bound, expected, worst, cached = [], [], 0, 0, 0
     for it in items:
         body = build_body(model, it.state, it.questions)
-        if pinned and cache_path(decide_dir, pinned, it.request_hash).exists():
+        if stored_answer(decide_dir, it.request_hash, model, pinned)[0] is not None:   # answered: never sent again
             cached += 1
             continue
         est.append(estimate_tokens(body, cfg))
@@ -581,9 +634,18 @@ class Outcome:
     resolved_model: str | None = None
     attempts: int = 0
     cost_micros: int = 0
+    # What the X1 pilot compares: the request's size, what its last try reserved, and what was billed.
+    request_bytes: int = 0
+    input_bound: int = 0
+    reserved_micros: int = 0
+    billed_input_tokens: int | None = None
 
     def record(self) -> dict:
         return asdict(self)
+
+    def billing(self) -> dict:
+        return {k: getattr(self, k) for k in ("attempts", "request_bytes", "input_bound", "reserved_micros",
+                                                "billed_input_tokens", "cost_micros")}
 
 
 class _Gate:
@@ -634,17 +696,60 @@ class JobResult:
     spent_micros: int
 
 
+def receipt_path(decide_dir: Path, h: str) -> Path:
+    return Path(decide_dir) / "receipts" / f"{h}.json"
+
+
+UNRESOLVED = "_unresolved"     # where a body whose model string cannot name a folder is kept
+
+
+def stored_answer(decide_dir: Path, h: str, model: str, pinned: str | None) -> tuple[Path | None, dict | None]:
+    """Where the stored answer to request `h`, asked of `model`, lies, and its receipt: (None, None) when there is
+    none to use. A receipt is written before its body, so an answer is found whether or not a model was pinned. A
+    receipt for another model, or for an older resolved version than the pinned one, is not used: that request is
+    asked again (a new version reruns from scratch). Answers stored before receipts existed are found under the pin."""
+    p = receipt_path(decide_dir, h)
+    if p.exists():
+        try:
+            rec = json.loads(p.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return p, None                         # a receipt that cannot be read still means it was answered
+        if rec.get("model") != model:
+            return None, None
+        if pinned and rec.get("resolved_model") and rec["resolved_model"] != pinned:
+            return None, None
+        return Path(decide_dir) / rec["file"], rec
+    if pinned:
+        legacy = cache_path(decide_dir, pinned, h)
+        if legacy.exists():
+            return legacy, {"resolved_model": pinned, "file": str(legacy.relative_to(decide_dir))}
+    return None, None
+
+
 class Job:
-    """One decision job over a list of Items, through the ledger, the cache and the client."""
+    """One decision job over a list of Items, through the ledger, the cache and the client.
+
+    It enforces its own money rules: the caps agree with the ledger's, the budget is positive and within the job's
+    cap, the ledger has released the job, and the price was verified in the last 24 hours, checked again at every
+    request's admission (retries and the fallback model included). The dry run of exactly these items is the
+    caller's to require (spend_step does, through spend_checks)."""
 
     def __init__(self, job: str, cfg: dict, ledger: ledger_mod.Ledger, *, client_factory, budget_usd,
                  decide_dir: Path = DECIDE_DIR, sleep=time.sleep, rng: random.Random | None = None,
                  concurrency: int | None = None, out=print, now=None):
         if job not in JOBS:
             raise JobError(f"unknown decision job {job}")
+        check_caps(cfg)
+        try:
+            budget = Decimal(str(budget_usd))
+        except ArithmeticError:
+            raise JobError("the budget must be a number of dollars") from None
+        cap = Decimal(str(cfg["caps"]["jobs"][job]))
+        if not budget.is_finite() or budget <= 0 or budget > cap:
+            raise JobError(f"the budget must be a positive amount within {job}'s ${cap} cap")
         self.job, self.cfg, self.ledger = job, cfg, ledger
         self.client_factory, self.decide_dir = client_factory, Path(decide_dir)
-        self.budget = Decimal(str(budget_usd))
+        self.budget = budget
         self.sleep, self.rng, self.out = sleep, rng or random.Random(0), out
         self.now = now or (lambda: datetime.now().astimezone())
         ops = cfg["operations"]
@@ -657,17 +762,43 @@ class Job:
         self.model = self.state.get("model") or cfg["model"]
         self._lock = threading.Lock()
         self.stopped: str | None = None
+        self.stop_kind: str | None = None
         self.version_changed = False
         self.sent = 0
         self._client = None
 
-    # -- shared -----------------------------------------------------------------------------------------------------
+    # -- stopping and admission (one lock) ------------------------------------------------------------------------
 
-    def stop(self, reason: str) -> None:
+    def _stop_locked(self, reason: str, kind: str = "other") -> None:
+        if self.stopped is None:
+            self.stopped, self.stop_kind = reason, kind
+            self.out(f"{self.job}: stopping: {reason}")
+
+    def stop(self, reason: str, kind: str = "other") -> None:
         with self._lock:
-            if self.stopped is None:
-                self.stopped = reason
-                self.out(f"{self.job}: stopping: {reason}")
+            self._stop_locked(reason, kind)
+
+    def _open_locked(self) -> bool:
+        if self.stopped is None:
+            try:
+                check_price(self.cfg, self.now())
+            except JobError as e:
+                self._stop_locked(str(e), "price")
+        return self.stopped is None
+
+    def _open(self) -> bool:
+        """Before a reservation: the job has not stopped and the price is still fresh."""
+        with self._lock:
+            return self._open_locked()
+
+    def _admit(self) -> bool:
+        """At the transport, under the lock stop() takes: a request admitted here was admitted before any stop and
+        may finish; once the job stops, or the price goes stale, nothing more is admitted."""
+        with self._lock:
+            if not self._open_locked():
+                return False
+            self.sent += 1
+            return True
 
     def client(self):
         with self._lock:
@@ -676,11 +807,13 @@ class Job:
             return self._client
 
     def _note(self, unknown: bool) -> None:
+        """Every attempt's billing outcome, whatever its status: half of the last ten unknown stops the job."""
         with self._lock:
             self.recent.append(unknown)
             bad = sum(self.recent)
-        if bad >= self.unknown_stop:
-            self.stop(f"{bad} of the last {len(self.recent)} attempts ended with an unknown outcome")
+            if bad >= self.unknown_stop:
+                self._stop_locked(f"{bad} of the last {len(self.recent)} attempts ended with an unknown outcome",
+                                  "unknown")
 
     def _event(self, kind: str, **detail) -> None:
         with self._lock:
@@ -711,42 +844,85 @@ class Job:
                 {"at": self.now().isoformat(timespec="seconds"), "kind": "version_changed", "from": pinned,
                  "to": resolved, "note": "the job stopped; its next run starts from scratch on the new version"})
             save_state(self.decide_dir, self.job, self.state)
-        self.stop(f"the resolved model changed from {pinned} to {resolved}; rerun the job from scratch")
+            self._stop_locked(f"the resolved model changed from {pinned} to {resolved}; rerun the job from scratch",
+                              "version")
         return False
 
-    # -- one item ---------------------------------------------------------------------------------------------------
+    # -- stored answers -------------------------------------------------------------------------------------------
 
-    def _cached(self, it: Item) -> Outcome | None:
-        pinned = self.state.get("resolved_model")
-        if not pinned:
+    def _store(self, it: Item, r: CallResult) -> str | None:
+        """Keep an answered body before anything parses it: the receipt first, then the body, so a crash between
+        the two leaves a receipt and the request is never sent again. Returns the resolved model when its string
+        can name a folder."""
+        resolved = r.body.get("model") if isinstance(r.body, dict) else None
+        ok = isinstance(resolved, str) and bool(SAFE_MODEL.match(resolved)) and ".." not in resolved
+        folder = resolved if ok else UNRESOLVED
+        body_path = cache_path(self.decide_dir, folder, it.request_hash)
+        if body_path.exists():                     # never replace the first copy
+            body_path = body_path.with_name(f"{it.request_hash}.extra-{uuid.uuid4().hex[:8]}.json")
+        receipt = {"request_hash": it.request_hash, "model": self.model, "resolved_model": resolved if ok else None,
+                   "file": str(body_path.relative_to(self.decide_dir)), "job": self.job, "item_id": it.item_id,
+                   "at": self.now().isoformat(timespec="seconds")}
+        write_atomic(receipt_path(self.decide_dir, it.request_hash), json.dumps(receipt, sort_keys=True) + "\n")
+        write_atomic(body_path, r.raw or "")
+        return resolved if ok else None
+
+    def _stored(self, it: Item) -> Outcome | None:
+        """An answer stored by an earlier run: cached when it meets the contract; a recorded failure with the rules'
+        decision when it does not (never sent again, never stopping the run); None when there is none to use."""
+        path, rec = stored_answer(self.decide_dir, it.request_hash, self.model, self.state.get("resolved_model"))
+        if path is None:
             return None
-        path = cache_path(self.decide_dir, pinned, it.request_hash)
-        if not path.exists():
-            return None
-        parsed = parse_response(json.loads(path.read_text(encoding="utf-8")), it.questions, prefix_of(self.cfg, self.model))
+        failed = Outcome(it.item_id, it.request_hash, "fallback")
+        if rec is None or not path.exists():
+            failed.reason = "a stored answer is missing or unreadable (a crash after its receipt); not sent again"
+            return failed
+        try:
+            parsed = parse_response(json.loads(path.read_text(encoding="utf-8")), it.questions,
+                                    prefix_of(self.cfg, self.model))
+        except (ContractError, json.JSONDecodeError, UnicodeDecodeError, OSError) as e:
+            what = str(e) if isinstance(e, ContractError) else "the stored body is not JSON"
+            failed.reason = f"stored answer off the contract ({what}); not sent again"
+            return failed
+        if not self._pin(parsed["model"]):
+            failed.reason = "the resolved model changed"
+            return failed
         return Outcome(it.item_id, it.request_hash, "cached", answers=parsed["answers"], refusals=parsed["refusals"],
                        resolved_model=parsed["model"])
 
-    def _reserve(self, it: Item, body: dict, attempt: int) -> str | None:
+    # -- one item -------------------------------------------------------------------------------------------------
+
+    def _reserve(self, it: Item, body: dict, attempt: int, micros: int) -> str | None:
         try:
-            return self.ledger.reserve(self.job, it.item_id, Decimal(reservation_micros(body, self.cfg)) / 1_000_000,
-                                       ceiling_usd=self.budget,
+            return self.ledger.reserve(self.job, it.item_id, Decimal(micros) / 1_000_000, ceiling_usd=self.budget,
                                        detail={"model": body["model"], "request_hash": it.request_hash,
+                                               "request_bytes": len(canonical(body).encode("utf-8")),
                                                "input_bound": input_bound(body, self.cfg),
                                                "est_input_tokens": estimate_tokens(body, self.cfg), "attempt": attempt})
         except ledger_mod.CapReached as e:
-            self.stop(f"the {e.scope} cap was reached: {e}")
+            self.stop(f"the {e.scope} cap was reached: {e}", "cap")
             return None
 
-    def _settle_failure(self, entry: str, r: CallResult) -> str:
+    def _settle(self, entry: str, it: Item, usage: dict, request_id, out: Outcome, detail: dict) -> int:
+        """Settle from reported usage; a settlement above its reservation stops the job, on every path."""
+        micros, src = usage_micros(usage, self.cfg, self.model)
+        numbers = usage_numbers(usage)
+        billed = numbers.get("input_tokens") if numbers else None
+        settled = self.ledger.settle(entry, Decimal(micros) / 1_000_000, numbers, request_id, "decisions",
+                                     detail={**detail, "cost_source": src, "request_bytes": out.request_bytes,
+                                             "input_bound": out.input_bound, "billed_input_tokens": billed})
+        out.billed_input_tokens = billed if isinstance(billed, int) else out.billed_input_tokens
+        if settled["over"]:
+            self.stop(f"a settlement passed its reservation ({it.item_id}): the worst case did not hold", "over")
+        return micros
+
+    def _settle_failure(self, entry: str, it: Item, r: CallResult, out: Outcome) -> str:
         kind = billing_outcome(status=r.http_status, kind=r.status, usage=r.usage, tokens_consumed=r.tokens_consumed)
         if kind == "void":
             self.ledger.void(entry, f"{r.status}: not billed")
         elif kind == "usage":
             try:
-                micros, src = usage_micros(r.usage, self.cfg, self.model)
-                self.ledger.settle(entry, Decimal(micros) / 1_000_000, r.usage, None, "decisions",
-                                   detail={"cost_source": src, "status": r.status})
+                out.cost_micros += self._settle(entry, it, r.usage, None, out, {"status": r.status})
             except ContractError:
                 self.ledger.settle_unknown(entry, f"{r.status} with unpriceable usage")
                 kind = "unknown"
@@ -754,23 +930,30 @@ class Job:
             self.ledger.settle_unknown(entry, f"{r.status}: outcome unknown, kept as spent")
         return kind
 
+    def _refused(self, out: Outcome, probe: bool) -> Outcome:
+        if probe and self.stop_kind == "unknown":
+            raise _Unavailable(self.stopped)
+        out.reason = f"job stopped: {self.stopped}"
+        return out
+
     def _send(self, it: Item, probe: bool = False) -> Outcome:
         body = build_body(self.model, it.state, it.questions)
-        out = Outcome(it.item_id, it.request_hash, "fallback")
+        micros = reservation_micros(body, self.cfg)
+        out = Outcome(it.item_id, it.request_hash, "fallback", request_bytes=len(canonical(body).encode("utf-8")),
+                      input_bound=input_bound(body, self.cfg))
         for attempt in range(1, self.tries + 1):
-            if self.stopped:
-                out.reason = f"job stopped: {self.stopped}"
-                return out
-            entry = self._reserve(it, body, attempt)
+            if not self._open():
+                return self._refused(out, probe)
+            entry = self._reserve(it, body, attempt, micros)
             if entry is None:
-                out.reason = f"job stopped: {self.stopped}"
-                return out
-            out.attempts = attempt
+                return self._refused(out, probe)
+            out.attempts, out.reserved_micros = attempt, micros
+            admitted = False
             try:
                 with self.gate:
-                    with self._lock:
-                        self.sent += 1
-                    r = self.client().call(body)
+                    admitted = self._admit()
+                    if admitted:
+                        r = self.client().call(body)
             except DecisionError as e:          # raised before or while sending, with nothing to show for it
                 if e.kind == "missing_key":
                     self.ledger.void(entry, "no key in .env; nothing was sent")
@@ -779,11 +962,14 @@ class Job:
                 self.stop(f"the client failed: {e.kind}")
                 out.reason = e.kind
                 return out
+            if not admitted:
+                self.ledger.void(entry, f"not sent: the job stopped before admission ({self.stopped})")
+                return self._refused(out, probe)
             if r.ok:
                 return self._answered(it, entry, r, out)
-            kind = self._settle_failure(entry, r)
+            kind = self._settle_failure(entry, it, r, out)
             code = r.http_status
-            self._note(kind == "unknown" and code not in self.retry)
+            self._note(kind == "unknown")
             if code == 402:
                 self.stop("402: the OpenRouter account has no credits (Daniel resolves this)")
                 out.reason = "402"
@@ -795,6 +981,8 @@ class Job:
             if code in self.retry:
                 if code == 429:
                     self.gate.throttled()
+                if self.stopped:
+                    return self._refused(out, probe)
                 if attempt < self.tries:
                     self.sleep(self.base * 2 ** (attempt - 1) * self.rng.uniform(0.75, 1.25))
                     continue
@@ -802,6 +990,8 @@ class Job:
                     raise _Unavailable(f"{r.status} after {self.tries} tries")
                 out.reason = f"{r.status} after {self.tries} tries"
                 return out
+            if self.stopped and self.stop_kind != "unknown":
+                return self._refused(out, probe)
             if probe and (code == 404 or r.status in ("timeout", "connection") or (code or 0) >= 500):
                 raise _Unavailable(r.status)
             if code == 400:
@@ -812,27 +1002,21 @@ class Job:
         return out
 
     def _answered(self, it: Item, entry: str, r: CallResult, out: Outcome) -> Outcome:
-        resolved = (r.body or {}).get("model") if isinstance(r.body, dict) else None
-        if isinstance(resolved, str) and SAFE_MODEL.match(resolved) and ".." not in resolved:
-            write_cache(self.decide_dir, resolved, it.request_hash, r.raw or "")
+        resolved = self._store(it, r)
+        body = r.body if isinstance(r.body, dict) else {}
         try:
-            usage = (r.body or {}).get("usage")
-            micros, src = usage_micros(usage, self.cfg, self.model)
-            settled = self.ledger.settle(entry, Decimal(micros) / 1_000_000, usage, _safe((r.body or {}).get("id")),
-                                         "decisions", detail={"model": resolved, "cost_source": src})
-            out.cost_micros = micros
-            if settled["over"]:
-                self.stop(f"a settlement passed its reservation ({it.item_id})")
+            out.cost_micros += self._settle(entry, it, body.get("usage"), _safe(body.get("id")), out,
+                                            {"model": resolved})
         except ContractError as e:
             self.ledger.settle_unknown(entry, "an answer whose usage cannot be priced")
-            self.stop(str(e))
+            self.stop(str(e), "contract")
             out.reason = "contract"
             return out
         self._note(False)
         try:
             parsed = parse_response(r.body, it.questions, prefix_of(self.cfg, self.model))
         except ContractError as e:
-            self.stop(str(e))
+            self.stop(str(e), "contract")
             out.reason = "contract"
             return out
         if not self._pin(parsed["model"]):
@@ -843,19 +1027,19 @@ class Job:
             parsed["model"]
         return out
 
-    # -- the whole job ----------------------------------------------------------------------------------------------
+    # -- the whole job --------------------------------------------------------------------------------------------
 
     def run(self, items: list[Item]) -> JobResult:
         outcomes: list = [None] * len(items)
         todo = []
         for i, it in enumerate(items):
-            hit = self._cached(it)
+            hit = self._stored(it)
             if hit is not None:
                 outcomes[i] = hit
             else:
                 todo.append(i)
-        cached = len(items) - len(todo)
-        if todo and self.state.get("resolved_model") is None:     # the first request decides the model
+        cached = sum(o is not None and o.status == "cached" for o in outcomes)
+        if todo and self.state.get("resolved_model") is None and not self.stopped:   # the first request decides the model
             first = todo.pop(0)
             outcomes[first] = self._probe(items[first])
         try:
@@ -875,19 +1059,27 @@ class Job:
                          list(self.state.get("versions") or []), self.sent, cached, spent)
 
     def _probe(self, it: Item) -> Outcome:
+        """The job's first request, alone, before any other is sent. If Drex Max gives no answer (a 404, a 5xx, a
+        timeout, retries used up, or the unknown-outcome stop), the job moves to the fallback model, recorded. The
+        unknown-outcome stop is the one stop cleared for that move: nothing else is in flight, and every attempt it
+        counted stays settled in the ledger as spent."""
         try:
             return self._send(it, probe=True)
         except _Unavailable as e:
             if self.model != self.cfg["model"]:
                 self.stop(f"the fallback model {self.model} is unavailable too ({e})")
                 return Outcome(it.item_id, it.request_hash, "fallback", reason=str(e))
-            self._event("fallback_model", primary=self.model, fallback=self.cfg["fallback"]["model"], why=str(e))
-            self.out(f"{self.job}: {self.model} gave no answer to the first request ({e}); using the fallback "
-                     f"{self.cfg['fallback']['model']}, recorded in the job's state")
-            self.model = self.cfg["fallback"]["model"]
             with self._lock:
+                if self.stopped is not None and self.stop_kind != "unknown":
+                    return Outcome(it.item_id, it.request_hash, "fallback", reason=f"job stopped: {self.stopped}")
+                self.stopped = self.stop_kind = None
+                self.recent.clear()
+                self.model = self.cfg["fallback"]["model"]
                 self.state["model"] = self.model
                 save_state(self.decide_dir, self.job, self.state)
+            self._event("fallback_model", primary=self.cfg["model"], fallback=self.model, why=str(e))
+            self.out(f"{self.job}: {self.cfg['model']} gave no answer to the first request ({e}); using the fallback "
+                     f"{self.model}, recorded in the job's state")
             try:
                 return self._send(it, probe=True)
             except _Unavailable as e2:
@@ -955,10 +1147,10 @@ def dry_run_step(job: str, set_name: str, items: list[Item], cfg: dict, ledger_p
 
 
 def spend_checks(job: str, set_name: str, cfg: dict, budget_usd, *, decide_dir: Path = DECIDE_DIR,
-                 env_path: Path | None = None, now: datetime | None = None) -> tuple[list[Item], Decimal]:
+                 env_path: Path | None = None, now: datetime | None = None) -> tuple[list[Item], Decimal, dict]:
     """Everything a spending run needs before its first reservation: the caps agree, the budget is a positive amount
     within the job's cap, the key is in .env, the price was verified in the last 24 hours, and a dry run of exactly
-    these frozen items exists from the last 24 hours. Returns the items and the budget."""
+    these frozen items exists from the last 24 hours. Returns the items, the budget and the dry run."""
     check_caps(cfg)
     try:
         budget = Decimal(str(budget_usd))
@@ -972,12 +1164,15 @@ def spend_checks(job: str, set_name: str, cfg: dict, budget_usd, *, decide_dir: 
         raise JobError(f"no {cfg['key_name']} in .env: {job} is skipped and dispatch uses the rules (spec §13)")
     check_price(cfg, now)
     items = load_items(items_path(decide_dir, job, set_name))
-    check_dry_run(dryrun_path(decide_dir, job, set_name), request_set_hash(job, set_name, items), now)
-    return items, budget
+    dry = check_dry_run(dryrun_path(decide_dir, job, set_name), request_set_hash(job, set_name, items), now)
+    return items, budget, dry
 
 
-def write_outputs(path: Path, rows: list[dict]) -> None:
-    write_atomic(path, "".join(json.dumps(r, sort_keys=True) + "\n" for r in rows))
+def write_outputs(path: Path, rows: list[dict]) -> str:
+    """Write the rows and return the SHA-256 of the bytes written."""
+    text = "".join(json.dumps(r, sort_keys=True) + "\n" for r in rows)
+    write_atomic(path, text)
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def read_outputs(path: Path) -> list[dict]:
@@ -1008,7 +1203,70 @@ def summary(result: JobResult, items: list[Item], set_name: str, cfg: dict, tota
             "request_set_hash": request_set_hash(result.job, set_name, items), "contract": CONTRACT,
             "prompt_version": cfg["decisions"]["prompt_version"], "config_hash": config_hash(cfg),
             "ledger": {"spent_usd": jt.get("spent", 0) / 1e6, "held_usd": jt.get("held", 0) / 1e6,
-                       "cap_usd": float(cfg["caps"]["jobs"][result.job])}}
+                       "cap_usd": float(cfg["caps"]["jobs"][result.job])},
+            "billing": billing_summary(result.outcomes)}
+
+
+def billing_summary(outcomes) -> dict:
+    """What the pilot reads: per answered call, the billed input tokens against the request's bytes and its input
+    bound, and the cost against what it reserved (the worst case must cover every settlement)."""
+    billed = [o for o in outcomes if o.billed_input_tokens is not None]
+    ratio = lambda a, b: (a / b) if b else None  # noqa: E731
+    return {"calls_with_usage": len(billed),
+            "billed_input_tokens": sum(o.billed_input_tokens for o in billed),
+            "request_bytes": sum(o.request_bytes for o in billed),
+            "input_bound_tokens": sum(o.input_bound for o in billed),
+            "max_billed_over_bound": max((ratio(o.billed_input_tokens, o.input_bound) for o in billed), default=None),
+            "max_billed_tokens_per_request_byte": max((ratio(o.billed_input_tokens, o.request_bytes) for o in billed),
+                                                      default=None),
+            "cost_usd": sum(o.cost_micros for o in billed) / 1e6,
+            "max_cost_over_reservation": max((ratio(o.cost_micros, o.reserved_micros) for o in billed), default=None)}
+
+
+def file_sha256(path: Path) -> str:
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+class ProvenanceError(JobError):
+    """Outputs that are not the ones the current items, configuration and test run produced."""
+
+
+def verified_outputs(job: str, set_name: str, cfg: dict, *, decide_dir: Path = DECIDE_DIR,
+                     results_dir: Path = RESULTS_DIR) -> tuple[list[dict], dict]:
+    """The outputs to score, read once and checked against the provenance their run recorded: the output bytes'
+    hash, the frozen items' bytes and request set, the decision configuration (config_hash and lock_hash), and the
+    dry run (and its test run) they were sent under, which must still be the current dry run. Refuses stale or
+    altered outputs rather than relabeling them. Returns the rows and the provenance."""
+    spath = summary_path(results_dir, job, set_name)
+    if not spath.exists():
+        raise ProvenanceError(f"no run summary at {spath}; the job has not run")
+    doc = json.loads(spath.read_text(encoding="utf-8"))
+    prov = doc.get("provenance")
+    if doc.get("status") not in ("run", "stopped") or not isinstance(prov, dict):
+        raise ProvenanceError(f"the run summary at {spath} records no outputs to score (status {doc.get('status')!r})")
+    raw = outputs_path(decide_dir, job, set_name).read_bytes() if outputs_path(decide_dir, job, set_name).exists() \
+        else None
+    if raw is None or hashlib.sha256(raw).hexdigest() != prov.get("outputs_sha256"):
+        raise ProvenanceError("the outputs are missing or are not the bytes their run wrote")
+    rows = [json.loads(line) for line in raw.decode("utf-8").splitlines() if line]
+    ipath = items_path(decide_dir, job, set_name)
+    items = load_items(ipath)
+    stale = []
+    if file_sha256(ipath) != prov.get("items_sha256") or request_set_hash(job, set_name, items) != prov.get(
+            "request_set_hash"):
+        stale.append("the frozen items")
+    if prov.get("config_hash") != config_hash(cfg) or prov.get("lock_hash") != lock_hash(cfg):
+        stale.append("the decision configuration")
+    dpath = dryrun_path(decide_dir, job, set_name)
+    dry = json.loads(dpath.read_text(encoding="utf-8")) if dpath.exists() else {}
+    if dry.get("created_at") != prov.get("dryrun_created_at") or dry.get("test_run") != prov.get("test_run"):
+        stale.append("the dry run (and its test run)")
+    if [r.get("request_hash") for r in rows] != [i.request_hash for i in items]:
+        stale.append("the requests behind each row")
+    if stale:
+        raise ProvenanceError(f"the {job} outputs on {set_name} do not match {', '.join(stale)} as they are now; "
+                              "send the current items again before scoring")
+    return rows, prov
 
 
 def not_run(job: str, set_name: str, reason: str, results_dir: Path = RESULTS_DIR, now: datetime | None = None) -> dict:
@@ -1028,7 +1286,8 @@ def spend_step(job: str, set_name: str, cfg: dict, budget_usd, ledger_path: Path
     from src.scenarios.runner import GeneratorLock
 
     clock = now or (lambda: datetime.now().astimezone())
-    items, budget = spend_checks(job, set_name, cfg, budget_usd, decide_dir=decide_dir, env_path=env_path, now=clock())
+    items, budget, dry = spend_checks(job, set_name, cfg, budget_usd, decide_dir=decide_dir, env_path=env_path,
+                                      now=clock())
     factory = client_factory or (lambda: DecisionClient(cfg, env_path=env_path))
     with GeneratorLock(Path(decide_dir) / "decide.lock"):
         with ledger_mod.Ledger(ledger_path) as lg:
@@ -1039,8 +1298,14 @@ def spend_step(job: str, set_name: str, cfg: dict, budget_usd, ledger_path: Path
             result = run.run(items)
             totals = lg.totals()
     rows = decide_fn(result.outcomes, items, result)
-    write_outputs(outputs_path(decide_dir, job, set_name), rows)
+    for row, o in zip(rows, result.outcomes, strict=True):
+        row["billing"] = o.billing()
     doc = summary(result, items, set_name, cfg, totals, clock())
+    doc["provenance"] = {"outputs_sha256": write_outputs(outputs_path(decide_dir, job, set_name), rows),
+                         "items_sha256": file_sha256(items_path(decide_dir, job, set_name)),
+                         "request_set_hash": doc["request_set_hash"], "config_hash": config_hash(cfg),
+                         "lock_hash": lock_hash(cfg), "dryrun_created_at": dry.get("created_at"),
+                         "test_run": dry.get("test_run")}
     write_atomic(summary_path(results_dir, job, set_name), json.dumps(doc, indent=1, sort_keys=True) + "\n")
     c = doc["counts"]
     out(f"{job} on {set_name}: {c['answered']:,} answered, {c['cached']:,} from the cache, {c['fallback']:,} on the "

@@ -213,3 +213,24 @@ def test_x1_scores_the_controls_the_review_list_and_agreement_with_the_planner()
     weak = de.x1_scores(rows, resamples=50)
     assert weak["control_auroc"]["point"] < 0.8 and weak["soft_filter"]["works"] is False
     assert weak["soft_filter"]["review_list"] == []
+
+
+def test_f010_slices_carry_intervals_and_every_metric_and_say_why_one_is_undefined():
+    rows, labels = alerts(n_scen=4, per=6)
+    for r in rows:
+        if labels[r["alert_id"]]["shared"]:
+            labels[r["alert_id"]]["route_kind"] = "courier"     # the courier slice holds shared delays only
+    s = de.x2_scores(rows, labels, "val", CFG, resamples=100)
+    tube = s["slices"]["by_route_kind"]["tube"]
+    for m in ("model", "R1", "R2"):
+        for metric in ("place_accuracy", "action_appropriate", "role_accuracy", "breaches_averted_per_100_alerts",
+                       "recollections_started_per_100_alerts"):
+            assert {"point", "low", "high"} <= set(tube["methods"][m][metric])
+    assert tube["alerts"] == 12 and tube["scenarios"] == 4
+    assert {"low", "high", "share_ahead"} <= set(tube["differences"]["model - R2"]["role_accuracy"])
+    courier = s["slices"]["by_route_kind"]["courier"]
+    assert courier["shared_problem"]["model_auroc"]["undefined"] == "no negatives"
+    assert courier["shared_problem"]["model_auroc"]["point"] is None
+    assert tube["shared_problem"]["model_recall"]["undefined"] == "no positives"
+    assert set(s["slices"]["by_place"]) == {"in_tube_system"}
+    assert "escalate" in s["slices"]["by_place"]["in_tube_system"]

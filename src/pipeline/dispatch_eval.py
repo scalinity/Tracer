@@ -197,52 +197,73 @@ def _decision(row: dict, method: str) -> dict:
 
 def x2_scores(rows: Sequence[dict], labels: dict[str, dict], split: str, cfg: dict, *,
               resamples: int = ne.BOOTSTRAPS, seed: int = ne.BOOTSTRAP_SEED) -> dict:
+    """X2's metrics on the whole set and on each slice by true place and by route kind, every one with its
+    scenario-cluster bootstrap interval; a metric a slice cannot define (no positives, nothing flagged, one class
+    only) says "undefined" and why. The adoption rule reads the whole set."""
     found = float(cfg["counterfactual"]["found_after_alert_min"])
     received = float(cfg["counterfactual"]["received_after_found_min"])
     yes = float(cfg["decisions"]["noul_yes"])
     scored = [r for r in rows if labels[r["alert_id"]]["place"] is not None]
-    c = Clusters([r["scenario_id"] for r in scored], resamples, seed)
     lab = [labels[r["alert_id"]] for r in scored]
-    ones = np.ones(len(scored))
     per: dict = {}
     for m in METHODS:
         d = [_decision(r, m) for r in scored]
-        place = np.array([x["place"] == y["place"] for x, y in zip(d, lab)], dtype=float)
         action = np.array([x["action"] in appropriate_actions(y["place"], y["lost_in"]) for x, y in zip(d, lab)],
                           dtype=float)
-        role = np.array([x["role"] in appropriate_roles(y["place"], y["lost_in"]) for x, y in zip(d, lab)], dtype=float)
         lost = np.array([y["place"] == "lost" for y in lab], dtype=float)
-        averted = np.array([a and y["place"] != "lost" and y["breach"] and r["tick_min"] + found + received <= y["window_min"]
-                            for a, y, r in zip(action, lab, scored)], dtype=float)
-        per[m] = {"place": place, "action": action, "role": role, "averted": averted, "recollections": action * lost,
-                  "decisions": d}
-    out = {"set": split, "alerts": len(rows), "scored_alerts": len(scored),
-           "alerts_without_a_place": len(rows) - len(scored), "scenarios": len(c.names),
+        per[m] = {"place": np.array([x["place"] == y["place"] for x, y in zip(d, lab)], dtype=float),
+                  "action": action,
+                  "role": np.array([x["role"] in appropriate_roles(y["place"], y["lost_in"]) for x, y in zip(d, lab)],
+                                   dtype=float),
+                  "averted": np.array([a and y["place"] != "lost" and y["breach"]
+                                       and r["tick_min"] + found + received <= y["window_min"]
+                                       for a, y, r in zip(action, lab, scored)], dtype=float),
+                  "recollections": action * lost}
+    whole = _x2_block(np.arange(len(scored)), scored, lab, per, yes, resamples, seed)
+    out = {**whole, "set": split, "alerts": len(rows), "scored_alerts": len(scored),
+           "alerts_without_a_place": len(rows) - len(scored),
            "bootstrap": {"resamples": resamples, "seed": seed, "clusters": "scenarios"},
            "counterfactual": {"found_after_alert_min": found, "received_after_found_min": received, "source": "assumed"},
-           "model_source": _counts([r["dispatch"]["source"] for r in rows]),
-           "methods": {}, "differences": {}, "slices": {}}
-    for m in METHODS:
-        p = per[m]
-        out["methods"][m] = {
-            "place_accuracy": _ci(*c.ratio(p["place"], ones)),
-            "action_appropriate": _ci(*c.ratio(p["action"], ones)),
-            "role_accuracy": _ci(*c.ratio(p["role"], ones)),
-            "breaches_averted_per_100_alerts": _ci(*_per100(c, p["averted"], ones)),
-            "recollections_started_per_100_alerts": _ci(*_per100(c, p["recollections"], ones))}
-    for m in ("R1", "R2"):
-        out["differences"][f"model - {m}"] = {"role_accuracy": _diff(c, (per["model"]["role"], ones),
-                                                                     (per[m]["role"], ones))}
-    out["shared_problem"] = _binary_block(c, scored, lab, "shared", "shared_problem", yes)
-    out["escalate"] = _binary_block(c, scored, lab, "unrecoverable", "escalate", yes)
-    for name, key in (("by_place", lambda y, r: y["place"]), ("by_route_kind", lambda y, r: y["route_kind"])):
+           "model_source": _counts([r["dispatch"]["source"] for r in rows]), "slices": {}}
+    for name, key in (("by_place", "place"), ("by_route_kind", "route_kind")):
         groups: dict = {}
-        for i, (y, r) in enumerate(zip(lab, scored)):
-            groups.setdefault(key(y, r), []).append(i)
-        out["slices"][name] = {g: {"alerts": len(ix), **{m: {k: float(per[m][k][ix].mean())
-                                                             for k in ("place", "action", "role")} for m in METHODS}}
+        for i, y in enumerate(lab):
+            groups.setdefault(y[key], []).append(i)
+        out["slices"][name] = {g: _x2_block(np.asarray(ix), scored, lab, per, yes, resamples, seed)
                                for g, ix in sorted(groups.items())}
     out["adoption"] = adoption(out, binding=split == "test")
+    return out
+
+
+def _x2_block(ix: np.ndarray, scored, lab, per: dict, yes: float, resamples: int, seed: int) -> dict:
+    """Every X2 metric over the alerts `ix`, its intervals from a bootstrap over their own scenarios."""
+    rows = [scored[i] for i in ix]
+    sub = [lab[i] for i in ix]
+    c = Clusters([r["scenario_id"] for r in rows], resamples, seed)
+    ones = np.ones(len(ix))
+    out = {"alerts": len(ix), "scenarios": len(c.names), "methods": {}, "differences": {}}
+    for m in METHODS:
+        p = {k: v[ix] for k, v in per[m].items()}
+        out["methods"][m] = {
+            "place_accuracy": _defined(c.ratio(p["place"], ones), "no alerts"),
+            "action_appropriate": _defined(c.ratio(p["action"], ones), "no alerts"),
+            "role_accuracy": _defined(c.ratio(p["role"], ones), "no alerts"),
+            "breaches_averted_per_100_alerts": _defined(_per100(c, p["averted"], ones), "no alerts"),
+            "recollections_started_per_100_alerts": _defined(_per100(c, p["recollections"], ones), "no alerts")}
+    for m in ("R1", "R2"):
+        out["differences"][f"model - {m}"] = {"role_accuracy": _diff(c, (per["model"]["role"][ix], ones),
+                                                                     (per[m]["role"][ix], ones))}
+    out["shared_problem"] = _binary_block(c, rows, sub, "shared", "shared_problem", yes)
+    out["escalate"] = _binary_block(c, rows, sub, "unrecoverable", "escalate", yes)
+    return out
+
+
+def _defined(ratio: tuple, why: str) -> dict:
+    """A metric with its interval, or marked undefined with the reason when it has no value."""
+    point, draws = ratio
+    out = _ci(point, draws)
+    if point is None:
+        out["undefined"] = why
     return out
 
 
@@ -260,15 +281,22 @@ def _binary_block(c: Clusters, rows, lab, label_key: str, question: str, yes: fl
            "model_probabilities": int(has.sum())}
     sub = Clusters([r["scenario_id"] for r, h in zip(rows, has) if h], len(c.counts), ne.BOOTSTRAP_SEED) \
         if has.any() else None
+
+    def why(yy):
+        return "no alerts" if len(yy) == 0 else ("no positives" if yy.sum() == 0 else
+                                                 ("no negatives" if yy.sum() == len(yy) else "undefined"))
+    r2 = np.array([bool(r["r2"][question]) for r in rows], dtype=float)
     for name, fn in (("auroc", ne.auroc), ("auprc", ne.auprc)):
         if sub is not None:
-            out[f"model_{name}"] = _ci(fn(y[has], p_model[has]), _boot_stat(sub, fn, y[has], p_model[has]))
-        r2 = np.array([bool(r["r2"][question]) for r in rows], dtype=float)
-        out[f"R2_{name}"] = _ci(fn(y, r2), _boot_stat(c, fn, y, r2))
+            out[f"model_{name}"] = _defined((fn(y[has], p_model[has]), _boot_stat(sub, fn, y[has], p_model[has])),
+                                            why(y[has]))
+        else:
+            out[f"model_{name}"] = _defined((None, np.array([])), "no model probabilities")
+        out[f"R2_{name}"] = _defined((fn(y, r2), _boot_stat(c, fn, y, r2)), why(y))
     for m in ("model", "R2"):
         flag = np.array([bool(_decision(r, m)[question]) for r in rows], dtype=float)
-        out[f"{m}_precision"] = _ci(*c.ratio(flag * y, flag))
-        out[f"{m}_recall"] = _ci(*c.ratio(flag * y, y))
+        out[f"{m}_precision"] = _defined(c.ratio(flag * y, flag), "nothing flagged")
+        out[f"{m}_recall"] = _defined(c.ratio(flag * y, y), "no positives")
     return out
 
 

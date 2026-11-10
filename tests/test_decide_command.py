@@ -256,3 +256,75 @@ def test_x2_labels_place_each_alert_where_its_truth_segments_say(tiny):
     labels = dispatch_eval.x2_labels(rows, "val", tiny["store"])
     for r in rows:
         assert labels[r["alert_id"]]["place"] == r["want"]
+
+
+# --- Review findings F008 and F009 ------------------------------------------------------------------------------------
+
+def test_f008_the_first_test_store_read_happens_inside_the_locks_mutex(env, monkeypatch):
+    from contextlib import contextmanager
+
+    env.look("test")
+    depth, seen = {"n": 0}, []
+    real = ne._lock_transaction
+
+    @contextmanager
+    def tracked(path):
+        with real(path):
+            depth["n"] += 1
+            try:
+                yield
+            finally:
+                depth["n"] -= 1
+    monkeypatch.setattr(ne, "_lock_transaction", tracked)
+    real_inputs, real_sample = pipeline.alert_inputs, zeroshot.sample_ticks
+    monkeypatch.setattr(pipeline, "alert_inputs", lambda *a, **k: (seen.append(("X2", depth["n"])),
+                                                                   real_inputs(*a, **k))[1])
+    monkeypatch.setattr(zeroshot, "sample_ticks", lambda *a, **k: (seen.append(("X3", depth["n"])),
+                                                                   real_sample(*a, **k))[1])
+    assert env.cli("--job", "X2", "--set", "test", "--dry-run", "--relock-reason", "X2 joins the lock")[0] == 0
+    assert env.cli("--job", "X3", "--set", "test", "--dry-run", "--n", "20")[0] == 0
+    assert seen == [("X2", 1), ("X3", 1)]                 # each read inside the mutex, after the final checks
+
+
+def test_f009_score_only_refuses_outputs_from_another_decision_configuration(env):
+    assert env.cli("--job", "X2", "--set", "val", "--dry-run", "--n", "10")[0] == 0
+    assert env.cli("--job", "X2", "--set", "val", "--budget-usd", "0.10")[0] == 0
+    env.cfg["decisions"]["prompt_version"] = "p2"          # revised on validation, never sent
+    code, out = env.cli("--job", "X2", "--set", "val", "--score-only")
+    assert code == 1 and "the decision configuration" in out
+    assert not (env.results / "X2-val-scores.json").exists()
+
+
+def test_f009_score_only_refuses_outputs_altered_after_their_run(env):
+    assert env.cli("--job", "X2", "--set", "val", "--dry-run", "--n", "10")[0] == 0
+    assert env.cli("--job", "X2", "--set", "val", "--budget-usd", "0.10")[0] == 0
+    path = env.decide / "outputs" / "X2-val.jsonl"
+    path.write_text(path.read_text().replace('"drex-max"', '"rules"', 1))
+    code, out = env.cli("--job", "X2", "--set", "val", "--score-only")
+    assert code == 1 and "not the bytes their run wrote" in out
+
+
+def test_f009_on_test_outputs_sent_before_a_relock_are_never_scored_under_it(env):
+    env.look("test")
+    assert env.cli("--job", "X2", "--set", "test", "--dry-run", "--relock-reason", "X2 joins the lock")[0] == 0
+    assert env.cli("--job", "X2", "--set", "test", "--budget-usd", "0.10")[0] == 0
+    env.cfg["decisions"]["prompt_version"] = "p2"          # a new configuration relocks and rebuilds the states
+    code, out = env.cli("--job", "X2", "--set", "test", "--dry-run", "--relock-reason", "p2 on test")
+    assert code == 0 and "test run: relock" in out
+    before = len(logged(env))
+    code, out = env.cli("--job", "X2", "--set", "test", "--score-only")
+    assert code == 1 and "do not match" in out and len(logged(env)) == before    # refused before any look
+    assert not (env.results / "X2-test-scores.json").exists()
+
+
+def test_f009_scores_carry_the_provenance_they_were_checked_against(env):
+    assert env.cli("--job", "X2", "--set", "val", "--dry-run", "--n", "10")[0] == 0
+    assert env.cli("--job", "X2", "--set", "val", "--budget-usd", "0.10")[0] == 0
+    assert env.cli("--job", "X2", "--set", "val", "--score-only")[0] == 0
+    summary = json.loads((env.results / "X2-val.json").read_text())
+    scores = json.loads((env.results / "X2-val-scores.json").read_text())
+    assert scores["provenance"] == summary["provenance"]
+    assert summary["provenance"]["outputs_sha256"] == dc.file_sha256(env.decide / "outputs" / "X2-val.jsonl")
+    assert summary["billing"]["calls_with_usage"] == summary["counts"]["answered"]
+    rows = dc.read_outputs(env.decide / "outputs" / "X2-val.jsonl")
+    assert all(r["billing"]["billed_input_tokens"] == 900 and r["billing"]["request_bytes"] > 0 for r in rows)
