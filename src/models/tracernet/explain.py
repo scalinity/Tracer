@@ -626,8 +626,9 @@ def _sample(ids: Sequence[str], limit: int | None, seed: int) -> np.ndarray:
 
 def _checked(pred: P.Predictor, table, store_dir: Path, runs: list, history: P.History, test_run) -> list:
     """The history runs of a CheckedTable, once it holds for these alerts (see explain_alerts); raises otherwise."""
-    if not isinstance(table, P.CheckedTable):
-        raise TypeError("table= takes the CheckedTable predictor.checked_table returns, read with its lock check")
+    if not P.is_issued(table):
+        raise TypeError("table= takes the CheckedTable predictor.checked_table returns, read with its lock check "
+                        "(one built directly or cloned is refused)")
     if Path(store_dir).resolve() != table.store_dir:
         raise ValueError("the feature table was read from another store")
     if not set(runs) <= set(table.runs):

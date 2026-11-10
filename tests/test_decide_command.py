@@ -531,3 +531,28 @@ def test_f011_an_alert_naming_another_run_or_read_against_another_store_is_refus
     with pytest.raises(ValueError, match="not read and checked for"):
         env.pred.explain(_alert(sid, run), store_dir=env.store, table=only_history)
     assert env.pred.explain(_alert(sid, run), store_dir=env.store, table=checked).height == 1
+
+
+def test_f011_a_checked_table_built_directly_or_cloned_is_refused(env):
+    """Sol's third sequence: a CheckedTable constructed by hand with no locked splits, and a legitimate one cloned
+    with dataclasses.replace to drop its locked splits, test run and artifact. Neither was issued by checked_table."""
+    import dataclasses
+
+    from src.models.tracernet import features as F
+    from src.models.tracernet import predictor as P
+
+    env.look("test")
+    sid, run = _specimens(env.store, "test", 1)[0]
+    hist = P._history_runs(env.store, [run])
+    raw = F.load_table(env.store, runs=sorted({run, *hist}))
+    forged = P.CheckedTable(raw, env.store.resolve(), (run,), tuple(hist), (), None, None)
+    with pytest.raises(TypeError, match="built directly or cloned"):
+        env.pred.explain(_alert(sid, run), store_dir=env.store, table=forged)
+    methods = ne.baselines() + [ne.tracernet_method(str(ne.RISK_DIR / "test" / "*.parquet"))]
+    test_run = ne.guard_test_run("test", ne.lock_record(env.store, methods, artifact_dir=env.artifact))
+    checked = P.checked_table(env.pred, env.store, [run], test_run=test_run)
+    cloned = dataclasses.replace(checked, locked_splits=(), test_run=None, artifact_dir=None)
+    with pytest.raises(TypeError, match="built directly or cloned"):
+        env.pred.explain(_alert(sid, run), store_dir=env.store, table=cloned)
+    assert P.is_issued(checked) and not P.is_issued(cloned) and not P.is_issued(forged)
+    assert env.pred.explain(_alert(sid, run), store_dir=env.store, test_run=test_run, table=checked).height == 1

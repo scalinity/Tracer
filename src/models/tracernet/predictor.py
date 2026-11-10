@@ -40,6 +40,7 @@ import multiprocessing as mp
 import os
 import shutil
 import tempfile
+import weakref
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Sequence
@@ -102,7 +103,7 @@ class History:
     runs: tuple | None = None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class CheckedTable:
     """A feature table read in the same step as its lock check (checked_table): the store it came from, the runs it
     was read and checked for, their history runs, the locked splits among them, and the test run and artifact the
@@ -126,7 +127,18 @@ def checked_table(pred: "Predictor", store_dir: Path, runs, *, test_run=None) ->
     pred.check_lock(store_dir, runs, hist, History(), test_run)
     locked = _locked_splits(store_dir, set(runs) | set(hist))
     t = F.load_table(store_dir, runs=sorted(set(runs) | set(hist)))
-    return CheckedTable(t, store_dir.resolve(), tuple(runs), tuple(hist), tuple(locked), test_run, pred.artifact_dir)
+    issued = CheckedTable(t, store_dir.resolve(), tuple(runs), tuple(hist), tuple(locked), test_run, pred.artifact_dir)
+    _ISSUED.add(issued)
+    return issued
+
+
+# The CheckedTables checked_table issued: explain accepts only these, so one built directly or cloned with
+# dataclasses.replace (a new object, never issued) is refused rather than trusted for its fields.
+_ISSUED: "weakref.WeakSet[CheckedTable]" = weakref.WeakSet()
+
+
+def is_issued(table) -> bool:
+    return isinstance(table, CheckedTable) and table in _ISSUED
 
 
 class Predictor:
