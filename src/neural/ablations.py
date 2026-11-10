@@ -462,6 +462,12 @@ def _seconds(r: dict) -> float:
         sum(float((r.get(s) or {}).get("score_s") or 0) for s in ("val", "test"))
 
 
+def _lead(x: dict) -> str:
+    """A lead with its 95% interval, rounded to a tenth of a minute."""
+    r = lambda v: "n/a" if v is None else f"{float(v):.1f}"  # noqa: E731
+    return f"{r(x.get('point'))} (95% interval {r(x.get('low'))} to {r(x.get('high'))})"
+
+
 def control_lead(control: dict | None, margin: float) -> dict | None:
     """The negative control of A6: TracerNet minus the local analytic refit on control_v1world at its headline budget,
     3-2-1 weights, and whether it is large (at least `margin` minutes with the interval's lower end above zero)."""
@@ -553,8 +559,8 @@ def collect(*, root: Path = ABLATION_DIR, out_path: Path | None = None, control_
         ablations["A6"].setdefault("notes", []).append(
             "Negative control: " + ("not run yet (no control_v1world evaluation with TracerNet)." if control is None else
                                     f"TracerNet's lead over the local analytic refit on control_v1world at {control['budget']}"
-                                    f" is {control['median_warning_all_breaches_min']['point']} min (median, all breaches) "
-                                    f"and {control['capped_mean_warning_min']['point']} min (capped mean); "
+                                    f" is {_lead(control['median_warning_all_breaches_min'])} min (median, all breaches) "
+                                    f"and {_lead(control['capped_mean_warning_min'])} min (capped mean); "
                                     + ("large: treated as leakage until shown otherwise." if control["leakage_suspected"]
                                        else "small.")))
     steps = sorted({(r.get("train") or {}).get("steps") for r in results.values() if r.get("train")})

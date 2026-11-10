@@ -595,7 +595,10 @@ def section_ablations(data: dict) -> list[str]:
     for aid, ab in (a.get("ablations") or {}).items():
         out += [f"### {aid}. {ab.get('question', '')}", ""]
         if ab.get("status") != "done":
-            out += [f"{ab.get('status', NOT_RUN).capitalize()}: {ab.get('reason', 'no reason recorded')}.", ""]
+            why = str(ab.get("reason", "no reason recorded"))
+            status = ab.get("status", NOT_RUN)
+            out += [(why[0].upper() + why[1:] if why.lower().startswith(status.lower()) else f"{status.capitalize()}: {why}")
+                    + ("" if why.endswith(".") else "."), ""]
         arms = ab.get("arms") or {}
         if not arms:
             continue
@@ -605,8 +608,9 @@ def section_ablations(data: dict) -> list[str]:
                 s = ((arm.get(split) or {}).get(key)) or {}
                 if not s or s.get("mean") is None:
                     return "n/a"
-                rng = f" ({num(s['min'], 2)} to {num(s['max'], 2)})" if s.get("n", 1) > 1 else ""
-                return f"{num(s['mean'], 2)}{rng}"
+                d = 4 if key in ("val_sel", "brier_30", "brier_60") else 2    # these differ in the third decimal
+                rng = f" ({num(s['min'], d)} to {num(s['max'], d)})" if s.get("n", 1) > 1 else ""
+                return f"{num(s['mean'], d)}{rng}"
             rows.append([name, str(arm.get("seeds_done", 0)), stat("val", "val_sel"), stat("val", "capped_mean_warning_min"),
                          stat("val", "median_warning_all_breaches_min"), stat("test", "capped_mean_warning_min"),
                          stat("test", "median_warning_all_breaches_min"), stat("test", "brier_30"),
