@@ -447,6 +447,26 @@ LIBRARY_V2 = ROOT / "datasets" / "scenarios-v2.jsonl.gz"
 SPLITS_V2 = ROOT / "datasets" / "scenarios-v2.splits.json"
 SIM_A1_DIR = ROOT / "data" / "sim-a1"            # ablation A1's simulation (src/scenarios/freeze.py simulate_a1)
 STORE_V2_A1_DIR = ROOT / "data" / "store-v2-a1"  # and its store, which A1's arms train on
+CONTROL_SIM_DIR = ROOT / "data" / "sim-control"    # the v1-world scenario's replicates (spec §8.1 control_v1world)
+CONTROL_STORE_DIR = ROOT / "data" / "store-v2-control"  # and its own store, the negative control's set
+
+
+def build_control_v2(sim_dir: Path = CONTROL_SIM_DIR, store_dir: Path = CONTROL_STORE_DIR, *, workers: int = 1,
+                     replicates: int | None = None) -> dict:
+    """The control_v1world set (spec §8.1, §8.8): the v1-world scenario (src/sim/v1world.py) simulated for its
+    replicates (v1world.REPLICATES; run keys 190000 on) into its own folder and store. A store's splits are the v2
+    ones, so the scenario sits in val there; the evaluation finds it by its id (neural_eval.CONTROL_SCENARIO) and
+    refuses it only in a locked split. Returns the store's counts."""
+    from src.sim import run as sim_run, v1world
+
+    sim_dir = Path(sim_dir)
+    sim_dir.mkdir(parents=True, exist_ok=True)
+    scenario = v1world.scenario() | {"split": "val"}
+    raw = library_bytes([scenario])
+    (sim_dir / "library.jsonl.gz").write_bytes(raw)
+    reps = list(range(v1world.REPLICATES if replicates is None else int(replicates)))
+    sim_run.simulate_library([scenario], sim_dir, {"val": reps}, workers, library_sha256=_sha256_bytes(raw))
+    return build_v2(sim_dir, sim_dir / "library.jsonl.gz", None, Path(store_dir), workers=workers)
 
 
 def command_build_v2(*, workers: int | None = None, sim_dir: Path = SIM_DIR, store_dir: Path = STORE_V2_DIR,
