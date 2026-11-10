@@ -75,6 +75,7 @@ def env(tiny, tmp_path, monkeypatch):
 
     ne.risk_table("val", artifact, store_dir=tiny["store"], out_dir=ne.RISK_DIR / "val", workers=1)
     return SimpleNamespace(store=tiny["store"], artifact=artifact, root=root, cli=cli, look=look, sent=sent, cfg=cfg,
+                           pred=loaded,
                            decide=root / "data" / "decide", results=root / "results" / "neural" / "decisions",
                            lock=lock)
 
@@ -395,3 +396,138 @@ def test_f008_every_read_of_the_locked_store_happens_inside_the_locks_mutex(env,
                  ("X3 scoring", "load_specs_v2")):
         assert want in readers, want
     assert not [s for s in seen if s[0].endswith("spend")]       # a spend reads nothing from the store
+
+
+# --- Round three: F008's risk-table reads and F011's checked table ----------------------------------------------------
+
+def _risk_reads(monkeypatch, depth, seen, phase):
+    """Record every read of a file under the risk table folder (bytes, opens, parquet scans) with the lock's
+    transaction depth at that moment."""
+    import pathlib
+
+    import polars as pl
+
+    root = str(ne.RISK_DIR)
+
+    def under(x):
+        xs = x if isinstance(x, (list, tuple)) else [x]
+        return any(isinstance(v, (str, pathlib.PurePath)) and str(v).startswith(root) for v in xs)
+    for owner, name in ((pathlib.Path, "read_bytes"), (pathlib.Path, "open"), (pl, "read_parquet"),
+                        (pl, "scan_parquet")):
+        real = getattr(owner, name)
+
+        def wrapped(*a, _real=real, _name=name, **k):
+            if a and under(a[0]):
+                seen.append((phase["name"], f"risk {_name}", depth["n"]))
+            return _real(*a, **k)
+        monkeypatch.setattr(owner, name, wrapped)
+
+
+def _tracked(monkeypatch):
+    from contextlib import contextmanager
+
+    depth = {"n": 0}
+    real_tx = ne._lock_transaction
+
+    @contextmanager
+    def tracked(path):
+        with real_tx(path):
+            depth["n"] += 1
+            try:
+                yield
+            finally:
+                depth["n"] -= 1
+    monkeypatch.setattr(ne, "_lock_transaction", tracked)
+    return depth
+
+
+def test_f008_every_risk_table_read_on_test_happens_inside_the_locks_mutex(env, monkeypatch):
+    env.look("test")
+    depth, seen, phase = _tracked(monkeypatch), [], {"name": ""}
+    _risk_reads(monkeypatch, depth, seen, phase)
+    for name, args in (("X2 dry run", ("--job", "X2", "--set", "test", "--dry-run", "--relock-reason", "X2 joins")),
+                       ("X2 scoring", None), ("X3 dry run", ("--job", "X3", "--set", "test", "--dry-run", "--n", "20")),
+                       ("X3 scoring", None)):
+        phase["name"] = name
+        if args is None:                            # each scoring after its spend, which reads no risk file
+            job = name[:2]
+            phase["name"] = f"{job} spend"
+            assert env.cli("--job", job, "--set", "test", "--budget-usd", "0.10")[0] == 0
+            phase["name"] = name
+            args = ("--job", job, "--set", "test", "--score-only")
+        code, out = env.cli(*args)
+        assert code == 0, (name, out)
+    assert [s for s in seen if s[2] != 1] == []     # every risk file read inside the mutex, after the checks
+    assert {s[0] for s in seen} == {"X2 dry run", "X3 scoring"}    # the two looks that need the table's values
+
+
+def test_f008_with_no_lock_a_test_look_refuses_before_reading_any_risk_file(env, monkeypatch):
+    env.look("test")
+    env.lock.joinpath("test_lock.json").unlink()
+    depth, seen, phase = _tracked(monkeypatch), [], {"name": "X2 dry run"}
+    _risk_reads(monkeypatch, depth, seen, phase)
+    code, out = env.cli("--job", "X2", "--set", "test", "--dry-run", "--relock-reason", "X2 joins")
+    assert code == 1 and "no test lock" in out
+    assert seen == []
+
+
+def _alert(sid, run, tick=5):
+    import polars as pl
+
+    return pl.DataFrame({"alert_id": [f"{sid}@{tick}"], "specimen_id": [sid], "run": [run], "tick_min": [tick]})
+
+
+def test_f011_a_raw_feature_table_cannot_stand_in_for_the_test_locks_check(env):
+    """Sol's first sequence: a test alert with no test run, explained from a feature table read by hand."""
+    from src.models.tracernet import features as F
+    from src.models.tracernet import predictor as P
+
+    env.look("test")
+    sid, run = _specimens(env.store, "test", 1)[0]
+    hist = P._history_runs(env.store, [run])
+    table = F.load_table(env.store, runs=sorted({run, *hist}))
+    with pytest.raises((TypeError, ValueError, RuntimeError)):
+        env.pred.explain(_alert(sid, run), store_dir=env.store, history=P.History(runs=tuple(hist)), table=table)
+
+
+def test_f011_a_checked_table_still_needs_the_test_run_and_artifact_it_was_checked_for(env):
+    from src.models.tracernet import predictor as P
+
+    env.look("test")
+    sid, run = _specimens(env.store, "test", 1)[0]
+    with pytest.raises(RuntimeError, match="test lock"):
+        P.checked_table(env.pred, env.store, [run])                    # no test run: the lock check refuses
+    methods = ne.baselines() + [ne.tracernet_method(str(ne.RISK_DIR / "test" / "*.parquet"))]
+    test_run = ne.guard_test_run("test", ne.lock_record(env.store, methods, artifact_dir=env.artifact))
+    checked = P.checked_table(env.pred, env.store, [run], test_run=test_run)
+    assert checked.locked_splits == ("test",)
+    with pytest.raises(RuntimeError, match="test run"):
+        env.pred.explain(_alert(sid, run), store_dir=env.store, table=checked)        # test_run omitted
+    other = P.Predictor(env.pred.members, env.pred.schema, env.pred.calibration, manifest=env.pred.manifest)
+    with pytest.raises(RuntimeError, match="artifact"):
+        other.explain(_alert(sid, run), store_dir=env.store, test_run=test_run, table=checked)   # no artifact
+    explained = env.pred.explain(_alert(sid, run), store_dir=env.store, test_run=test_run, table=checked)
+    assert explained.height == 1 and len(explained["factors"][0]) > 0
+
+
+def test_f011_an_alert_naming_another_run_or_read_against_another_store_is_refused(env, tmp_path):
+    """Sol's second sequence: an alert claiming a run its specimen does not belong to, against an unrelated
+    store, with a raw table; then each identity check on a checked table."""
+    from src.models.tracernet import features as F
+    from src.models.tracernet import predictor as P
+
+    sid, run = _specimens(env.store, "val", 1)[0]
+    hist = P._history_runs(env.store, [run])
+    raw = F.load_table(env.store, runs=sorted({run, *hist}))
+    elsewhere = tmp_path / "elsewhere"
+    with pytest.raises((TypeError, ValueError)):
+        env.pred.explain(_alert(sid, hist[0]), store_dir=elsewhere, history=P.History(runs=tuple(hist)), table=raw)
+    checked = P.checked_table(env.pred, env.store, [run, *hist])
+    with pytest.raises(ValueError, match="does not belong to"):
+        env.pred.explain(_alert(sid, hist[0]), store_dir=env.store, table=checked)   # its row is in another run
+    with pytest.raises(ValueError, match="another store"):
+        env.pred.explain(_alert(sid, run), store_dir=elsewhere, table=checked)
+    only_history = P.checked_table(env.pred, env.store, hist)
+    with pytest.raises(ValueError, match="not read and checked for"):
+        env.pred.explain(_alert(sid, run), store_dir=env.store, table=only_history)
+    assert env.pred.explain(_alert(sid, run), store_dir=env.store, table=checked).height == 1

@@ -102,6 +102,33 @@ class History:
     runs: tuple | None = None
 
 
+@dataclass(frozen=True)
+class CheckedTable:
+    """A feature table read in the same step as its lock check (checked_table): the store it came from, the runs it
+    was read and checked for, their history runs, the locked splits among them, and the test run and artifact the
+    check held for. explain takes it in place of reading the store, and checks every alert against it."""
+    table: F.Table
+    store_dir: Path
+    runs: tuple
+    history_runs: tuple
+    locked_splits: tuple
+    test_run: object
+    artifact_dir: Path | None
+
+
+def checked_table(pred: "Predictor", store_dir: Path, runs, *, test_run=None) -> CheckedTable:
+    """Read the features of `runs` and their history runs with the predictor's lock check (check_lock) in the same
+    step. A caller on a locked split calls this inside the lock's mutex, so the check and the reads it guards cannot
+    be separated by a relock; what it returns needs no further read of the store."""
+    store_dir = Path(store_dir)
+    runs = sorted({int(r) for r in runs})
+    hist = _history_runs(store_dir, runs)
+    pred.check_lock(store_dir, runs, hist, History(), test_run)
+    locked = _locked_splits(store_dir, set(runs) | set(hist))
+    t = F.load_table(store_dir, runs=sorted(set(runs) | set(hist)))
+    return CheckedTable(t, store_dir.resolve(), tuple(runs), tuple(hist), tuple(locked), test_run, pred.artifact_dir)
+
+
 class Predictor:
     def __init__(self, members: Sequence[TracerNet], schema: dict, calibration: dict | None = None, *,
                  version: str = VERSION, policy_hash: str | None = None, manifest: dict | None = None,
@@ -369,12 +396,11 @@ class Predictor:
         ).sort(["alert_at", "specimen_id"])
 
     def explain(self, alerts: pl.DataFrame, *, top_k: int = 3, store_dir: Path, history: History | None = None,
-                test_run=None, workers: int = 1, table: F.Table | None = None) -> pl.DataFrame:
+                test_run=None, workers: int = 1, table: CheckedTable | None = None) -> pl.DataFrame:
         """The alerts with `factors` (spec §9.3: the top_k groups that raise the risk and the one that lowers it most)
         and `related` (up to 5 batch-mates by attention weight, which is not an explanation) filled in, explained
-        from `store_dir`, the store they were scored on. Runs of a locked split need `test_run`, as score does; or
-        `table`, a feature table already read from that store, with `history.runs` naming its history runs (then the
-        store is not read here)."""
+        from `store_dir`, the store they were scored on. Runs of a locked split need `test_run`, as score does.
+        `table`, a CheckedTable from checked_table, replaces the store read, and every alert is checked against it."""
         from src.models.tracernet import explain as X
 
         ex = X.explain_alerts(self, alerts, store_dir=store_dir, history=history, test_run=test_run, top_k=top_k,
