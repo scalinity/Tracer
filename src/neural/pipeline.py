@@ -13,6 +13,8 @@ run, generate and collect; the later stages join it with their tasks.
     python -m src.neural.pipeline report      (src/neural/report.py: results/neural/REPORT.md)
     python -m src.neural.pipeline explain --split val|test|test_ood   (spec §9.4's checks: explain_command below)
     python -m src.neural.pipeline export ...  (src/api/export_neural.py's own arguments: docs/demo/neural.json)
+    python -m src.neural.pipeline decide --job X1|X2|X3 --set SET --dry-run | --budget-usd N | --score-only
+                                              (the decision layer, spec §11: decide_command below)
 
 The dry run sends nothing, spends nothing and opens no connection: it builds every request of the job with the real
 planner and prompt and prices each one's worst case (what generate reserves: its input bound, every UTF-8 byte sent
@@ -490,6 +492,230 @@ def explain_command(split: str, *, store_dir: Path | None = None, artifact_dir: 
     return 0
 
 
+DECIDE_SETS = {"X1": ("library",), "X2": ("val", "test"), "X3": ("val", "test")}
+
+
+def decision_look(split: str, store_dir: Path, artifact_dir: Path, methods, parts: dict, cfg: dict, *,
+                  matched: bool = False, relock_reason: str | None = None, out=print):
+    """The test run for a decision-layer look at a locked split (spec §8.7). It rebuilds the lock record of the
+    split's TracerNet look (every baseline and TracerNet, `matched` as that look had it) with the decision-model
+    configuration hash added. When only that hash differs from the lock (the first decision-layer look, or a changed
+    decision configuration), it relocks with `relock_reason`, logged, and records TracerNet's risk table again (a
+    relock clears the recorded tables); any other difference refuses, so the decision layer never relocks over a
+    changed artifact, store or evaluation. When nothing differs, the look is logged as a repeat."""
+    from src.decide import client as dc
+    from src.pipeline import neural_eval as ne
+
+    if not ne.LOCK_PATH.exists():
+        raise ne.LockError(f"no test lock at {ne.LOCK_PATH}: the decision layer looks again at a test set an evaluation "
+                           f"has scored, so run `evaluate --split {split} --artifact ...` first")
+    locked = json.loads(ne.LOCK_PATH.read_text(encoding="utf-8"))
+    if ne.TRACERNET not in ((locked.get("risk_parts") or {}).get(split) or {}):
+        raise ne.LockError(f"the test lock records no TracerNet risk table for {split}: no look has scored TracerNet "
+                           "on it, so it has no alerts")
+    hashes = ne.lock_record(store_dir, methods, artifact_dir=artifact_dir, matched=matched,
+                            decision_model=dc.lock_hash(cfg))
+    changed = [k for k in ne.HASH_FIELDS if locked.get(k) != hashes[k]]
+    other = [k for k in changed if k != "decision_model_sha256"]
+    if other:
+        raise ne.LockError(f"these differ from the locked look at {split}: {', '.join(other)}; the decision layer "
+                           "relocks only to add its own configuration hash")
+    if changed and not (relock_reason or "").strip():
+        raise ne.LockError("the lock does not hold this decision-model configuration; spec §8.7 adds its hash to the "
+                           "lock record, which is a relock: rerun with --relock-reason")
+    run = ne.guard_test_run(split, hashes, relock_reason if changed else None, risk_parts=parts)
+    if run["status"] == "relock":
+        ne.record_risk_parts(run, parts)
+    elif run["status"] != "repeat":
+        raise ne.LockError(f"the {split} look was logged as {run['status']!r}")
+    out(f"{split} run: {run['status']} at {run['time']}")
+    return run
+
+
+def _lock_still_holds(split: str, dry: dict, cfg: dict) -> None:
+    """A spending run on a test set reads no test data, but sends states built under a test run: the lock must
+    still be the one that run recorded."""
+    from src.decide import client as dc
+    from src.pipeline import neural_eval as ne
+
+    rec = dry.get("test_run") or {}
+    locked = json.loads(ne.LOCK_PATH.read_text(encoding="utf-8")) if ne.LOCK_PATH.exists() else {}
+    if not rec or locked.get("time") != rec.get("lock_time") or locked.get("decision_model_sha256") != dc.lock_hash(cfg):
+        raise ne.LockError(f"the test lock changed since the {split} dry run built these states; run the dry run again")
+
+
+def _decide_risk(split: str, store_dir: Path, artifact_dir: Path, tracernet: str | None, cfg: dict, *,
+                 matched: bool, relock_reason: str | None, table: bool = True, out=print):
+    """TracerNet's risk table for the set (read once as hashed, when `table`; otherwise only its parts' hashes), its
+    parts' files, and the test run on a locked split."""
+    from src.pipeline import neural_eval as ne
+
+    tracernet = str(tracernet) if tracernet is not None else str(ne.RISK_DIR / split / "*.parquet")
+    methods = ne.baselines() + [ne.tracernet_method(tracernet)]
+    pinned = ne._pin_risk_tables(methods)
+    frame, parts = risk_snapshot(methods[-1].series.files) if table else (None, pinned)
+    if pinned != parts:
+        raise ValueError(f"the risk table at {tracernet} changed while it was read; run again")
+    run = None
+    if split in ne.LOCKED_SPLITS:
+        run = decision_look(split, store_dir, artifact_dir, methods, parts, cfg, matched=matched,
+                            relock_reason=relock_reason, out=out)
+        with ne._lock_transaction(ne.TEST_RUNS_PATH):
+            locked = json.loads(ne.LOCK_PATH.read_text(encoding="utf-8"))
+            if ((locked.get("risk_parts") or {}).get(split) or {}).get(ne.TRACERNET) != parts[ne.TRACERNET]:
+                raise ne.LockError(f"the test lock no longer records the {split} risk table this run read")
+            run.check(split, artifact_dir=artifact_dir, store_dir=store_dir)
+    return frame, methods[-1].series.files, run
+
+
+def alert_p_never(pred, alerts, store_dir: Path, test_run=None):
+    """The alerts with TracerNet's p_never at their ticks. The risk table keeps p_miss alone, so the alert ticks go
+    through the predictor's members as `score` sends every tick (features from the observed store, calibrated), with
+    the same lock check; only these ticks are scored."""
+    import numpy as np
+    import polars as pl
+
+    from src.models.tracernet import features as F
+    from src.models.tracernet import predictor as P
+
+    if alerts.height == 0:
+        return alerts
+    runs = sorted({int(r) for r in alerts["run"].to_list()})
+    hist = P._history_runs(store_dir, runs)
+    pred.check_lock(store_dir, runs, hist, P.History(), test_run)
+    t = F.load_table(store_dir, runs=sorted(set(runs) | set(hist)))
+    rows = t.rows_of(alerts["specimen_id"].to_list())
+    ticks = alerts["tick_min"].to_numpy().astype(np.float64)
+    owner = alerts["run"].to_numpy()
+    never = np.empty(len(rows))
+    for run in np.unique(owner):
+        sel = np.flatnonzero(owner == run)
+        batch = F.features_for_run(t, int(run), rows[sel], ticks[sel], pred.schema, bins=pred.bins)
+        never[sel] = pred.outputs(batch)["p_never"]
+    return alerts.with_columns(p_never=pl.Series(np.minimum(never, alerts["p_miss"].to_numpy())))
+
+
+def decide_items(job: str, split: str, cfg: dict, *, store_dir: Path, artifact_dir: Path, tracernet: str | None,
+                 matched: bool, relock_reason: str | None, n: int | None, seed: int, workers: int, out=print):
+    """The job's items, built from the observed store (X2, X3) or the library (X1), and the test run on a locked
+    split."""
+    import polars as pl
+
+    from src.decide import critic, dispatcher, facts, zeroshot
+    from src.models.tracernet.predictor import HISTORY_REPLICATE, Predictor
+    from src.pipeline import neural_eval as ne
+
+    if job == "X1":
+        from src.scenarios import audit
+        return critic.build_items(audit.records(), cfg, label_n=n, seed=seed), None
+    if job == "X3" and split not in ne.LOCKED_SPLITS:
+        table, run = None, None                    # X3 needs no risk table until it is scored
+    else:
+        table, _files, run = _decide_risk(split, store_dir, artifact_dir, tracernet, cfg, matched=matched,
+                                          relock_reason=relock_reason, table=job == "X2", out=out)
+    if job == "X3":
+        ticks = zeroshot.sample_ticks(store_dir, split, n or int(cfg["samples"]["X3"]), seed, test_run=run)
+        rows = facts.alert_facts(store_dir, [(t.specimen_id, t.run, t.tick_min) for t in ticks], test_run=run)
+        out(f"X3 on {split}: {len(ticks):,} ticks from {len({t.scenario_id for t in ticks}):,} scenarios")
+        return zeroshot.build_items(ticks, rows, cfg), run
+    risk = alert_inputs(table, store_dir, split)
+    pred = Predictor.load(artifact_dir)
+    history = pl.col("replicate") == HISTORY_REPLICATE
+    alerts = pred.alerts(risk.filter(~history), budget_per_shift=ne.HEADLINE_BUDGET, weights="default",
+                         tune_on=risk.filter(history))
+    sample = dispatcher.sample_alerts(alerts, n if n is not None else int(cfg["samples"]["X2"][split]), seed)
+    out(f"X2 on {split}: {sample.height:,} of {alerts.height:,} alerts at {ne.HEADLINE_BUDGET} per 8-hour shift, from "
+        f"{sample['scenario_id'].n_unique():,} whole scenarios; explaining them")
+    explained = alert_p_never(pred, pred.explain(sample, store_dir=store_dir, test_run=run, workers=workers),
+                              store_dir, test_run=run)
+    rows = facts.alert_facts(store_dir, explained.select("specimen_id", "run", "tick_min").rows(), test_run=run)
+    return dispatcher.build_items(explained, rows, cfg), run
+
+
+def decide_command(job: str, set_name: str | None, *, mode: str, paths: runner.Paths, budget_usd: str | None = None,
+                   n: int | None = None, seed: int | None = None, store_dir: Path | None = None,
+                   artifact_dir: Path | None = None, tracernet: str | None = None, matched: bool = False,
+                   relock_reason: str | None = None, workers: int = 1, train_store_dir: Path | None = None,
+                   client_factory=None, now=None, sleep=time.sleep, out=print) -> int:
+    """`decide --job X1|X2|X3 --set SET` with --dry-run (build and freeze the items, price them; no connection),
+    --budget-usd N (send the frozen items, spending at most N), or --score-only (score the outputs against the
+    labels through evaluate.py). X4 is not built."""
+    from src.decide import client as dc, critic, dispatcher, distill, zeroshot
+    from src.models.tracernet.predictor import DEFAULT_ARTIFACT
+    from src.pipeline import dispatch_eval, neural_eval as ne, store
+
+    if job == "X4":
+        out(distill.REASON)
+        return 1
+    sets = DECIDE_SETS[job]
+    set_name = (set_name or sets[0]) if job == "X1" else set_name
+    if set_name not in sets:
+        raise dc.JobError(f"{job} runs on {' or '.join(sets)}; name one with --set")
+    cfg = dc.load_config()
+    now = now or (lambda: datetime.now().astimezone())
+    decide_dir = paths.root / "data" / "decide"
+    results_dir = paths.root / "results" / "neural" / "decisions"
+    store_dir = Path(store_dir) if store_dir is not None else store.STORE_V2_DIR
+    artifact_dir = Path(artifact_dir) if artifact_dir is not None else DEFAULT_ARTIFACT
+    seed = int(cfg["samples"]["seed"]) if seed is None else seed
+
+    if mode == "dry-run":
+        items, run = decide_items(job, set_name, cfg, store_dir=store_dir, artifact_dir=artifact_dir,
+                                  tracernet=tracernet, matched=matched, relock_reason=relock_reason, n=n, seed=seed,
+                                  workers=workers, out=out)
+        d = dc.dry_run_step(job, set_name, items, cfg, paths.ledger, decide_dir=decide_dir, now=now(), out=out)
+        if run is not None:
+            locked = json.loads(ne.LOCK_PATH.read_text(encoding="utf-8"))
+            d["test_run"] = {"time": run["time"], "status": run["status"], "lock_time": locked.get("time")}
+            dc.write_atomic(dc.dryrun_path(decide_dir, job, set_name), json.dumps(d, indent=1, sort_keys=True) + "\n")
+        return 0
+
+    if mode == "spend":
+        if not dc.key_present(cfg, paths.env):
+            doc = dc.not_run(job, set_name, f"no {cfg['key_name']} in .env; dispatch uses rule R2 (spec §13)",
+                             results_dir, now())
+            out(f"{job} not run: {doc['reason']}")
+            return 1
+        if set_name in ne.LOCKED_SPLITS:
+            _lock_still_holds(set_name, json.loads(dc.dryrun_path(decide_dir, job, set_name).read_text(encoding="utf-8")),
+                              cfg)
+        decide_fn = {"X1": critic.answers, "X3": zeroshot.answers,
+                     "X2": lambda o, i, r: dispatcher.decisions(o, i, r, cfg)}[job]
+        doc = dc.spend_step(job, set_name, cfg, budget_usd, paths.ledger, decide_fn, client_factory=client_factory,
+                            decide_dir=decide_dir, results_dir=results_dir, env_path=paths.env, sleep=sleep, now=now,
+                            out=out)
+        return 2 if doc["stopped"] else 0
+
+    rows = dc.read_outputs(dc.outputs_path(decide_dir, job, set_name))
+    if job == "X1":
+        scores = dispatch_eval.x1_scores(rows, noul_yes=float(cfg["decisions"]["noul_yes"]))
+    else:
+        if set_name in ne.LOCKED_SPLITS:           # the look: its guard pins and checks the risk table's parts
+            _table, files, run = _decide_risk(set_name, store_dir, artifact_dir, tracernet, cfg, matched=matched,
+                                              relock_reason=None, table=False, out=out)
+        else:
+            glob = Path(tracernet) if tracernet is not None else ne.RISK_DIR / set_name / "*.parquet"
+            files, run = sorted(glob.parent.glob(glob.name)) if any(c in glob.name for c in "*?[") else [glob], None
+        if job == "X2":
+            labels = dispatch_eval.x2_labels(rows, set_name, store_dir, test_run=run)
+            scores = dispatch_eval.x2_scores(rows, labels, set_name, cfg)
+        else:
+            labels = dispatch_eval.x3_labels(rows, set_name, store_dir, test_run=run)
+            tn = dispatch_eval.tracernet_at(rows, files)
+            analytic, notes = dispatch_eval.analytic_local_at(rows, set_name, store_dir, train_store_dir=train_store_dir,
+                                                              test_run=run)
+            scores = dispatch_eval.x3_scores(rows, labels, tn, analytic, set_name, notes=notes)
+    scores |= {"job": job, "notice": dc.NOTICE, "created_at": now().isoformat(timespec="seconds"),
+               "config_hash": dc.config_hash(cfg)}
+    path = results_dir / f"{job}-{set_name}-scores.json"
+    dc.write_atomic(path, json.dumps(scores, indent=1, sort_keys=True, allow_nan=False) + "\n")
+    out(f"{job} on {set_name}: scored; wrote {path}")
+    if job == "X2":
+        a = scores["adoption"]
+        out(f"adoption rule held: {a['holds']} ({'binding' if a['binding'] else 'not binding: validation'})")
+    return 0
+
+
 def _limit(value: str) -> int | None:
     if value == "all":
         return None
@@ -599,6 +825,25 @@ def build_parser() -> argparse.ArgumentParser:
                                                "explanations-<split>.json otherwise")
     sub.add_parser("export", add_help=False, help="TracerNet's demo file, docs/demo/neural.json: every argument goes "
                                                   "to python -m src.api.export_neural")
+    p = sub.add_parser("decide", help="the decision layer's jobs X1 to X3 (spec §11): --dry-run, then --budget-usd, "
+                                      "then --score-only; test sets go through the lock")
+    p.add_argument("--job", required=True, choices=("X1", "X2", "X3", "X4"))
+    p.add_argument("--set", dest="decide_set", default=None, help="X1: library; X2 and X3: val or test")
+    mode = p.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--dry-run", action="store_true", help="build and freeze the items and price them; no "
+                                                             "connection, no spending")
+    mode.add_argument("--budget-usd", default=None, help="send the frozen items, spending at most this much")
+    mode.add_argument("--score-only", action="store_true", help="score the outputs against the labels")
+    p.add_argument("--n", type=int, default=None, help="X1: label scenarios; X2: alerts; X3: ticks (config default)")
+    p.add_argument("--seed", type=int, default=None)
+    p.add_argument("--store", default=None, help="store folder (default: the v2 store)")
+    p.add_argument("--artifact", default=None, help="TracerNet artifact (default artifacts/tracernet/v1)")
+    p.add_argument("--tracernet", default=None, help="the set's risk table (default data/neural/risk/<set>/*.parquet)")
+    p.add_argument("--matched", action="store_true", help="as the set's locked look was run (its lock record)")
+    p.add_argument("--relock-reason", default=None, help="a test set's first decision-layer look adds the decision "
+                                                         "model's hash to the lock, which needs a reason")
+    p.add_argument("--workers", type=int, default=1)
+    p.add_argument("--train-store", default=None, help="X3 scoring: the store whose train split gives the global fit")
     p = sub.add_parser("report", help="render results/neural/REPORT.md (spec §8.10)")
     p.add_argument("--out", default=None)
     p.add_argument("--ledger-json", default=None, help="ledger totals as JSON, when the ledger mirror is elsewhere")
@@ -713,6 +958,22 @@ def main(argv: list[str] | None = None, *, paths: runner.Paths | None = None, se
                                        tracernet=args.tracernet, matched=args.matched, limit=args.limit,
                                        workers=args.workers, out_path=Path(args.out) if args.out else None, out=out)
             except (neural_eval.LockError, ValueError, FileNotFoundError) as e:
+                out(f"error: {e}")
+                return 1
+        if args.command == "decide":
+            from src.decide import client as dc, facts, render
+            from src.pipeline import neural_eval
+            opt = (lambda v: Path(v) if v else None)
+            mode = "dry-run" if args.dry_run else ("score" if args.score_only else "spend")
+            try:
+                return decide_command(args.job, args.decide_set, mode=mode, paths=pipe.paths,
+                                      budget_usd=args.budget_usd, n=args.n, seed=args.seed, store_dir=opt(args.store),
+                                      artifact_dir=opt(args.artifact), tracernet=args.tracernet, matched=args.matched,
+                                      relock_reason=args.relock_reason, workers=args.workers,
+                                      train_store_dir=opt(args.train_store), client_factory=client_factory,
+                                      now=now, sleep=sleep, out=out)
+            except (dc.JobError, dc.DecisionError, neural_eval.LockError, facts.FactsError, render.RenderError,
+                    ValueError, FileNotFoundError) as e:
                 out(f"error: {e}")
                 return 1
         if args.command == "report":

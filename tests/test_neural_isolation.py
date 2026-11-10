@@ -119,3 +119,57 @@ def test_importing_every_training_module_never_opens_the_truth(monkeypatch):
     for info in pkgutil.walk_packages(src.neural.__path__, "src.neural."):
         importlib.import_module(info.name)
     assert not any(store.TRUTH_NAME in p for p in opened), opened
+
+
+# --- The decision layer (src/decide/, spec §11, §15.2) ---------------------------------------------------------------
+
+DECIDE = ROOT / "src" / "decide"
+
+
+def test_every_decision_module_is_scanned():
+    files = modules()
+    for name in ("client.py", "render.py", "rules.py", "facts.py", "dispatcher.py", "zeroshot.py", "critic.py",
+                 "distill.py"):
+        assert DECIDE / name in files, name
+
+
+def test_importing_every_decision_module_never_opens_the_truth(monkeypatch):
+    import src.decide
+
+    opened = []
+    real = duckdb.connect
+
+    def spy(path=":memory:", *a, **k):
+        opened.append(str(path))
+        return real(path, *a, **k)
+    monkeypatch.setattr(duckdb, "connect", spy)
+    for info in pkgutil.walk_packages(src.decide.__path__, "src.decide."):
+        importlib.import_module(info.name)
+    assert not any(store.TRUTH_NAME in p for p in opened), opened
+
+
+def test_decision_model_states_hold_no_hidden_field_no_id_and_no_time():
+    """Every alert and tick state passes render.check_alert_text, and the facts it is written from name nothing
+    from the hidden side."""
+    from src.decide import facts as F, render
+
+    f = {"specimen": {"type": "urine", "tests": ["culture"], "tier": 2, "priority": "stat", "unit_kind": "icu",
+                      "route_kind": "courier", "route": "hand_carry"},
+         "silence_min": 75.0, "window_min": 1440, "left_min": 1365.0,
+         "route_history": {"scope": "route kind", "n": 90, "p50": 40.0, "p90": 80.0, "share_faster": 0.8,
+                           "never_share": 0.01},
+         "mates": {"n": 3, "received": 1}, "route_last_receipt_min": None, "route_usual_gap_min": None,
+         "route_overdue": 1, "unit_outstanding": 0, "lab_receipts_60": 0, "lab_usual_receipts_60": None,
+         "shift": "night", "day_type": "weekend", "to_shift_change_min": 30.0, "staff_this_shift": None,
+         "staff_range": None, "courier_interval_min": None}
+    hidden = ("truth", "planted", "fault", "breach", "outcome", "cause", "disruption", "substate", "segment",
+              "scenario", "specimen_id", "run", "replicate")
+    assert not [k for k in f if any(h in k for h in hidden)]
+    for tn in (None, {"p_miss": 0.4, "p_never": 0.05, "factors": ["Monday 03:15, 30 min to shift change"]}):
+        text = render.alert_state(f, tn)
+        assert render.check_alert_text(text) == text
+        assert not any(h in text.lower() for h in hidden[:-3])
+    assert "facts.py" in F.__file__
+    for snippet in ("Seen at 03:15.", "SP-r100071-000001", "On 2026-01-05.", "a planted fault", "the breach"):
+        with pytest.raises(render.RenderError):
+            render.check_alert_text(snippet)

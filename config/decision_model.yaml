@@ -1,0 +1,86 @@
+# The decision layer: Drex Max v1.1 through OpenRouter's Decisions API (docs/neural/spec.md §11, Appendix A item 4).
+#
+# src/decide/client.py reads this file. The base URL lives here and nowhere under docs/. The key's value is read from
+# .env by the client at the moment of each call and is never logged or written anywhere; only its name is here.
+#
+# Money. The ledger (src/scenarios/ledger.py, data/openai/ledger.sqlite) holds the `decide` account and the jobs X1 to
+# X4 with the caps of config/openai_jobs.yaml. The caps below repeat them so this file states the whole decision layer;
+# the client refuses to run when the two files disagree, and a cap is never raised.
+#
+# Prices. Re-check OpenRouter's page for each model before every spending job (Appendix A item 4) and rewrite
+# `verified_at` (ISO date and time with a time zone). A spending command refuses a price older than 24 hours. Each
+# call reserves the larger of its input bound (every UTF-8 byte of the request plus framing) and its estimated input
+# tokens times 1.5, at the standard price ($0.12 per million for Drex Max, not the discounted $0.06), and settles from
+# the response's usage.cost, or, when a response has none, from its tokens at the standard price.
+
+provider: openrouter
+base_url: "https://openrouter.ai"
+path: "/api/alpha/decisions"
+env_file: ".env"            # relative to the repository root
+key_name: "OPENROUTER_API_KEY"
+timeout_s: 60
+
+model: "nace-ai/drex-max"
+resolved_prefix: "nace-ai/drex-max"   # the response's `model` must start with this; the full string is recorded
+# Used only if Drex Max is unavailable when a job starts (its first request fails with no answer after every retry),
+# and recorded in the job's state file and summary. A job never switches model once a request has been answered.
+fallback:
+  model: "typesafe/jev-1.14"
+  resolved_prefix: "typesafe/jev-1.14"
+contract: "decisions-alpha-2026-11-09"  # the response shape the client checks (notes: the API is labeled alpha)
+
+price:
+  verified_at: null          # set when the pages are checked (Appendix A item 4); null refuses every spending job
+  checked_by: null
+  source_urls:
+    nace-ai/drex-max: "https://openrouter.ai/nace-ai/drex-max"
+    typesafe/jev-1.14: "https://openrouter.ai/typesafe/jev-1.14"
+  # USD per million tokens. `listed` is the price the page shows today; `standard` is the price without any
+  # discount, which every reservation uses. Output is free on both pages.
+  models:
+    nace-ai/drex-max: {listed_input: 0.06, standard_input: 0.12, output: 0.0, discount_shown: true}
+    typesafe/jev-1.14: {listed_input: 0.042, standard_input: 0.042, output: 0.0, discount_shown: false}
+
+caps:
+  account: decide
+  account_usd: 8.00
+  jobs: {X1: 1.00, X2: 4.50, X3: 0.75, X4: 1.75}
+
+reservation:
+  input_multiplier: 1.5      # spec §11.5: estimated input tokens x 1.5
+  framing_per_request: 64    # tokens added to the byte bound for the request's framing (source: assumed)
+  framing_per_question: 16
+  chars_per_token: 3.5       # the local estimate of input tokens; never a reservation (source: assumed)
+
+operations:
+  retry_statuses: [429, 503, 529]   # spec §11.5; any other failure ends the item, which falls back to the rules
+  tries: 6
+  backoff_base_s: 2.0        # waits of about 2, 4, 8, 16 and 32 s between six tries, times a jitter of 0.75 to 1.25
+  concurrency_start: 8
+  concurrency_min: 1
+  unknown_window: 10         # the job stops when half of the last ten answered attempts end with an unknown outcome
+  unknown_stop: 5
+
+decisions:
+  noul_yes: 0.7              # TypeSafe's suggested starting point for "yes", fixed in advance (Appendix D A-09)
+  prompt_version: "p1"       # raise when a question's wording changes (validation only; spec §8.7)
+
+# The counterfactual of spec §11.3 (Appendix D A-08). Assumed, not measured: acting on an appropriate action finds the
+# specimen this many minutes after the alert, and it is received this many minutes later.
+counterfactual:
+  found_after_alert_min: 10
+  received_after_found_min: 5
+  source: assumed
+
+# Token budgets for the rendered states (spec §11.3), counted with the local estimate above.
+budgets:
+  X1: 1500
+  X2: 1200
+  X3: 1200
+
+# Sample sizes (spec §11.3).
+samples:
+  X1_controls_each: 150      # corrupted scenarios, and the same number of accepted ones beside them
+  X2: {val: 5000, test: 20000}
+  X3: 4000
+  seed: 0
