@@ -255,3 +255,196 @@ def test_the_drivers_subset_renders_as_test_ood_on_its_feature_scenarios(tmp_pat
     assert f"{c['clusters']:,} scenarios, {c['scored_specimens']:,} scored specimens" in feature
     assert "| 6/shift | tracernet | 3-2-1 |" in feature and "Not run yet" not in feature
     assert "The rule applied here" in whole and "The rule applied here" not in feature
+
+
+# --- Section 8: the decision layer ---------------------------------------------------------------------------------
+
+def _ci(point, half=0.02):
+    return {"point": point, "low": point - half, "high": point + half}
+
+
+def _summary(job, set_name, prompt="p1", spent=0.25, cap=4.5, calls=100, cost=0.01, cached=0):
+    return {"job": job, "set": set_name, "status": "run", "stopped": None, "prompt_version": prompt, "items": calls + cached,
+            "counts": {"answered": calls, "cached": cached, "fallback": 0}, "resolved_model": "nace-ai/drex-max-20261016",
+            "ledger": {"spent_usd": spent, "held_usd": 0.0, "cap_usd": cap},
+            "billing": {"calls_with_usage": calls, "cost_usd": cost, "max_billed_over_bound": 0.31 if calls else None,
+                        "max_cost_over_reservation": 0.16 if calls else None},
+            "notice": "Synthetic data, with no clinical review. Decision-model answers are zero-shot."}
+
+
+def _x2_block(model_role, r1_role=0.46, r2_role=0.68):
+    methods = {m: {"place_accuracy": _ci(p), "action_appropriate": _ci(p), "role_accuracy": _ci(r),
+                   "breaches_averted_per_100_alerts": _ci(9.2, 1.0),
+                   "recollections_started_per_100_alerts": _ci(0.0, 0.0) | {"low": 0.0}}
+               for m, p, r in (("model", 0.31, model_role), ("R1", 0.20, r1_role), ("R2", 0.42, r2_role))}
+    yes = {f"{w}_{k}": _ci(0.6) for w in ("model", "R2") for k in ("auroc", "auprc", "precision", "recall")}
+    return {"alerts": 40, "scenarios": 4, "methods": methods,
+            "differences": {f"model - {m}": {"role_accuracy": _ci(model_role - r, 0.02) | {"share_ahead": 0.0}}
+                            for m, r in (("R1", r1_role), ("R2", r2_role))},
+            "shared_problem": yes | {"positives": 18, "alerts": 40, "threshold": 0.7, "label": "shared"},
+            "escalate": yes | {"positives": 5, "alerts": 40, "threshold": 0.7, "label": "unrecoverable"}}
+
+
+def _x2_scores(set_name, model_role, *, holds=False, choices=True):
+    x = _x2_block(model_role) | {"set": set_name, "scored_alerts": 40, "alerts_without_a_place": 0,
+                                 "counterfactual": {"found_after_alert_min": 10.0, "received_after_found_min": 5.0,
+                                                    "source": "assumed"},
+                                 "slices": {"by_place": {"in_tube_system": _x2_block(model_role) | {"alerts": 30},
+                                                         "lost": _x2_block(model_role) | {"alerts": 10}},
+                                            "by_route_kind": {"tube": _x2_block(model_role)}},
+                                 "adoption": {"holds": holds, "binding": set_name == "test",
+                                              "checks": {"R1": {"holds": holds}, "R2": {"holds": holds}},
+                                              "dispatch_source": ("decision model" if holds else "rules R2")
+                                              if set_name == "test" else None}}
+    if choices:
+        x["choices"] = {"model": {"action": {"contact_courier_coordinator": 0.42, "check_receiving_queue": 0.30},
+                                  "place": {"with_courier": 0.5}}}
+    return x
+
+
+X1_SCORES = {"labels": 120, "labels_answered": 120, "controls": 20, "control_auroc": _ci(0.98, 0.01),
+             "soft_filter": {"works": True, "threshold": 0.8, "review_list": ["S0001", "S0002", "S0003"],
+                             "note": "flagged scenarios go to a review list; none is deleted"},
+             "control_scores_by_corruption": {"clean": {"n": 10, "mean_score": 2.74},
+                                              "rates_10x": {"n": 10, "mean_score": 0.40}},
+             "plausibility_levels": {"1": 3, "3": 117},
+             "failure_focus_agreement": {"n": 120, "share": 0.571},
+             "edge_tag_agreement": {"asked": 40, "share_yes": 0.983, "by_tag": {}}}
+X3_SCORES = {"set": "test", "ticks": 400, "scored_ticks": 396, "refused_or_unanswered": 4, "scenarios": 30, "misses": 150,
+             "methods": {m: {k: _ci(v) for k, v in zip(("auroc", "auprc", "brier", "ece"), vals)}
+                         for m, vals in (("decision_model", (0.62, 0.50, 0.24, 0.12)),
+                                         ("tracernet", (0.91, 0.85, 0.09, 0.03)),
+                                         ("analytic_local", (0.88, 0.80, 0.11, 0.04)))},
+             "differences": {"decision_model - tracernet": {"auroc": {"point": -0.29, "low": -0.33, "high": -0.25}}}}
+
+
+def decision_page(tmp_path, files: dict) -> str:
+    """The report with results/neural/decisions/ holding exactly `files` ({file name: document})."""
+    i = inputs(tmp_path)
+    folder = Path(i["decisions"])
+    folder.mkdir(parents=True, exist_ok=True)
+    for name, doc in files.items():
+        (folder / name).write_text(json.dumps(doc))
+    out = tmp_path / "results" / "neural" / "REPORT.md"
+    R.report_command(out_path=out, inputs=i, out=lambda *_: None)
+    return section(out.read_text(), 8)
+
+
+P1_OUTPUTS = "09d953acd28a3a225c8d795894cbbdfdafbbb47555768c510494a2ec517d33ab"
+P1_CHOICES = {"job": "X2", "set": "val", "prompt_version": "p1", "alerts": 5000, "outputs_sha256": P1_OUTPUTS,
+              "model": {"place": {"in_lab_awaiting_scan": {"alerts": 1477, "share": 0.2954}},
+                        "action": {"wait_and_recheck": {"alerts": 579, "share": 0.1158},
+                                   "check_receiving_queue": {"alerts": 3359, "share": 0.6718}}}}
+
+
+def every_decision_file(p1_role=0.335, p2_role=0.52, test_holds=False) -> dict:
+    pilot = _summary("X1", "library", spent=0.024707, cap=1.0, calls=320, cost=0.024707)
+    paid = _summary("X1", "library", spent=0.696058, cap=1.0, calls=8122, cost=0.671351, cached=320)
+    pilot["billing"] |= {"max_billed_over_bound": 0.331, "max_cost_over_reservation": 0.166}
+    paid["billing"] |= {"max_billed_over_bound": 0.353, "max_cost_over_reservation": 0.177}
+    return {"X1-library-pilot.json": pilot, "X1-library-paid.json": paid,
+            "X1-library.json": _summary("X1", "library", spent=0.696058, cap=1.0, calls=0, cost=0.0, cached=8442),
+            "X1-library-scores.json": X1_SCORES,
+            "X2-val-p1.json": _summary("X2", "val", "p1", spent=0.331374, calls=5000, cost=0.331374),
+            "X2-val-p1-scores.json": _x2_scores("val", p1_role, choices=False) | {"provenance": {"outputs_sha256": P1_OUTPUTS}},
+            "X2-val-p1-choices.json": P1_CHOICES,
+            "X2-val.json": _summary("X2", "val", "p2", spent=0.66, calls=5000, cost=0.33),
+            "X2-val-scores.json": _x2_scores("val", p2_role),
+            "X2-test.json": _summary("X2", "test", "p2" if p2_role > p1_role else "p1", spent=1.9, calls=20000, cost=1.24),
+            "X2-test-scores.json": _x2_scores("test", 0.74 if test_holds else 0.40, holds=test_holds),
+            "X3-test.json": _summary("X3", "test", spent=0.06, cap=0.75, calls=4000, cost=0.06),
+            "X3-test-scores.json": X3_SCORES}
+
+
+def test_the_decision_section_with_every_run_present(tmp_path):
+    s = decision_page(tmp_path, every_decision_file())
+    order = ["### What it is", "### Spend", "### X1", "### X2: prompt rounds on validation", "### X2 on test (binding)",
+             "### X3", "### X4", "### Notice"]
+    assert [s.index(h) for h in order] == sorted(s.index(h) for h in order)
+    assert "beats both R1 and R2 by at least 5 points, with the 95% interval of each difference above zero on test" in s
+    assert "| X3 on test | p1 | 4,000 (0 from the cache) | 4,000 | $0.0600 | $0.0600 of $0.75 | 0.31 | 0.16 |" in s
+    assert "| X1 pilot | p1 | 320 (0 from the cache) | 320 | $0.0247 | $0.0247 of $1.00 | 0.33 | 0.17 |" in s
+    assert "| X1 paid run | p1 | 8,442 (320 from the cache) | 8,122 | $0.6714 | $0.6961 of $1.00 | 0.35 | 0.18 |" in s
+    assert "| X1 refresh, from the cache | p1 | 8,442 (8,442 from the cache) | 0 | $0.0000 |" in s
+    assert ("X1 cost $0.0247 for its 320-call pilot, then $0.6714 for the 8,122 calls of its paid run: $0.6961 in all, "
+            "the ledger's total for the job. Its worst call, across both paid runs, billed 0.35 of its input bound and "
+            "0.18 of its reservation.") in s
+    assert "commit" not in s
+    assert "`nace-ai/drex-max-20261016`" in s and "The decide account so far: $2.6561 of its $8.00 cap" in s
+    assert "AUROC 0.980 (0.970 to 0.990) against the bar of 0.80, so plausibility works as a soft filter" in s
+    assert "3 scenarios, whose most likely level is one of the two lowest, go to a review list; none is deleted" in s
+    assert "| rates 10x | 10 | 0.40 |" in s and "57.1% of 120 scenarios" in s
+    assert "98.3% of the 40 asked" in s and "a lean toward yes rather than agreement" in s
+    assert "| Round one (p1) | 40 | 33.5 (31.5 to 35.5); 46.0; 68.0 |" in s
+    assert "`check_receiving_queue`, 67% (shares counted from this round's outputs)" in s     # p1 predates choices
+    assert "`contact_courier_coordinator`, 42% |" in s                                      # p2 records them
+    assert "no number on it is binding" in s
+    assert "prompt p2 (the selected round)." in s
+    assert "| Drex Max minus R2 | -28.0 (-30.0 to -26.0) | at least +5.0, interval above zero | failed |" in s
+    assert "The adoption rule did not hold (binding): the exports and the demo use rule R2's dispatch." in s
+    assert "| R2 (hand-written rules) | 42.0 (40.0 to 44.0) | 42.0 (40.0 to 44.0) | 68.0 (66.0 to 70.0) |" in s
+    assert "| Shared problem: Drex Max | 0.600 (0.580 to 0.620) |" in s and "| Escalate: R2 |" in s
+    assert "| `in_tube_system` | 30 | 40.0 | 46.0 | 68.0 | 31.0 | 9.2 |" in s and "| `tube` | 40 |" in s
+    assert "(`source: assumed`): acting on an appropriate action finds the specimen 10 minutes after the alert" in s
+    assert "| TracerNet | 0.910 (0.890 to 0.930) |" in s and "| Analytic model, local refit |" in s
+    assert "No: on the same ticks Drex Max ranks the misses worse than TracerNet" in s
+    assert "X4 (the distilled dispatcher) is not built" in s and "The rule did not hold on test, so X4 is not needed." in s
+    assert "zero-shot" in s.split("### Notice")[1] and "Not run" not in s
+
+
+def test_a_held_adoption_rule_puts_drex_max_in_the_exports(tmp_path):
+    s = decision_page(tmp_path, every_decision_file(test_holds=True))
+    assert "The adoption rule held (binding): the exports and the demo use Drex Max's dispatch." in s
+
+
+def test_the_decision_section_with_x2_and_x3_test_absent(tmp_path):
+    files = {k: v for k, v in every_decision_file().items() if not k.endswith("-test.json")
+             and not k.endswith("-test-scores.json")}
+    s = decision_page(tmp_path, files)
+    assert "Not run yet: X2 on test: it runs after the TracerNet test looks" in s
+    assert "Not run yet: X3 on test: it runs after the TracerNet test looks" in s
+    assert "X2 has not been scored on test yet." in s
+    assert "### Spend" in s and "| X2 on test |" not in s and "| X3 on test |" not in s
+    assert "Selection: test uses" in s                                     # both rounds scored: still named
+
+
+def test_a_run_without_scores_and_a_run_not_run_say_why(tmp_path):
+    files = every_decision_file()
+    del files["X2-test-scores.json"]
+    files["X3-test.json"] = {"job": "X3", "set": "test", "status": "not run", "reason": "no OPENROUTER_API_KEY in .env"}
+    del files["X3-test-scores.json"]
+    s = decision_page(tmp_path, files)
+    assert "Not run yet: X2 on test has run (its summary exists) but is not scored yet" in s
+    assert "Not run yet: X3 on test: no OPENROUTER_API_KEY in .env." in s
+
+
+@pytest.mark.parametrize("p1_role,p2_role,named", [(0.335, 0.52, "round two (p2, 52.0% against 33.5%)"),
+                                                   (0.45, 0.40, "round one (p1, 45.0% against 40.0%)")])
+def test_the_selection_line_names_the_round_with_the_higher_validation_role_accuracy(tmp_path, p1_role, p2_role, named):
+    s = decision_page(tmp_path, every_decision_file(p1_role, p2_role))
+    assert f"Selection: test uses the round with the higher validation role accuracy, {named}." in s
+
+
+def test_with_one_round_scored_the_selection_waits_for_the_second(tmp_path):
+    files = {k: v for k, v in every_decision_file().items() if not k.startswith("X2-val.") and k != "X2-val-scores.json"}
+    s = decision_page(tmp_path, files)
+    assert "Not run yet: X2 round two (p2): no X2-val-scores.json yet." in s
+    assert "it is named once both rounds are scored" in s and "Selection:" not in s
+
+
+def test_x1s_spend_and_round_ones_choices_drop_with_their_files(tmp_path):
+    files = every_decision_file()
+    for name in ("X1-library-pilot.json", "X1-library-paid.json", "X2-val-p1-choices.json"):
+        del files[name]
+    s = decision_page(tmp_path, files)
+    assert "| X1 pilot |" not in s and "| X1 paid run |" not in s and "for its 320-call pilot" not in s
+    assert "X1's job total in the ledger: $0.6961." in s and "answered 8,442 of its 8,442 items from the cache" in s
+    assert "| Round one (p1) |" in s and "not recorded in this scores file" in s
+
+
+def test_counted_choices_of_other_outputs_are_not_shown(tmp_path):
+    files = every_decision_file()
+    files["X2-val-p1-choices.json"] = P1_CHOICES | {"outputs_sha256": "0" * 64}
+    s = decision_page(tmp_path, files)
+    assert "not shown: the counted choices are not of the outputs these scores read" in s
+    assert "`check_receiving_queue`, 67%" not in s

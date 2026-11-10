@@ -1,0 +1,53 @@
+{
+ "billing": {
+  "billed_input_tokens": 409150,
+  "calls_with_usage": 320,
+  "cost_usd": 0.024707,
+  "input_bound_tokens": 1281267,
+  "max_billed_over_bound": 0.33134962805526036,
+  "max_billed_tokens_per_request_byte": 0.33861386138613864,
+  "max_cost_over_reservation": 0.1663716814159292,
+  "request_bytes": 1250531
+ },
+ "config_hash": "a8f252a764764c294178c5498f9b2734a2de876ad30651c92b016d78bcb9993d",
+ "contract": "decisions-alpha-2026-11-09",
+ "counts": {
+  "answered": 320,
+  "cached": 0,
+  "fallback": 0
+ },
+ "created_at": "2026-11-10T13:01:43-05:00",
+ "fallback_reasons": {},
+ "items": 320,
+ "job": "X1",
+ "ledger": {
+  "cap_usd": 1.0,
+  "held_usd": 0.0,
+  "spent_usd": 0.024707
+ },
+ "model": "nace-ai/drex-max",
+ "notice": "Synthetic data: laboratory weeks designed by language models and simulated by this project's code, with no clinical review. Decision-model answers are zero-shot and their calibration on this task is measured, never assumed.",
+ "prompt_version": "p1",
+ "provenance": {
+  "config_hash": "a8f252a764764c294178c5498f9b2734a2de876ad30651c92b016d78bcb9993d",
+  "dryrun_created_at": "2026-11-10T13:01:04-05:00",
+  "items_sha256": "30522dd70e53fe240687129fcb5d93c7eef6e4ab035118704b94c62bb6f799e0",
+  "lock_hash": "a52c7e2250ca5331fc882c431a7408fafe451ce219a940032f7e170033c641a7",
+  "outputs_sha256": "48816bbe3a769a5bb73d8e6fff70457e5e2bf9784e2f43771de0851bcc8dd43f",
+  "request_set_hash": "107e8429c4043734e280b011f2e191f615d0fefa2671748fe4eae0bdb58d0f1a",
+  "test_run": null
+ },
+ "refusals": {},
+ "request_set_hash": "107e8429c4043734e280b011f2e191f615d0fefa2671748fe4eae0bdb58d0f1a",
+ "requests_sent": 320,
+ "resolved_model": "nace-ai/drex-max-20261016",
+ "set": "library",
+ "status": "run",
+ "stopped": null,
+ "versions": [
+  {
+   "first_seen": "2026-11-10T13:01:13-05:00",
+   "resolved_model": "nace-ai/drex-max-20261016"
+  }
+ ]
+}

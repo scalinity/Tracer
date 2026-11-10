@@ -22,7 +22,8 @@ X2, per alert and per method (the decision model's dispatch, rule R1, rule R2):
 Every metric carries a 95% interval from a cluster bootstrap over scenarios (2,000 resamples, seed 0, the draws of
 neural_eval.draw_counts), as do the role-accuracy differences. The adoption rule (pre-registered): the decision
 model's dispatch is adopted only if its role accuracy beats both R1 and R2 by at least 5 points, with the lower end of
-the 95% interval of each difference above zero, on test. Otherwise R2 ships, and the comparison is reported.
+the 95% interval of each difference above zero, on test. Otherwise R2 ships, and the comparison is reported. Each
+method's choices (the share of alerts given each place and each action) are recorded beside the metrics.
 
     | True place            | Appropriate actions                                                          |
     | still_at_unit         | call_unit_confirm_sent                                                       |
@@ -231,8 +232,17 @@ def x2_scores(rows: Sequence[dict], labels: dict[str, dict], split: str, cfg: di
             groups.setdefault(y[key], []).append(i)
         out["slices"][name] = {g: _x2_block(np.asarray(ix), scored, lab, per, yes, resamples, seed)
                                for g, ix in sorted(groups.items())}
+    out["choices"] = {m: {k: _shares([_decision(r, m)[k] for r in rows]) for k in ("place", "action")}
+                      for m in METHODS}
     out["adoption"] = adoption(out, binding=split == "test")
     return out
+
+
+def _shares(values) -> dict:
+    """Each value's share of the list, the most frequent first (ties by name)."""
+    counts = _counts(values)
+    n = max(1, len(values))
+    return {k: counts[k] / n for k in sorted(counts, key=lambda k: (-counts[k], k))}
 
 
 def _x2_block(ix: np.ndarray, scored, lab, per: dict, yes: float, resamples: int, seed: int) -> dict:

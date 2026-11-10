@@ -234,3 +234,13 @@ def test_f010_slices_carry_intervals_and_every_metric_and_say_why_one_is_undefin
     assert tube["shared_problem"]["model_recall"]["undefined"] == "no positives"
     assert set(s["slices"]["by_place"]) == {"in_tube_system"}
     assert "escalate" in s["slices"]["by_place"]["in_tube_system"]
+
+
+def test_x2_scores_record_each_methods_choices_most_frequent_first():
+    rows, labels = alerts(n_scen=2, per=4)
+    rows[0]["dispatch"] = decision("still_at_unit", "call_unit_confirm_sent")
+    s = de.x2_scores(rows, labels, "val", CFG, resamples=0)
+    model = s["choices"]["model"]
+    assert list(model["action"].items()) == [("escalate_tube_system", 7 / 8), ("call_unit_confirm_sent", 1 / 8)]
+    assert sum(model["place"].values()) == pytest.approx(1.0)
+    assert s["choices"]["R2"]["action"] == {"call_unit_confirm_sent": 1.0}
