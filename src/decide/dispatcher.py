@@ -27,18 +27,21 @@ from src.decide import render, rules
 from src.decide.client import Item
 
 def sample_alerts(alerts: pl.DataFrame, n: int | None, seed: int) -> pl.DataFrame:
-    """Whole scenarios in the seed's order until at least n alerts are in (n None: every alert)."""
+    """Whole runs (one laboratory week of one scenario: every alert in it) in the seed's order until at least n
+    alerts are in (n None: every alert). A scenario's replicates hold hundreds of alerts between them, so whole
+    scenarios would fill a 5,000-alert sample from a dozen laboratories; whole runs spread it over hundreds, and the
+    cluster bootstrap still resamples by scenario."""
     if n is None or alerts.height <= n:
         return alerts
-    counts = alerts.group_by("scenario_id").len().rows()
-    order = sorted(counts, key=lambda r: (zlib.crc32(f"{seed}:{r[0]}".encode()), r[0]))
+    counts = alerts.group_by("scenario_id", "run").len().rows()
+    order = sorted(counts, key=lambda r: (zlib.crc32(f"{seed}:{r[0]}:{r[1]}".encode()), r[0], r[1]))
     keep, total = [], 0
-    for scenario, k in order:
+    for scenario, run, k in order:
         if total >= n:
             break
-        keep.append(scenario)
+        keep.append(run)
         total += k
-    return alerts.filter(pl.col("scenario_id").is_in(keep))
+    return alerts.filter(pl.col("run").is_in(keep))
 
 
 def raising_texts(factors) -> list[str]:

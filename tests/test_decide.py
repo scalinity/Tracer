@@ -657,3 +657,20 @@ def test_the_controls_are_half_corrupted_and_drawn_in_the_seeds_order():
 def test_x4_is_not_built_and_says_why():
     with pytest.raises(distill.NotBuilt, match="cut list"):
         distill.run()
+
+
+def test_the_x2_sample_takes_whole_runs_in_the_seeds_order_across_many_scenarios():
+    import polars as pl
+
+    from src.decide import dispatcher
+    rows = [{"scenario_id": f"S{s:03d}", "run": s * 10 + r, "alert_id": f"a{s}-{r}-{i}"}
+            for s in range(40) for r in range(10) for i in range(5)]          # 40 scenarios x 10 runs x 5 alerts
+    alerts = pl.DataFrame(rows)
+    sample = dispatcher.sample_alerts(alerts, 100, seed=0)
+    assert 100 <= sample.height < 105                                          # whole runs until n is reached
+    per_run = sample.group_by("run").len()["len"].to_list()
+    assert set(per_run) == {5}                                                 # every alert of each chosen run
+    assert sample["scenario_id"].n_unique() >= 8                               # spread; whole scenarios gave 2
+    assert sample.equals(dispatcher.sample_alerts(alerts, 100, seed=0))        # seeded
+    assert not sample.equals(dispatcher.sample_alerts(alerts, 100, seed=1))
+    assert dispatcher.sample_alerts(alerts, None, seed=0).height == alerts.height
