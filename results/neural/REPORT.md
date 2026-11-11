@@ -922,6 +922,8 @@ python -m src.neural.pipeline ablate --collect
 python -m src.neural.pipeline explain --split test --matched
 python -m src.neural.pipeline export --source legacy_v1
 python -m src.neural.pipeline report
+python -m src.neural.pipeline run --from-frozen --out SCRATCH
+python -m src.neural.pipeline run --from-frozen --evaluate-committed --out SCRATCH
 ```
 
 ### Hashes

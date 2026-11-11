@@ -1234,7 +1234,9 @@ COMMANDS = ("python -m src.neural.pipeline freeze --jobs O1,O2,O3", "python -m s
             "python -m src.neural.pipeline ablate --set core", "python -m src.neural.pipeline ablate --collect",
             "python -m src.neural.pipeline explain --split test --matched",
             "python -m src.neural.pipeline export --source legacy_v1",
-            "python -m src.neural.pipeline report")
+            "python -m src.neural.pipeline report",
+            "python -m src.neural.pipeline run --from-frozen --out SCRATCH",
+            "python -m src.neural.pipeline run --from-frozen --evaluate-committed --out SCRATCH")
 
 
 def section_reproduce(data: dict) -> list[str]:
