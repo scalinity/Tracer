@@ -503,6 +503,7 @@ The v2 scenario jobs (docs/neural/spec.md §4) call OpenAI's Responses API with 
 |---|---|---|---|---|
 | O1 pilot | One laboratory week for each of 24 briefs, on each of three models | 79 (72 plus 7 repairs) | $0.6003 of $3.00 | 69 accepted, 3 dropped; gate passed, Terra chosen for every stratum |
 | O2 main run | One laboratory week for each of 6,101 briefs, `gpt-6.1-terra` at low effort | 7,038 (6,100 plus 938 repairs) | $43.8659 of $44.00 | 6,023 accepted (98.7% of briefs), 52 dropped, 26 left unsent at the cap |
+| O3 round two | One laboratory week for each of 2,378 briefs aimed at validation's weak spots, `gpt-6.1-terra` at low effort | 2,733 (2,378 plus 355 repairs) | $17.7077 of $18.00 | 2,367 accepted (99.5% of briefs), 11 dropped; the library froze at 8,142 scenarios |
 
 
 ## The decision-model jobs
