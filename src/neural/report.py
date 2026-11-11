@@ -8,7 +8,7 @@ It renders the files the earlier stages wrote and nothing else:
   results/neural/test_ood_feature/evaluation.json   test_ood on the scenarios that carry the out-of-distribution
                                            feature (archetype multi_site_system or a scanner_downtime disruption),
                                            or a `subsets.ood_feature` entry inside the test_ood evaluation
-  results/neural/selection.json, hpo.json, ablations.json, test_lock.json, test_runs.jsonl,
+  results/neural/selection.json, hpo.json, ablations.json, explanations.json, test_lock.json, test_runs.jsonl,
   results/neural/ablations/test_runs.jsonl, results/neural/generation/pilot.json and round2-plan.json,
   artifacts/tracernet/v1/manifest.json, datasets/scenarios-v2.manifest.json, and the OpenAI ledger's totals (its
   append-only mirror replayed read-only through src/scenarios/ledger.py, else a JSON given with --ledger-json,
@@ -57,7 +57,7 @@ def default_inputs(root: Path = ROOT) -> dict:
             "pilot": neural / "generation" / "pilot.json", "round2": neural / "generation" / "round2-plan.json",
             "artifact": root / "artifacts" / "tracernet" / "v1" / "manifest.json",
             "manifest": root / "datasets" / "scenarios-v2.manifest.json",
-            "explanations": neural / "explanations", "decisions": neural / "decisions", "limits": neural / "limits.md",
+            "explanations": neural / "explanations.json", "decisions": neural / "decisions", "limits": neural / "limits.md",
             "ledger": root / "data" / "openai" / "ledger.sqlite", "ledger_json": None,
             "plots": neural / "plots", "root": root}
 
@@ -112,7 +112,7 @@ def load(inputs: dict) -> dict:
             "manifest": _json(inputs["manifest"]), "ledger": ledger_totals(inputs["ledger"], inputs["ledger_json"]),
             "limits": [line.rstrip() for line in Path(inputs["limits"]).read_text(encoding="utf-8").splitlines()
                        if line.strip()] if inputs.get("limits") and Path(inputs["limits"]).is_file() else [],
-            "explanations": Path(inputs["explanations"]).exists(), "decisions": Path(inputs["decisions"]).exists(),
+            "explanations": _json(inputs["explanations"]), "decisions": Path(inputs["decisions"]).exists(),
             "config": (yaml.safe_load(Path(CONFIG_PATH).read_text(encoding="utf-8")) or {}).get("ablations") or {}}
 
 
@@ -626,10 +626,61 @@ def section_ablations(data: dict) -> list[str]:
 # --- Sections 7 to 9 ---------------------------------------------------------------------------------------------------
 
 def section_explanations(data: dict) -> list[str]:
+    """Spec §8.10 item 7 from results/neural/explanations.json (src/models/tracernet/explain.py `run_checks`)."""
     out = ["## 7. Explanation checks and example alerts", ""]
-    if not data["explanations"]:
-        return out + [f"{NOT_RUN}: the explanations of spec §9 (task N9) have not been computed."]
-    return out + ["The explanation outputs are in results/neural/explanations/."]
+    ex = data["explanations"]
+    if ex is None:
+        return out + [f"{NOT_RUN}: the explanation checks of spec §9.4 (task N9) have not been run "
+                      "(no results/neural/explanations.json)."]
+    c = ex["checks"]
+    comp, dele, rand = c["completeness"], c["deletion"], c["randomization"]
+    budget, weights = ex.get("budget_per_shift"), ex.get("weights")
+    at = "" if budget is None else f" at {num(budget, 0)} alerts per shift"
+    under = "" if weights is None else f" ({weights} weights)"
+    given = ex.get("alerts_given", ex["alerts"])
+    scope = (f"{num(ex['alerts'])} alerts" if given == ex["alerts"] else
+             f"a seeded sample of {num(ex['alerts'])} of its {num(given)} alerts")
+    out += [f"Integrated gradients on the logit of the ensemble's mean p_miss, summed into ten factor groups (spec §9), "
+            f"on {scope} of `{ex.get('set') or 'an unnamed set'}`{at}{under}, "
+            f"{num(ex['steps'])} steps. Attributions explain the network, not the world, and the data is synthetic.",
+            ""]
+    rows = [["Completeness", f"median gap {pct(comp.get('median_relative_gap'), 2)} at {num(comp.get('steps'))} steps",
+             "within 1% for the median alert", held(comp["passed"])],
+            ["Deletion", f"top 3 beat 3 random groups in {pct(dele.get('share_top_beats_random'))} of "
+                         f"{num(dele.get('alerts'))} alerts; mean drop in p_miss {num(dele.get('mean_drop_top'), 4)} "
+                         f"against {num(dele.get('mean_drop_random'), 4)}", "at least 70%, with a larger mean drop",
+             held(dele["passed"])],
+            ["Randomization", f"mean Spearman {num(rand.get('mean_spearman'), 2)} (median "
+                              f"{num(rand.get('median_spearman'), 2)}) over {num(rand.get('alerts'))} alerts",
+             "below 0.3", held(rand["passed"])],
+            ["Factors", f"{num(ex['alerts_with_factors'])} of {num(ex['alerts'])} alerts carry factors", "every alert",
+             held(ex["alerts_with_factors"] == ex["alerts"])]]
+    out += table(["Check", "Result", "Rule", "Outcome"], rows)
+    closed, saturated = ex.get("closed_window_alerts", 0), ex.get("saturated_alerts", 0)
+    out += ["", f"Closed-window alerts: {num(closed)}. At or past its window's close an alert's p_miss is 1 by "
+                "construction, so it carries one window factor with no attribution and is left out of the three "
+                "checks above."
+            + (f" Another {num(saturated)} alerts reached the limit of the network's scale and are treated the same "
+               "way." if saturated else "")]
+    raising = ex.get("raising_groups") or {}
+    if raising:
+        ranked = sorted(raising.items(), key=lambda kv: (-kv[1], kv[0]))
+        out += ["", "Groups among the factors that raise the risk, by how often: "
+                + ", ".join(f"{g} {num(n)}" for g, n in ranked) + "."]
+    out += ["", "### Example alerts", "",
+            "The highest, the median and the lowest p_miss among the alerts explained. Related specimens are the "
+            "batch-mates the network attended to most, which is not an explanation."]
+    for e in ex.get("examples") or []:
+        where = f"{e['scenario_id']}, " if e.get("scenario_id") else ""
+        out += ["", f"**{e['alert_id']}** ({where}minute {num(e['tick_min'])} of a {num(e['window_min'])}-minute "
+                    f"window, p_miss {num(e['p_miss'], 3)})", ""]
+        out += table(["Direction", "Group", "Share", "Attribution (logit)", "Factor"],
+                     [[f["direction"], f["group"], pct(f["share"], 0), num(f["attribution"], 3), f["text"]]
+                      for f in e["factors"]])
+        related = ", ".join(r["specimen_id"] for r in e.get("related") or [])
+        if related:
+            out += ["", f"Related specimens: {related}."]
+    return out
 
 
 def section_decisions(data: dict) -> list[str]:
@@ -814,14 +865,17 @@ COMMANDS = ("python -m src.neural.pipeline freeze --jobs O1,O2,O3", "python -m s
             "python -m src.neural.pipeline store", "python -m src.neural.pipeline train --hpo",
             "python -m src.neural.pipeline train --rung A|B|C --seeds 0,1,2", "python -m src.neural.pipeline select",
             "python -m src.neural.pipeline calibrate",
-            "python -m src.neural.pipeline evaluate --split val --artifact artifacts/tracernet/v1",
+            "python -m src.neural.pipeline evaluate --split val --artifact artifacts/tracernet/v1 --matched",
             "python -m src.neural.pipeline weakspots",
-            "python -m src.neural.pipeline evaluate --split test --artifact artifacts/tracernet/v1",
-            "python -m src.neural.pipeline evaluate --split test_ood --artifact artifacts/tracernet/v1",
-            "python -m src.neural.pipeline evaluate --split legacy_v1 --artifact artifacts/tracernet/v1",
+            "python -m src.neural.pipeline evaluate --split test --artifact artifacts/tracernet/v1 --matched",
+            "python -m src.neural.pipeline evaluate --split test_ood --artifact artifacts/tracernet/v1 --matched",
+            "python -m src.neural.pipeline evaluate --split legacy_v1 --artifact artifacts/tracernet/v1 --matched",
+            "python -m src.neural.pipeline store --control",
             "python -m src.neural.pipeline evaluate --split control_v1world --artifact artifacts/tracernet/v1 "
-            "--store STORE_WITH_THE_V1_WORLD_SCENARIO --train-store data/store-v2",
+            "--store data/store-v2-control --train-store data/store-v2 --matched",
             "python -m src.neural.pipeline ablate --set core", "python -m src.neural.pipeline ablate --collect",
+            "python -m src.neural.pipeline explain --split test --matched",
+            "python -m src.neural.pipeline export --source legacy_v1",
             "python -m src.neural.pipeline report")
 
 

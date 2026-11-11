@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TracerNet demo file",
+  "description": "TracerNet's output beside the demo bundle (docs/neural/spec.md §10.5): per specimen, p_miss and p_never every 5 minutes to the 240-minute horizon, the alert minute of TracerNet, the local analytic model and the window rule at each of the bundle's 20 budgets, the factors and dispatch decision at TracerNet's headline alert, and the truth read through src/pipeline/evaluate.py. Synthetic data with no clinical review. Written by src/api/export_neural.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["neural_version", "notice", "source", "scenarios", "model", "store", "tick_min", "horizon_min", "grid_budgets",
+               "headline_index", "weightings", "methods", "knob_notes", "specimens"],
+  "properties": {
+    "neural_version": {"const": 1},
+    "notice": {"type": "string", "minLength": 1},
+    "source": {"enum": ["legacy_v1", "v2"]},
+    "scenarios": {"type": ["array", "null"], "items": {"type": "string"}, "description": "the v2 scenarios; null on legacy_v1"},
+    "model": {
+      "type": "object", "additionalProperties": false,
+      "required": ["version", "policy_hash", "rung", "members", "feature_schema_version", "manifest_sha256"],
+      "properties": {
+        "version": {"type": "string"}, "policy_hash": {"type": "string"}, "rung": {"enum": ["L", "A", "B", "C"]},
+        "members": {"type": "integer", "minimum": 1}, "feature_schema_version": {"type": "string"},
+        "manifest_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "store": {
+      "type": "object", "additionalProperties": false, "required": ["path", "sha256"],
+      "properties": {"path": {"type": "string"}, "sha256": {"type": ["string", "null"]}}
+    },
+    "tick_min": {"const": 5},
+    "horizon_min": {"const": 240},
+    "grid_budgets": {"type": "array", "minItems": 20, "maxItems": 20, "items": {"type": "number", "exclusiveMinimum": 0}},
+    "headline_index": {"type": "integer", "minimum": 0, "maximum": 19},
+    "weightings": {"const": ["3-2-1", "equal"]},
+    "methods": {
+      "type": "object", "additionalProperties": false, "required": ["tracernet", "analytic_local", "window_rule"],
+      "properties": {"tracernet": {"type": "string"}, "analytic_local": {"type": "string"}, "window_rule": {"type": "string"}}
+    },
+    "knob_notes": {"type": "array", "items": {"type": "string"}, "description": "where a local refit fell back to the global fit"},
+    "specimens": {"type": "array", "items": {"$ref": "#/$defs/specimen"}}
+  },
+  "$defs": {
+    "probabilities": {"type": "array", "maxItems": 48, "items": {"type": "number", "minimum": 0, "maximum": 1}},
+    "ticks": {"type": "array", "minItems": 20, "maxItems": 20, "items": {"type": ["integer", "null"], "minimum": 5},
+              "description": "the alert minute at each grid budget, null for no alert"},
+    "weighted": {
+      "type": "object", "additionalProperties": false, "required": ["3-2-1", "equal"],
+      "properties": {"3-2-1": {"$ref": "#/$defs/ticks"}, "equal": {"$ref": "#/$defs/ticks"}}
+    },
+    "factor": {
+      "type": "object", "additionalProperties": false, "required": ["group", "text", "share", "attribution", "direction"],
+      "if": {"properties": {"attribution": {"type": "null"}}, "required": ["attribution"]},
+      "then": {"properties": {"group": {"const": "window"}, "direction": {"const": "raises"}, "share": {"const": 1}}},
+      "properties": {
+        "group": {"enum": ["silence", "window", "specimen", "route_unit", "time_of_day", "batch_mates", "route_flow",
+                           "unit_flow", "lab_flow", "lab_history"]},
+        "text": {"type": "string", "minLength": 1},
+        "share": {"type": "number", "minimum": 0, "maximum": 1},
+        "attribution": {"type": ["number", "null"], "description": "in logit units of the ensemble's p_miss; null only for an alert whose window has closed (or whose logit is at the limit of the network's scale), whose single factor is the window group with share 1"},
+        "direction": {"enum": ["raises", "lowers"]}
+      }
+    },
+    "dispatch": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["source", "model", "place", "place_p", "action", "action_p", "role", "shared_problem_p", "escalate_p"],
+          "properties": {
+            "source": {"enum": ["drex-max", "distilled", "rules"]}, "model": {"type": ["string", "null"]},
+            "place": {"type": "string"}, "place_p": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+            "action": {"type": "string"}, "action_p": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+            "role": {"type": "string"}, "shared_problem_p": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+            "escalate_p": {"type": ["number", "null"], "minimum": 0, "maximum": 1}
+          }
+        }
+      ]
+    },
+    "specimen": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "run", "scenario_id", "type", "tier", "route", "window_min", "received_min", "p_miss", "p_never",
+                   "alerts", "headline", "truth"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^SP-r[0-9]+-[0-9]+$"},
+        "run": {"type": "integer", "minimum": 0},
+        "scenario_id": {"type": ["string", "null"]},
+        "type": {"type": "string"},
+        "tier": {"type": "integer", "minimum": 1, "maximum": 3},
+        "route": {"enum": ["tube", "hand_carry"]},
+        "window_min": {"type": "integer", "minimum": 1},
+        "received_min": {"type": ["number", "null"], "description": "minutes from the collection scan to the receipt scan"},
+        "p_miss": {"$ref": "#/$defs/probabilities"},
+        "p_never": {"$ref": "#/$defs/probabilities"},
+        "alerts": {
+          "type": "object", "additionalProperties": false, "required": ["tracernet", "analytic_local", "window_rule"],
+          "properties": {"tracernet": {"$ref": "#/$defs/weighted"}, "analytic_local": {"$ref": "#/$defs/weighted"},
+                         "window_rule": {"$ref": "#/$defs/ticks"}}
+        },
+        "headline": {
+          "type": "object", "additionalProperties": false, "required": ["alert_min", "factors", "dispatch"],
+          "properties": {"alert_min": {"type": ["integer", "null"], "minimum": 5},
+                         "factors": {"type": "array", "maxItems": 4, "items": {"$ref": "#/$defs/factor"}},
+                         "dispatch": {"$ref": "#/$defs/dispatch"}}
+        },
+        "truth": {
+          "type": "object", "additionalProperties": false, "required": ["breach", "fault"],
+          "properties": {"breach": {"type": "boolean"}, "fault": {"type": "string"}, "outcome": {"type": "string"},
+                         "cause": {"type": "string"}}
+        }
+      }
+    }
+  }
+}

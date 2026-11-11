@@ -63,6 +63,35 @@ if you want to re-run it.
 
 The system map opens directly from disk and needs no server: `open visuals/architecture.html`.
 
+## Neural model (v2)
+
+TracerNet is a neural risk model, an ensemble of three networks in `artifacts/tracernet/v1/`, and it is a
+challenger to the analytic model, not its replacement. It learns from a second dataset: OpenAI models wrote
+laboratory-week configurations, frozen in `datasets/scenarios-v2.jsonl.gz`, and seeded code in `src/sim/` plays
+each week out into scan events and labels under the same policy table. Every 5 minutes while a specimen is
+unreceived, it estimates the probability that the specimen misses its window. It replaces the analytic model only
+if it passes rules fixed before any test set was scored (`docs/neural/spec.md` §8.6). On the test set at 6 alerts
+per 8-hour shift, R1 (warning) failed, R2 (losses) and R3 (calibration) held, and R4 (equal alerts) failed, so the
+analytic model stays primary and TracerNet is reported as a challenger result. The full report, with intervals,
+slices, ablations and the explanation checks, is `results/neural/REPORT.md`. This data is synthetic too:
+laboratory weeks designed by language models and simulated by this project's code, with no clinical review.
+
+These run offline with the committed artifact. The v2 store in `data/store-v2/` comes from the frozen library
+through the pipeline's `simulate` and `store` commands; `export --source legacy_v1` reads the v1 store instead.
+
+```sh
+python -m src.neural.pipeline evaluate --split val --artifact artifacts/tracernet/v1   # every baseline and TracerNet on a set -> results/neural/val/
+python -m src.neural.pipeline explain --split test --matched   # the explanation checks on the test alerts at 6 alerts per 8-hour shift, from the locked look's risk table -> results/neural/explanations.json
+python -m src.neural.pipeline export --source legacy_v1    # TracerNet's demo file, docs/demo/neural.json, beside the unchanged bundle
+python -m src.models.tracernet.predict --split val --budget 6 --explain --out results/neural/predictions/val   # predictions, and alerts with their factors
+python -m src.neural.pipeline report                  # results/neural/REPORT.md
+```
+
+The test sets are scored once: `results/neural/test_lock.json` holds the hashes of that look, which ran with
+`--matched`. A later `evaluate` or `explain` of `test` or `test_ood` runs only when every hash matches, so it takes
+`--matched` too, and each one is listed in `results/neural/test_runs.jsonl`. `explain` never starts a look of its
+own.
+
 ## Where things live
 
 | Path | Contents |

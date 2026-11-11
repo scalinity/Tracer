@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TracerNet prediction",
+  "description": "One row per specimen and scoring tick (docs/neural/spec.md §10.3): TracerNet's calibrated receipt-time outputs at that tick, given no receipt by then. Written as predictions.parquet by src/models/tracernet/predict.py. Synthetic data with no clinical review; every timing parameter is an assumption.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["specimen_id", "run", "scenario_id", "replicate", "tick_min", "at", "window_min", "tier", "route", "p_miss",
+               "p_late", "p_never", "p_on_time", "harm_default", "harm_equal", "arrival_q50_min", "arrival_q90_min",
+               "ensemble_sd", "model_version", "policy_hash"],
+  "properties": {
+    "specimen_id": {"type": "string", "pattern": "^SP-r[0-9]+-[0-9]+$"},
+    "run": {"type": "integer", "minimum": 0},
+    "scenario_id": {"type": ["string", "null"], "description": "null on the v1 store"},
+    "replicate": {"type": ["integer", "null"], "minimum": 0, "description": "null on the v1 store"},
+    "tick_min": {"type": "integer", "minimum": 1, "description": "minutes since collection"},
+    "at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}$", "description": "the tick's clock time, to the minute"},
+    "window_min": {"type": "integer", "minimum": 1},
+    "tier": {"type": "integer", "minimum": 1, "maximum": 3},
+    "route": {"enum": ["tube", "hand_carry"]},
+    "p_miss": {"type": "number", "minimum": 0, "maximum": 1, "description": "p_late + p_never"},
+    "p_late": {"type": "number", "minimum": 0, "maximum": 1},
+    "p_never": {"type": "number", "minimum": 0, "maximum": 1},
+    "p_on_time": {"type": "number", "minimum": 0, "maximum": 1, "description": "1 - p_miss"},
+    "harm_default": {"type": "number", "minimum": 0, "description": "p_miss times the tier's default (3-2-1) weight"},
+    "harm_equal": {"type": "number", "minimum": 0, "description": "p_miss under equal weights"},
+    "arrival_q50_min": {"type": ["number", "null"], "description": "minutes since collection by which half of the arrivals come, given it arrives"},
+    "arrival_q90_min": {"type": ["number", "null"], "description": "the same for nine in ten"},
+    "ensemble_sd": {"type": "number", "minimum": 0, "description": "spread of p_miss across the ensemble's members"},
+    "model_version": {"type": "string", "minLength": 1},
+    "policy_hash": {"type": "string", "minLength": 1}
+  }
+}

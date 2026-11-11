@@ -4,6 +4,7 @@
     p = Predictor.load()                                      # artifacts/tracernet/v1, on CPU
     risk = p.score(store_dir, runs, history=History())        # one row per specimen and tick (spec §10.3)
     alerts = p.alerts(risk, budget_per_shift=6, tune_on=history_risk)
+    alerts = p.explain(alerts, store_dir=store_dir)              # factors and related specimens (spec §9)
 
 The artifact holds three members (one rung, three seeds), the feature schema, the bins and the calibration. A
 prediction at a tick averages the members' receipt-time distributions, divides the log of that average by the
@@ -27,6 +28,8 @@ bisection (spec §8.3), or a knob above every attainable harm (no alerts) when n
 Explanations (spec §9) need the ensemble as a differentiable function: `embed` turns a batch into each member's
 continuous inputs, `logit_miss_embedded` runs from there to the logit of the members' mean p_miss with gradients
 through all members, `ensemble_logit_miss` does both, and `input_groups` names the inputs of each factor group.
+`explain` runs src/models/tracernet/explain.py on an alert table and fills its `factors` and `related` columns; it
+reads features through the same locked-split guard as `score` (`check_lock`).
 """
 
 from __future__ import annotations
@@ -261,16 +264,7 @@ class Predictor:
             raise ValueError("the history runs must live in the scored store")
         runs = sorted({int(r) for r in runs})
         hist_runs = list(history.runs) if history.runs is not None else _history_runs(store_dir, runs)
-        for split in _locked_splits(store_dir, set(runs) | {int(r) for r in hist_runs}):
-            check = getattr(test_run, "check", None)
-            if not callable(check):
-                raise RuntimeError(f"runs of the {split} split are scored only after the test lock is taken "
-                                   "(spec §8.7): pass the test run the lock recorded")
-            if history.runs is not None:
-                raise RuntimeError(f"runs of the {split} split are scored with their own history replicate only")
-            if self.artifact_dir is None:
-                raise RuntimeError(f"runs of the {split} split are scored only by a predictor loaded from an artifact")
-            check(split, artifact_dir=self.artifact_dir, store_dir=store_dir)
+        self.check_lock(store_dir, runs, hist_runs, history, test_run)
         t = F.load_table(store_dir, runs=sorted(set(runs) | {int(r) for r in hist_runs}))
         present = set(t.runs.tolist())
         missing = [r for r in runs if r not in present]
@@ -287,6 +281,20 @@ class Predictor:
         workers = workers if workers is not None else max(1, min(len(tasks), cores - 1))
         parts = _run_tasks(self, t, tasks, workers, chunk)
         return self._frame(t, parts)
+
+    def check_lock(self, store_dir: Path, runs, hist_runs, history: History, test_run) -> None:
+        """Refuse runs of a locked split (test, test_ood) unless `test_run`, the run the test lock recorded, still
+        holds for this artifact and store; score and explain both read features only after this guard."""
+        for split in _locked_splits(store_dir, {int(r) for r in runs} | {int(r) for r in hist_runs}):
+            check = getattr(test_run, "check", None)
+            if not callable(check):
+                raise RuntimeError(f"runs of the {split} split are scored only after the test lock is taken "
+                                   "(spec §8.7): pass the test run the lock recorded")
+            if history.runs is not None:
+                raise RuntimeError(f"runs of the {split} split are scored with their own history replicate only")
+            if self.artifact_dir is None:
+                raise RuntimeError(f"runs of the {split} split are scored only by a predictor loaded from an artifact")
+            check(split, artifact_dir=self.artifact_dir, store_dir=store_dir)
 
     def _frame(self, t: F.Table, parts: list[dict]) -> pl.DataFrame:
         if not parts:
@@ -359,6 +367,19 @@ class Predictor:
             factors=pl.lit([], dtype=pl.List(FACTOR)), related=pl.lit([], dtype=pl.List(RELATED)),
             dispatch=pl.lit(None, dtype=DISPATCH), notice=pl.lit(notice),
         ).sort(["alert_at", "specimen_id"])
+
+    def explain(self, alerts: pl.DataFrame, *, top_k: int = 3, store_dir: Path, history: History | None = None,
+                test_run=None, workers: int = 1) -> pl.DataFrame:
+        """The alerts with `factors` (spec §9.3: the top_k groups that raise the risk and the one that lowers it most)
+        and `related` (up to 5 batch-mates by attention weight, which is not an explanation) filled in, explained
+        from `store_dir`, the store they were scored on. Runs of a locked split need `test_run`, as score does."""
+        from src.models.tracernet import explain as X
+
+        ex = X.explain_alerts(self, alerts, store_dir=store_dir, history=history, test_run=test_run, top_k=top_k,
+                              workers=workers)
+        return alerts.with_columns(
+            factors=pl.Series([r["factors"] for r in ex.records], dtype=pl.List(FACTOR)),
+            related=pl.Series([r["related"] for r in ex.records], dtype=pl.List(RELATED)))
 
 
 PROBABILITY_SLACK = 1e-5     # float32 rounding takes p_miss about 1e-7 past [0, 1]; anything further is refused
