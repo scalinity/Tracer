@@ -63,6 +63,7 @@ def default_inputs(root: Path = ROOT) -> dict:
             "artifact": root / "artifacts" / "tracernet" / "v1" / "manifest.json",
             "manifest": root / "datasets" / "scenarios-v2.manifest.json",
             "explanations": neural / "explanations.json", "decisions": neural / "decisions", "limits": neural / "limits.md",
+            "acceptance": neural / "acceptance.md",
             "ledger": root / "data" / "openai" / "ledger.sqlite", "ledger_json": None,
             "plots": neural / "plots", "root": root}
 
@@ -117,6 +118,8 @@ def load(inputs: dict) -> dict:
             "manifest": _json(inputs["manifest"]), "ledger": ledger_totals(inputs["ledger"], inputs["ledger_json"]),
             "limits": [line.rstrip() for line in Path(inputs["limits"]).read_text(encoding="utf-8").splitlines()
                        if line.strip()] if inputs.get("limits") and Path(inputs["limits"]).is_file() else [],
+            "acceptance": (Path(inputs["acceptance"]).read_text(encoding="utf-8")
+                           if inputs.get("acceptance") and Path(inputs["acceptance"]).is_file() else None),
             "explanations": _json(inputs["explanations"]), "decisions": load_decisions(inputs["decisions"]),
             "config": (yaml.safe_load(Path(CONFIG_PATH).read_text(encoding="utf-8")) or {}).get("ablations") or {}}
 
@@ -1285,11 +1288,20 @@ def section_reproduce(data: dict) -> list[str]:
 
 # --- The page ----------------------------------------------------------------------------------------------------------
 
+def section_acceptance(data: dict) -> list[str]:
+    """Spec §17's acceptance appendix, from results/neural/acceptance.md, one heading level down."""
+    text = data.get("acceptance")
+    if not text:
+        return ["## Appendix: acceptance criteria (spec §17)", "", f"{NOT_RUN}: the acceptance audit of task N11."]
+    return [("#" + line) if line.startswith("#") else line for line in text.rstrip("\n").splitlines()]
+
+
 def render(data: dict, plots_dir: Path, root: Path = ROOT) -> str:
     lines = ["# TracerNet against the baselines: the v2 report", "", verdict_paragraph(data), ""]
     for section in (section_verdict(data), section_headline(data), section_calibration(data, plots_dir, root),
                     section_slices(data), section_beside(data), section_ablations(data), section_explanations(data),
-                    section_decisions(data), section_data(data), section_limits(data), section_reproduce(data)):
+                    section_decisions(data), section_data(data), section_limits(data), section_reproduce(data),
+                    section_acceptance(data)):
         lines += section + [""]
     return "\n".join(lines).rstrip("\n") + "\n"
 
