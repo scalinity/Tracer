@@ -680,3 +680,18 @@ def test_the_x2_sample_takes_capped_runs_in_the_seeds_order_across_many_scenario
     kept = dispatcher.sample_alerts(shuffled, 1000, seed=0, per_run=10)
     assert kept["alert_id"].to_list() == [a for a in shuffled["alert_id"].to_list() if a in set(kept["alert_id"])]
     assert set(kept["alert_id"]) == set(sample["alert_id"])                    # the choice ignores row order
+
+
+def test_the_per_run_cap_holds_when_the_input_is_no_larger_than_the_sample():
+    """F013: an input of at most n alerts still keeps at most per_run of each run."""
+    import polars as pl
+
+    from src.decide import dispatcher
+    alerts = pl.DataFrame({"scenario_id": ["S1"] * 25 + ["S2"] * 5, "run": [1] * 25 + [2] * 5,
+                           "alert_id": [f"a{i:02d}" for i in range(30)]})
+    for n in (30, 40):
+        s = dispatcher.sample_alerts(alerts, n, seed=0, per_run=10)
+        assert s.height == 15 and set(s.group_by("run").len().sort("run")["len"].to_list()) == {10, 5}
+        assert s["alert_id"].to_list() == [a for a in alerts["alert_id"].to_list() if a in set(s["alert_id"])]
+    assert dispatcher.sample_alerts(alerts, 30, seed=0).height == 30                  # no cap: every alert
+    assert dispatcher.sample_alerts(alerts, None, seed=0, per_run=10).height == 30   # n None: every alert

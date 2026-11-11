@@ -32,8 +32,8 @@ def sample_alerts(alerts: pl.DataFrame, n: int | None, seed: int, per_run: int |
     holds about 126 alerts at 6 per 8-hour shift, so whole runs would fill a 5,000-alert sample from about 40 weeks;
     capping each run spreads it over hundreds of scenarios. Every score is per alert and every state is written from
     the store, so no alert needs the others of its week; the cluster bootstrap resamples by scenario."""
-    if n is None or alerts.height <= n:
-        return alerts
+    if n is None or (per_run is None and alerts.height <= n):
+        return alerts                  # with a cap, a small input still goes through the cap below
     counts = alerts.group_by("scenario_id", "run").len().rows()
     order = sorted(counts, key=lambda r: (zlib.crc32(f"{seed}:{r[0]}:{r[1]}".encode()), r[0], r[1]))
     keep, total = [], 0
@@ -42,13 +42,18 @@ def sample_alerts(alerts: pl.DataFrame, n: int | None, seed: int, per_run: int |
             break
         keep.append(run)
         total += k if per_run is None else min(k, per_run)
-    chosen = alerts.filter(pl.col("run").is_in(keep))
     if per_run is None:
-        return chosen
+        return alerts.filter(pl.col("run").is_in(keep))
+    return _cap_runs(alerts, keep, per_run, seed)
+
+
+def _cap_runs(alerts: pl.DataFrame, runs: list, per_run: int, seed: int) -> pl.DataFrame:
+    """At most `per_run` alerts of each of `runs`, in the seed's order of alert ids, kept in the alerts' own order."""
+    chosen = alerts.filter(pl.col("run").is_in(runs))
     rank = pl.col("alert_id").map_elements(lambda a: zlib.crc32(f"{seed}:{a}".encode()), return_dtype=pl.Int64)
     ids = (chosen.select("run", "alert_id").with_columns(_rank=rank).sort("run", "_rank", "alert_id")
            .group_by("run", maintain_order=True).head(per_run)["alert_id"])
-    return chosen.filter(pl.col("alert_id").is_in(ids.implode()))           # in the alerts' own order
+    return chosen.filter(pl.col("alert_id").is_in(ids.implode()))
 
 
 def raising_texts(factors) -> list[str]:

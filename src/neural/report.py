@@ -1006,8 +1006,11 @@ def _decision_x3(data: dict) -> list[str]:
     if d.get("low") is None or d.get("high") is None:
         verdict = "No reading: the AUROC difference with TracerNet has no interval."
     elif d["high"] < 0:
+        a = ((x.get("differences") or {}).get("decision_model - analytic_local") or {}).get("auroc") or {}
+        also = (f" and the local analytic refit ({ci(a, 3)})" if a.get("high") is not None and a["high"] < 0 else "")
         verdict = (f"No: on the same ticks Drex Max ranks the misses worse than TracerNet (AUROC difference "
-                   f"{ci(d, 3)}), so forecasting stays with the network.")
+                   f"{ci(d, 3)}){also}. X3 compares Drex Max with the risk models; it leaves the primary-model "
+                   "verdict of section 1 as it is.")
     elif d["low"] > 0:
         verdict = f"Yes, on these ticks: Drex Max ranks the misses better than TracerNet (AUROC difference {ci(d, 3)})."
     else:
