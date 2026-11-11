@@ -64,9 +64,9 @@ QUESTIONS = {"A1": "More data or more variety?", "A2": "Do the hard edge cases m
 CORE = ("A1", "A2", "A5", "A6")
 SETS = {"core": CORE, "all": CORE + ("A7",)}
 NOT_BUILT = {
-    "A3": "not run (time box; spec §18 cuts A3): it needs each train scenario's generation job (O2 or O3), which the "
+    "A3": "not run (not buildable in time): it needs each train scenario's generation job (O2 or O3), which the "
           "scenario cells do not carry",
-    "A4": "not run (time box; spec §18 cuts A4): it needs code-random scenarios simulated into their own store and a "
+    "A4": "not run (not buildable in time): it needs code-random scenarios simulated into their own store and a "
           "code-random test set, which the pipeline cannot build yet",
     "A8": "not run (cut): it trains on the Claude-written v1 trails, which Anthropic's Usage Policy does not allow "
           "without prior authorization (spec §18 cuts A8 second among the ablations)",

@@ -1198,13 +1198,13 @@
   },
   "A3": {
    "question": "Did round 2 help?",
-   "reason": "not run (time box; spec \u00a718 cuts A3): it needs each train scenario's generation job (O2 or O3), which the scenario cells do not carry",
+   "reason": "not run (not buildable in time): it needs each train scenario's generation job (O2 or O3), which the scenario cells do not carry",
    "required": false,
    "status": "not run"
   },
   "A4": {
    "question": "Was the API spend worth it?",
-   "reason": "not run (time box; spec \u00a718 cuts A4): it needs code-random scenarios simulated into their own store and a code-random test set, which the pipeline cannot build yet",
+   "reason": "not run (not buildable in time): it needs code-random scenarios simulated into their own store and a code-random test set, which the pipeline cannot build yet",
    "required": false,
    "status": "not run"
   },

@@ -15,6 +15,7 @@ It renders the files the earlier stages wrote and nothing else:
                                            section 8
   results/neural/selection.json, hpo.json, ablations.json, explanations.json, test_lock.json, test_runs.jsonl,
   results/neural/ablations/test_runs.jsonl, results/neural/generation/pilot.json and round2-plan.json,
+  results/neural/limits.md and caveats.md, written notes rendered as bullets (section 10, and under the verdict),
   artifacts/tracernet/v1/manifest.json, datasets/scenarios-v2.manifest.json, and the OpenAI ledger's totals (its
   append-only mirror replayed read-only through src/scenarios/ledger.py, else a JSON given with --ledger-json,
   else the library manifest's record of the ledger at the freeze, each labeled with its source)
@@ -63,6 +64,7 @@ def default_inputs(root: Path = ROOT) -> dict:
             "artifact": root / "artifacts" / "tracernet" / "v1" / "manifest.json",
             "manifest": root / "datasets" / "scenarios-v2.manifest.json",
             "explanations": neural / "explanations.json", "decisions": neural / "decisions", "limits": neural / "limits.md",
+            "caveats": neural / "caveats.md",
             "acceptance": neural / "acceptance.md",
             "ledger": root / "data" / "openai" / "ledger.sqlite", "ledger_json": None,
             "plots": neural / "plots", "root": root}
@@ -104,6 +106,14 @@ def ledger_totals(ledger_path: Path | None = None, json_path: Path | None = None
                          | usd(balances["accounts"].get(a)) for a, c in cfg["accounts"].items()}}
 
 
+def _lines(path) -> list[str]:
+    """A written notes file's non-empty lines, each as a bullet; [] when it does not exist."""
+    if not path or not Path(path).is_file():
+        return []
+    return [line.rstrip() if line.startswith("- ") else f"- {line.rstrip()}"
+            for line in Path(path).read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
 def load(inputs: dict) -> dict:
     ev = {s: _json(p) for s, p in inputs["evaluations"].items()}
     ood = ev.get("test_ood")
@@ -116,8 +126,7 @@ def load(inputs: dict) -> dict:
             "artifact_sha256": (hashlib.sha256(Path(inputs["artifact"]).read_bytes()).hexdigest()
                                 if Path(inputs["artifact"]).is_file() else None),
             "manifest": _json(inputs["manifest"]), "ledger": ledger_totals(inputs["ledger"], inputs["ledger_json"]),
-            "limits": [line.rstrip() for line in Path(inputs["limits"]).read_text(encoding="utf-8").splitlines()
-                       if line.strip()] if inputs.get("limits") and Path(inputs["limits"]).is_file() else [],
+            "limits": _lines(inputs.get("limits")), "caveats": _lines(inputs.get("caveats")),
             "acceptance": (Path(inputs["acceptance"]).read_text(encoding="utf-8")
                            if inputs.get("acceptance") and Path(inputs["acceptance"]).is_file() else None),
             "explanations": _json(inputs["explanations"]), "decisions": load_decisions(inputs["decisions"]),
@@ -194,7 +203,49 @@ def held(x: bool) -> str:
 
 # --- Section 1: the verdict --------------------------------------------------------------------------------------------
 
+BASELINE_NAMES = {"window_rule": "the window rule", "analytic_global": "the global refit",
+                  "analytic_local": "the local refit"}
+
+
+def _no_knob(result: dict, method: str, budget: str = HEAD) -> int | None:
+    """Scenarios in which `method` has no in-budget knob at `budget` (the most over its weightings)."""
+    by_w = ((result.get("knobs") or {}).get(budget) or {}).get(method) or {}
+    counts = [k.get("no_alert_groups") for k in by_w.values() if k.get("no_alert_groups") is not None]
+    return max(counts) if counts else None
+
+
+def primary_sentence(result: dict, rule: dict) -> str:
+    """Why the primary model is what it is: spec §8.6 lets R1 to R3 decide it, and R4 only qualifies the
+    comparison. A failed R4 whose every failing check has the baseline realizing fewer alerts than TracerNet is
+    put down to the baselines leaving budget unused, with the window rule's scenarios without an in-budget knob."""
+    v = rule["verdict"]
+    if v["tracernet_primary"]:
+        out = "TracerNet becomes the primary risk model: R1 to R3 held."
+    else:
+        failed = [k for k in ("R1", "R2", "R3") if not rule[k]["held"]]
+        out = f"The analytic model stays primary because {' and '.join(failed)} failed."
+    r4 = rule["R4"]
+    if not r4["held"]:
+        failing = [c for c in r4["checks"] if not c["held"]]
+        out += f" R4 {'failed' if v['tracernet_primary'] else 'also failed'}"
+        if failing and all(c["baseline_per_shift"] < c["tracernet_per_shift"] for c in failing):
+            n, groups = _no_knob(result, "window_rule"), (result.get("counts") or {}).get("tuning_groups")
+            out += (f", mostly because the baselines leave part of the {HEAD.split('/')[0]}-alert budget unused"
+                    + (f" (the window rule alerts on nothing in {n:,} of {groups:,} scenarios)" if n and groups else ""))
+        out += "."
+    return out
+
+
+def _r1_all_zero(rule: dict) -> bool:
+    return bool(rule["checks"]) and all(c["tracernet_min"] == 0 and c["baseline_min"] == 0 and c["difference_min"] == 0
+                                        and c["interval_low_min"] == 0 for c in rule["checks"])
+
+
 def _r1_sentence(rule: dict) -> str:
+    if _r1_all_zero(rule):
+        return ("TracerNet's and every baseline's median warning over all breaches was 0.0 min at "
+                + " and ".join(f"{w}" for w in dict.fromkeys(c["weighting"] for c in rule["checks"]))
+                + " weights (every difference 0.0, interval low 0.0)")
     parts = []
     for w in ne.WEIGHTINGS:
         cs = [c for c in rule["checks"] if c["weighting"] == w]
@@ -205,6 +256,85 @@ def _r1_sentence(rule: dict) -> str:
                      + ", ".join(f"{c['baseline'].replace('_', ' ')} {num(c['baseline_min'])} (difference "
                                  f"{num(c['difference_min'])}, interval low {num(c['interval_low_min'])})" for c in cs))
     return "; ".join(parts)
+
+
+def _r2_sentence(rule: dict) -> str:
+    """R2 per weighting: within 1 point of every baseline reads as even, otherwise each baseline's gap."""
+    parts = []
+    for w in ne.WEIGHTINGS:
+        cs = [c for c in rule["checks"] if c["weighting"] == w and c["deficit"] is not None]
+        if not cs:
+            continue
+        if all(abs(c["deficit"]) < 0.01 for c in cs):
+            worst = max(cs, key=lambda c: c["deficit"])
+            parts.append(f"at {w} weights it is even with {'all three' if len(cs) == 3 else f'all {len(cs)}'}, within 1 point (largest deficit "
+                         f"{num(100 * worst['deficit'])} points, interval high "
+                         f"{num(100 * worst['deficit_interval_high'])})")
+        else:
+            gaps = [f"{num(100 * abs(c['deficit']))}{' points' if i == 0 else ''} "
+                    f"{'above' if c['deficit'] <= 0 else 'below'} {BASELINE_NAMES.get(c['baseline'], c['baseline'])}'s"
+                    for i, c in enumerate(cs)]
+            parts.append(f"at {w} weights TracerNet alerts on a share of never-received specimens "
+                         + (gaps[0] if len(gaps) == 1 else ", ".join(gaps[:-1]) + " and " + gaps[-1]))
+    weightings = len({c["weighting"] for c in rule["checks"]})
+    return (f"{held(rule['held'])}{' at both weightings' if rule['held'] and weightings == 2 else ''}: "
+            + "; ".join(parts))
+
+
+def r1_floor(result: dict) -> dict | None:
+    """When every R1 median is 0 and no method catches half the breaches at the headline budget, the floor that
+    makes them 0 and the capped mean warning that still separates the methods (3-2-1 weights); else None."""
+    rule = result.get("decision_rule")
+    if not rule or not _r1_all_zero(rule["R1"]):
+        return None
+    op = (result.get("operating_points") or {}).get(HEAD) or {}
+    catches = [(v["catch_rate"]["point"], m, w) for m, by_w in op.items() for w, v in by_w.items()
+               if (v.get("catch_rate") or {}).get("point") is not None]
+    if not catches or max(catches)[0] >= 0.5:
+        return None
+    best = max(catches)
+    diffs = ((result.get("differences") or {}).get(HEAD) or {}).get("3-2-1") or {}
+    c = result.get("counts") or {}
+    return {"best_catch": best[0], "best_method": best[1], "best_weighting": best[2],
+            "breaches": c.get("breaches"), "shifts": c.get("scored_shifts"),
+            "tracernet_capped": point(result, HEAD, ne.TRACERNET, "3-2-1", "capped_mean_warning_min"),
+            "baseline_capped": {b: point(result, HEAD, b, "3-2-1", "capped_mean_warning_min") for b in ne.BASELINES},
+            "differences": {b: (diffs.get(b) or {}).get("capped_mean_warning_min") for b in ne.BASELINES}}
+
+
+def r1_floor_lines(result: dict, selection: dict | None) -> list[str]:
+    """Section 1's reading of a floored R1: why every median is 0, the build log's prediction, the capped mean
+    warning beside it, and what rung selection's warning check compared."""
+    f = r1_floor(result)
+    if f is None:
+        return []
+    caps = {b: v for b, v in f["baseline_capped"].items() if v is not None}
+    per_shift = f["breaches"] / f["shifts"] if f["breaches"] and f["shifts"] else None
+    out = ["", "**Why R1 cannot separate the methods here.** A missed breach counts as 0 minutes of warning (spec §8.4). "
+           + (f"`test` has {num(per_shift)} breaches per shift ({num(f['breaches'])} in {num(int(f['shifts']))} "
+              f"shifts) against a budget of {HEAD.split('/')[0]} alerts, and " if per_shift else "At this budget ")
+           + f"the best catch rate is {pct(f['best_catch'])} ("
+           + ("TracerNet" if f["best_method"] == ne.TRACERNET else f["best_method"].replace("_", " "))
+           + f", {f['best_weighting']} weights), so "
+           "more than half of every method's breaches count as 0 and every median is 0. The build log predicted this "
+           "on November 8 at 11:42 PM EST, before any validation or test result existed (docs/neural/build-log.md, "
+           "\"a secondary analysis\"), and R1 stays as written."]
+    if f["tracernet_capped"] is not None and caps:
+        diffs = [f"{num(d['point'])} min ({interval(d)}) against {BASELINE_NAMES[b]}"
+                 for b, d in f["differences"].items() if d and d.get("point") is not None]
+        out[-1] += (f" The capped mean warning, fixed then as the non-binding companion, does separate them: at 3-2-1 "
+                    f"weights TracerNet {num(f['tracernet_capped'])} min against {num(min(caps.values()))} to "
+                    f"{num(max(caps.values()))} min for the baselines ("
+                    + ", ".join(f"{BASELINE_NAMES[b].removeprefix('the ')} {num(v)}" for b, v in caps.items()) + ")"
+                    + (f"; TracerNet minus each baseline is " + ", ".join(diffs) if diffs else "")
+                    + ". The secondary view below gives it at every budget, with R1 at 30 alerts per 100 specimens.")
+    w = (selection or {}).get("warning_check") or {}
+    chosen = (selection or {}).get("chosen")
+    if chosen and w.get(chosen) is not None and w.get("A") is not None:
+        out[-1] += (f" Rung selection's warning check (spec §7.9) compared rung {chosen}'s validation median warning "
+                    f"with rung A's, {num(w[chosen])} against {num(w['A'])} min"
+                    + (", so it tested nothing." if w[chosen] == 0 and w["A"] == 0 else "."))
+    return out
 
 
 def verdict_paragraph(data: dict) -> str:
@@ -218,19 +348,28 @@ def verdict_paragraph(data: dict) -> str:
                 f"numbers below are development numbers and never decide the rule. {NOTICE}")
     v = rule["verdict"]
     r1, r2, r3, r4 = (rule[k] for k in ("R1", "R2", "R3", "R4"))
-    worst2 = max((c for c in r2["checks"] if c["deficit"] is not None), key=lambda c: c["deficit"], default=None)
+    failed = [k for k in ("R1", "R2", "R3") if not rule[k]["held"]]
     r3_txt = "; ".join(f"at {c['landmark_min']} min TracerNet {num(c['tracernet_brier'], 4)} against "
                        f"{num(c['better_analytic_brier'], 4)} (excess {num(c['excess'], 4)})" for c in r3["checks"])
     r4_worst = max((c for c in r4["checks"] if c["relative_difference"] is not None),
                    key=lambda c: c["relative_difference"], default=None)
-    return (f"**Verdict on `test` at 6 alerts per shift: R1 {held(r1['held'])}, R2 {held(r2['held'])}, R3 "
-            f"{held(r3['held'])}, R4 {held(r4['held'])}; primary risk model: {v['primary_model']}.** "
-            f"R1 (at least 5 minutes more warning than each baseline, with the interval's lower end above zero): "
-            f"{_r1_sentence(r1)}. R2 (deficit in never-received specimens alerted below 2 points): the largest "
-            f"deficit was "
-            + (f"{pct(worst2['deficit'])} against {worst2['baseline'].replace('_', ' ')} at {worst2['weighting']} "
-               f"weights (interval high {pct(worst2['deficit_interval_high'])})" if worst2 else "n/a")
-            + f". R3 (Brier no worse than the better analytic refit's by more than 0.01): {r3_txt}. R4 (realized "
+    floored = r1_floor(test)
+    caps = [x for x in (floored or {}).get("baseline_capped", {}).values() if x is not None]
+    if floored and (floored["tracernet_capped"] is None or not caps):
+        floored = None
+    return (f"**Verdict on `test` at 6 alerts per shift, a chosen budget: R1 {held(r1['held'])}, R2 "
+            f"{held(r2['held'])}, R3 {held(r3['held'])}, R4 {held(r4['held'])}. {primary_sentence(test, rule)}** "
+            + (f"Under spec §8.6 the primary model follows R1 to R3, so {failed[0]} alone decides it. "
+               if len(failed) == 1 else "")
+            + f"R1 (at least 5 minutes more warning than each baseline, with the interval's lower end above zero): "
+            f"{_r1_sentence(r1)}."
+            + (f" A missed breach counts as 0 minutes (spec §8.4), and at this budget no method catches half the "
+               f"breaches (best catch rate {pct(floored['best_catch'])}), so every median is 0 and R1 cannot "
+               f"separate the methods; the pre-specified capped mean warning does (TracerNet "
+               f"{num(floored['tracernet_capped'])} min against {num(min(caps))} to {num(max(caps))} for the "
+               f"baselines at 3-2-1 weights; section 1)." if floored else "")
+            + f" R2 (deficit in never-received specimens alerted below 2 points) {_r2_sentence(r2)}."
+            + f" R3 (Brier no worse than the better analytic refit's by more than 0.01): {r3_txt}. R4 (realized "
             f"alerts within 10% of each baseline's): the largest relative difference was "
             + (f"{pct(r4_worst['relative_difference'])} against {r4_worst['baseline'].replace('_', ' ')} at "
                f"{r4_worst['weighting']} weights" if r4_worst else "n/a")
@@ -263,6 +402,7 @@ def section_verdict(data: dict) -> list[str]:
                      [[c["weighting"], c["baseline"], num(c["tracernet_min"]), num(c["baseline_min"]),
                        num(c["difference_min"]), num(c["interval_low_min"]), held(c["held"])]
                       for c in rule["R1"]["checks"]])
+        out += r1_floor_lines(test, data["selection"])
         out += ["", "### R2. Losses", ""]
         out += table(["Weights", "Baseline", "TracerNet alerted", "Baseline alerted", "Deficit", "Interval high",
                       "Held"],
@@ -562,6 +702,13 @@ def section_beside(data: dict) -> list[str]:
                 out.append(f"TracerNet won on `test` and fails the rule on `{name}`: reported as exactly that (spec §8.9).")
         if name == "control_v1world":
             out += control_lines(r, data["config"])
+    out += ["", "### Sensitivity sets and face validity (spec §8.11)", "",
+            "- Sensitivity sets (`sens_tail`, `sens_disrupt_half`, `sens_disrupt_double`, `sens_pace_fast`, "
+            "`sens_pace_slow`): not run. Spec §8.11 puts them outside the critical path of N0 to N11, to run when "
+            "compute and time allow; none was simulated or scored, so the result is not shown to be robust to any "
+            "simulator assumption.",
+            "- Blinded face-validity rating: not run. It needs Karissa's agreement, arranged outside the hands-off "
+            "build, which asks nothing new of her, and it was not arranged; no laboratory week has been rated."]
     return out
 
 
@@ -596,10 +743,13 @@ def section_ablations(data: dict) -> list[str]:
     a = data["ablations"]
     if a is None:
         return out + [f"{NOT_RUN}: results/neural/ablations.json does not exist (`ablate --collect`)."]
+    hours, box = (a.get("compute") or {}).get("hours"), a.get("time_box_h")
+    over = hours is not None and box is not None and hours > box
     out += [f"Every trained arm took the same {num(a.get('steps'))} gradient steps "
             f"({'equal across arms' if a.get('steps_equal') else 'NOT equal across arms: see the arms'}); "
-            f"compute {num((a.get('compute') or {}).get('hours'), 2)} hours of the {num(a.get('time_box_h'), 0)}-hour "
-            f"box. Test numbers are descriptive, scored after the lock, and never change the headline model.", ""]
+            f"compute {num(hours, 2)} hours against spec §8.8's budget of {num(box, 0)} hours"
+            + (f", over it by {num(hours - box, 2)} hours" if over else "")
+            + ". Test numbers are descriptive, scored after the lock, and never change the headline model.", ""]
     for aid, ab in (a.get("ablations") or {}).items():
         out += [f"### {aid}. {ab.get('question', '')}", ""]
         if ab.get("status") != "done":
@@ -1061,9 +1211,11 @@ def section_data(data: dict) -> list[str]:
         rows = []
         for job, j in sorted((m.get("jobs") or {}).items()):
             c = j.get("counts") or {}
+            per_brief = max((len(arms) for arms in (j.get("arms") or {}).values()), default=1) or 1   # O1: every arm
             rows.append([job, ", ".join(sorted({a for arms in (j.get("arms") or {}).values() for a in arms})),
-                         j.get("tier", ""), num(c.get("briefs")), num(c.get("requests")), num(c.get("accepted")),
-                         pct(c["accepted"] / c["briefs"]) if c.get("briefs") else "n/a", num(c.get("repaired")),
+                         j.get("tier", ""), num(c.get("briefs")) + (f" × {per_brief} arms" if per_brief > 1 else ""),
+                         num(c.get("requests")), num(c.get("accepted")),
+                         pct(c["accepted"] / (c["briefs"] * per_brief)) if c.get("briefs") else "n/a", num(c.get("repaired")),
                          num(c.get("dropped")), num(c.get("refused")),
                          ", ".join(f"{k} {v}" for k, v in sorted((c.get("rejections_by_layer") or {}).items())),
                          f"${j.get('spent_usd', 0):.4f}",
@@ -1139,6 +1291,29 @@ def section_data(data: dict) -> list[str]:
 
 # --- Section 10: limits, next steps and the §8.9 recommendation ------------------------------------------------------------
 
+def overall_leads(test: dict, rule: dict) -> list[str]:
+    """The measures on which TracerNet leads every baseline over all of `test`: the capped mean warning at 6 alerts
+    per shift, 3-2-1 weights, by at least R1's 5 minutes; AUROC at 30 minutes of silence; the Brier score at every
+    landmark of R3."""
+    out = []
+    tn = point(test, HEAD, ne.TRACERNET, "3-2-1", "capped_mean_warning_min")
+    base = [x for x in (point(test, HEAD, b, "3-2-1", "capped_mean_warning_min") for b in ne.BASELINES) if x is not None]
+    if tn is not None and base and tn - max(base) >= ne.MIN_WARNING_GAIN_MIN:
+        out.append(f"capped mean warning ({num(tn)} min against the best baseline's {num(max(base))} at 6 alerts per "
+                   "shift, 3-2-1 weights)")
+    disc = test.get("discrimination") or {}
+    auc = {m: ((disc.get(m) or {}).get("landmark_30") or {}).get("auroc") for m in (ne.TRACERNET, *ne.BASELINES)}
+    rivals = [x for m, x in auc.items() if m != ne.TRACERNET and x is not None]
+    if auc[ne.TRACERNET] is not None and rivals and auc[ne.TRACERNET] > max(rivals):
+        out.append(f"AUROC ({num(auc[ne.TRACERNET], 3)} against {num(max(rivals), 3)} at 30 minutes of silence)")
+    r3 = rule["R3"]["checks"]
+    if r3 and all(c["tracernet_brier"] < c["better_analytic_brier"] for c in r3):
+        out.append("Brier score (" + " and ".join(f"{num(c['tracernet_brier'], 4)} against "
+                                                  f"{num(c['better_analytic_brier'], 4)} at {c['landmark_min']} min"
+                                                  for c in r3) + ")")
+    return out
+
+
 def recommendations(data: dict) -> list[str]:
     """Spec §8.9's recommendations the evidence supports, each with why; [] when the rule held and nothing applies.
     Rules stated on the page: a lead on disruption slices is at least 5 minutes over the best baseline in the
@@ -1162,10 +1337,17 @@ def recommendations(data: dict) -> list[str]:
         if tn is not None and base and tn - max(base) >= margin:
             leads.append(f"{k.replace('_min', '').replace('_', ' ')} {num(tn)} against the best baseline's {num(max(base))}")
     if not v["R1"] and leads:
-        out.append("**Hybrid.** TracerNet ties overall (R1 failed) but leads on the disruption slice ("
-                   + "; ".join(leads) + "): score routine silence with the analytic model or the window rule and let "
-                   "TracerNet add a context alert when its p_miss exceeds the analytic risk by a fixed margin. Evaluate "
-                   "the blend on validation before claiming anything.")
+        overall = overall_leads(test, rule)
+        out.append("**Hybrid.** "
+                   + ("§8.9's options fit this result imperfectly. This one is framed as \"ties overall, leads on "
+                      "disruption slices\", but TracerNet does not tie overall: it leads on "
+                      + (overall[0] if len(overall) == 1 else ", ".join(overall[:-1]) + " and " + overall[-1])
+                      + (". The tie exists only in R1's floored median (section 1)" if r1_floor(test) else
+                         ". It does not lead on R1's median warning")
+                      + ". It also leads on the disruption slice (" if overall else "TracerNet ties overall (R1 failed) but leads on the disruption slice (")
+                   + "; ".join(leads) + "). The option: score routine silence with the analytic model or the window "
+                   "rule and let TracerNet add a context alert when its p_miss exceeds the analytic risk by a fixed "
+                   "margin. Evaluate the blend on validation before claiming anything.")
     if v["R1"] and not v["R3"]:
         out.append("**Recalibrate.** TracerNet leads on warning (R1 held) and fails calibration (R3): fit an isotonic "
                    "map per window class on validation; re-running test then needs a relock and a reason.")
@@ -1199,7 +1381,7 @@ def section_limits(data: dict) -> list[str]:
                        f"({', '.join(f'{float(s):.0%}' for s in shares)}; {counts} scenarios), the same for every arm, "
                        "so their intervals are wider than the main evaluation's"
                        + ("." if rec.get("same_selection") else "; the arms were NOT all scored on one selection."))
-    out += [line if line.startswith("- ") else f"- {line}" for line in data.get("limits") or []]
+    out += data.get("limits") or []
     test = data["ev"].get("test")
     rule = (test or {}).get("decision_rule")
     out += ["", "### Recommendation (spec §8.9)", ""]
@@ -1209,7 +1391,7 @@ def section_limits(data: dict) -> list[str]:
     if rule["verdict"]["tracernet_primary"]:
         out.append("The rule held: TracerNet becomes the primary risk model.")
         return out + ([""] + recs if recs else [])
-    out.append("The rule failed: the analytic model stays primary and TracerNet is reported as a challenger result.")
+    out.append(f"The rule failed. {primary_sentence(test, rule)} TracerNet is reported as a challenger result.")
     if recs:
         return out + [""] + recs
     return out + ["", "None of §8.9's four patterns is supported by the evidence above (a lead on the disruption "
@@ -1274,9 +1456,12 @@ def section_reproduce(data: dict) -> list[str]:
     if lock is None and not data["test_runs"]:
         out.append(f"{NOT_RUN}: no test set has been scored (no results/neural/test_lock.json).")
     else:
+        out.append("Test sets are scored under a hash lock; every rerun is listed in `results/neural/test_runs.jsonl`, "
+                   "and below.")
         if lock is not None:
-            out.append(f"Locked first on `{lock.get('first_split')}` at {lock.get('time')}"
-                       + (f", relocked from {lock['relocked_from']}" if lock.get("relocked_from") else "") + ".")
+            out[-1] += (f" Locked first on `{lock.get('first_split')}` at {lock['relocked_from']}, relocked at "
+                        f"{lock.get('time')}." if lock.get("relocked_from") else
+                        f" Locked first on `{lock.get('first_split')}` at {lock.get('time')}.")
         out += [""] + table(["Time", "Set", "Status", "Reason"],
                             [[e.get("time", ""), e.get("split", ""), e.get("status", ""), e.get("reason", "")]
                              for e in data["test_runs"]])
@@ -1300,6 +1485,8 @@ def section_acceptance(data: dict) -> list[str]:
 
 def render(data: dict, plots_dir: Path, root: Path = ROOT) -> str:
     lines = ["# TracerNet against the baselines: the v2 report", "", verdict_paragraph(data), ""]
+    if data.get("caveats"):
+        lines += ["**Read with the verdict:**", ""] + data["caveats"] + [""]
     for section in (section_verdict(data), section_headline(data), section_calibration(data, plots_dir, root),
                     section_slices(data), section_beside(data), section_ablations(data), section_explanations(data),
                     section_decisions(data), section_data(data), section_limits(data), section_reproduce(data),

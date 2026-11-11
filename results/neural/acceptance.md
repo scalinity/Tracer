@@ -1,6 +1,6 @@
 # Appendix: acceptance criteria (spec §17)
 
-Audited on November 10, 2026, on branch `n11-closeout` at commit `ac94969` (main `95b4ac8` plus two N11 commits). Each item gives the criterion in short form, the verdict and the evidence. Evidence is labeled by where it comes from:
+Audited on November 10, 2026, on branch `n11-closeout` at commit `ac94969` (main `95b4ac8` plus two N11 commits). Revised on November 11, 2026, after an independent review of the report: items 14 and 18 moved from held to partly held, item 6 states the truth-log rule as it holds, and items 12, 13, 20 and 21 were brought up to date. No check was rerun for the revision. Each item gives the criterion in short form, the verdict and the evidence. Evidence is labeled by where it comes from:
 
 - **Run now:** a command or test run for this audit, with its result.
 - **Parent's run:** a check the parent session ran, with its log; not rerun here.
@@ -71,7 +71,7 @@ A check that nobody ran is reported as not run. Every number comes from syntheti
 
 **Criterion.** `test_truth_isolation.py` passes unchanged; `test_neural_isolation.py` passes; only `store.py` and `evaluate.py` mention the truth file.
 
-**Verdict: held.**
+**Verdict: held**, with the rule stated as it holds: no truth log on the training or feature path. Training, the features and everything under `src/models/` and `src/decide/` read the observed store only. The truth log does reach the build through evaluation: the orchestration files in `src/neural/` (`pipeline.py`, `rebuild.py`, `ablations.py`, `ensemble.py`, `weakspots.py` and `report.py`) import `src/pipeline/neural_eval.py`, which imports `evaluate.py` and scores through it. Rung selection's warning check (`ensemble.py`) and round two's weak spots (`weakspots.py`, which planned job O3's briefs) used validation metrics computed against the truth log.
 
 - Run now: `pytest tests/test_truth_isolation.py tests/test_neural_isolation.py`: 38 passed.
 - Run now: `git log -- tests/test_truth_isolation.py` shows its last change on October 30 (`c98f2ef`), before this work began at `8686475`.
@@ -128,12 +128,12 @@ A check that nobody ran is reported as not run. Every number comes from syntheti
 
 ## 12. Verdict
 
-**Criterion.** R1 to R4 evaluated and quoted verbatim; the test set scored once, or every rescore listed with its reason.
+**Criterion.** R1 to R4 evaluated and quoted verbatim; the test set scored under a hash lock, with every rerun listed in `results/neural/test_runs.jsonl` with its reason.
 
 **Verdict: held.**
 
 - Run now: the 11 quoted lines of the rule in `results/neural/REPORT.md` section 1 are identical to spec §8.6.
-- Record: `REPORT.md` section 1 evaluates R1 (failed), R2 (held), R3 (held) and R4 (failed), each with its table.
+- Record: `REPORT.md` section 1 evaluates R1 (failed), R2 (held), R3 (held) and R4 (failed), each with its table. The analytic model stays primary because R1 failed: spec §8.6 lets R1 to R3 decide, and R4 only qualifies the comparison.
 - Record: `results/neural/test_runs.jsonl` holds 15 entries (1 first look, 10 repeats with inputs unchanged, 3 risk tables recorded, 1 relock), each with its reason; `REPORT.md` section 11, "Test runs", lists all 15. The relock at 4:42 PM on November 10 gives its reason: X2 on test adds the decision-model configuration hash (spec §8.7). The ablation arms' 129 runs under their own locks are listed after it.
 
 ## 13. Honesty
@@ -142,17 +142,17 @@ A check that nobody ran is reported as not run. Every number comes from syntheti
 
 **Verdict: held.**
 
-- Record: `REPORT.md`'s first paragraph gives R1 to R4 with numbers and interval ends, names the analytic model as primary, and ends with the notice that every number comes from synthetic laboratory weeks with no clinical review.
-- Record: `REPORT.md` section 10, "Recommendation (spec §8.9)": the analytic model stays primary, and the hybrid option is recommended because TracerNet ties overall but leads on the disruption slice (capped mean warning 17.7 minutes against the best baseline's 11.5).
+- Record: `REPORT.md`'s first paragraph gives R1 to R4 with numbers and interval ends, labels the 6-alert budget as chosen, names the analytic model as primary because R1 failed, explains why every R1 median is 0, and ends with the notice that every number comes from synthetic laboratory weeks with no clinical review. A list under it keeps the leakage flag, the `legacy_v1` calibration, the coverage shortfall, the training spikes and the failed deletion check in view.
+- Record: `REPORT.md` section 10, "Recommendation (spec §8.9)": the analytic model stays primary because R1 failed, and the hybrid option is recommended as the nearest of §8.9's options, which fit this result imperfectly. TracerNet leads overall on capped mean warning, AUROC (0.957 against 0.917 at 30 minutes of silence) and Brier score, ties only in R1's floored median, and leads on the disruption slice (capped mean warning 17.7 minutes against the best baseline's 11.5).
 
 ## 14. Ablations
 
 **Criterion.** A1, A2, A5 and A6 done; the others done or marked "not run (time box)"; the negative control reported.
 
-**Verdict: held.** Note: A3 and A4 are marked "not run (time box)"; A7, A8 and A9 are marked "not run" with other reasons (A7 outside the core set, A8 cut under Anthropic's Usage Policy, A9 first on the cut list). The arms used 73.7 hours of compute against §8.8's 6-hour box, which `REPORT.md` section 10 states.
+**Verdict: partly held.** A1, A2, A5 and A6 are done and the negative control is reported. Two parts do not hold as written: A3 and A4 are marked "not run (not buildable in time)", since the pipeline could not build their inputs, rather than dropped for the time box; and the arms used 73.7 hours of compute against §8.8's budget of 6 hours (`REPORT.md` sections 6 and 10). A7, A8 and A9 are marked "not run" with their reasons (A7 outside the core set, A8 cut under Anthropic's Usage Policy, A9 first on the cut list).
 
 - Record: `results/neural/ablations.json`: A1 (4 arms), A2 (2 arms), A5 (rungs L, A, B, C and the ensemble) and A6 (5 arms) are `done`, three seeds per arm except the A5 ensemble, all at 733 steps (`steps_equal: true`).
-- Record: `ablations.A6.negative_control`: on `control_v1world` at 6 alerts per shift, TracerNet's median warning leads the local analytic refit by 10 minutes (95% interval 5 to 20), flagged `leakage_suspected: true`; `REPORT.md` section 10 reports the flag with the evidence that the lead over the context-free global fit is 0 minutes.
+- Record: `ablations.A6.negative_control`: on `control_v1world` at 6 alerts per shift, TracerNet's median warning leads the local analytic refit by 10 minutes (95% interval 5 to 20), flagged `leakage_suspected: true`; `REPORT.md` section 10 reports the flag with the evidence that the lead over the context-free global fit is 0 minutes. The flag stands: flagged, explained, not resolved.
 - Run now: `pytest tests/test_ablations.py` passed (in the 284-test run of item 11).
 
 ## 15. Explanations
@@ -191,7 +191,7 @@ A check that nobody ran is reported as not run. Every number comes from syntheti
 
 **Criterion.** `run --from-frozen` rebuilds the data, retrains into a scratch artifact and matches the committed validation metrics within 0.5%; `run --from-frozen --evaluate-committed` reproduces `results/neural/evaluation.json` byte for byte.
 
-**Verdict: held on validation, read as follows.** The retrain matched every gated metric within 0.5%. `--evaluate-committed` reproduced the committed validation evaluation byte for byte once three fields that every rerun changes are carried over: the store's path, the store manifest's hash and the wall-clock timing. There is no top-level `results/neural/evaluation.json`; the evaluations are per set, and validation is the one the command reproduces. The test sets are not rescored: the lock now holds the decision layer's look, so a TracerNet look at `test` or `test_ood` would need a relock of its own. The store manifest's hash differs because DuckDB's file bytes vary from build to build, while all 10 tables are content-equal.
+**Verdict: partly held.** The file the criterion names, `results/neural/evaluation.json`, does not exist (the evaluations are per set), and the validation evaluation matched byte for byte only with three fields carried over: the store's path, the store manifest's hash and the wall-clock timing. The retrain matched every gated metric within 0.5%. The test sets are not rescored: the lock now holds the decision layer's look, so a TracerNet look at `test` or `test_ood` would need a relock of its own. The store manifest's hash differs because DuckDB's file bytes vary from build to build, while all 10 tables are content-equal.
 
 - Parent's run, `run --from-frozen` (HiPerGator, code `8656c07`; `results/neural/rebuild/run-from-frozen.json`, with the cluster's folder prefix written as `$T`). Training and calibration ran on a B200 node from 4:37 AM to 9:05 AM on Nov 11 (seeds 0, 1 and 2 in 118, 59 and 90 min), and scoring and evaluation on 64 AMD Rome cores from 9:11 AM to 3:32 PM. Exact checks all passed: the simulation manifest, all 62,438 simulation files, the store's inputs and its 10 tables, the training configuration and the feature schema. The gated metrics, each within 0.5%:
 
@@ -222,10 +222,10 @@ A check that nobody ran is reported as not run. Every number comes from syntheti
 
 **Criterion.** Every pull request merged to `main` and none open; no `Co-Authored-By` trailer and no "Generated with" or "Generated by" line in any commit message, title or body of this work; a teaming-log entry per pull request; tasks N0 to N11 ticked with their checks; `AGENTS.md` updated.
 
-**Verdict: partly held.** Every pull request through #62 is merged, none carries a trailer or a "Generated" line, and each has its teaming-log entry; N11's own pull request carries this appendix and its entry. The ticks are the part that does not hold from here: the published plan belongs to another organization, whose policy keeps its tick database closed to Claude Code even with editor access, so N0 to N11 are ticked by hand in the browser.
+**Verdict: partly held.** Every pull request through #63 (N11) is merged, none carries a trailer or a "Generated" line, and each has its teaming-log entry. The ticks are the part that does not hold from here: the published plan belongs to another organization, whose policy keeps its tick database closed to Claude Code even with editor access, so N0 to N11 are ticked by hand in the browser.
 
 - Run now: `gh pr list --state all`: 62 pull requests, all merged; `gh pr list --state open` is empty. This work's #49 to #62 all merged into `main`.
-- Run now: `git log 8686475..HEAD --format=%B` (16 commits) has no `Co-Authored-By`, "Generated with" or "Generated by" line, and no title or body of #49 to #62 has one. Outside this work: the bodies of #37 and #39 (October 30) end with "Generated by Claude Code", and commit `905b3c4` (October 28) uses "generated with the Claude API" in prose.
+- Run now: `git log 8686475..HEAD --format=%B` (16 commits) has no `Co-Authored-By`, "Generated with" or "Generated by" line, and no title or body of #49 to #62 has one. Outside this work: the bodies of #37 and #39 (October 30) ended with "Generated by Claude Code" (both lines were removed on November 11, for the revision), and commit `905b3c4` (October 28) uses "generated with the Claude API" in prose.
 - Run now: `docs/ai-teaming-log.md` has 14 entries for the 14 pull requests #49 to #62 (N0, the plan, N1, N2, N3, N4, two spend-path reviews, N5 to N10).
 - Run now: `AGENTS.md` (local only, untracked) was last changed at 11:43 PM on November 10 and states the test verdict, the failed deletion check and the decision layer's result.
 - Parent's run: reading the plan's tick database (`state/main`) was refused ("shared with you from another organization"), so whether N0 to N11 are ticked could not be checked here. Republishing the plan was refused too: the live page is at a newer version whose source this machine could not receive, and overwriting it unseen would discard that version.
@@ -235,16 +235,18 @@ A check that nobody ran is reported as not run. Every number comes from syntheti
 
 **Criterion.** N9 merged by Friday, November 13; N11 by Saturday, November 14.
 
-**Verdict: held once this pull request merges.** N9 merged on November 10, three days early; N11's pull request opened on November 11, three days before its deadline.
+**Verdict: held.** N9 merged on November 10, three days early; N11 (#63) merged on November 11, three days before its deadline.
 
-- Run now (`gh pr list`): N9, #61, merged at 11:27 PM EST on November 10; N10, #62, at 11:39 PM EST on November 10.
+- Run now (`gh pr list`): N9, #61, merged at 11:27 PM EST on November 10; N10, #62, at 11:39 PM EST on November 10; N11, #63, at 4:14 PM EST on November 11 (`gh pr view 63`, read for the revision).
 
 ## Summary
 
-Of the 21 criteria, 16 held (items 1, 4 to 10, 12 to 14, 16 to 19 and 21, the last once this pull request merges), 1 failed and 4 held in part.
+Of the 21 criteria, 14 held (items 1, 4 to 10, 12, 13, 16, 17, 19 and 21), 1 failed and 6 held in part.
 
 - **Failed: item 15, explanations.** The deletion check found the top three factor groups lower `p_miss` more than three random groups in 68.2% of test alerts, below the required 70%. Completeness (0.93%), randomization (Spearman -0.0006) and factors on every alert held.
 - **Partly held: item 2, OpenAI spend.** Every cap held ($62.1739 of the $74.00 usable); the manifest records spend per job but not per model with token sums.
 - **Partly held: item 3, library.** Every scenario re-validates and every marginal is at least 90% of target; the manifest gives requested, repaired and dropped counts by job only.
 - **Partly held: item 11, evaluation.** Discrimination and calibration metrics have no bootstrap intervals, and reliability plots exist for `test` only.
+- **Partly held: item 14, ablations.** A3 and A4 were not buildable in time, and the arms used 73.7 hours of compute against a 6-hour budget.
+- **Partly held: item 18, single command.** The file the criterion names does not exist, and the validation match needed three fields carried over.
 - **Partly held: item 20, process.** The plan's ticks could not be read or written from here (another organization's policy), so N0 to N11 are ticked by hand.
