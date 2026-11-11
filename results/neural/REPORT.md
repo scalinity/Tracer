@@ -642,7 +642,51 @@ Not run: the gradient-boosted reference is first on the cut list (spec §18).
 
 ## 7. Explanation checks and example alerts
 
-Not run yet: the explanation checks of spec §9.4 (task N9) have not been run (no results/neural/explanations.json).
+Integrated gradients on the logit of the ensemble's mean p_miss, summed into ten factor groups (spec §9), on 287,374 alerts of `test` at 6 alerts per shift (default weights), 256 steps. Attributions explain the network, not the world, and the data is synthetic.
+
+| Check | Result | Rule | Outcome |
+|---|---|---|---|
+| Completeness | median gap 0.93% at 256 steps | within 1% for the median alert | held |
+| Deletion | top 3 beat 3 random groups in 68.2% of 264,850 alerts; mean drop in p_miss 0.0346 against 0.0116 | at least 70%, with a larger mean drop | failed |
+| Randomization | mean Spearman -0.00 (median 0.00) over 927 alerts | below 0.3 | held |
+| Factors | 287,374 of 287,374 alerts carry factors | every alert | held |
+
+Closed-window alerts: 22,524. At or past its window's close an alert's p_miss is 1 by construction, so it carries one window factor with no attribution and is left out of the three checks above.
+
+Groups among the factors that raise the risk, by how often: route_flow 135,646, unit_flow 128,852, lab_flow 116,043, batch_mates 89,077, window 75,844, silence 21,318.
+
+### Example alerts
+
+The highest, the median and the lowest p_miss among the alerts explained. Related specimens are the batch-mates the network attended to most, which is not an explanation.
+
+**SP-r108422-000338@5** (S0842, minute 5 of a 60-minute window, p_miss 1.000)
+
+| Direction | Group | Share | Attribution (logit) | Factor |
+|---|---|---|---|---|
+| raises | batch_mates | 87% | 0.211 | 0 of 1 specimen sent from this unit around the same time have arrived |
+| raises | lab_flow | 13% | 0.031 | Receiving is behind: 3 receipts in the last hour against 6 collections the hour before |
+| lowers | route_flow | 77% | -0.061 | No receipts via this route for 139 min, usually none within an hour |
+
+Related specimens: SP-r108422-000337, SP-r108422-000336.
+
+**SP-r125301-001234@5** (S2530, minute 5 of a 60-minute window, p_miss 0.408)
+
+| Direction | Group | Share | Attribution (logit) | Factor |
+|---|---|---|---|---|
+| raises | route_flow | 81% | 0.576 | No receipts via this route for 11 min, usually every 30 min |
+| raises | unit_flow | 19% | 0.135 | 3 specimens from this on-site clinic are still outstanding |
+| lowers | batch_mates | 100% | -0.888 | 0 of 1 specimen sent from this unit around the same time have arrived |
+
+Related specimens: SP-r125301-001200, SP-r125301-001213, SP-r125301-001222, SP-r125301-001227, SP-r125301-001230.
+
+**SP-r136472-000080@5** (S3647, minute 5 of a 1,440-minute window, p_miss 0.001)
+
+| Direction | Group | Share | Attribution (logit) | Factor |
+|---|---|---|---|---|
+| raises | unit_flow | 100% | 0.007 | 1 specimen from this emergency department is still outstanding |
+| lowers | route_flow | 67% | -0.055 | No receipts via this route for 84 min, usually every 60 min |
+
+Related specimens: SP-r136472-000076, SP-r136472-000077.
 
 ## 8. Decision layer
 
