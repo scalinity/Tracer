@@ -99,18 +99,88 @@ def section(text: str, number: int) -> str:
 def test_the_first_paragraph_states_each_rule_with_numbers_intervals_and_the_notice(tmp_path):
     text = page(tmp_path, evaluations={"test": make()})
     first = text.split("\n\n")[1]
-    assert first.startswith("**Verdict on `test` at 6 alerts per shift: R1 failed, R2 held, R3 held, R4 held; "
-                            "primary risk model: analytic model.**")
+    assert first.startswith("**Verdict on `test` at 6 alerts per shift, a chosen budget: R1 failed, R2 held, R3 held, "
+                            "R4 held. The analytic model stays primary because R1 failed.**")
+    assert "Under spec §8.6 the primary model follows R1 to R3, so R1 alone decides it." in first
     assert "TracerNet's median warning over all breaches was 2.0 min against window rule 0.0 (difference 2.0, " \
            "interval low 0.5)" in first
     assert "at 30 min TracerNet 0.0700 against 0.0750 (excess -0.0050)" in first
-    assert "the largest deficit was 0.0%" in first and "interval high 1.0%" in first
+    assert ("R2 (deficit in never-received specimens alerted below 2 points) held at both weightings: at 3-2-1 weights "
+            "it is even with all three, within 1 point (largest deficit 0.0 points, interval high 1.0)") in first
     assert R.NOTICE in first
 
 
 def test_a_held_rule_names_tracernet_as_the_primary_model(tmp_path):
     first = page(tmp_path, evaluations={"test": make(tn=12.0, low=2.0)}).split("\n\n")[1]
-    assert "R1 held, R2 held, R3 held, R4 held; primary risk model: TracerNet." in first
+    assert "R1 held, R2 held, R3 held, R4 held. TracerNet becomes the primary risk model: R1 to R3 held.**" in first
+
+
+def floored():
+    """Every R1 median 0 (no method catches half the breaches) while TracerNet leads on the capped mean warning, and
+    the baselines realizing fewer alerts than TracerNet, so R4 fails."""
+    r = make(tn=0.0, low=0.0)
+    for m, by_w in r["operating_points"]["6/shift"].items():
+        for v in by_w.values():
+            v["catch_rate"] = interval_of(0.392 if m == "tracernet" else 0.3, 0.01)
+            v["capped_mean_warning_min"] = interval_of(23.9 if m == "tracernet" else 10.0)
+            if m != "tracernet":
+                v["realized_alerts_per_shift"] = interval_of(4.0)
+    r["discrimination"]["tracernet"]["landmark_30"]["auroc"] = 0.957
+    rule = ne.decide(R.headline_points(r, "6/shift"), {w: r["differences"]["6/shift"][w] for w in ne.WEIGHTINGS},
+                     R.brier_of(r))
+    r["decision_rule"] = rule | {"set": "test", "binding": True}
+    return r
+
+
+def test_a_floored_r1_says_why_beside_the_capped_mean_and_the_warning_check_that_compared_zeros(tmp_path):
+    text = page(tmp_path, evaluations={"test": floored()},
+                selection={"chosen": "C", "warning_check": {"A": 0.0, "C": 0.0}})
+    first, s1 = text.split("\n\n")[1], section(text, 1)
+    assert ("The analytic model stays primary because R1 failed. R4 also failed, mostly because the baselines leave "
+            "part of the 6-alert budget unused (the window rule alerts on nothing in 261 of 772 scenarios).**") in first
+    assert "median warning over all breaches was 0.0 min at 3-2-1 and equal weights" in first
+    assert "A missed breach counts as 0 minutes (spec §8.4)" in first and "best catch rate 39.2%" in first
+    assert "TracerNet 23.9 min against 10.0 to 10.0 for the baselines" in first
+    assert "**Why R1 cannot separate the methods here.**" in s1 and "November 8 at 11:42 PM EST" in s1
+    assert "compared rung C's validation median warning with rung A's, 0.0 against 0.0 min, so it tested nothing." in s1
+    assert "R1 cannot separate" not in section(page(tmp_path / "plain", evaluations={"test": make()}), 1)
+
+
+def test_a_hybrid_that_leads_overall_says_the_options_fit_imperfectly(tmp_path):
+    ev = floored()
+    ev["slices"]["disruption"]["disrupted"]["tracernet"] = {w: {"median_warning_all_breaches_min": 0.0,
+                                                                "capped_mean_warning_min": 17.7}
+                                                            for w in ("3-2-1", "equal")}
+    s10 = section(page(tmp_path, evaluations={"test": ev}), 10)
+    assert "The rule failed. The analytic model stays primary because R1 failed." in s10
+    assert "**Hybrid.** §8.9's options fit this result imperfectly." in s10
+    assert ("it leads on capped mean warning (23.9 min against the best baseline's 10.0 at 6 alerts per shift, 3-2-1 "
+            "weights), AUROC (0.957 against 0.900 at 30 minutes of silence) and Brier score") in s10
+    assert "The tie exists only in R1's floored median (section 1)." in s10 and "ties overall (R1 failed)" not in s10
+
+
+def test_o1s_acceptance_counts_every_arm_and_the_lock_reads_first_then_relocked(tmp_path):
+    jobs = {"O1": {"arms": {"all": ["a-low", "b-low", "c-medium"]}, "tier": "flex", "spent_usd": 0.6,
+                   "counts": {"briefs": 24, "requests": 79, "accepted": 69}},
+            "O2": {"arms": {"normal": ["b-low"], "edge": ["b-low"]}, "tier": "flex", "spent_usd": 40.0,
+                   "counts": {"briefs": 100, "requests": 110, "accepted": 98}}}
+    text = page(tmp_path, evaluations={"test": make()}, manifest={"jobs": jobs},
+                lock={"first_split": "test", "time": "at-relock", "relocked_from": "at-first"})
+    s9 = section(text, 9)
+    assert "| O1 | a-low, b-low, c-medium | flex | 24 × 3 arms | 79 | 69 | 95.8% |" in s9
+    assert "| O2 | b-low | flex | 100 | 110 | 98 | 98.0% |" in s9
+    s11 = section(text, 11)
+    assert "Test sets are scored under a hash lock; every rerun is listed in `results/neural/test_runs.jsonl`" in s11
+    assert "Locked first on `test` at at-first, relocked at at-relock." in s11
+
+
+def test_the_paper_analyses_are_not_run_with_their_reasons_and_the_caveats_sit_under_the_verdict(tmp_path):
+    text = page(tmp_path, evaluations={"test": make()}, caveats="- The control flags leakage.\nNo bullet.\n")
+    s5 = section(text, 5)
+    assert "### Sensitivity sets and face validity (spec §8.11)" in s5
+    assert "`sens_pace_slow`): not run." in s5 and "Blinded face-validity rating: not run." in s5
+    assert text.split("\n\n")[2:4] == ["**Read with the verdict:**", "- The control flags leakage.\n- No bullet."]
+    assert "Read with the verdict" not in page(tmp_path / "none", evaluations={"test": make()})
 
 
 def test_beside_r1_the_scenarios_without_an_in_budget_knob_and_the_non_binding_view(tmp_path):

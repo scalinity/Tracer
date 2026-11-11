@@ -1,0 +1,5 @@
+- The negative control flags leakage: on `control_v1world`, where no context exists, TracerNet's median warning leads the local analytic refit by 10 minutes (95% interval 5 to 20). Flagged, explained, not resolved (sections 5 and 10).
+- TracerNet's calibration does not carry over to `legacy_v1`: its Brier score at 60 minutes of silence is 0.216 against the analytic model's 0.182 (sections 5 and 10).
+- The scenario library misses its coverage targets in 20 of 32 stratum-by-archetype cells (section 9).
+- Training was unstable: single-epoch validation spikes reached val_sel 1,444 against about 0.082, and each member kept its best validation epoch (section 10).
+- The explanations fail their deletion check: the top three factor groups beat three random groups in 68.2% of test alerts, against the required 70% (section 7).

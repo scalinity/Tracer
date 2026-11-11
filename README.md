@@ -71,9 +71,13 @@ laboratory-week configurations, frozen in `datasets/scenarios-v2.jsonl.gz`, and 
 each week out into scan events and labels under the same policy table. Every 5 minutes while a specimen is
 unreceived, it estimates the probability that the specimen misses its window. It replaces the analytic model only
 if it passes rules fixed before any test set was scored (`docs/neural/spec.md` §8.6). On the test set at 6 alerts
-per 8-hour shift, R1 (warning) failed, R2 (losses) and R3 (calibration) held, and R4 (equal alerts) failed, so the
-analytic model stays primary and TracerNet is reported as a challenger result. The full report, with intervals,
-slices, ablations and the explanation checks, is `results/neural/REPORT.md`. This data is synthetic too:
+per 8-hour shift, a chosen budget, R1 (warning) failed, R2 (losses) and R3 (calibration) held, and R4 (equal alerts)
+failed. The analytic model stays primary because R1 failed. R4 also failed, mostly because the baselines leave part of
+the 6-alert budget unused (the window rule alerts on nothing in 268 of 782 scenarios). R1 cannot separate the methods
+here: a missed breach counts as 0 minutes and no method catches half the breaches, so every median warning is 0, while
+the capped mean warning is 23.9 minutes for TracerNet against 7.4 to 13.7 for the baselines. TracerNet is reported as
+a challenger result. The full report, with intervals, slices, ablations and the explanation checks, is
+`results/neural/REPORT.md`. This data is synthetic too:
 laboratory weeks designed by language models and simulated by this project's code, with no clinical review.
 
 These run offline with the committed artifact. The v2 store in `data/store-v2/` comes from the frozen library
@@ -87,10 +91,10 @@ python -m src.models.tracernet.predict --split val --budget 6 --explain --out re
 python -m src.neural.pipeline report                  # results/neural/REPORT.md
 ```
 
-The test sets are scored once: `results/neural/test_lock.json` holds the hashes of that look, which ran with
-`--matched`. A later `evaluate` or `explain` of `test` or `test_ood` runs only when every hash matches, so it takes
-`--matched` too, and each one is listed in `results/neural/test_runs.jsonl`. `explain` never starts a look of its
-own.
+The test sets are scored under a hash lock; every rerun is listed in `results/neural/test_runs.jsonl`.
+`results/neural/test_lock.json` holds the hashes of the look, which ran with `--matched`. A later `evaluate` or
+`explain` of `test` or `test_ood` runs only when every hash matches, so it takes `--matched` too. `explain` never
+starts a look of its own.
 
 ## Where things live
 
