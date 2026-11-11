@@ -211,9 +211,9 @@ A check that nobody ran is reported as not run. Every number comes from syntheti
 
 **Criterion.** Full pytest passes with no drop in the collected count; `scripts/clean_clone.sh` passes; the plan check passes; the exhibit's `npm test` passes.
 
-**Verdict: held** at `b1e2867` for the suite and the clean clone; both need a rerun at N11's final commit.
+**Verdict: held** at N11's final code commit, `26b1044`.
 
-- Parent's run: the full suite gave 1,706 passed and 3 skipped at `b1e2867` (N10's last commit before merge), and `scripts/clean_clone.sh` passed (1,706 passed, outputs match). Not rerun here, to avoid racing the agent editing `src/neural/pipeline.py`.
+- Parent's run at `26b1044` (4:04 PM to 4:13 PM, November 11): the full suite gave 1,737 passed and 3 skipped (the key-value checks, which need `.env` and passed separately under item 1); `scripts/clean_clone.sh .` passed, its fresh checkout reproducing every committed output and passing 1,737; the exhibit's `npm test` passed 51. The suite has grown from 1,509 after N8 to 1,737, so the collected count never dropped.
 - Run now: `pytest --collect-only -q` collects 1,711 tests at `ac94969` (599 when this work began, build log November 8).
 - Run now: `node visuals/plan.check.cjs`: "plan data is consistent", exit 0.
 - Run now: `npm test` in `visuals/exhibit-3d` (in the main checkout, whose exhibit files equal `95b4ac8`; the worktree has no `node_modules`): 3 files, 51 passed.
