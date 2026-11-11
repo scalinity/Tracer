@@ -1086,8 +1086,8 @@ python -m src.neural.pipeline run       --from-frozen [--evaluate-committed] [--
 ```
 
 **The single command.**
-- `run --from-frozen` regenerates everything from the committed library and splits with no API call: simulate, store, features, train the committed configuration into a scratch artifact, calibrate, evaluate on validation, compare with the committed artifact's validation metrics (`val_sel` within 0.5%), report. It never touches a test set: a retrained network is not bit-identical on MPS, so scoring test with it would be a second look.
-- `run --from-frozen --evaluate-committed` rebuilds the same data, then scores the committed artifact on every set, test included under the existing lock (every hash matches), and reproduces `results/neural/evaluation.json` byte for byte (inference on CPU).
+- `run --from-frozen` regenerates everything from the committed library and splits with no API call: simulate, store, features, train the committed configuration into a scratch artifact, calibrate, evaluate on validation, compare with the committed validation metrics (the ensemble's `val_sel`, and TracerNet's pooled AUROC, pooled AUPRC and Brier at 30 and 60 minutes, each within 0.5%; each seed's `val_sel` and the operating points are reported without a gate), report. It never touches a test set: a retrained network is not bit-identical on MPS, so scoring test with it would be a second look.
+- `run --from-frozen --evaluate-committed` rebuilds the same data, scores the committed artifact on validation and compares `results/neural/val/evaluation.json` with the committed copy on every field except the store's path, the store manifest's hash and the timing, which a rebuilt store always changes (DuckDB's file bytes differ from build to build); it also checks the simulation file by file and the store table by table. Inference runs on CPU of the processor type that scored the committed table. The test sets are not rescored: a TracerNet look after the decision layer's relock needs a relock of its own.
 - `run --generate` is the original build with O1 to O3 and every spend guard; each job needs its own `--budget-usd`.
 
 ### 12.2 Stages

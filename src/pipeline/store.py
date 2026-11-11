@@ -519,6 +519,26 @@ def verified_store_v2_manifest(store_dir: Path = STORE_V2_DIR) -> dict:
     return manifest
 
 
+def table_digests(store_dir: Path = STORE_V2_DIR) -> dict:
+    """{database file: {table: {rows, columns, sum, xor}}} for every table of a v2 store's two files: the row count,
+    the column names and types, and the sum and XOR of DuckDB's hash of each whole row. Neither aggregate depends on
+    row order or on how DuckDB laid the file out, so two stores loaded from the same simulation agree here even when
+    their files' bytes differ (they do across DuckDB builds). The hashes are DuckDB's own: compare digests made by
+    one DuckDB version. Opens both files read-only and computes no statistic of any column."""
+    out = {}
+    for name in (OBSERVED_NAME, TRUTH_NAME):
+        with duckdb.connect(str(Path(store_dir) / name), read_only=True) as con:
+            tables = [t for (t,) in con.execute("select table_name from information_schema.tables where "
+                                                "table_schema = 'main' order by table_name").fetchall()]
+            out[name] = {}
+            for t in tables:
+                columns = [[c[0], c[1]] for c in con.execute(f'describe "{t}"').fetchall()]
+                n, total, xor = con.execute(f'select count(*), sum(hash(r)::hugeint), bit_xor(hash(r)) from "{t}" r'
+                                            ).fetchone()
+                out[name][t] = {"rows": int(n), "columns": columns, "sum": str(total or 0), "xor": str(xor or 0)}
+    return out
+
+
 def main() -> int:
     counts = build()
     print(f"wrote {STORE_DIR}: " + ", ".join(f"{k} {v}" for k, v in counts.items()))
