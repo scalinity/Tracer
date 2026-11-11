@@ -1,0 +1,2494 @@
+{
+ "adoption": {
+  "binding": false,
+  "checks": {
+   "R1": {
+    "difference": 0.15739999999999998,
+    "holds": true,
+    "low": 0.13539499999999996
+   },
+   "R2": {
+    "difference": -0.06459999999999999,
+    "holds": false,
+    "low": -0.08139999999999992
+   }
+  },
+  "dispatch_source": null,
+  "holds": false,
+  "rule": "role accuracy beats R1 and R2 by at least 5 points, each difference's 95% interval above zero, on test"
+ },
+ "alerts": 5000,
+ "alerts_without_a_place": 0,
+ "bootstrap": {
+  "clusters": "scenarios",
+  "resamples": 2000,
+  "seed": 0
+ },
+ "choices": {
+  "R1": {
+   "action": {
+    "check_lab_tube_station": 0.3356,
+    "contact_courier_coordinator": 0.6644
+   },
+   "place": {
+    "at_lab_tube_station": 0.3356,
+    "with_courier": 0.6644
+   }
+  },
+  "R2": {
+   "action": {
+    "call_unit_confirm_sent": 0.3978,
+    "check_lab_tube_station": 0.2048,
+    "check_receiving_queue": 0.0058,
+    "contact_courier_coordinator": 0.3288,
+    "escalate_tube_system": 0.0504,
+    "request_recollection": 0.0124
+   },
+   "place": {
+    "at_lab_tube_station": 0.2048,
+    "in_lab_awaiting_scan": 0.0058,
+    "in_tube_system": 0.0504,
+    "lost": 0.0124,
+    "still_at_unit": 0.3978,
+    "waiting_for_courier": 0.0406,
+    "with_courier": 0.2882
+   }
+  },
+  "model": {
+   "action": {
+    "call_unit_confirm_sent": 0.3772,
+    "check_lab_tube_station": 0.1382,
+    "contact_courier_coordinator": 0.3658,
+    "escalate_tube_system": 0.011,
+    "request_recollection": 0.0026,
+    "wait_and_recheck": 0.1052
+   },
+   "place": {
+    "at_lab_tube_station": 0.081,
+    "in_lab_awaiting_scan": 0.0654,
+    "in_tube_system": 0.1268,
+    "lost": 0.0034,
+    "still_at_unit": 0.222,
+    "waiting_for_courier": 0.3108,
+    "with_courier": 0.1906
+   }
+  }
+ },
+ "config_hash": "d386b03891c5705d00072031cee5b3644e4d05f40d69765d5b13fb8522f917fa",
+ "counterfactual": {
+  "found_after_alert_min": 10.0,
+  "received_after_found_min": 5.0,
+  "source": "assumed"
+ },
+ "created_at": "2026-11-10T16:19:27-05:00",
+ "differences": {
+  "model - R1": {
+   "role_accuracy": {
+    "high": 0.18040499999999998,
+    "low": 0.13539499999999996,
+    "point": 0.15739999999999998,
+    "share_ahead": 1.0
+   }
+  },
+  "model - R2": {
+   "role_accuracy": {
+    "high": -0.046600000000000086,
+    "low": -0.08139999999999992,
+    "point": -0.06459999999999999,
+    "share_ahead": 0.0
+   }
+  }
+ },
+ "escalate": {
+  "R2_auprc": {
+   "high": 0.248424591039329,
+   "low": 0.2112103212585778,
+   "point": 0.22906506286880424
+  },
+  "R2_auroc": {
+   "high": 0.518579951876274,
+   "low": 0.5003035368403522,
+   "point": 0.5091178059128993
+  },
+  "R2_precision": {
+   "high": 0.32595110313082815,
+   "low": 0.22499630177514793,
+   "point": 0.2735562310030395
+  },
+  "R2_recall": {
+   "high": 0.0987887924058686,
+   "low": 0.06326828871466335,
+   "point": 0.07992895204262877
+  },
+  "alerts": 5000,
+  "label": "unrecoverable",
+  "model_auprc": {
+   "high": 0.44841545722421294,
+   "low": 0.3835391930321004,
+   "point": 0.41491679197693965
+  },
+  "model_auroc": {
+   "high": 0.7793182072638072,
+   "low": 0.7437555418415303,
+   "point": 0.7623137260655589
+  },
+  "model_precision": {
+   "high": 0.4504189869825843,
+   "low": 0.3203090734649123,
+   "point": 0.38372093023255816
+  },
+  "model_probabilities": 5000,
+  "model_recall": {
+   "high": 0.1064026201233531,
+   "low": 0.07109797938608209,
+   "point": 0.08792184724689166
+  },
+  "positives": 1126,
+  "threshold": 0.7
+ },
+ "job": "X2",
+ "methods": {
+  "R1": {
+   "action_appropriate": {
+    "high": 0.39220499999999997,
+    "low": 0.35459500000000005,
+    "point": 0.3736
+   },
+   "breaches_averted_per_100_alerts": {
+    "high": 8.84,
+    "low": 6.78,
+    "point": 7.8
+   },
+   "place_accuracy": {
+    "high": 0.214,
+    "low": 0.1862,
+    "point": 0.2002
+   },
+   "recollections_started_per_100_alerts": {
+    "high": 0.13999999999999999,
+    "low": 0.0,
+    "point": 0.06
+   },
+   "role_accuracy": {
+    "high": 0.4818,
+    "low": 0.4426,
+    "point": 0.4628
+   }
+  },
+  "R2": {
+   "action_appropriate": {
+    "high": 0.6082,
+    "low": 0.5744,
+    "point": 0.5918
+   },
+   "breaches_averted_per_100_alerts": {
+    "high": 25.06,
+    "low": 21.6,
+    "point": 23.32
+   },
+   "place_accuracy": {
+    "high": 0.438005,
+    "low": 0.4058,
+    "point": 0.4224
+   },
+   "recollections_started_per_100_alerts": {
+    "high": 0.22,
+    "low": 0.04,
+    "point": 0.12
+   },
+   "role_accuracy": {
+    "high": 0.6988,
+    "low": 0.6698,
+    "point": 0.6848
+   }
+  },
+  "model": {
+   "action_appropriate": {
+    "high": 0.5706,
+    "low": 0.53439,
+    "point": 0.553
+   },
+   "breaches_averted_per_100_alerts": {
+    "high": 26.480499999999996,
+    "low": 22.8595,
+    "point": 24.64
+   },
+   "place_accuracy": {
+    "high": 0.388405,
+    "low": 0.3602,
+    "point": 0.3744
+   },
+   "recollections_started_per_100_alerts": {
+    "high": 0.2,
+    "low": 0.02,
+    "point": 0.1
+   },
+   "role_accuracy": {
+    "high": 0.6354049999999999,
+    "low": 0.603995,
+    "point": 0.6202
+   }
+  }
+ },
+ "model_source": {
+  "drex-max": 5000
+ },
+ "notice": "Synthetic data: laboratory weeks designed by language models and simulated by this project's code, with no clinical review. Decision-model answers are zero-shot and their calibration on this task is measured, never assumed.",
+ "provenance": {
+  "config_hash": "d386b03891c5705d00072031cee5b3644e4d05f40d69765d5b13fb8522f917fa",
+  "dryrun_created_at": "2026-11-10T15:52:22-05:00",
+  "items_sha256": "7d546f998c1e0c91c71b446c9292b7bce7fdd7d179637ed02ad5531b67dce633",
+  "lock_hash": "4f365789b5d734b7783617bee6289f17e0ff0b28e1928a6df8a358eae3266c88",
+  "outputs_sha256": "13e2e7e7c5e9a8dfc56b41c5eff3608f44dd211779d3eb1cd5bd5ca579b29149",
+  "questions_hash": "6a80c6ca12a0654df68202290d77f2f7a074a07b54b5454f0bfc92669eb64434",
+  "request_set_hash": "c172ac64535ba65a2bd26f80e8cf6ab24465e6a55c6bab2a18492f33765f03a9",
+  "test_run": null
+ },
+ "scenarios": 500,
+ "scored_alerts": 5000,
+ "set": "val",
+ "shared_problem": {
+  "R2_auprc": {
+   "high": 0.5532064079990883,
+   "low": 0.48656227519176526,
+   "point": 0.5187434957110254
+  },
+  "R2_auroc": {
+   "high": 0.6249693473008042,
+   "low": 0.5932154044704759,
+   "point": 0.6087104934992003
+  },
+  "R2_precision": {
+   "high": 0.6458462205793603,
+   "low": 0.5715133466655073,
+   "point": 0.6082474226804123
+  },
+  "R2_recall": {
+   "high": 0.4792306425249927,
+   "low": 0.4235242073235828,
+   "point": 0.45038167938931295
+  },
+  "alerts": 5000,
+  "label": "shared",
+  "model_auprc": {
+   "high": 0.6740395757191283,
+   "low": 0.6028038522318919,
+   "point": 0.6363266484410021
+  },
+  "model_auroc": {
+   "high": 0.716637508496591,
+   "low": 0.6815293101052645,
+   "point": 0.6988748712446387
+  },
+  "model_precision": {
+   "high": 0.6732936883362616,
+   "low": 0.6055142463600299,
+   "point": 0.6386797915460336
+  },
+  "model_probabilities": 5000,
+  "model_recall": {
+   "high": 0.5217987091670172,
+   "low": 0.4696258899325952,
+   "point": 0.4952851369555456
+  },
+  "positives": 2227,
+  "threshold": 0.7
+ },
+ "slices": {
+  "by_place": {
+   "at_lab_tube_station": {
+    "alerts": 480,
+    "differences": {
+     "model - R1": {
+      "role_accuracy": {
+       "high": -0.28150775694893343,
+       "low": -0.36492416001439504,
+       "point": -0.32291666666666663,
+       "share_ahead": 0.0
+      }
+     },
+     "model - R2": {
+      "role_accuracy": {
+       "high": -0.1512525765022991,
+       "low": -0.2675752251107912,
+       "point": -0.21041666666666659,
+       "share_ahead": 0.0
+      }
+     }
+    },
+    "escalate": {
+     "R2_auprc": {
+      "high": 0.09833704280649584,
+      "low": 0.023843967784555782,
+      "point": 0.05031645569620253
+     },
+     "R2_auroc": {
+      "high": 0.7094065751901375,
+      "low": 0.46280444117286224,
+      "point": 0.5876623376623377
+     },
+     "R2_precision": {
+      "high": 0.1463495934959349,
+      "low": 0.013884132420091323,
+      "point": 0.0759493670886076
+     },
+     "R2_recall": {
+      "high": 0.5714285714285714,
+      "low": 0.08333333333333333,
+      "point": 0.3333333333333333
+     },
+     "alerts": 480,
+     "label": "unrecoverable",
+     "model_auprc": {
+      "high": 0.15341268951767154,
+      "low": 0.038857915714061615,
+      "point": 0.07456941062968658
+     },
+     "model_auroc": {
+      "high": 0.7923381536670983,
+      "low": 0.5613590272949568,
+      "point": 0.6835618085618086
+     },
+     "model_precision": {
+      "high": 0.2,
+      "low": 0.0,
+      "point": 0.09090909090909091
+     },
+     "model_probabilities": 480,
+     "model_recall": {
+      "high": 0.3333333333333333,
+      "low": 0.0,
+      "point": 0.16666666666666666
+     },
+     "positives": 18,
+     "threshold": 0.7
+    },
+    "methods": {
+     "R1": {
+      "action_appropriate": {
+       "high": 1.0,
+       "low": 1.0,
+       "point": 1.0
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 10.679656350015197,
+       "low": 5.450387738902119,
+       "point": 7.916666666666666
+      },
+      "place_accuracy": {
+       "high": 1.0,
+       "low": 1.0,
+       "point": 1.0
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 1.0,
+       "low": 1.0,
+       "point": 1.0
+      }
+     },
+     "R2": {
+      "action_appropriate": {
+       "high": 0.7490155011645068,
+       "low": 0.6680412042632677,
+       "point": 0.7104166666666667
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 7.884638658367907,
+       "low": 3.5318828831304443,
+       "point": 5.625
+      },
+      "place_accuracy": {
+       "high": 0.7490155011645068,
+       "low": 0.6680412042632677,
+       "point": 0.7104166666666667
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 0.9198332785358101,
+       "low": 0.8516934864961954,
+       "point": 0.8875
+      }
+     },
+     "model": {
+      "action_appropriate": {
+       "high": 0.5541132434444537,
+       "low": 0.4653579700554223,
+       "point": 0.5104166666666666
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 6.832796893079918,
+       "low": 3.042453349055981,
+       "point": 4.791666666666667
+      },
+      "place_accuracy": {
+       "high": 0.3765736493908318,
+       "low": 0.2876793999184256,
+       "point": 0.33125
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 0.7184922430510665,
+       "low": 0.635075839985605,
+       "point": 0.6770833333333334
+      }
+     }
+    },
+    "scenarios": 242,
+    "shared_problem": {
+     "R2_auprc": {
+      "high": 0.42785034472128347,
+      "low": 0.2897357842670176,
+      "point": 0.355722049689441
+     },
+     "R2_auroc": {
+      "high": 0.6415816669998756,
+      "low": 0.5545113452436422,
+      "point": 0.598109243697479
+     },
+     "R2_precision": {
+      "high": 0.5631200353045013,
+      "low": 0.3628127860848337,
+      "point": 0.4608695652173913
+     },
+     "R2_recall": {
+      "high": 0.45600625,
+      "low": 0.3017241379310345,
+      "point": 0.37857142857142856
+     },
+     "alerts": 480,
+     "label": "shared",
+     "model_auprc": {
+      "high": 0.510248584094571,
+      "low": 0.343835365683976,
+      "point": 0.4143124684611701
+     },
+     "model_auroc": {
+      "high": 0.6866492898205454,
+      "low": 0.5842998179417601,
+      "point": 0.6363760504201681
+     },
+     "model_precision": {
+      "high": 0.4859154929577465,
+      "low": 0.30933929327126536,
+      "point": 0.39849624060150374
+     },
+     "model_probabilities": 480,
+     "model_recall": {
+      "high": 0.456379486431281,
+      "low": 0.3,
+      "point": 0.37857142857142856
+     },
+     "positives": 140,
+     "threshold": 0.7
+    }
+   },
+   "in_lab_awaiting_scan": {
+    "alerts": 320,
+    "differences": {
+     "model - R1": {
+      "role_accuracy": {
+       "high": -0.07910768478217467,
+       "low": -0.15488548094931076,
+       "point": -0.11562500000000003,
+       "share_ahead": 0.0
+      }
+     },
+     "model - R2": {
+      "role_accuracy": {
+       "high": -0.042763157894736836,
+       "low": -0.12690592306382062,
+       "point": -0.08437500000000003,
+       "share_ahead": 0.0
+      }
+     }
+    },
+    "escalate": {
+     "R2_auprc": {
+      "high": 0.11538461538461539,
+      "low": 0.024259581881533102,
+      "point": 0.03225806451612903
+     },
+     "R2_auroc": {
+      "high": 0.9693622448979592,
+      "low": 0.9364403781836892,
+      "point": 0.9529780564263323
+     },
+     "R2_precision": {
+      "high": 0.10714285714285714,
+      "low": 0.0,
+      "point": 0.03225806451612903
+     },
+     "R2_recall": {
+      "high": 1.0,
+      "low": 1.0,
+      "point": 1.0
+     },
+     "alerts": 320,
+     "label": "unrecoverable",
+     "model_auprc": {
+      "high": 0.21428571428571427,
+      "low": 0.04095833333333334,
+      "point": 0.058823529411764705
+     },
+     "model_auroc": {
+      "high": 0.9746979286536248,
+      "low": 0.9290102476595428,
+      "point": 0.95141065830721
+     },
+     "model_precision": {
+      "high": 0.125,
+      "low": 0.0,
+      "point": 0.037037037037037035
+     },
+     "model_probabilities": 320,
+     "model_recall": {
+      "high": 1.0,
+      "low": 1.0,
+      "point": 1.0
+     },
+     "positives": 1,
+     "threshold": 0.7
+    },
+    "methods": {
+     "R1": {
+      "action_appropriate": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "place_accuracy": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 0.5625324554896141,
+       "low": 0.43130018286531024,
+       "point": 0.496875
+      }
+     },
+     "R2": {
+      "action_appropriate": {
+       "high": 0.016026929260450153,
+       "low": 0.0,
+       "point": 0.00625
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "place_accuracy": {
+       "high": 0.016026929260450153,
+       "low": 0.0,
+       "point": 0.00625
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 0.5308009258856391,
+       "low": 0.40181268882175225,
+       "point": 0.465625
+      }
+     },
+     "model": {
+      "action_appropriate": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "place_accuracy": {
+       "high": 0.16242237261146494,
+       "low": 0.0857121013543032,
+       "point": 0.121875
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 0.44308414239482197,
+       "low": 0.31948032084834477,
+       "point": 0.38125
+      }
+     }
+    },
+    "scenarios": 219,
+    "shared_problem": {
+     "R2_auprc": {
+      "high": 0.5083725761571904,
+      "low": 0.3646938042617965,
+      "point": 0.4342200854700855
+     },
+     "R2_auroc": {
+      "high": 0.6045851296381297,
+      "low": 0.49308188159574423,
+      "point": 0.5481781376518219
+     },
+     "R2_precision": {
+      "high": 0.60417239010989,
+      "low": 0.375,
+      "point": 0.4888888888888889
+     },
+     "R2_recall": {
+      "high": 0.42750817884405656,
+      "low": 0.25190698331919703,
+      "point": 0.3384615384615385
+     },
+     "alerts": 320,
+     "label": "shared",
+     "model_auprc": {
+      "high": 0.6611500179284175,
+      "low": 0.47585527449065607,
+      "point": 0.5628328309120618
+     },
+     "model_auroc": {
+      "high": 0.7250998748126912,
+      "low": 0.6049630803396427,
+      "point": 0.6687651821862348
+     },
+     "model_precision": {
+      "high": 0.64,
+      "low": 0.449981884057971,
+      "point": 0.5454545454545454
+     },
+     "model_probabilities": 320,
+     "model_recall": {
+      "high": 0.6422764227642277,
+      "low": 0.4627942912702271,
+      "point": 0.5538461538461539
+     },
+     "positives": 130,
+     "threshold": 0.7
+    }
+   },
+   "in_tube_system": {
+    "alerts": 254,
+    "differences": {
+     "model - R1": {
+      "role_accuracy": {
+       "high": -0.18594849304126093,
+       "low": -0.30400000000000005,
+       "point": -0.24015748031496065,
+       "share_ahead": 0.0
+      }
+     },
+     "model - R2": {
+      "role_accuracy": {
+       "high": 0.06666666666666665,
+       "low": -0.11674291707198446,
+       "point": -0.023622047244094557,
+       "share_ahead": 0.287
+      }
+     }
+    },
+    "escalate": {
+     "R2_auprc": {
+      "high": 0.014733114364110674,
+      "low": 0.003676470588235294,
+      "point": 0.003937007874015748
+     },
+     "R2_auroc": {
+      "high": 0.42196875,
+      "low": 0.37402326140530145,
+      "point": 0.39920948616600793
+     },
+     "R2_precision": {
+      "high": 0.0,
+      "low": 0.0,
+      "point": 0.0
+     },
+     "R2_recall": {
+      "high": 0.0,
+      "low": 0.0,
+      "point": 0.0
+     },
+     "alerts": 254,
+     "label": "unrecoverable",
+     "model_auprc": {
+      "high": 0.018069913231203553,
+      "low": 0.0045871559633027525,
+      "point": 0.005
+     },
+     "model_auroc": {
+      "high": 0.2698661752009032,
+      "low": 0.16147652596057072,
+      "point": 0.21541501976284586
+     },
+     "model_precision": {
+      "high": 0.0,
+      "low": 0.0,
+      "point": 0.0
+     },
+     "model_probabilities": 254,
+     "model_recall": {
+      "high": 0.0,
+      "low": 0.0,
+      "point": 0.0
+     },
+     "positives": 1,
+     "threshold": 0.7
+    },
+    "methods": {
+     "R1": {
+      "action_appropriate": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "place_accuracy": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 1.0,
+       "low": 1.0,
+       "point": 1.0
+      }
+     },
+     "R2": {
+      "action_appropriate": {
+       "high": 0.25002340823970026,
+       "low": 0.15445590994371483,
+       "point": 0.20078740157480315
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 4.382908366533862,
+       "low": 0.7604562737642585,
+       "point": 2.3622047244094486
+      },
+      "place_accuracy": {
+       "high": 0.25002340823970026,
+       "low": 0.15445590994371483,
+       "point": 0.20078740157480315
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 0.8374120312349368,
+       "low": 0.7233201581027668,
+       "point": 0.7834645669291339
+      }
+     },
+     "model": {
+      "action_appropriate": {
+       "high": 0.4596962752378741,
+       "low": 0.31836270871985156,
+       "point": 0.38976377952755903
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 2.6717557251908395,
+       "low": 0.0,
+       "point": 1.1811023622047243
+      },
+      "place_accuracy": {
+       "high": 0.5671874092572157,
+       "low": 0.4385230138713745,
+       "point": 0.5039370078740157
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 0.8140515069587391,
+       "low": 0.696,
+       "point": 0.7598425196850394
+      }
+     }
+    },
+    "scenarios": 159,
+    "shared_problem": {
+     "R2_auprc": {
+      "high": 0.4403298708270926,
+      "low": 0.26494198144175135,
+      "point": 0.3485711025252278
+     },
+     "R2_auroc": {
+      "high": 0.6885269636941131,
+      "low": 0.5527113501778075,
+      "point": 0.6192322757540148
+     },
+     "R2_precision": {
+      "high": 0.5584511077158135,
+      "low": 0.32393330571665285,
+      "point": 0.44285714285714284
+     },
+     "R2_recall": {
+      "high": 0.5753955238278986,
+      "low": 0.3281185963114754,
+      "point": 0.4492753623188406
+     },
+     "alerts": 254,
+     "label": "shared",
+     "model_auprc": {
+      "high": 0.5702359498531384,
+      "low": 0.3504592906458538,
+      "point": 0.43791843754666304
+     },
+     "model_auroc": {
+      "high": 0.7004814557666361,
+      "low": 0.5422177261291687,
+      "point": 0.6228750489620055
+     },
+     "model_precision": {
+      "high": 0.5833333333333334,
+      "low": 0.3333333333333333,
+      "point": 0.45614035087719296
+     },
+     "model_probabilities": 254,
+     "model_recall": {
+      "high": 0.5066666666666667,
+      "low": 0.26229508196721313,
+      "point": 0.37681159420289856
+     },
+     "positives": 69,
+     "threshold": 0.7
+    }
+   },
+   "lost": {
+    "alerts": 21,
+    "differences": {
+     "model - R1": {
+      "role_accuracy": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0,
+       "share_ahead": 0.0
+      }
+     },
+     "model - R2": {
+      "role_accuracy": {
+       "high": 0.1428571428571429,
+       "low": 0.0,
+       "point": 0.04761904761904767,
+       "share_ahead": 0.626
+      }
+     }
+    },
+    "escalate": {
+     "R2_auprc": {
+      "high": 1.0,
+      "low": 1.0,
+      "point": 1.0
+     },
+     "R2_auroc": {
+      "high": null,
+      "low": null,
+      "point": null,
+      "undefined": "no negatives"
+     },
+     "R2_precision": {
+      "high": 1.0,
+      "low": 1.0,
+      "point": 1.0
+     },
+     "R2_recall": {
+      "high": 0.42857142857142855,
+      "low": 0.09523809523809523,
+      "point": 0.23809523809523808
+     },
+     "alerts": 21,
+     "label": "unrecoverable",
+     "model_auprc": {
+      "high": 1.0000000000000002,
+      "low": 0.9999999999999998,
+      "point": 1.0000000000000002
+     },
+     "model_auroc": {
+      "high": null,
+      "low": null,
+      "point": null,
+      "undefined": "no negatives"
+     },
+     "model_precision": {
+      "high": 1.0,
+      "low": 1.0,
+      "point": 1.0
+     },
+     "model_probabilities": 21,
+     "model_recall": {
+      "high": 0.23809523809523808,
+      "low": 0.0,
+      "point": 0.09523809523809523
+     },
+     "positives": 21,
+     "threshold": 0.7
+    },
+    "methods": {
+     "R1": {
+      "action_appropriate": {
+       "high": 0.2857142857142857,
+       "low": 0.0,
+       "point": 0.14285714285714285
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "place_accuracy": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 28.57142857142857,
+       "low": 0.0,
+       "point": 14.285714285714285
+      },
+      "role_accuracy": {
+       "high": 1.0,
+       "low": 1.0,
+       "point": 1.0
+      }
+     },
+     "R2": {
+      "action_appropriate": {
+       "high": 0.47619047619047616,
+       "low": 0.09523809523809523,
+       "point": 0.2857142857142857
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "place_accuracy": {
+       "high": 0.23809523809523808,
+       "low": 0.0,
+       "point": 0.09523809523809523
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 47.61904761904761,
+       "low": 9.523809523809524,
+       "point": 28.57142857142857
+      },
+      "role_accuracy": {
+       "high": 1.0,
+       "low": 0.8571428571428571,
+       "point": 0.9523809523809523
+      }
+     },
+     "model": {
+      "action_appropriate": {
+       "high": 0.42857142857142855,
+       "low": 0.09523809523809523,
+       "point": 0.23809523809523808
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "place_accuracy": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 42.857142857142854,
+       "low": 9.523809523809524,
+       "point": 23.809523809523807
+      },
+      "role_accuracy": {
+       "high": 1.0,
+       "low": 1.0,
+       "point": 1.0
+      }
+     }
+    },
+    "scenarios": 21,
+    "shared_problem": {
+     "R2_auprc": {
+      "high": 0.9120879120879122,
+      "low": 0.4601934523809524,
+      "point": 0.6917989417989419
+     },
+     "R2_auroc": {
+      "high": 0.8667187499999998,
+      "low": 0.4722222222222222,
+      "point": 0.6805555555555556
+     },
+     "R2_precision": {
+      "high": 1.0,
+      "low": 0.5,
+      "point": 0.7777777777777778
+     },
+     "R2_recall": {
+      "high": 0.8571428571428571,
+      "low": 0.3,
+      "point": 0.5833333333333334
+     },
+     "alerts": 21,
+     "label": "shared",
+     "model_auprc": {
+      "high": 1.0,
+      "low": 0.7359297415547416,
+      "point": 0.8793361730861731
+     },
+     "model_auroc": {
+      "high": 1.0,
+      "low": 0.6725757575757576,
+      "point": 0.8703703703703703
+     },
+     "model_precision": {
+      "high": 1.0,
+      "low": 0.5714285714285714,
+      "point": 0.8571428571428571
+     },
+     "model_probabilities": 21,
+     "model_recall": {
+      "high": 0.7777777777777778,
+      "low": 0.2222222222222222,
+      "point": 0.5
+     },
+     "positives": 12,
+     "threshold": 0.7
+    }
+   },
+   "misrouted_elsewhere": {
+    "alerts": 15,
+    "differences": {
+     "model - R1": {
+      "role_accuracy": {
+       "high": -0.06666666666666665,
+       "low": -0.5333333333333333,
+       "point": -0.2666666666666667,
+       "share_ahead": 0.0
+      }
+     },
+     "model - R2": {
+      "role_accuracy": {
+       "high": -0.06666666666666665,
+       "low": -0.5333333333333333,
+       "point": -0.2666666666666667,
+       "share_ahead": 0.0
+      }
+     }
+    },
+    "escalate": {
+     "R2_auprc": {
+      "high": 0.4,
+      "low": 0.06666666666666667,
+      "point": 0.2
+     },
+     "R2_auroc": {
+      "high": 0.5,
+      "low": 0.3076923076923077,
+      "point": 0.4166666666666667
+     },
+     "R2_precision": {
+      "high": 0.0,
+      "low": 0.0,
+      "point": 0.0
+     },
+     "R2_recall": {
+      "high": 0.0,
+      "low": 0.0,
+      "point": 0.0
+     },
+     "alerts": 15,
+     "label": "unrecoverable",
+     "model_auprc": {
+      "high": 1.0,
+      "low": 0.5833333333333333,
+      "point": 0.6666666666666666
+     },
+     "model_auroc": {
+      "high": 1.0,
+      "low": 0.5769230769230769,
+      "point": 0.8611111111111112
+     },
+     "model_precision": {
+      "high": 1.0,
+      "low": 0.0,
+      "point": 0.5
+     },
+     "model_probabilities": 15,
+     "model_recall": {
+      "high": 1.0,
+      "low": 0.0,
+      "point": 0.3333333333333333
+     },
+     "positives": 3,
+     "threshold": 0.7
+    },
+    "methods": {
+     "R1": {
+      "action_appropriate": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "place_accuracy": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 1.0,
+       "low": 1.0,
+       "point": 1.0
+      }
+     },
+     "R2": {
+      "action_appropriate": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "place_accuracy": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 1.0,
+       "low": 1.0,
+       "point": 1.0
+      }
+     },
+     "model": {
+      "action_appropriate": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "place_accuracy": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 0.9333333333333333,
+       "low": 0.4666666666666667,
+       "point": 0.7333333333333333
+      }
+     }
+    },
+    "scenarios": 15,
+    "shared_problem": {
+     "R2_auprc": {
+      "high": 1.0,
+      "low": 0.4666666666666667,
+      "point": 0.7999999999999999
+     },
+     "R2_auroc": {
+      "high": 1.0,
+      "low": 0.625,
+      "point": 0.8333333333333334
+     },
+     "R2_precision": {
+      "high": 1.0,
+      "low": 1.0,
+      "point": 1.0
+     },
+     "R2_recall": {
+      "high": 1.0,
+      "low": 0.25,
+      "point": 0.6666666666666666
+     },
+     "alerts": 15,
+     "label": "shared",
+     "model_auprc": {
+      "high": 1.0,
+      "low": 0.6666666666666666,
+      "point": 0.8690476190476191
+     },
+     "model_auroc": {
+      "high": 1.0,
+      "low": 0.5769230769230769,
+      "point": 0.8518518518518519
+     },
+     "model_precision": {
+      "high": 1.0,
+      "low": 0.3333333333333333,
+      "point": 0.8
+     },
+     "model_probabilities": 15,
+     "model_recall": {
+      "high": 1.0,
+      "low": 0.25,
+      "point": 0.6666666666666666
+     },
+     "positives": 6,
+     "threshold": 0.7
+    }
+   },
+   "still_at_unit": {
+    "alerts": 2525,
+    "differences": {
+     "model - R1": {
+      "role_accuracy": {
+       "high": 0.5115285544094118,
+       "low": 0.462091340995255,
+       "point": 0.4875247524752475,
+       "share_ahead": 1.0
+      }
+     },
+     "model - R2": {
+      "role_accuracy": {
+       "high": -0.01935002434330141,
+       "low": -0.08614524984378684,
+       "point": -0.05188118811881193,
+       "share_ahead": 0.0005
+      }
+     }
+    },
+    "escalate": {
+     "R2_auprc": {
+      "high": 0.40014903636397775,
+      "low": 0.34404458276439115,
+      "point": 0.372013201320132
+     },
+     "R2_auroc": {
+      "high": 0.5297608740813827,
+      "low": 0.5075882506203614,
+      "point": 0.5187706270627063
+     },
+     "R2_precision": {
+      "high": 0.5862463806264804,
+      "low": 0.41445666969147005,
+      "point": 0.5
+     },
+     "R2_recall": {
+      "high": 0.10757663969629662,
+      "low": 0.0663688623672792,
+      "point": 0.0858085808580858
+     },
+     "alerts": 2525,
+     "label": "unrecoverable",
+     "model_auprc": {
+      "high": 0.6471370277295299,
+      "low": 0.5748874373153157,
+      "point": 0.6118152078953062
+     },
+     "model_auroc": {
+      "high": 0.8022352495962937,
+      "low": 0.7638578516695405,
+      "point": 0.7833317675826988
+     },
+     "model_precision": {
+      "high": 0.6991371681415928,
+      "low": 0.5321100917431193,
+      "point": 0.6178861788617886
+     },
+     "model_probabilities": 2525,
+     "model_recall": {
+      "high": 0.10376309674920936,
+      "low": 0.065536684766119,
+      "point": 0.08360836083608361
+     },
+     "positives": 909,
+     "threshold": 0.7
+    },
+    "methods": {
+     "R1": {
+      "action_appropriate": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "place_accuracy": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      }
+     },
+     "R2": {
+      "action_appropriate": {
+       "high": 0.5421108351994325,
+       "low": 0.49272979643570003,
+       "point": 0.5184158415841584
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 33.75399977186818,
+       "low": 29.144892547972386,
+       "point": 31.445544554455445
+      },
+      "place_accuracy": {
+       "high": 0.5421108351994325,
+       "low": 0.49272979643570003,
+       "point": 0.5184158415841584
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 0.5624290870270852,
+       "low": 0.514065254313042,
+       "point": 0.5394059405940594
+      }
+     },
+     "model": {
+      "action_appropriate": {
+       "high": 0.506706569815539,
+       "low": 0.45657462769038476,
+       "point": 0.48237623762376236
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 37.06474730564918,
+       "low": 32.038320636574475,
+       "point": 34.53465346534653
+      },
+      "place_accuracy": {
+       "high": 0.3417246257846753,
+       "low": 0.2936463436787655,
+       "point": 0.31683168316831684
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 0.5115285544094118,
+       "low": 0.462091340995255,
+       "point": 0.4875247524752475
+      }
+     }
+    },
+    "scenarios": 495,
+    "shared_problem": {
+     "R2_auprc": {
+      "high": 0.5882797412501531,
+      "low": 0.5055379059708685,
+      "point": 0.5471161084977794
+     },
+     "R2_auroc": {
+      "high": 0.6296070533308616,
+      "low": 0.5838686205818522,
+      "point": 0.6062862259379288
+     },
+     "R2_precision": {
+      "high": 0.680605167190533,
+      "low": 0.5854876237015937,
+      "point": 0.6350710900473934
+     },
+     "R2_recall": {
+      "high": 0.4823237389950873,
+      "low": 0.407847977831129,
+      "point": 0.4455527847049044
+     },
+     "alerts": 2525,
+     "label": "shared",
+     "model_auprc": {
+      "high": 0.7213626882138259,
+      "low": 0.6396791055787585,
+      "point": 0.6814476723496034
+     },
+     "model_auroc": {
+      "high": 0.7322197940621861,
+      "low": 0.6824284710793082,
+      "point": 0.7072925351774372
+     },
+     "model_precision": {
+      "high": 0.7215683597774573,
+      "low": 0.6329572390888029,
+      "point": 0.6785290628706999
+     },
+     "model_probabilities": 2525,
+     "model_recall": {
+      "high": 0.5095322793413823,
+      "low": 0.4407076243116797,
+      "point": 0.47547797173732337
+     },
+     "positives": 1203,
+     "threshold": 0.7
+    }
+   },
+   "waiting_for_courier": {
+    "alerts": 864,
+    "differences": {
+     "model - R1": {
+      "role_accuracy": {
+       "high": -0.022698832993083284,
+       "low": -0.05843601154620306,
+       "point": -0.03935185185185186,
+       "share_ahead": 0.0
+      }
+     },
+     "model - R2": {
+      "role_accuracy": {
+       "high": -0.01600960591133006,
+       "low": -0.05386658851302839,
+       "point": -0.03356481481481477,
+       "share_ahead": 0.0
+      }
+     }
+    },
+    "escalate": {
+     "R2_auprc": {
+      "high": 0.22786304604486424,
+      "low": 0.15604066740458328,
+      "point": 0.19212962962962962
+     },
+     "R2_auroc": {
+      "high": 0.5,
+      "low": 0.4952508563285352,
+      "point": 0.4978510028653295
+     },
+     "R2_precision": {
+      "high": 0.0,
+      "low": 0.0,
+      "point": 0.0
+     },
+     "R2_recall": {
+      "high": 0.0,
+      "low": 0.0,
+      "point": 0.0
+     },
+     "alerts": 864,
+     "label": "unrecoverable",
+     "model_auprc": {
+      "high": 0.4205666192618344,
+      "low": 0.251798015717661,
+      "point": 0.33915125467107365
+     },
+     "model_auroc": {
+      "high": 0.7741410333174219,
+      "low": 0.6698952154862032,
+      "point": 0.723249732454172
+     },
+     "model_precision": {
+      "high": 0.7,
+      "low": 0.23995238095238094,
+      "point": 0.4482758620689655
+     },
+     "model_probabilities": 864,
+     "model_recall": {
+      "high": 0.11803086180124213,
+      "low": 0.041174456083803386,
+      "point": 0.0783132530120482
+     },
+     "positives": 166,
+     "threshold": 0.7
+    },
+    "methods": {
+     "R1": {
+      "action_appropriate": {
+       "high": 1.0,
+       "low": 1.0,
+       "point": 1.0
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 39.93378614493018,
+       "low": 31.6030896173297,
+       "point": 35.648148148148145
+      },
+      "place_accuracy": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 1.0,
+       "low": 1.0,
+       "point": 1.0
+      }
+     },
+     "R2": {
+      "action_appropriate": {
+       "high": 0.9976773881694226,
+       "low": 0.9824750947727098,
+       "point": 0.9907407407407407
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 39.93378614493018,
+       "low": 31.6030896173297,
+       "point": 35.648148148148145
+      },
+      "place_accuracy": {
+       "high": 0.11647013770373155,
+       "low": 0.07302644239627563,
+       "point": 0.09490740740740741
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 0.9988938358675988,
+       "low": 0.987485779294653,
+       "point": 0.9942129629629629
+      }
+     },
+     "model": {
+      "action_appropriate": {
+       "high": 0.9773011670069167,
+       "low": 0.941563988453797,
+       "point": 0.9606481481481481
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 39.73956357747139,
+       "low": 31.53234728010016,
+       "point": 35.532407407407405
+      },
+      "place_accuracy": {
+       "high": 0.5356373840106974,
+       "low": 0.4680062114031308,
+       "point": 0.5
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 0.9773011670069167,
+       "low": 0.941563988453797,
+       "point": 0.9606481481481481
+      }
+     }
+    },
+    "scenarios": 312,
+    "shared_problem": {
+     "R2_auprc": {
+      "high": 0.6334239829136068,
+      "low": 0.5268803698094456,
+      "point": 0.5823592590089752
+     },
+     "R2_auroc": {
+      "high": 0.6259322171039698,
+      "low": 0.5580645441271316,
+      "point": 0.5924735341035433
+     },
+     "R2_precision": {
+      "high": 0.7202821627435382,
+      "low": 0.5917550245291977,
+      "point": 0.6598639455782312
+     },
+     "R2_recall": {
+      "high": 0.48172079835027254,
+      "low": 0.3741427652141938,
+      "point": 0.4282560706401766
+     },
+     "alerts": 864,
+     "label": "shared",
+     "model_auprc": {
+      "high": 0.7646132880750712,
+      "low": 0.6539552465755323,
+      "point": 0.7101435822881381
+     },
+     "model_auroc": {
+      "high": 0.7382718689970602,
+      "low": 0.6638418318123013,
+      "point": 0.7021505722864064
+     },
+     "model_precision": {
+      "high": 0.7861497175646205,
+      "low": 0.6758924021901259,
+      "point": 0.7353846153846154
+     },
+     "model_probabilities": 864,
+     "model_recall": {
+      "high": 0.5810557275541796,
+      "low": 0.4726477024070022,
+      "point": 0.5275938189845475
+     },
+     "positives": 453,
+     "threshold": 0.7
+    }
+   },
+   "with_courier": {
+    "alerts": 521,
+    "differences": {
+     "model - R1": {
+      "role_accuracy": {
+       "high": -0.24952732019083632,
+       "low": -0.33895879041730387,
+       "point": -0.2936660268714012,
+       "share_ahead": 0.0
+      }
+     },
+     "model - R2": {
+      "role_accuracy": {
+       "high": -0.003503519500434389,
+       "low": -0.10186030008110301,
+       "point": -0.0499040307101728,
+       "share_ahead": 0.0145
+      }
+     }
+    },
+    "escalate": {
+     "R2_auprc": {
+      "high": 0.024617721401157127,
+      "low": 0.0039447731755424065,
+      "point": 0.013435700575815739
+     },
+     "R2_auroc": {
+      "high": 0.5,
+      "low": 0.4948511838175497,
+      "point": 0.4980544747081712
+     },
+     "R2_precision": {
+      "high": 0.0,
+      "low": 0.0,
+      "point": 0.0
+     },
+     "R2_recall": {
+      "high": 0.0,
+      "low": 0.0,
+      "point": 0.0
+     },
+     "alerts": 521,
+     "label": "unrecoverable",
+     "model_auprc": {
+      "high": 0.16610522797465901,
+      "low": 0.017885337783112014,
+      "point": 0.05704311116428236
+     },
+     "model_auroc": {
+      "high": 0.9324752487928581,
+      "low": 0.6918153876133787,
+      "point": 0.8171206225680934
+     },
+     "model_precision": {
+      "high": 0.230833333333333,
+      "low": 0.0,
+      "point": 0.10344827586206896
+     },
+     "model_probabilities": 521,
+     "model_recall": {
+      "high": 0.8333333333333334,
+      "low": 0.0,
+      "point": 0.42857142857142855
+     },
+     "positives": 7,
+     "threshold": 0.7
+    },
+    "methods": {
+     "R1": {
+      "action_appropriate": {
+       "high": 1.0,
+       "low": 1.0,
+       "point": 1.0
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 10.850060591875025,
+       "low": 6.1349408169316035,
+       "point": 8.445297504798464
+      },
+      "place_accuracy": {
+       "high": 1.0,
+       "low": 1.0,
+       "point": 1.0
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 1.0,
+       "low": 1.0,
+       "point": 1.0
+      }
+     },
+     "R2": {
+      "action_appropriate": {
+       "high": 0.7943950956014747,
+       "low": 0.7170507010943913,
+       "point": 0.7562380038387716
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 8.016032064128256,
+       "low": 4.007103825136611,
+       "point": 5.950095969289827
+      },
+      "place_accuracy": {
+       "high": 0.6654147439920263,
+       "low": 0.5799565911697893,
+       "point": 0.6238003838771593
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 0.7943950956014747,
+       "low": 0.7170507010943913,
+       "point": 0.7562380038387716
+      }
+     },
+     "model": {
+      "action_appropriate": {
+       "high": 0.7504726798091637,
+       "low": 0.6610412095826962,
+       "point": 0.7063339731285988
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 7.170490280160088,
+       "low": 3.3331702544031314,
+       "point": 5.182341650671785
+      },
+      "place_accuracy": {
+       "high": 0.6526737474108087,
+       "low": 0.5543065810593901,
+       "point": 0.6026871401151631
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 0.7504726798091637,
+       "low": 0.6610412095826962,
+       "point": 0.7063339731285988
+      }
+     }
+    },
+    "scenarios": 282,
+    "shared_problem": {
+     "R2_auprc": {
+      "high": 0.6017592193890927,
+      "low": 0.4572052709366589,
+      "point": 0.5298133841544369
+     },
+     "R2_auroc": {
+      "high": 0.7139033724908627,
+      "low": 0.6224641297284488,
+      "point": 0.6681329720843862
+     },
+     "R2_precision": {
+      "high": 0.6791686320754717,
+      "low": 0.5201528527781725,
+      "point": 0.600896860986547
+     },
+     "R2_recall": {
+      "high": 0.6960935321996096,
+      "low": 0.553392894030159,
+      "point": 0.6261682242990654
+     },
+     "alerts": 521,
+     "label": "shared",
+     "model_auprc": {
+      "high": 0.698165730500538,
+      "low": 0.5349232499650668,
+      "point": 0.6053190034162731
+     },
+     "model_auroc": {
+      "high": 0.7629961487825883,
+      "low": 0.6728281631447007,
+      "point": 0.7185150232883801
+     },
+     "model_precision": {
+      "high": 0.6593955267696597,
+      "low": 0.5096108490566037,
+      "point": 0.5822222222222222
+     },
+     "model_probabilities": 521,
+     "model_recall": {
+      "high": 0.6759458812260535,
+      "low": 0.5492199065507032,
+      "point": 0.6121495327102804
+     },
+     "positives": 214,
+     "threshold": 0.7
+    }
+   }
+  },
+  "by_route_kind": {
+   "courier": {
+    "alerts": 3019,
+    "differences": {
+     "model - R1": {
+      "role_accuracy": {
+       "high": 0.2898211468202708,
+       "low": 0.23758230508994166,
+       "point": 0.26366346472341834,
+       "share_ahead": 1.0
+      }
+     },
+     "model - R2": {
+      "role_accuracy": {
+       "high": -0.02235965962086927,
+       "low": -0.06597402631434897,
+       "point": -0.04438555813183176,
+       "share_ahead": 0.0
+      }
+     }
+    },
+    "escalate": {
+     "R2_auprc": {
+      "high": 0.327053975483711,
+      "low": 0.2784245598882531,
+      "point": 0.30213996083495276
+     },
+     "R2_auroc": {
+      "high": 0.5135763418275263,
+      "low": 0.5041278976105068,
+      "point": 0.5085171321563012
+     },
+     "R2_precision": {
+      "high": 0.8928571428571429,
+      "low": 0.5453598484848484,
+      "point": 0.72
+     },
+     "R2_recall": {
+      "high": 0.03010201603109059,
+      "low": 0.01162723250418173,
+      "point": 0.020316027088036117
+     },
+     "alerts": 3019,
+     "label": "unrecoverable",
+     "model_auprc": {
+      "high": 0.5264220908327847,
+      "low": 0.4478602380818239,
+      "point": 0.4832347685496133
+     },
+     "model_auroc": {
+      "high": 0.7714147576815918,
+      "low": 0.7274435998834772,
+      "point": 0.7490475374079683
+     },
+     "model_precision": {
+      "high": 0.562065548412046,
+      "low": 0.3756733425414365,
+      "point": 0.46564885496183206
+     },
+     "model_probabilities": 3019,
+     "model_recall": {
+      "high": 0.08833317266850226,
+      "low": 0.05148594311866623,
+      "point": 0.06884875846501129
+     },
+     "positives": 886,
+     "threshold": 0.7
+    },
+    "methods": {
+     "R1": {
+      "action_appropriate": {
+       "high": 0.4391648201952814,
+       "low": 0.3853430830173062,
+       "point": 0.4130506790327923
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 12.66140892109136,
+       "low": 9.691318634776898,
+       "point": 11.129513083802584
+      },
+      "place_accuracy": {
+       "high": 0.1407241438673883,
+       "low": 0.1107071893894413,
+       "point": 0.12586949320967208
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.2315618873859387,
+       "low": 0.0,
+       "point": 0.09937065253395165
+      },
+      "role_accuracy": {
+       "high": 0.4391648201952814,
+       "low": 0.3853430830173062,
+       "point": 0.4130506790327923
+      }
+     },
+     "R2": {
+      "action_appropriate": {
+       "high": 0.73710896194012,
+       "low": 0.6991289564028732,
+       "point": 0.7181185823120239
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 36.21478011624055,
+       "low": 31.484936900425794,
+       "point": 33.85226896323286
+      },
+      "place_accuracy": {
+       "high": 0.4595290883937672,
+       "low": 0.4172039493986801,
+       "point": 0.4382245776747267
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.16949440011038794,
+       "low": 0.0,
+       "point": 0.06624710168930109
+      },
+      "role_accuracy": {
+       "high": 0.7402014007981276,
+       "low": 0.7021678780537048,
+       "point": 0.7210997018880424
+      }
+     },
+     "model": {
+      "action_appropriate": {
+       "high": 0.6954268226799495,
+       "low": 0.6571622426488463,
+       "point": 0.6763829082477641
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 36.11755296204901,
+       "low": 31.145814897610098,
+       "point": 33.653527658164954
+      },
+      "place_accuracy": {
+       "high": 0.4096710029522189,
+       "low": 0.37397061095748235,
+       "point": 0.39185160649221595
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.2315618873859387,
+       "low": 0.0,
+       "point": 0.09937065253395165
+      },
+      "role_accuracy": {
+       "high": 0.695751277876997,
+       "low": 0.6576426242898399,
+       "point": 0.6767141437562106
+      }
+     }
+    },
+    "scenarios": 410,
+    "shared_problem": {
+     "R2_auprc": {
+      "high": 0.6462254424823302,
+      "low": 0.5735282707296123,
+      "point": 0.6104873359286096
+     },
+     "R2_auroc": {
+      "high": 0.6256696318576432,
+      "low": 0.5840452610167511,
+      "point": 0.6044298026231337
+     },
+     "R2_precision": {
+      "high": 0.7175393068775422,
+      "low": 0.6385869565217391,
+      "point": 0.6782094594594594
+     },
+     "R2_recall": {
+      "high": 0.5194016703542895,
+      "low": 0.4545995394263246,
+      "point": 0.48696179502728926
+     },
+     "alerts": 3019,
+     "label": "shared",
+     "model_auprc": {
+      "high": 0.7492772784967329,
+      "low": 0.6769783439321108,
+      "point": 0.7142477662681859
+     },
+     "model_auroc": {
+      "high": 0.7203687934676692,
+      "low": 0.6772114193164009,
+      "point": 0.6989697361373626
+     },
+     "model_precision": {
+      "high": 0.7524488524260996,
+      "low": 0.6833161229067811,
+      "point": 0.71869918699187
+     },
+     "model_probabilities": 3019,
+     "model_recall": {
+      "high": 0.5654208822877411,
+      "low": 0.5050535579204031,
+      "point": 0.5360824742268041
+     },
+     "positives": 1649,
+     "threshold": 0.7
+    }
+   },
+   "tube": {
+    "alerts": 1678,
+    "differences": {
+     "model - R1": {
+      "role_accuracy": {
+       "high": 0.042798156977740344,
+       "low": -0.019962937768428172,
+       "point": 0.011323003575685275,
+       "share_ahead": 0.752
+      }
+     },
+     "model - R2": {
+      "role_accuracy": {
+       "high": -0.04345201249253007,
+       "low": -0.10369554751909096,
+       "point": -0.07270560190703224,
+       "share_ahead": 0.0
+      }
+     }
+    },
+    "escalate": {
+     "R2_auprc": {
+      "high": 0.18624470566850004,
+      "low": 0.13161876205853693,
+      "point": 0.15717333877946654
+     },
+     "R2_auroc": {
+      "high": 0.6017530404845007,
+      "low": 0.5377139731841935,
+      "point": 0.5695807161344638
+     },
+     "R2_precision": {
+      "high": 0.271189114045875,
+      "low": 0.17088438668408487,
+      "point": 0.22033898305084745
+     },
+     "R2_recall": {
+      "high": 0.3567580256312651,
+      "low": 0.23451168649701487,
+      "point": 0.2968036529680365
+     },
+     "alerts": 1678,
+     "label": "unrecoverable",
+     "model_auprc": {
+      "high": 0.35111440928264726,
+      "low": 0.2459640000867541,
+      "point": 0.28758397039370087
+     },
+     "model_auroc": {
+      "high": 0.7626519676882416,
+      "low": 0.6970113239816546,
+      "point": 0.7315747634740752
+     },
+     "model_precision": {
+      "high": 0.37648190045248864,
+      "low": 0.20999193548387096,
+      "point": 0.2905982905982906
+     },
+     "model_probabilities": 1678,
+     "model_recall": {
+      "high": 0.20203435214211068,
+      "low": 0.11004665071770335,
+      "point": 0.1552511415525114
+     },
+     "positives": 219,
+     "threshold": 0.7
+    },
+    "methods": {
+     "R1": {
+      "action_appropriate": {
+       "high": 0.3080063111764899,
+       "low": 0.26486438338576107,
+       "point": 0.2860548271752086
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 3.1176030274046655,
+       "low": 1.482743726138911,
+       "point": 2.264600715137068
+      },
+      "place_accuracy": {
+       "high": 0.3080063111764899,
+       "low": 0.26486438338576107,
+       "point": 0.2860548271752086
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 0.5781293349260173,
+       "low": 0.5253527319534623,
+       "point": 0.5518474374255066
+      }
+     },
+     "R2": {
+      "action_appropriate": {
+       "high": 0.3938295057975909,
+       "low": 0.3450789793438639,
+       "point": 0.3694874851013111
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 7.4609600925390405,
+       "low": 4.623571284903499,
+       "point": 6.019070321811681
+      },
+      "place_accuracy": {
+       "high": 0.3925839745371945,
+       "low": 0.3442799765813216,
+       "point": 0.36829558998808104
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.48817740982819363,
+       "low": 0.057173896220047746,
+       "point": 0.23837902264600713
+      },
+      "role_accuracy": {
+       "high": 0.6585055770246857,
+       "low": 0.6118165460577124,
+       "point": 0.6358760429082241
+      }
+     },
+     "model": {
+      "action_appropriate": {
+       "high": 0.3934865049248035,
+       "low": 0.3386235359839729,
+       "point": 0.36591179976162097
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 12.521963998925763,
+       "low": 8.9561448531195,
+       "point": 10.66746126340882
+      },
+      "place_accuracy": {
+       "high": 0.3520741042348162,
+       "low": 0.3046920321509698,
+       "point": 0.3283671036948749
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.3115313352133684,
+       "low": 0.0,
+       "point": 0.11918951132300357
+      },
+      "role_accuracy": {
+       "high": 0.5882749804914518,
+       "low": 0.536718464851449,
+       "point": 0.5631704410011918
+      }
+     }
+    },
+    "scenarios": 363,
+    "shared_problem": {
+     "R2_auprc": {
+      "high": 0.415764494834802,
+      "low": 0.32170615161780364,
+      "point": 0.3687331676287603
+     },
+     "R2_auroc": {
+      "high": 0.6095275292364271,
+      "low": 0.5547166628163104,
+      "point": 0.5823508378275531
+     },
+     "R2_precision": {
+      "high": 0.5210696089069208,
+      "low": 0.3945365742844162,
+      "point": 0.4595238095238095
+     },
+     "R2_recall": {
+      "high": 0.4144629826321276,
+      "low": 0.31345278864970644,
+      "point": 0.36278195488721804
+     },
+     "alerts": 1678,
+     "label": "shared",
+     "model_auprc": {
+      "high": 0.5137179156141716,
+      "low": 0.3957222493886428,
+      "point": 0.4516739417379846
+     },
+     "model_auroc": {
+      "high": 0.6726918472526721,
+      "low": 0.6072725852411013,
+      "point": 0.6415671049351126
+     },
+     "model_precision": {
+      "high": 0.518957345971564,
+      "low": 0.3955152807391613,
+      "point": 0.45861297539149887
+     },
+     "model_probabilities": 1678,
+     "model_recall": {
+      "high": 0.43426352832478843,
+      "low": 0.3361512823782367,
+      "point": 0.38533834586466165
+     },
+     "positives": 532,
+     "threshold": 0.7
+    }
+   },
+   "walk_in": {
+    "alerts": 303,
+    "differences": {
+     "model - R1": {
+      "role_accuracy": {
+       "high": 0.016296145494028184,
+       "low": -0.19388672735281162,
+       "point": -0.09240924092409242,
+       "share_ahead": 0.046
+      }
+     },
+     "model - R2": {
+      "role_accuracy": {
+       "high": -0.15335410010649622,
+       "low": -0.28929495073891626,
+       "point": -0.22112211221122108,
+       "share_ahead": 0.0
+      }
+     }
+    },
+    "escalate": {
+     "R2_auprc": {
+      "high": 0.5172126055776604,
+      "low": 0.12167940389396138,
+      "point": 0.30546387972130545
+     },
+     "R2_auroc": {
+      "high": 0.774049845186611,
+      "low": 0.5649107142857143,
+      "point": 0.6631205673758865
+     },
+     "R2_precision": {
+      "high": 1.0,
+      "low": 0.42857142857142855,
+      "point": 0.7777777777777778
+     },
+     "R2_recall": {
+      "high": 0.5555555555555556,
+      "low": 0.14285714285714285,
+      "point": 0.3333333333333333
+     },
+     "alerts": 303,
+     "label": "unrecoverable",
+     "model_auprc": {
+      "high": 0.4951906426636956,
+      "low": 0.1868556852033727,
+      "point": 0.2873785862941085
+     },
+     "model_auroc": {
+      "high": 0.8732632783882783,
+      "low": 0.6803129222972973,
+      "point": 0.783096926713948
+     },
+     "model_precision": {
+      "high": 0.7272727272727273,
+      "low": 0.09090909090909091,
+      "point": 0.4
+     },
+     "model_probabilities": 303,
+     "model_recall": {
+      "high": 0.3888888888888889,
+      "low": 0.04540513833992095,
+      "point": 0.19047619047619047
+     },
+     "positives": 21,
+     "threshold": 0.7
+    },
+    "methods": {
+     "R1": {
+      "action_appropriate": {
+       "high": 0.53125,
+       "low": 0.4006731219479564,
+       "point": 0.46534653465346537
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 7.913669064748201,
+       "low": 2.8938906752411575,
+       "point": 5.2805280528052805
+      },
+      "place_accuracy": {
+       "high": 0.53125,
+       "low": 0.4006731219479564,
+       "point": 0.46534653465346537
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 0.53125,
+       "low": 0.4006731219479564,
+       "point": 0.46534653465346537
+      }
+     },
+     "R2": {
+      "action_appropriate": {
+       "high": 0.6221590051124964,
+       "low": 0.501694070612084,
+       "point": 0.5643564356435643
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 19.205348489743177,
+       "low": 9.731543624161073,
+       "point": 14.19141914191419
+      },
+      "place_accuracy": {
+       "high": 0.6221590051124964,
+       "low": 0.501694070612084,
+       "point": 0.5643564356435643
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 0.6512476334161637,
+       "low": 0.5333333333333333,
+       "point": 0.594059405940594
+      }
+     },
+     "model": {
+      "action_appropriate": {
+       "high": 0.42309322033898294,
+       "low": 0.2980769230769231,
+       "point": 0.35973597359735976
+      },
+      "breaches_averted_per_100_alerts": {
+       "high": 17.123554389109373,
+       "low": 7.638392857142858,
+       "point": 12.211221122112212
+      },
+      "place_accuracy": {
+       "high": 0.5212326656394453,
+       "low": 0.3899567641580421,
+       "point": 0.45544554455445546
+      },
+      "recollections_started_per_100_alerts": {
+       "high": 0.0,
+       "low": 0.0,
+       "point": 0.0
+      },
+      "role_accuracy": {
+       "high": 0.43465375974626663,
+       "low": 0.3108974358974359,
+       "point": 0.37293729372937295
+      }
+     }
+    },
+    "scenarios": 162,
+    "shared_problem": {
+     "R2_auprc": {
+      "high": 0.22004834450928518,
+      "low": 0.09570385676608242,
+      "point": 0.15238436887166978
+     },
+     "R2_auroc": {
+      "high": 0.5597771708257641,
+      "low": 0.4447789444597955,
+      "point": 0.502156995432245
+     },
+     "R2_precision": {
+      "high": 0.2790930232558138,
+      "low": 0.047619047619047616,
+      "point": 0.15555555555555556
+     },
+     "R2_recall": {
+      "high": 0.25,
+      "low": 0.05263157894736842,
+      "point": 0.15217391304347827
+     },
+     "alerts": 303,
+     "label": "shared",
+     "model_auprc": {
+      "high": 0.4562650684848703,
+      "low": 0.21747589341131318,
+      "point": 0.3166998764515354
+     },
+     "model_auroc": {
+      "high": 0.7064684195059762,
+      "low": 0.514994973602775,
+      "point": 0.6176196920994755
+     },
+     "model_precision": {
+      "high": 0.4318181818181818,
+      "low": 0.13157894736842105,
+      "point": 0.28
+     },
+     "model_probabilities": 303,
+     "model_recall": {
+      "high": 0.43138368983957215,
+      "low": 0.17020272982737855,
+      "point": 0.30434782608695654
+     },
+     "positives": 46,
+     "threshold": 0.7
+    }
+   }
+  }
+ }
+}

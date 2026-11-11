@@ -690,7 +690,131 @@ Related specimens: SP-r136472-000076, SP-r136472-000077.
 
 ## 8. Decision layer
 
-Not run: the decision layer of spec §11 (task N10) has not run yet.
+### What it is
+
+Drex Max v1.1 (Nace.AI), reached through OpenRouter's Decisions API, answers typed questions with a probability for every option and writes no text. It is used zero-shot: it was never trained on this project's data and never sees a label. It labels the scenario library (X1), proposes where to look, what to do and whom to call for each TracerNet alert (X2), and is tested as a forecaster on its own (X3). X2 is compared with two rules on the same alerts: R1, today's routing (a tube specimen to the receiving technologist, a hand-carried one to the courier coordinator), and R2, hand-written rules over the same facts the model sees. The adoption rule, pre-registered in spec §11.3: "exports and the demo use Drex Max's decisions only if its role accuracy beats both R1 and R2 by at least 5 points, with the 95% interval of each difference above zero on test. Otherwise they use R2, and the comparison is reported."
+
+### Spend
+
+| Run | Prompt | Items | Calls billed this run | Billed this run | Job's total so far, of its cap | Worst billed input / input bound | Worst cost / reservation |
+|---|---|---|---|---|---|---|---|
+| X1 pilot | p1 | 320 (0 from the cache) | 320 | $0.0247 | $0.0247 of $1.00 | 0.33 | 0.17 |
+| X1 paid run | p1 | 8,442 (320 from the cache) | 8,122 | $0.6714 | $0.6961 of $1.00 | 0.35 | 0.18 |
+| X1 refresh, from the cache | p1 | 8,442 (8,442 from the cache) | 0 | $0.0000 | $0.6961 of $1.00 | n/a | n/a |
+| X2 on validation, prompt round one | p1 | 5,000 (0 from the cache) | 5,000 | $0.3314 | $0.3314 of $4.50 | 0.31 | 0.16 |
+| X2 on validation, prompt round two | p2 | 5,000 (0 from the cache) | 5,000 | $0.3725 | $0.7039 of $4.50 | 0.30 | 0.15 |
+| X2 on test | p2 | 20,000 (0 from the cache) | 20,000 | $1.4894 | $2.1933 of $4.50 | 0.30 | 0.15 |
+| X3 on test | p2 | 4,000 (0 from the cache) | 4,000 | $0.1003 | $0.1003 of $0.75 | 0.30 | 0.15 |
+
+X1 cost $0.0247 for its 320-call pilot, then $0.6714 for the 8,122 calls of its paid run: $0.6961 in all, the ledger's total for the job. Its worst call, across both paid runs, billed 0.35 of its input bound and 0.18 of its reservation. The refresh the scores come from answered 8,442 of its 8,442 items from the cache and was billed $0.0000.
+
+The decide account so far: $2.9897 of its $8.00 cap, the latest total of each job. A worst ratio under 1 means every billed call stayed inside its reservation. Resolved model: `nace-ai/drex-max-20261016`.
+
+### X1: scenario labels and audit
+
+8,142 of 8,142 scenarios labeled, and 300 negative controls (code-made corruptions mixed with accepted scenarios, rendered without plausibility measures in both arms).
+
+Plausibility on the controls: AUROC 0.980 (0.966 to 0.991) against the bar of 0.80, so plausibility works as a soft filter. 726 scenarios, whose most likely level is one of the two lowest, go to a review list; none is deleted.
+
+Mean plausibility score (0, not plausible, to 4, highly plausible) by control:
+
+| Control | Scenarios | Mean score |
+|---|---|---|
+| clean | 150 | 2.74 |
+| contradictory schedules | 37 | 2.04 |
+| impossible routes | 38 | 1.21 |
+| rates 10x | 37 | 0.40 |
+| staffing absurd | 38 | 1.56 |
+
+Most likely plausibility level across the library: level 1 726, level 2 1,265, level 3 6,031, level 4 120.
+
+The dominant failure agrees with the planner's failure focus for 57.1% of 8,142 scenarios. Edge-tag questions were answered yes for 98.3% of the 2,246 asked; only the tags each scenario's brief requested were asked, so this measures a lean toward yes rather than agreement.
+
+### X2: prompt rounds on validation (not binding)
+
+Percentages with Drex Max's 95% interval, then R1 and R2 on the same alerts:
+
+| Round | Alerts | Role accuracy, % (Drex Max; R1; R2) | Place accuracy, % | Action appropriate, % | Drex Max's most-chosen action |
+|---|---|---|---|---|---|
+| Round one (p1) | 5,000 | 33.5 (31.9 to 35.1); 46.3; 68.5 | 31.2 (29.7 to 32.7); 20.0; 42.2 | 20.3 (19.0 to 21.6); 37.4; 59.2 | `check_receiving_queue`, 67% (shares counted from this round's outputs) |
+| Round two (p2) | 5,000 | 62.0 (60.4 to 63.5); 46.3; 68.5 | 37.4 (36.0 to 38.8); 20.0; 42.2 | 55.3 (53.4 to 57.1); 37.4; 59.2 | `call_unit_confirm_sent`, 38% |
+
+Selection: test uses the round with the higher validation role accuracy, round two (p2, 62.0% against 33.5%).
+
+Validation is for prompt work only; no number on it is binding (spec §8.7).
+
+### X2 on test (binding)
+
+20,000 alerts from 782 scenarios, 20,000 with a true place at the alert tick; prompt p2 (the selected round).
+
+The adoption rule, binding on test, in percentage points of role accuracy:
+
+| Difference | Points (95% interval) | Needed | Outcome |
+|---|---|---|---|
+| Drex Max minus R1 | 16.7 (15.2 to 18.1) | at least +5.0, interval above zero | held |
+| Drex Max minus R2 | -7.9 (-8.9 to -6.9) | at least +5.0, interval above zero | failed |
+
+The adoption rule did not hold (binding): any dispatch the exports carry is rule R2's dispatch. The demo's specimens come from `legacy_v1`, whose v1 store records no route, unit kind or staffing roster, so neither dispatcher can run on them and `docs/demo/neural.json` carries no dispatch (null).
+
+Every method on the same alerts, with 95% intervals:
+
+| Method | Place accuracy, % | Action appropriate, % | Role accuracy, % | Breaches averted per 100 alerts | Recollections per 100 alerts |
+|---|---|---|---|---|---|
+| Drex Max | 37.7 (36.8 to 38.5) | 54.5 (53.2 to 55.7) | 61.2 (60.2 to 62.2) | 25.0 (23.6 to 26.3) | 0.1 (0.0 to 0.1) |
+| R1 (today's routing) | 19.0 (18.2 to 19.9) | 35.4 (34.1 to 36.8) | 44.5 (43.2 to 45.9) | 7.4 (6.8 to 8.0) | 0.1 (0.0 to 0.1) |
+| R2 (hand-written rules) | 44.5 (43.5 to 45.4) | 60.5 (59.4 to 61.7) | 69.1 (68.3 to 70.0) | 25.2 (23.9 to 26.4) | 0.2 (0.1 to 0.3) |
+
+The yes-no questions, against their labels: a shared problem (8,222 of 20,000 alerts) and an unrecoverable specimen (4,380 of 20,000); Drex Max says yes at 0.7, fixed in advance.
+
+| Question and method | AUROC | AUPRC | Precision | Recall |
+|---|---|---|---|---|
+| Shared problem: Drex Max | 0.708 (0.697 to 0.719) | 0.610 (0.587 to 0.636) | 0.613 (0.589 to 0.639) | 0.496 (0.479 to 0.513) |
+| Shared problem: R2 | 0.603 (0.593 to 0.611) | 0.480 (0.455 to 0.505) | 0.571 (0.544 to 0.598) | 0.432 (0.416 to 0.448) |
+| Escalate: Drex Max | 0.790 (0.778 to 0.802) | 0.433 (0.411 to 0.455) | 0.418 (0.379 to 0.455) | 0.087 (0.077 to 0.097) |
+| Escalate: R2 | 0.503 (0.498 to 0.508) | 0.220 (0.206 to 0.234) | 0.233 (0.205 to 0.261) | 0.066 (0.057 to 0.075) |
+
+By true place (points; the intervals are in the scores file):
+
+| True place | Alerts | Role, %: Drex Max | R1 | R2 | Action, %: Drex Max | Averted per 100: Drex Max |
+|---|---|---|---|---|---|---|
+| `at_lab_tube_station` | 1,805 | 74.6 | 100.0 | 86.5 | 52.9 | 6.1 |
+| `in_lab_awaiting_scan` | 1,258 | 36.3 | 49.2 | 45.2 | 0.0 | 0.0 |
+| `in_tube_system` | 1,035 | 78.5 | 100.0 | 69.1 | 45.8 | 1.3 |
+| `lost` | 75 | 100.0 | 100.0 | 100.0 | 18.7 | 0.0 |
+| `misrouted_elsewhere` | 100 | 66.0 | 100.0 | 98.0 | 0.0 | 0.0 |
+| `still_at_unit` | 10,458 | 47.9 | 0.0 | 59.0 | 47.7 | 34.6 |
+| `waiting_for_courier` | 3,268 | 96.9 | 100.0 | 99.7 | 96.9 | 35.9 |
+| `with_courier` | 2,001 | 65.2 | 100.0 | 68.9 | 65.2 | 3.9 |
+
+By route kind (points; the intervals are in the scores file):
+
+| Route kind | Alerts | Role, %: Drex Max | R1 | R2 | Action, %: Drex Max | Averted per 100: Drex Max |
+|---|---|---|---|---|---|---|
+| `courier` | 12,114 | 66.9 | 38.4 | 73.4 | 66.7 | 35.0 |
+| `tube` | 6,585 | 55.9 | 55.0 | 65.1 | 36.1 | 9.6 |
+| `walk_in` | 1,301 | 35.0 | 48.5 | 49.9 | 34.0 | 9.5 |
+
+The counterfactual behind "breaches averted" (`source: assumed`): acting on an appropriate action finds the specimen 10 minutes after the alert, and it is received 5 minutes later; for a lost specimen it starts a recollection, counted separately.
+
+### X3: can a decision model forecast?
+
+4,000 of 4,000 test ticks from 100 scenarios (0 refused or unanswered, left out for every method), 2,398 of them misses; the same ticks for all three, no threshold tuned.
+
+| Method | AUROC | AUPRC | Brier | ECE |
+|---|---|---|---|---|
+| Drex Max | 0.669 (0.641 to 0.697) | 0.760 (0.726 to 0.790) | 0.408 (0.385 to 0.434) | 0.396 (0.369 to 0.425) |
+| TracerNet | 0.763 (0.738 to 0.785) | 0.859 (0.837 to 0.876) | 0.264 (0.246 to 0.284) | 0.216 (0.200 to 0.238) |
+| Analytic model, local refit | 0.702 (0.679 to 0.724) | 0.801 (0.777 to 0.823) | 0.281 (0.263 to 0.300) | 0.225 (0.204 to 0.251) |
+
+No: on the same ticks Drex Max ranks the misses worse than TracerNet (AUROC difference -0.093 (-0.105 to -0.081)) and the local analytic refit (-0.033 (-0.047 to -0.018)). X3 compares Drex Max with the risk models; it leaves the primary-model verdict of section 1 as it is.
+
+### X4: the distilled dispatcher
+
+X4 (the distilled dispatcher) is not built: it is the first decision-layer job on the cut list (spec §18, item 2), and it matters only if X2's adoption rule adopts Drex Max on test. The rule did not hold on test, so X4 is not needed.
+
+### Notice
+
+Synthetic data: laboratory weeks designed by language models and simulated by this project's code, with no clinical review. Decision-model answers are zero-shot and their calibration on this task is measured, never assumed.
 
 ## 9. Data
 
@@ -823,7 +947,7 @@ Search: complete 15, fail 0, pruned 9, running 0 trials; best val_sel 0.08750 (t
 
 ### Test runs
 
-Locked first on `test` at 2026-11-10T01:25:46-05:00.
+Locked first on `test` at 2026-11-10T16:42:32-05:00, relocked from 2026-11-10T01:25:46-05:00.
 
 | Time | Set | Status | Reason |
 |---|---|---|---|
@@ -837,6 +961,11 @@ Locked first on `test` at 2026-11-10T01:25:46-05:00.
 | 2026-11-10T07:14:47-05:00 | test | repeat | inputs unchanged |
 | 2026-11-10T07:14:59-05:00 | test | repeat | inputs unchanged |
 | 2026-11-10T08:09:24-05:00 | test | repeat | inputs unchanged |
+| 2026-11-10T16:42:32-05:00 | test | relock | X2 on test adds the decision-model configuration hash (spec 8.7) |
+| 2026-11-10T16:42:32-05:00 | test | risk table recorded | the parts this run read, recorded once written |
+| 2026-11-10T17:42:25-05:00 | test | repeat | inputs unchanged |
+| 2026-11-10T18:37:09-05:00 | test | repeat | inputs unchanged |
+| 2026-11-10T19:26:37-05:00 | test | repeat | inputs unchanged |
 
 Ablation test runs (each arm under its own lock, after the main lock):
 

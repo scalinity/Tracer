@@ -1,0 +1,66 @@
+{
+ "job": "X2",
+ "set": "val",
+ "prompt_version": "p1",
+ "alerts": 5000,
+ "outputs_sha256": "09d953acd28a3a225c8d795894cbbdfdafbbb47555768c510494a2ec517d33ab",
+ "note": "Drex Max's top choices in prompt round one, counted from its frozen outputs (data/decide/outputs/X2-val.jsonl of round one); round one's scores predate the choices record.",
+ "model": {
+  "place": {
+   "in_lab_awaiting_scan": {
+    "alerts": 1477,
+    "share": 0.2954
+   },
+   "waiting_for_courier": {
+    "alerts": 1322,
+    "share": 0.2644
+   },
+   "still_at_unit": {
+    "alerts": 820,
+    "share": 0.164
+   },
+   "with_courier": {
+    "alerts": 792,
+    "share": 0.1584
+   },
+   "in_tube_system": {
+    "alerts": 507,
+    "share": 0.1014
+   },
+   "at_lab_tube_station": {
+    "alerts": 68,
+    "share": 0.0136
+   },
+   "lost": {
+    "alerts": 14,
+    "share": 0.0028
+   }
+  },
+  "action": {
+   "check_receiving_queue": {
+    "alerts": 3359,
+    "share": 0.6718
+   },
+   "wait_and_recheck": {
+    "alerts": 579,
+    "share": 0.1158
+   },
+   "call_unit_confirm_sent": {
+    "alerts": 539,
+    "share": 0.1078
+   },
+   "contact_courier_coordinator": {
+    "alerts": 392,
+    "share": 0.0784
+   },
+   "check_lab_tube_station": {
+    "alerts": 127,
+    "share": 0.0254
+   },
+   "request_recollection": {
+    "alerts": 4,
+    "share": 0.0008
+   }
+  }
+ }
+}

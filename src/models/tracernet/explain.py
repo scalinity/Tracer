@@ -624,15 +624,39 @@ def _sample(ids: Sequence[str], limit: int | None, seed: int) -> np.ndarray:
     return keep
 
 
+def _checked(pred: P.Predictor, table, store_dir: Path, runs: list, history: P.History, test_run) -> list:
+    """The history runs of a CheckedTable, once it holds for these alerts (see explain_alerts); raises otherwise."""
+    if not P.is_issued(table):
+        raise TypeError("table= takes the CheckedTable predictor.checked_table returns, read with its lock check "
+                        "(one built directly or cloned is refused)")
+    if Path(store_dir).resolve() != table.store_dir:
+        raise ValueError("the feature table was read from another store")
+    if not set(runs) <= set(table.runs):
+        raise ValueError("some alerts name runs the feature table was not read and checked for")
+    if history.runs is not None and tuple(int(r) for r in history.runs) != tuple(table.history_runs):
+        raise ValueError("the history runs named are not the feature table's")
+    if table.locked_splits and (test_run is None or test_run is not table.test_run
+                                or pred.artifact_dir is None or pred.artifact_dir != table.artifact_dir):
+        raise RuntimeError(f"runs of the {table.locked_splits[0]} split are explained only with the test run and the "
+                           "artifact their lock check held for (spec §8.7)")
+    return list(table.history_runs)
+
+
 def explain_alerts(pred: P.Predictor, alerts: pl.DataFrame, *, store_dir: Path, history: P.History | None = None,
                    test_run=None, top_k: int = TOP_K, checks: bool = False, seed: int = 0,
                    randomization_alerts: int | None = RANDOMIZATION_ALERTS, workers: int = 1,
-                   steps: int | None = None) -> Explained:
+                   steps: int | None = None, table: P.CheckedTable | None = None) -> Explained:
     """Integrated gradients for every alert (spec §9), from the observed store the alerts were scored on. With
     `checks`, also the deletion resets and, for a seeded sample of `randomization_alerts` alerts (None: all), the
     attributions of a re-initialized network. Unless `steps` is given, the steps start at 64 and double while the
     median alert misses completeness by more than 1%, up to MAX_STEPS: chosen on a seeded sample of STEP_SAMPLE
-    alerts, then confirmed on all of them. Runs of a locked split need `test_run`, as Predictor.score does."""
+    alerts, then confirmed on all of them. Runs of a locked split need `test_run`, as Predictor.score does.
+
+    `table`, when given, is a CheckedTable (predictor.checked_table): features read in the same step as the lock
+    check, inside the lock's mutex on a locked split. Nothing here reads the store then, so the integration runs on
+    that snapshot outside the mutex, but the checks still hold: it was read from this store; it was read and
+    checked for every alert's run; each alert's specimen is a row of the run the alert names; the history runs are
+    the table's; and on a locked split the test run and the artifact are the ones the check held for."""
     store_dir = Path(store_dir)
     history = history or P.History()
     if history.store_dir is not None and Path(history.store_dir).resolve() != store_dir.resolve():
@@ -640,11 +664,16 @@ def explain_alerts(pred: P.Predictor, alerts: pl.DataFrame, *, store_dir: Path, 
     if alerts.height == 0:
         return Explained([], steps or STEPS, None)
     runs = sorted({int(r) for r in alerts["run"].to_list()})
-    hist_runs = list(history.runs) if history.runs is not None else P._history_runs(store_dir, runs)
-    pred.check_lock(store_dir, runs, hist_runs, history, test_run)
-    t = F.load_table(store_dir, runs=sorted(set(runs) | {int(r) for r in hist_runs}))
+    if table is None:
+        hist_runs = list(history.runs) if history.runs is not None else P._history_runs(store_dir, runs)
+        pred.check_lock(store_dir, runs, hist_runs, history, test_run)
+        t = F.load_table(store_dir, runs=sorted(set(runs) | {int(r) for r in hist_runs}))
+    else:
+        hist_runs, t = _checked(pred, table, store_dir, runs, history, test_run), table.table
     ids = alerts["alert_id"].to_list()
     rows = t.rows_of(alerts["specimen_id"].to_list())
+    if table is not None and np.any(np.asarray(t.a["run"])[rows] != alerts["run"].to_numpy()):
+        raise ValueError("an alert names a run its specimen does not belong to")
     ticks = alerts["tick_min"].to_numpy().astype(np.float64)
     a = t.a
     scen = np.asarray(a["scenario"])[rows]

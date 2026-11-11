@@ -8,6 +8,11 @@ It renders the files the earlier stages wrote and nothing else:
   results/neural/test_ood_feature/evaluation.json   test_ood on the scenarios that carry the out-of-distribution
                                            feature (archetype multi_site_system or a scanner_downtime disruption),
                                            or a `subsets.ood_feature` entry inside the test_ood evaluation
+  results/neural/decisions/<job>-<set>.json and -scores.json   the decision layer's run summaries and scores (X1 on
+                                           the library, with its pilot's and its paid run's summaries; X2 on
+                                           validation, prompt rounds one and two, and on test; X3 on test), and
+                                           X2-val-p1-choices.json, round one's choices counted from its outputs;
+                                           section 8
   results/neural/selection.json, hpo.json, ablations.json, explanations.json, test_lock.json, test_runs.jsonl,
   results/neural/ablations/test_runs.jsonl, results/neural/generation/pilot.json and round2-plan.json,
   artifacts/tracernet/v1/manifest.json, datasets/scenarios-v2.manifest.json, and the OpenAI ledger's totals (its
@@ -112,7 +117,7 @@ def load(inputs: dict) -> dict:
             "manifest": _json(inputs["manifest"]), "ledger": ledger_totals(inputs["ledger"], inputs["ledger_json"]),
             "limits": [line.rstrip() for line in Path(inputs["limits"]).read_text(encoding="utf-8").splitlines()
                        if line.strip()] if inputs.get("limits") and Path(inputs["limits"]).is_file() else [],
-            "explanations": _json(inputs["explanations"]), "decisions": Path(inputs["decisions"]).exists(),
+            "explanations": _json(inputs["explanations"]), "decisions": load_decisions(inputs["decisions"]),
             "config": (yaml.safe_load(Path(CONFIG_PATH).read_text(encoding="utf-8")) or {}).get("ablations") or {}}
 
 
@@ -683,11 +688,361 @@ def section_explanations(data: dict) -> list[str]:
     return out
 
 
+# Each run of the decision layer the section reads, in the order the spend table lists them: (job, file stem, label).
+# A run is its summary results/neural/decisions/<job>-<stem>.json and, where scored, its scores <job>-<stem>-scores.json
+# (src/decide/client.py, src/pipeline/dispatch_eval.py). X1 ran as a pilot, then a paid run over the rest, then a
+# refresh that answered everything from the cache (X1-library.json, the scored run); X2's first prompt round on
+# validation is kept as X2-val-p1*.json beside round two, with X2-val-p1-choices.json, its choices counted from its
+# outputs (its scores predate the choices record).
+DECISION_RUNS = (("X1", "library-pilot", "X1 pilot"), ("X1", "library-paid", "X1 paid run"),
+                 ("X1", "library", "X1 refresh, from the cache"), ("X2", "val-p1", "X2 on validation, prompt round one"),
+                 ("X2", "val", "X2 on validation, prompt round two"), ("X2", "test", "X2 on test"),
+                 ("X3", "test", "X3 on test"))
+METHOD_NAMES = {"model": "Drex Max", "R1": "R1 (today's routing)", "R2": "R2 (hand-written rules)"}
+
+
+def load_decisions(folder) -> dict:
+    """{(job, stem): {"summary", "scores", "choices"}} for every run of DECISION_RUNS, None where a file is absent."""
+    folder = Path(folder)
+    return {(job, stem): {"summary": _json(folder / f"{job}-{stem}.json"),
+                          "scores": _json(folder / f"{job}-{stem}-scores.json"),
+                          "choices": _json(folder / f"{job}-{stem}-choices.json")} for job, stem, _ in DECISION_RUNS}
+
+
+def ci(m: dict | None, digits: int = 1, scale: float = 1.0) -> str:
+    """'point (low to high)'; 'undefined' where the scores say a metric cannot be defined."""
+    if not m or m.get("point") is None:
+        return "undefined" if m and m.get("undefined") else "n/a"
+    return f"{num(m['point'] * scale, digits)} ({interval(m, digits, scale)})"
+
+
+def _pts(m: dict | None, scale: float = 100.0, digits: int = 1) -> str:
+    if not m or m.get("point") is None:
+        return "undefined" if m and m.get("undefined") else "n/a"
+    return num(m["point"] * scale, digits)
+
+
+def _run(data: dict, job: str, stem: str) -> dict:
+    return data["decisions"].get((job, stem)) or {"summary": None, "scores": None, "choices": None}
+
+
+def _absent(label: str, run: dict, why: str) -> str | None:
+    """The 'not run' line of a run without scores, or None when its scores exist."""
+    s = run["summary"]
+    if run["scores"] is not None:
+        return None
+    if s is not None and s.get("status") == "not run":
+        return f"{NOT_RUN}: {label}: {s.get('reason', 'no reason recorded')}."
+    if s is not None:
+        return f"{NOT_RUN}: {label} has run (its summary exists) but is not scored yet (`decide --score-only`)."
+    return f"{NOT_RUN}: {label}: {why}."
+
+
+def _decision_what() -> list[str]:
+    return ["### What it is", "",
+            "Drex Max v1.1 (Nace.AI), reached through OpenRouter's Decisions API, answers typed questions with a "
+            "probability for every option and writes no text. It is used zero-shot: it was never trained on this "
+            "project's data and never sees a label. It labels the scenario library (X1), proposes where to look, what "
+            "to do and whom to call for each TracerNet alert (X2), and is tested as a forecaster on its own (X3). X2 is "
+            "compared with two rules on the same alerts: R1, today's routing (a tube specimen to the receiving "
+            "technologist, a hand-carried one to the courier coordinator), and R2, hand-written rules over the same "
+            "facts the model sees. The adoption rule, pre-registered in spec §11.3: \"exports and the demo use Drex "
+            "Max's decisions only if its role accuracy beats both R1 and R2 by at least 5 points, with the 95% interval "
+            "of each difference above zero on test. Otherwise they use R2, and the comparison is reported.\""]
+
+
+def _decision_spend(data: dict) -> list[str]:
+    out = ["### Spend", ""]
+    rows, models, latest = [], set(), {}
+    for job, stem, label in DECISION_RUNS:
+        s = _run(data, job, stem)["summary"]
+        if s is None or s.get("status") == "not run":
+            continue
+        b, led = s.get("billing") or {}, s.get("ledger") or {}
+        if s.get("resolved_model"):
+            models.add(s["resolved_model"])
+        latest[job] = max(latest.get(job, 0.0), float(led.get("spent_usd") or 0.0))
+        cached = (s.get("counts") or {}).get("cached", 0)
+        rows.append([label, s.get("prompt_version", "n/a"), f"{num(s.get('items'))} ({num(cached)} from the cache)",
+                     num(b.get("calls_with_usage")), f"${num(b.get('cost_usd'), 4)}",
+                     f"${num(led.get('spent_usd'), 4)} of ${num(led.get('cap_usd'), 2)}",
+                     num(b.get("max_billed_over_bound"), 2), num(b.get("max_cost_over_reservation"), 2)])
+    if not rows:
+        return out + [f"{NOT_RUN}: no decision-layer run has a summary yet."]
+    out += table(["Run", "Prompt", "Items", "Calls billed this run", "Billed this run", "Job's total so far, of its cap",
+                  "Worst billed input / input bound", "Worst cost / reservation"], rows)
+    out += _x1_spend(data)
+    from src.decide import client as dc
+
+    caps = dc.load_config()["caps"]
+    out += ["", f"The decide account so far: ${num(sum(latest.values()), 4)} of its ${num(float(caps['account_usd']), 2)} "
+                "cap, the latest total of each job. A worst ratio under 1 means every billed call stayed inside its "
+                "reservation. Resolved model: " + (", ".join(f"`{m}`" for m in sorted(models)) or "none recorded") + "."]
+    return out
+
+
+def _x1_spend(data: dict) -> list[str]:
+    """X1's cost in words, from whichever of its runs' summaries exist: the pilot, the paid run over the rest (whose
+    ledger block holds the job's total) and the refresh from the cache."""
+    runs = [(stem, _run(data, "X1", stem)["summary"]) for stem in ("library-pilot", "library-paid", "library")]
+    runs = [(stem, s) for stem, s in runs if s is not None and s.get("status") != "not run"]
+    paid = [(stem, s) for stem, s in runs if stem != "library"]
+    if not runs:
+        return []
+    parts = [f"${num((s.get('billing') or {}).get('cost_usd'), 4)} for "
+             + (f"its {num((s.get('billing') or {}).get('calls_with_usage'))}-call pilot" if stem == "library-pilot" else
+                f"the {num((s.get('billing') or {}).get('calls_with_usage'))} calls of its paid run")
+             for stem, s in paid]
+    total = max(float((s.get("ledger") or {}).get("spent_usd") or 0.0) for _, s in runs)
+    line = (f"X1 cost {', then '.join(parts)}: ${num(total, 4)} in all, the ledger's total for the job." if parts else
+            f"X1's job total in the ledger: ${num(total, 4)}.")
+    bounds = [b for _, s in paid if (b := (s.get("billing") or {}).get("max_billed_over_bound")) is not None]
+    costs = [c for _, s in paid if (c := (s.get("billing") or {}).get("max_cost_over_reservation")) is not None]
+    if bounds and costs:
+        line += (f" Its worst call, across {'both paid runs' if len(paid) > 1 else 'its paid run'}, billed "
+                 f"{num(max(bounds), 2)} of its input bound and {num(max(costs), 2)} of its reservation.")
+    refresh = next((s for stem, s in runs if stem == "library"), None)
+    if refresh is not None:
+        line += (f" The refresh the scores come from answered {num((refresh.get('counts') or {}).get('cached'))} of its "
+                 f"{num(refresh.get('items'))} items from the cache and was billed "
+                 f"${num((refresh.get('billing') or {}).get('cost_usd'), 4)}.")
+    return ["", line]
+
+
+def _decision_x1(data: dict) -> list[str]:
+    out = ["### X1: scenario labels and audit", ""]
+    run = _run(data, "X1", "library")
+    line = _absent("X1", run, "no results/neural/decisions/X1-library-scores.json (`decide --job X1`)")
+    if line:
+        return out + [line]
+    x = run["scores"]
+    auc, f = x.get("control_auroc") or {}, x.get("soft_filter") or {}
+    works = bool(f.get("works"))
+    review = f.get("review_list") or []
+    out += [f"{num(x.get('labels_answered'))} of {num(x.get('labels'))} scenarios labeled, and {num(x.get('controls'))} "
+            "negative controls (code-made corruptions mixed with accepted scenarios, rendered without plausibility "
+            "measures in both arms).", "",
+            f"Plausibility on the controls: AUROC {ci(auc, 3)} against the bar of {num(f.get('threshold'), 2)}, so "
+            f"plausibility {'works' if works else 'does not work'} as a soft filter. "
+            + (f"{num(len(review))} scenarios, whose most likely level is one of the two lowest, go to a review list; "
+               "none is deleted." if works else "No review list is drawn; none is deleted.")]
+    by = x.get("control_scores_by_corruption") or {}
+    if by:
+        order = sorted(by, key=lambda k: (k != "clean", k))
+        out += ["", "Mean plausibility score (0, not plausible, to 4, highly plausible) by control:", ""]
+        out += table(["Control", "Scenarios", "Mean score"],
+                     [[k.replace("_", " "), num(by[k].get("n")), num(by[k].get("mean_score"), 2)] for k in order])
+    levels = x.get("plausibility_levels") or {}
+    if levels:
+        out += ["", "Most likely plausibility level across the library: "
+                + ", ".join(f"level {k} {num(levels[k])}" for k in sorted(levels, key=int)) + "."]
+    fa, ea = x.get("failure_focus_agreement") or {}, x.get("edge_tag_agreement") or {}
+    out += ["", f"The dominant failure agrees with the planner's failure focus for {pct(fa.get('share'))} of "
+                f"{num(fa.get('n'))} scenarios. Edge-tag questions were answered yes for {pct(ea.get('share_yes'))} of the "
+                f"{num(ea.get('asked'))} asked; only the tags each scenario's brief requested were asked, so this measures "
+                "a lean toward yes rather than agreement."]
+    return out
+
+
+def _share(v) -> float:
+    return v["share"] if isinstance(v, dict) else v
+
+
+def _top_action(run: dict) -> str:
+    """Drex Max's most-chosen action and its share: from the scores' choices record, else from the run's counted
+    choices file when it was counted from the very outputs the scores were computed from."""
+    x, counted = run["scores"] or {}, run.get("choices")
+    actions = ((x.get("choices") or {}).get("model") or {}).get("action") or {}
+    if actions:
+        top = min(actions.items(), key=lambda kv: (-_share(kv[1]), kv[0]))   # ties by name, as scored
+        return f"`{top[0]}`, {pct(_share(top[1]), 0)}"
+    if counted is not None:
+        if counted.get("outputs_sha256") != (x.get("provenance") or {}).get("outputs_sha256"):
+            return "not shown: the counted choices are not of the outputs these scores read"
+        actions = ((counted.get("model") or {}).get("action")) or {}
+        if actions:
+            top = min(actions.items(), key=lambda kv: (-_share(kv[1]), kv[0]))   # ties by name, as scored
+            return f"`{top[0]}`, {pct(_share(top[1]), 0)} (shares counted from this round's outputs)"
+    return "not recorded in this scores file"
+
+
+def _x2_round_row(label: str, run: dict) -> list[str]:
+    x = run["scores"]
+    m = x.get("methods") or {}
+
+    def cell(metric):
+        return (f"{ci((m.get('model') or {}).get(metric), 1, 100)}; {_pts((m.get('R1') or {}).get(metric))}; "
+                f"{_pts((m.get('R2') or {}).get(metric))}")
+    return [label, num(x.get("alerts")), cell("role_accuracy"), cell("place_accuracy"), cell("action_appropriate"),
+            _top_action(run)]
+
+
+def selected_round(data: dict) -> tuple[str | None, str]:
+    """The prompt round test uses: the one with the higher validation role accuracy (a tie keeps round one), and
+    the sentence that says so."""
+    scored = []
+    for stem, name in (("val-p1", "round one"), ("val", "round two")):
+        run = _run(data, "X2", stem)
+        if run["scores"] is not None:
+            role = (((run["scores"].get("methods") or {}).get("model") or {}).get("role_accuracy") or {}).get("point")
+            prompt = (run["summary"] or {}).get("prompt_version") or ("p1" if stem == "val-p1" else "p2")
+            scored.append((name, prompt, role))
+    if len(scored) < 2:
+        return None, ("The round test uses is the one with the higher validation role accuracy; it is named once both "
+                      "rounds are scored.")
+    (n1, p1, r1), (n2, p2, r2) = scored
+    pick = (n2, p2, r2) if (r2 or 0) > (r1 or 0) else (n1, p1, r1)
+    return pick[1], (f"Selection: test uses the round with the higher validation role accuracy, {pick[0]} "
+                     f"({pick[1]}, {pct(pick[2])} against {pct(r1 if pick[0] == n2 else r2)}).")
+
+
+def _decision_x2_val(data: dict) -> list[str]:
+    out = ["### X2: prompt rounds on validation (not binding)", ""]
+    rows, missing = [], []
+    for stem, label, why in (("val-p1", "Round one (p1)", "no X2-val-p1-scores.json"),
+                             ("val", "Round two (p2)", "no X2-val-scores.json yet")):
+        run = _run(data, "X2", stem)
+        line = _absent(f"X2 {label.lower()}", run, why)
+        if line:
+            missing.append(line)
+        else:
+            rows.append(_x2_round_row(label, run))
+    if rows:
+        out += ["Percentages with Drex Max's 95% interval, then R1 and R2 on the same alerts:", ""]
+        out += table(["Round", "Alerts", "Role accuracy, % (Drex Max; R1; R2)", "Place accuracy, %",
+                      "Action appropriate, %", "Drex Max's most-chosen action"], rows)
+        out.append("")
+    out += missing + ([""] if missing else [])
+    out += [selected_round(data)[1], "", "Validation is for prompt work only; no number on it is binding (spec §8.7)."]
+    return out
+
+
+def _x2_methods_table(x: dict) -> list[str]:
+    m = x.get("methods") or {}
+    return table(["Method", "Place accuracy, %", "Action appropriate, %", "Role accuracy, %",
+                  "Breaches averted per 100 alerts", "Recollections per 100 alerts"],
+                 [[METHOD_NAMES[k], ci(m[k].get("place_accuracy"), 1, 100), ci(m[k].get("action_appropriate"), 1, 100),
+                   ci(m[k].get("role_accuracy"), 1, 100), ci(m[k].get("breaches_averted_per_100_alerts")),
+                   ci(m[k].get("recollections_started_per_100_alerts"))] for k in ("model", "R1", "R2") if k in m])
+
+
+def _x2_slice_table(title: str, slices: dict) -> list[str]:
+    def p(block, method, metric, scale=100.0):
+        return _pts(((block.get("methods") or {}).get(method) or {}).get(metric), scale)
+    return table([title, "Alerts", "Role, %: Drex Max", "R1", "R2", "Action, %: Drex Max", "Averted per 100: Drex Max"],
+                 [[f"`{k}`", num(v.get("alerts")), p(v, "model", "role_accuracy"), p(v, "R1", "role_accuracy"),
+                   p(v, "R2", "role_accuracy"), p(v, "model", "action_appropriate"),
+                   p(v, "model", "breaches_averted_per_100_alerts", 1.0)] for k, v in slices.items()])
+
+
+def _decision_x2_test(data: dict) -> list[str]:
+    out = ["### X2 on test (binding)", ""]
+    run = _run(data, "X2", "test")
+    line = _absent("X2 on test", run, "it runs after the TracerNet test looks, and its decision-layer look relocks "
+                                      "the shared test lock with the decision model's hash (spec §8.7)")
+    if line:
+        return out + [line]
+    x, s = run["scores"], run["summary"] or {}
+    pick, _ = selected_round(data)
+    used = s.get("prompt_version")
+    out += [f"{num(x.get('alerts'))} alerts from {num(x.get('scenarios'))} scenarios, {num(x.get('scored_alerts'))} with a "
+            f"true place at the alert tick; prompt {used or 'n/a'}"
+            + ("" if pick is None or used is None else (" (the selected round)." if used == pick else
+                                                        f" (NOT the selected round, {pick})."))]
+    a = x.get("adoption") or {}
+    rows = []
+    for k in ("R1", "R2"):
+        d = ((x.get("differences") or {}).get(f"model - {k}") or {}).get("role_accuracy") or {}
+        rows.append([f"Drex Max minus {k}", ci(d, 1, 100), "at least +5.0, interval above zero",
+                     held(bool(((a.get("checks") or {}).get(k) or {}).get("holds")))])
+    out += ["", "The adoption rule, binding on test, in percentage points of role accuracy:", ""]
+    out += table(["Difference", "Points (95% interval)", "Needed", "Outcome"], rows)
+    source = "Drex Max's dispatch" if a.get("holds") else "rule R2's dispatch"
+    out += ["", f"The adoption rule {'held' if a.get('holds') else 'did not hold'} (binding): any dispatch the exports "
+                f"carry is {source}. The demo's specimens come from `legacy_v1`, whose v1 store records no route, unit "
+                "kind or staffing roster, so neither dispatcher can run on them and `docs/demo/neural.json` carries no "
+                "dispatch (null).", "", "Every method on the same alerts, with 95% intervals:", ""]
+    out += _x2_methods_table(x)
+    yes_rows = []
+    for q, label in (("shared_problem", "Shared problem"), ("escalate", "Escalate")):
+        b = x.get(q) or {}
+        for who, name in (("model", "Drex Max"), ("R2", "R2")):
+            yes_rows.append([f"{label}: {name}", ci(b.get(f"{who}_auroc"), 3), ci(b.get(f"{who}_auprc"), 3),
+                             ci(b.get(f"{who}_precision"), 3), ci(b.get(f"{who}_recall"), 3)])
+    sp, es = x.get("shared_problem") or {}, x.get("escalate") or {}
+    out += ["", f"The yes-no questions, against their labels: a shared problem ({num(sp.get('positives'))} of "
+                f"{num(sp.get('alerts'))} alerts) and an unrecoverable specimen ({num(es.get('positives'))} of "
+                f"{num(es.get('alerts'))}); Drex Max says yes at {num(sp.get('threshold'), 1)}, fixed in advance.", ""]
+    out += table(["Question and method", "AUROC", "AUPRC", "Precision", "Recall"], yes_rows)
+    slices = x.get("slices") or {}
+    for key, title in (("by_place", "True place"), ("by_route_kind", "Route kind")):
+        if slices.get(key):
+            out += ["", f"By {title.lower()} (points; the intervals are in the scores file):", ""]
+            out += _x2_slice_table(title, slices[key])
+    cf = x.get("counterfactual") or {}
+    out += ["", f"The counterfactual behind \"breaches averted\" (`source: {cf.get('source', 'assumed')}`): acting on an "
+                f"appropriate action finds the specimen {num(cf.get('found_after_alert_min'), 0)} minutes after the "
+                f"alert, and it is received {num(cf.get('received_after_found_min'), 0)} minutes later; for a lost "
+                "specimen it starts a recollection, counted separately."]
+    return out
+
+
+def _decision_x3(data: dict) -> list[str]:
+    out = ["### X3: can a decision model forecast?", ""]
+    run = _run(data, "X3", "test")
+    line = _absent("X3 on test", run, "it runs after the TracerNet test looks, under the same lock as X2 (spec §8.7)")
+    if line:
+        return out + [line]
+    x = run["scores"]
+    m = x.get("methods") or {}
+    out += [f"{num(x.get('scored_ticks'))} of {num(x.get('ticks'))} test ticks from {num(x.get('scenarios'))} scenarios "
+            f"({num(x.get('refused_or_unanswered'))} refused or unanswered, left out for every method), "
+            f"{num(x.get('misses'))} of them misses; the same ticks for all three, no threshold tuned.", ""]
+    names = {"decision_model": "Drex Max", "tracernet": "TracerNet", "analytic_local": "Analytic model, local refit"}
+    out += table(["Method", "AUROC", "AUPRC", "Brier", "ECE"],
+                 [[names[k], *(ci((m.get(k) or {}).get(metric), 3) for metric in ("auroc", "auprc", "brier", "ece"))]
+                  for k in names if k in m])
+    d = ((x.get("differences") or {}).get("decision_model - tracernet") or {}).get("auroc") or {}
+    if d.get("low") is None or d.get("high") is None:
+        verdict = "No reading: the AUROC difference with TracerNet has no interval."
+    elif d["high"] < 0:
+        a = ((x.get("differences") or {}).get("decision_model - analytic_local") or {}).get("auroc") or {}
+        also = (f" and the local analytic refit ({ci(a, 3)})" if a.get("high") is not None and a["high"] < 0 else "")
+        verdict = (f"No: on the same ticks Drex Max ranks the misses worse than TracerNet (AUROC difference "
+                   f"{ci(d, 3)}){also}. X3 compares Drex Max with the risk models; it leaves the primary-model "
+                   "verdict of section 1 as it is.")
+    elif d["low"] > 0:
+        verdict = f"Yes, on these ticks: Drex Max ranks the misses better than TracerNet (AUROC difference {ci(d, 3)})."
+    else:
+        verdict = (f"Not distinguishably: the AUROC difference with TracerNet, {ci(d, 3)}, spans zero.")
+    return out + ["", verdict]
+
+
+def _x4_state(data: dict) -> str:
+    x = _run(data, "X2", "test")["scores"]
+    if x is None:
+        return " X2 has not been scored on test yet."
+    if (x.get("adoption") or {}).get("holds"):
+        return " The rule held on test, so X4 is the way to run the dispatcher without live calls, if it is built."
+    return " The rule did not hold on test, so X4 is not needed."
+
+
 def section_decisions(data: dict) -> list[str]:
+    """Spec §8.10 item 8 from results/neural/decisions/ (src/decide/, src/pipeline/dispatch_eval.py)."""
     out = ["## 8. Decision layer", ""]
-    if not data["decisions"]:
+    runs = data.get("decisions") or {}
+    if not any(r["summary"] is not None or r["scores"] is not None for r in runs.values()):
         return out + ["Not run: the decision layer of spec §11 (task N10) has not run yet."]
-    return out + ["The decision layer's frozen outputs are in results/neural/decisions/."]
+    from src.decide import client as dc, distill
+
+    notice = next((r["summary"]["notice"] for r in runs.values() if r["summary"] and r["summary"].get("notice")),
+                  dc.NOTICE)
+    for part in (_decision_what(), _decision_spend(data), _decision_x1(data), _decision_x2_val(data),
+                 _decision_x2_test(data), _decision_x3(data),
+                 ["### X4: the distilled dispatcher", "", distill.REASON + _x4_state(data)],
+                 ["### Notice", "", notice]):
+        out += part + [""]
+    return out[:-1]
 
 
 def section_data(data: dict) -> list[str]:

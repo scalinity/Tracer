@@ -462,6 +462,13 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** the export read v2 specimens and truth labels before the lock check (found by review before any run); the first explanation smoke run failed because the stored risk table lacks each alert's tier and window; the full run neared its 250 GB and moved to a 450 GB node, so the run log holds five repeats from this work; the deletion check fails over every test alert (68.2% against 70%).
 - **Assumed:** integrated-gradient steps double past the spec's 64 to 128, up to 1,024, until the median alert is complete within 1% (256 on test); closed-window alerts carry one window factor with no attribution and are left out of the checks; each test alert's tier and window come from the observed store, never the truth; the demo's explanations come from `legacy_v1`; `legacy_v1`'s and `control_v1world`'s risk tables are built in the pipeline's `evaluate` dispatch, since `neural_eval.py` must not change while the lock records its blob.
 
+### Nov 10 · N10 · Add the decision layer and run X1 to X3 (this pull request)
+
+- **Agent:** an Opus subagent built `src/decide/`, `src/pipeline/dispatch_eval.py`, the `decide` command and report section 8 in its own worktree from self-contained briefs, and fixed each review round; the parent checked the prices, ran every spending step on the Mac through the ledger and every data-reading step on HiPerGator, chose the prompt round on validation, took the decision layer's single test look and wrote the results. GPT-6.1 Sol reviewed the spend path, key handling, isolation and the lock in five rounds, then the final commits in a sixth (fifteen findings, none critical, all fixed; each code finding with a regression shown to fail on its parent).
+- **Daniel:** accepted editor access to the plan page, whose tick database stays closed to Claude Code across organizations, and waived the ledger-versus-usage-page check; no review of this pull request yet.
+- **Went wrong:** the first fix for test-store reads left the risk table hashed outside the mutex and added a `table=` path that skipped the predictor's lock check, so two more rounds followed. The whole-scenario sample drew 14 laboratories and whole runs drew 43 before alerts were capped per run (two discarded dry runs, about 46 minutes of cluster time, no spend), and commit `42ec5e1` claimed whole runs spread the sample over hundreds of scenarios. Round two's wording moved Drex Max off the receiving-queue action even for specimens truly there.
+- **Assumed:** X1 labels the whole library (8,142 scenarios, not the planned 3,000) because the checked price fitted its cap; X2 samples runs in a seeded order with at most 10 alerts of each; test uses the prompt round with the higher validation role accuracy; X2 does not run on `legacy_v1` or the demo set, whose v1 store records no route, unit kind or roster, so the demo carries no dispatch; X4 is not built (cut list item 2, and the adoption rule failed); the reservation's framing allowance holds because the pilot measured billed input at most a third of the byte bound; the counterfactual times are `source: assumed`.
+
 ## The Claude API jobs
 
 The dataset jobs (D4 to J2) call `claude-haiku-5-5` at low effort with thinking off. The demo's specimen stories (J3) and search briefs (J4) call `claude-sonnet-5-5`, the model for text a person reads. The reply must match a JSON schema, so replies parse and retries stay rare. Bulk jobs run through the Batch API at half price, and every call is logged to `data/claude/usage.jsonl` (kept local). The order for each job is a token count, a pilot, then the batch, and a job's estimate must be under the plan's gate before it starts.
@@ -497,6 +504,17 @@ The v2 scenario jobs (docs/neural/spec.md §4) call OpenAI's Responses API with 
 | O1 pilot | One laboratory week for each of 24 briefs, on each of three models | 79 (72 plus 7 repairs) | $0.6003 of $3.00 | 69 accepted, 3 dropped; gate passed, Terra chosen for every stratum |
 | O2 main run | One laboratory week for each of 6,101 briefs, `gpt-6.1-terra` at low effort | 7,038 (6,100 plus 938 repairs) | $43.8659 of $44.00 | 6,023 accepted (98.7% of briefs), 52 dropped, 26 left unsent at the cap |
 
+
+## The decision-model jobs
+
+Jobs X1 to X3 (`docs/neural/spec.md` §11) call OpenRouter's Decisions API with `nace-ai/drex-max` (resolved `nace-ai/drex-max-20261016`), zero-shot, through the same ledger's `decide` account ($8.00, separate from OpenAI's), each request reserving its worst case at the undiscounted price. Prices were checked on the model pages on Nov 10.
+
+| Job | What it decided | Requests | Cost | Result |
+|---|---|---|---|---|
+| X1 | Plausibility, dominant failure and edge tags for 8,142 library scenarios and 300 code-made controls | 8,443 (a 320-call pilot, then 8,123) | $0.6961 of $1.00 | Control AUROC 0.980; 726 scenarios to a review list, none deleted |
+| X2 | Where to look, what to do and whom to call per alert: validation rounds one and two, then test | 30,044 (5,001, 5,006 and 20,037) | $2.1933 of $4.50 | Adoption rule fails on test (role accuracy 61.2% against R2's 69.1%); R2 dispatches |
+| X3 | Whether a specimen misses its window, without TracerNet's output | 4,003 | $0.1003 of $0.75 | AUROC 0.669 against TracerNet's 0.763 |
+| X4 | Not built (cut list item 2) | 0 | $0 of $1.75 | Not needed once the adoption rule failed |
 
 ## What has worked, and what to avoid
 
