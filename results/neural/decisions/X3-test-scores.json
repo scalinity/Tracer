@@ -1,0 +1,171 @@
+{
+ "bootstrap": {
+  "clusters": "scenarios",
+  "resamples": 2000,
+  "seed": 0
+ },
+ "config_hash": "d386b03891c5705d00072031cee5b3644e4d05f40d69765d5b13fb8522f917fa",
+ "created_at": "2026-11-10T19:28:38-05:00",
+ "differences": {
+  "decision_model - analytic_local": {
+   "auprc": {
+    "high": -0.00398152574494479,
+    "low": -0.08156129785098544,
+    "point": -0.040801598508242054,
+    "share_ahead": 0.014150943396226415
+   },
+   "auroc": {
+    "high": -0.01793708839448,
+    "low": -0.04696883900416941,
+    "point": -0.03259426550839806,
+    "share_ahead": 0.0
+   },
+   "brier": {
+    "high": 0.14247045889329898,
+    "low": 0.11050580459646347,
+    "point": 0.1269680618480004,
+    "share_ahead": 1.0
+   },
+   "ece": {
+    "high": 0.1901263404958109,
+    "low": 0.14604248625358637,
+    "point": 0.17135766858648976,
+    "share_ahead": 1.0
+   }
+  },
+  "decision_model - tracernet": {
+   "auprc": {
+    "high": -0.06273405447783048,
+    "low": -0.13564902004527,
+    "point": -0.09896889693941757,
+    "share_ahead": 0.0
+   },
+   "auroc": {
+    "high": -0.08088553652076544,
+    "low": -0.10476938924751347,
+    "point": -0.09347312939726093,
+    "share_ahead": 0.0
+   },
+   "brier": {
+    "high": 0.1597748814206871,
+    "low": 0.12930292228176807,
+    "point": 0.1444108803766076,
+    "share_ahead": 1.0
+   },
+   "ece": {
+    "high": 0.19826992116387826,
+    "low": 0.15563038602321547,
+    "point": 0.17977140729340693,
+    "share_ahead": 1.0
+   }
+  }
+ },
+ "job": "X3",
+ "local_refit_notes": {},
+ "methods": {
+  "analytic_local": {
+   "auprc": {
+    "high": 0.8232339030437107,
+    "low": 0.7766930262085755,
+    "point": 0.8006120302759584
+   },
+   "auroc": {
+    "high": 0.7241051854992139,
+    "low": 0.678689456451887,
+    "point": 0.7019259703519058
+   },
+   "brier": {
+    "high": 0.3003664592585992,
+    "low": 0.26323431482834136,
+    "point": 0.28141743273986036
+   },
+   "ece": {
+    "high": 0.25081213085060294,
+    "low": 0.20378042799007587,
+    "point": 0.22464109786505893
+   }
+  },
+  "decision_model": {
+   "auprc": {
+    "high": 0.7897036895526068,
+    "low": 0.726203964462191,
+    "point": 0.7598104317677163
+   },
+   "auroc": {
+    "high": 0.6967313621303522,
+    "low": 0.6406376590558523,
+    "point": 0.6693317048435078
+   },
+   "brier": {
+    "high": 0.4337825239179594,
+    "low": 0.3849327700970336,
+    "point": 0.4083854945878608
+   },
+   "ece": {
+    "high": 0.42470793334637646,
+    "low": 0.36948702099282776,
+    "point": 0.3959987664515487
+   }
+  },
+  "tracernet": {
+   "auprc": {
+    "high": 0.8759316744373506,
+    "low": 0.8373293531701507,
+    "point": 0.8587793287071339
+   },
+   "auroc": {
+    "high": 0.7847762337741561,
+    "low": 0.7380308552616063,
+    "point": 0.7628048342407687
+   },
+   "brier": {
+    "high": 0.2838469413164452,
+    "low": 0.24616108805830417,
+    "point": 0.2639746142112532
+   },
+   "ece": {
+    "high": 0.23780756668962358,
+    "low": 0.20009550736664522,
+    "point": 0.21622735915814176
+   }
+  }
+ },
+ "misses": 2398,
+ "notice": "Synthetic data: laboratory weeks designed by language models and simulated by this project's code, with no clinical review. Decision-model answers are zero-shot and their calibration on this task is measured, never assumed.",
+ "provenance": {
+  "config_hash": "d386b03891c5705d00072031cee5b3644e4d05f40d69765d5b13fb8522f917fa",
+  "dryrun_created_at": "2026-11-10T17:43:19-05:00",
+  "items_sha256": "4ed2ac35bea42cc13a59791dd67a0fa34fa422f2163041a5d50368f26b833ca2",
+  "lock_hash": "4f365789b5d734b7783617bee6289f17e0ff0b28e1928a6df8a358eae3266c88",
+  "outputs_sha256": "87696826476c74f66478eeea872ebf06c27e4ee933d5580d5a423b326d7819a2",
+  "questions_hash": "2d4d047d21658e8c500e936568bc30d0932335b74661168e7951e5800f7e2352",
+  "request_set_hash": "cf1c05ad89e3fe7f008ee55319f3f34a809b50d77664e46f8e6a501f7ebbddc5",
+  "test_run": {
+   "lock_time": "2026-11-10T16:42:32-05:00",
+   "status": "repeat",
+   "time": "2026-11-10T17:42:25-05:00"
+  }
+ },
+ "refused_or_unanswered": 0,
+ "scenarios": 100,
+ "scored_ticks": 4000,
+ "set": "test",
+ "strata": {
+  "late|short|30 to 90": 267,
+  "late|short|over 90": 267,
+  "late|short|up to 30": 267,
+  "never|long|30 to 90": 266,
+  "never|long|over 90": 266,
+  "never|long|up to 30": 266,
+  "never|short|30 to 90": 266,
+  "never|short|over 90": 266,
+  "never|short|up to 30": 267,
+  "on_time|long|30 to 90": 267,
+  "on_time|long|over 90": 267,
+  "on_time|long|up to 30": 267,
+  "on_time|short|30 to 90": 267,
+  "on_time|short|over 90": 267,
+  "on_time|short|up to 30": 267
+ },
+ "ticks": 4000
+}

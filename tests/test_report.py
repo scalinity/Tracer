@@ -381,7 +381,8 @@ def test_the_decision_section_with_every_run_present(tmp_path):
     assert "no number on it is binding" in s
     assert "prompt p2 (the selected round)." in s
     assert "| Drex Max minus R2 | -28.0 (-30.0 to -26.0) | at least +5.0, interval above zero | failed |" in s
-    assert "The adoption rule did not hold (binding): the exports and the demo use rule R2's dispatch." in s
+    assert "The adoption rule did not hold (binding): any dispatch the exports carry is rule R2's dispatch." in s
+    assert "carries no dispatch (null)" in s
     assert "| R2 (hand-written rules) | 42.0 (40.0 to 44.0) | 42.0 (40.0 to 44.0) | 68.0 (66.0 to 70.0) |" in s
     assert "| Shared problem: Drex Max | 0.600 (0.580 to 0.620) |" in s and "| Escalate: R2 |" in s
     assert "| `in_tube_system` | 30 | 40.0 | 46.0 | 68.0 | 31.0 | 9.2 |" in s and "| `tube` | 40 |" in s
@@ -394,7 +395,7 @@ def test_the_decision_section_with_every_run_present(tmp_path):
 
 def test_a_held_adoption_rule_puts_drex_max_in_the_exports(tmp_path):
     s = decision_page(tmp_path, every_decision_file(test_holds=True))
-    assert "The adoption rule held (binding): the exports and the demo use Drex Max's dispatch." in s
+    assert "The adoption rule held (binding): any dispatch the exports carry is Drex Max's dispatch." in s
 
 
 def test_the_decision_section_with_x2_and_x3_test_absent(tmp_path):

@@ -958,8 +958,10 @@ def _decision_x2_test(data: dict) -> list[str]:
     out += ["", "The adoption rule, binding on test, in percentage points of role accuracy:", ""]
     out += table(["Difference", "Points (95% interval)", "Needed", "Outcome"], rows)
     source = "Drex Max's dispatch" if a.get("holds") else "rule R2's dispatch"
-    out += ["", f"The adoption rule {'held' if a.get('holds') else 'did not hold'} (binding): the exports and the demo "
-                f"use {source}.", "", "Every method on the same alerts, with 95% intervals:", ""]
+    out += ["", f"The adoption rule {'held' if a.get('holds') else 'did not hold'} (binding): any dispatch the exports "
+                f"carry is {source}. The demo's specimens come from `legacy_v1`, whose v1 store records no route, unit "
+                "kind or staffing roster, so neither dispatcher can run on them and `docs/demo/neural.json` carries no "
+                "dispatch (null).", "", "Every method on the same alerts, with 95% intervals:", ""]
     out += _x2_methods_table(x)
     yes_rows = []
     for q, label in (("shared_problem", "Shared problem"), ("escalate", "Escalate")):
