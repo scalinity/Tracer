@@ -449,3 +449,12 @@ def test_counted_choices_of_other_outputs_are_not_shown(tmp_path):
     s = decision_page(tmp_path, files)
     assert "not shown: the counted choices are not of the outputs these scores read" in s
     assert "`check_receiving_queue`, 67%" not in s
+
+
+def test_the_acceptance_appendix_comes_last_one_heading_down_or_says_not_run():
+    from src.neural import report
+    text = "# Appendix: acceptance criteria (spec §17)\n\nIntro.\n\n## 1. Keys\n\n**Verdict: held.**\n"
+    out = report.section_acceptance({"acceptance": text})
+    assert out[0] == "## Appendix: acceptance criteria (spec §17)" and "### 1. Keys" in out and "**Verdict: held.**" in out
+    missing = report.section_acceptance({"acceptance": None})
+    assert missing[0].startswith("## Appendix") and "N11" in missing[-1]

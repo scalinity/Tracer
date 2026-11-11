@@ -15,6 +15,8 @@ run, generate and collect; the later stages join it with their tasks.
     python -m src.neural.pipeline export ...  (src/api/export_neural.py's own arguments: docs/demo/neural.json)
     python -m src.neural.pipeline decide --job X1|X2|X3 --set SET --dry-run | --budget-usd N | --score-only
                                               (the decision layer, spec §11: decide_command below)
+    python -m src.neural.pipeline run --from-frozen [--evaluate-committed] --out SCRATCH ...
+                                              (the single command, spec §12.1: src/neural/rebuild.py)
 
 The dry run sends nothing, spends nothing and opens no connection: it builds every request of the job with the real
 planner and prompt and prices each one's worst case (what generate reserves: its input bound, every UTF-8 byte sent
@@ -930,6 +932,22 @@ def build_parser() -> argparse.ArgumentParser:
                                                          "model's hash to the lock, which needs a reason")
     p.add_argument("--workers", type=int, default=1)
     p.add_argument("--train-store", default=None, help="X3 scoring: the store whose train split gives the global fit")
+    p = sub.add_parser("run", help="rebuild the data from the frozen library with no API call, retrain into a scratch "
+                                   "artifact (or score with the committed one) and compare (spec §12.1, §17 item 18)")
+    p.add_argument("--from-frozen", action="store_true", required=True,
+                   help="rebuild from the frozen library (the only mode built; run --generate is not)")
+    p.add_argument("--evaluate-committed", action="store_true",
+                   help="score validation with the committed artifact and compare with results/neural/val/")
+    p.add_argument("--out", required=True, help="the scratch folder; nothing is written outside it")
+    p.add_argument("--reuse-data", default=None, help="a folder holding sim/ and store-v2/ already rebuilt from the "
+                                                      "frozen library, read and never written")
+    p.add_argument("--reference-store", default=None, help="the committed store, compared table by table")
+    p.add_argument("--reference-sim", default=None, help="the committed simulation's manifest.json or its folder, "
+                                                         "compared file by file")
+    p.add_argument("--until", default=None, choices=("simulate", "store", "features", "train", "calibrate", "evaluate"))
+    p.add_argument("--seeds", default=None, help="with --until train: these seeds only, for jobs run side by side")
+    p.add_argument("--workers", type=int, default=None)
+    p.add_argument("--device", default="auto", help="training and calibration: auto, cpu, mps or cuda[:N]")
     p = sub.add_parser("report", help="render results/neural/REPORT.md (spec §8.10)")
     p.add_argument("--out", default=None)
     p.add_argument("--ledger-json", default=None, help="ledger totals as JSON, when the ledger mirror is elsewhere")
@@ -1060,6 +1078,18 @@ def main(argv: list[str] | None = None, *, paths: runner.Paths | None = None, se
                                       now=now, sleep=sleep, out=out)
             except (dc.JobError, dc.DecisionError, neural_eval.LockError, facts.FactsError, render.RenderError,
                     ValueError, FileNotFoundError) as e:
+                out(f"error: {e}")
+                return 1
+        if args.command == "run":
+            from src.neural import rebuild
+            opt = (lambda v: Path(v) if v else None)
+            try:
+                return rebuild.run_from_frozen(
+                    Path(args.out), evaluate_committed=args.evaluate_committed, reuse_data=opt(args.reuse_data),
+                    reference_store=opt(args.reference_store), reference_sim=opt(args.reference_sim),
+                    until=args.until, seeds=None if args.seeds is None else [int(s) for s in args.seeds.split(",") if s],
+                    workers=args.workers, device=args.device, out=out)
+            except rebuild.RebuildError as e:
                 out(f"error: {e}")
                 return 1
         if args.command == "report":

@@ -1,0 +1,316 @@
+{
+ "mode": "committed",
+ "scratch": "$T/run-n11-committed",
+ "result": "$T/run-n11-committed/run-evaluate-committed.json",
+ "git_sha": "8656c079be7aa6e3422e0bb868b29f771ce87d98",
+ "started_at": "2026-11-11T00:25:56-05:00",
+ "settings": {
+  "reuse_data": "$T/code-n11/data",
+  "reference_store": "$T/store-v2-r2-eval",
+  "reference_sim": "$T/sim-r2/manifest.json",
+  "until": null,
+  "seeds": [
+   0,
+   1,
+   2
+  ],
+  "workers": 47,
+  "device": "auto",
+  "matched": true,
+  "artifact": "$T/code-n11/artifacts/tracernet/v1",
+  "committed_evaluation": "$T/code-n11/results/neural/val/evaluation.json",
+  "tolerance": 0.005
+ },
+ "notes": [
+  "Each member's val_sel follows its own early stopping, and its epochs are sized from the throughput the machine measures, so one seed can stop at another epoch; an operating point is a count at a knob tuned per scenario on 5-minute ticks (the median warning moves in 5-minute steps). These are reported with their differences, not gated.",
+  "DuckDB's file bytes vary by build, so stores are compared table by table and the evaluation's store path, store manifest hash and timing are left out of its comparison.",
+  "No test set is scored and the test lock is not read; the store's table digests hash every row of every split and compute no statistic."
+ ],
+ "steps": [
+  {
+   "name": "simulate",
+   "status": "reused from $T/code-n11/data",
+   "outputs": {
+    "manifest": {
+     "path": "$T/code-n11/data/sim/manifest.json",
+     "sha256": "7e05fd4d82a666ed2ea56c8722cac7453e8ee5a293eceed5d59634b3e347ebac"
+    }
+   }
+  },
+  {
+   "name": "store",
+   "status": "reused from $T/code-n11/data",
+   "outputs": {
+    "manifest": {
+     "path": "$T/code-n11/data/store-v2/manifest.json",
+     "sha256": "fb3f2cab154b3909edce0be9f7689c260fd3731793aae17c802c3e2a371c02ca"
+    }
+   }
+  },
+  {
+   "name": "risk-committed",
+   "status": "ran: never run",
+   "started_at": "2026-11-11T00:25:57-05:00",
+   "finished_at": "2026-11-11T05:46:05-05:00",
+   "seconds": 19208.0,
+   "outputs": {
+    "part-0000.parquet": {
+     "path": "$T/run-n11-committed/risk/committed/val/part-0000.parquet",
+     "sha256": "dea9257ed492e474aa85cbf1b833a00bb00d61197b18d6c4a4806f085159f248"
+    },
+    "part-0001.parquet": {
+     "path": "$T/run-n11-committed/risk/committed/val/part-0001.parquet",
+     "sha256": "bd527073d1081b500582f77f5289a23e1fe800d247e473d918b6c931eed8fda4"
+    },
+    "part-0002.parquet": {
+     "path": "$T/run-n11-committed/risk/committed/val/part-0002.parquet",
+     "sha256": "fce8920a248962e25f1ab0996d69ebb5a8f045bb0aab166f6a3e0624069896aa"
+    },
+    "part-0003.parquet": {
+     "path": "$T/run-n11-committed/risk/committed/val/part-0003.parquet",
+     "sha256": "df9fd199e9d75c82407ea1f9f625e86d48227bc5ceb27eafa695334e2088551a"
+    },
+    "part-0004.parquet": {
+     "path": "$T/run-n11-committed/risk/committed/val/part-0004.parquet",
+     "sha256": "df06703a01e2763fb29abde32635f8796516b1d998b95d678bb18c3a3875c93a"
+    },
+    "part-0005.parquet": {
+     "path": "$T/run-n11-committed/risk/committed/val/part-0005.parquet",
+     "sha256": "a925252c5fc3475acfd16b4e3b504f0f5b80bb5cfb5ed2ae7a91573b361a4b32"
+    },
+    "part-0006.parquet": {
+     "path": "$T/run-n11-committed/risk/committed/val/part-0006.parquet",
+     "sha256": "f45db6ee19e4b1906418a4d3649db22b30a606ff2fbb88710fd06089fdb332b8"
+    },
+    "part-0007.parquet": {
+     "path": "$T/run-n11-committed/risk/committed/val/part-0007.parquet",
+     "sha256": "d6c34e459b60c545d3ffffb6ae477035d527d96a31065b6abe4e5866d8306ca8"
+    },
+    "part-0008.parquet": {
+     "path": "$T/run-n11-committed/risk/committed/val/part-0008.parquet",
+     "sha256": "34800f194a8d4f440d9b10e87fd3fbfa8fa1e782b7eb8dea055fff72421922b6"
+    },
+    "part-0009.parquet": {
+     "path": "$T/run-n11-committed/risk/committed/val/part-0009.parquet",
+     "sha256": "b3052049b0e7e6924778ed10cddf14975b8535c440a0ebee12d0132d88a27777"
+    },
+    "part-0010.parquet": {
+     "path": "$T/run-n11-committed/risk/committed/val/part-0010.parquet",
+     "sha256": "5e8fa3d1632e867db67a7248eda56f3603a7c7845819a65fa0d75354f8211726"
+    },
+    "part-0011.parquet": {
+     "path": "$T/run-n11-committed/risk/committed/val/part-0011.parquet",
+     "sha256": "31cf7349e4335733de01b00f25dc2627185734ab2cc5bdb1dfe0feefb4850a1d"
+    },
+    "part-0012.parquet": {
+     "path": "$T/run-n11-committed/risk/committed/val/part-0012.parquet",
+     "sha256": "8d8c9ab04d593b9837868dc9e5a4ae560a83a52aa8ca5f984b2347696cc37411"
+    },
+    "part-0013.parquet": {
+     "path": "$T/run-n11-committed/risk/committed/val/part-0013.parquet",
+     "sha256": "42642fd351b7ea31cb9749fc5e0e1d5812a1df7eac9b9def27900805a69170f8"
+    },
+    "part-0014.parquet": {
+     "path": "$T/run-n11-committed/risk/committed/val/part-0014.parquet",
+     "sha256": "325196e1f9a06a4fdbdc439c80af4b659d9a073f8fb6cdd9c1a948ecd482f816"
+    },
+    "part-0015.parquet": {
+     "path": "$T/run-n11-committed/risk/committed/val/part-0015.parquet",
+     "sha256": "899469e7b4de8f63779c91276a44e7902bd088bbaf1dd906c397bd634b40e351"
+    },
+    "part-0016.parquet": {
+     "path": "$T/run-n11-committed/risk/committed/val/part-0016.parquet",
+     "sha256": "473a50c274554ff832c5ad3c033d10b83773f4733e368c046e94c14d51843345"
+    },
+    "part-0017.parquet": {
+     "path": "$T/run-n11-committed/risk/committed/val/part-0017.parquet",
+     "sha256": "85d3c83c6490d31e91ba8a5d317659b74410d2ea0a8a4ab4539c7f0edf600f9a"
+    },
+    "part-0018.parquet": {
+     "path": "$T/run-n11-committed/risk/committed/val/part-0018.parquet",
+     "sha256": "0574472ec49d40ad354bbe8a41a43ef5f850a8d03b63cfb65e361d2d3a94e2ff"
+    },
+    "part-0019.parquet": {
+     "path": "$T/run-n11-committed/risk/committed/val/part-0019.parquet",
+     "sha256": "59e25701958d48f876dda6beb8718986320804a99854eb4e414058630bf07448"
+    },
+    "part-0020.parquet": {
+     "path": "$T/run-n11-committed/risk/committed/val/part-0020.parquet",
+     "sha256": "13cfeddaf2d1c10e146d49aac99f586abf3cca6d270aa6bcf4add75deefbccfd"
+    },
+    "part-0021.parquet": {
+     "path": "$T/run-n11-committed/risk/committed/val/part-0021.parquet",
+     "sha256": "256d369d34f41b80cb59b75bcdd9834887ab5a2a27d862c3346b897fc91a306e"
+    }
+   }
+  },
+  {
+   "name": "evaluate-committed",
+   "status": "ran: never run",
+   "started_at": "2026-11-11T05:46:15-05:00",
+   "finished_at": "2026-11-11T06:05:31-05:00",
+   "seconds": 1156.0,
+   "outputs": {
+    "evaluation": {
+     "path": "$T/run-n11-committed/eval/committed/val/evaluation.json",
+     "sha256": "52c6699a54a7481af6431da6c3a8c65d858d66477b00a1b0cd459d1ec922eddb"
+    }
+   }
+  }
+ ],
+ "finished_at": "2026-11-11T06:05:46-05:00",
+ "comparisons": [
+  {
+   "name": "simulation manifest",
+   "kind": "exact",
+   "committed": "7e05fd4d82a666ed2ea56c8722cac7453e8ee5a293eceed5d59634b3e347ebac",
+   "rebuilt": "7e05fd4d82a666ed2ea56c8722cac7453e8ee5a293eceed5d59634b3e347ebac",
+   "passed": true
+  },
+  {
+   "name": "simulation files",
+   "kind": "exact",
+   "files": 62438,
+   "reference_files": 62438,
+   "equal": 62438,
+   "missing": [],
+   "extra": [],
+   "different": [],
+   "passed": true
+  },
+  {
+   "name": "store inputs",
+   "kind": "exact",
+   "committed": {
+    "policy_hash": "9594d7c019363261",
+    "library_sha256": "257290db3d69618b5a488e59011d5283a4a873b14bae94d6d2f86edcd87528f6",
+    "splits_sha256": "2d495f203ad64fc8f08b9ee17a1df03143744a1f84a97f5ba0c31f36b5fdc09a",
+    "sim_manifest_sha256": "7e05fd4d82a666ed2ea56c8722cac7453e8ee5a293eceed5d59634b3e347ebac"
+   },
+   "rebuilt": {
+    "policy_hash": "9594d7c019363261",
+    "library_sha256": "257290db3d69618b5a488e59011d5283a4a873b14bae94d6d2f86edcd87528f6",
+    "splits_sha256": "2d495f203ad64fc8f08b9ee17a1df03143744a1f84a97f5ba0c31f36b5fdc09a",
+    "sim_manifest_sha256": "7e05fd4d82a666ed2ea56c8722cac7453e8ee5a293eceed5d59634b3e347ebac"
+   },
+   "passed": true
+  },
+  {
+   "name": "store tables",
+   "kind": "exact",
+   "tables": [
+    {
+     "file": "observed.duckdb",
+     "table": "events",
+     "rows": 305856367,
+     "reference_rows": 305856367,
+     "equal": true
+    },
+    {
+     "file": "observed.duckdb",
+     "table": "meta",
+     "rows": 4,
+     "reference_rows": 4,
+     "equal": true
+    },
+    {
+     "file": "observed.duckdb",
+     "table": "roster",
+     "rows": 143797,
+     "reference_rows": 143797,
+     "equal": true
+    },
+    {
+     "file": "observed.duckdb",
+     "table": "runs",
+     "rows": 27148,
+     "reference_rows": 27148,
+     "equal": true
+    },
+    {
+     "file": "observed.duckdb",
+     "table": "specimens",
+     "rows": 65620442,
+     "reference_rows": 65620442,
+     "equal": true
+    },
+    {
+     "file": "truth.duckdb",
+     "table": "meta",
+     "rows": 4,
+     "reference_rows": 4,
+     "equal": true
+    },
+    {
+     "file": "truth.duckdb",
+     "table": "truth_disruptions",
+     "rows": 55200,
+     "reference_rows": 55200,
+     "equal": true
+    },
+    {
+     "file": "truth.duckdb",
+     "table": "truth_scenarios",
+     "rows": 8142,
+     "reference_rows": 8142,
+     "equal": true
+    },
+    {
+     "file": "truth.duckdb",
+     "table": "truth_segments",
+     "rows": 449328213,
+     "reference_rows": 449328213,
+     "equal": true
+    },
+    {
+     "file": "truth.duckdb",
+     "table": "truth_specimens",
+     "rows": 65620442,
+     "reference_rows": 65620442,
+     "equal": true
+    }
+   ],
+   "file_bytes_equal": false,
+   "passed": true
+  },
+  {
+   "name": "validation evaluation",
+   "kind": "exact",
+   "excluded": [
+    "store.path",
+    "store.manifest_sha256",
+    "timing"
+   ],
+   "excluded_values": {
+    "store.path": {
+     "committed": "data/store-v2",
+     "rebuilt": "data/store-v2"
+    },
+    "store.manifest_sha256": {
+     "committed": "3adeaa651d1c79d3e7797ee5257b4818219e7bfa790d1022219491ecc56f7f66",
+     "rebuilt": "3adeaa651d1c79d3e7797ee5257b4818219e7bfa790d1022219491ecc56f7f66"
+    },
+    "timing": {
+     "committed": {
+      "seconds": 1345.79,
+      "workers": 15,
+      "specimens_read": 8147827,
+      "seconds_per_1000_specimens": 0.1652
+     },
+     "rebuilt": {
+      "seconds": 1153.74,
+      "workers": 47,
+      "specimens_read": 8147827,
+      "seconds_per_1000_specimens": 0.1416
+     }
+    }
+   },
+   "differences": 0,
+   "first_differences": [],
+   "bytes_equal_after_substitution": true,
+   "passed": true
+  }
+ ],
+ "reported": [],
+ "passed": true
+}

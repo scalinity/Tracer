@@ -313,7 +313,7 @@ Applied in order; the first failing layer's errors are what a repair request rec
 1. **Full schema.** JSON Schema Draft 2020-12 with all bounds (the repository already depends on `jsonschema`).
 2. **Semantics.** Ids unique; every referenced line, route and unit exists; `mixed` units have a tube share; `clinic_offsite` units use a van route; every shift with arrivals has at least one receiving staff member; disruption targets exist and match their type; disruptions start and end inside days 0 to 6 plus 12 hours; overlapping disruptions on one target are allowed and combine by the stronger severity; the hourly profile is not flat unless the brief asks for it; adherence to the brief's fixed fields.
 3. **Names and safety.** The narrative and notes contain no personal names or dates of birth (reuse the patterns of `src/generator/validate.py` check 9), no word pair that looks like an institution name (a capitalized word followed by Hospital, Medical Center, Clinic, Health, University or Health System), and nothing from a denylist that includes at least Mayo, Cleveland Clinic, Johns Hopkins, Kaiser, HCA, Ascension, Baptist, Shands and UF Health.
-4. **Plausibility by simulation.** Simulate 2 days of replicate 99 (a seed reserved for checks) and require the KPIs of §5.10.
+4. **Plausibility by simulation.** Simulate the whole scored week of replicate 99 (a seed reserved for checks), with its warm-up and warm-down days, and require the KPIs of §5.10.
 5. **Brief adherence.** Every `must_include` sentence has a code predicate (Appendix C and `config/scenario_planner.yaml`); all must hold.
 6. **Diversity.** §4.9.
 
@@ -472,7 +472,7 @@ The pilot sends the same 24 briefs to each of the three models, so their compari
 
 ### 5.10 Plausibility KPIs (`src/sim/kpi.py`)
 
-Computed on a 2-day simulation with replicate 99. Every threshold is an assumption.
+Computed on a simulation of the whole scored week of replicate 99, so a disruption planned late in the week and the weekend staffing are seen. Every threshold is an assumption.
 
 | KPI | Pass range |
 |---|---|
@@ -632,7 +632,7 @@ Numeric inputs are robust-scaled (median and interquartile range from train, cli
 
 ### 7.6 Calibration (`src/neural/calibrate.py`)
 
-- One temperature on the distribution logits, fitted by minimizing tick-weighted NLL over all validation ticks.
+- One temperature on the distribution logits, fitted by minimizing tick-weighted NLL over the validation ticks: all of them, or above `calibration_max_ticks` (3,000,000, assumed) a fixed uniform sample of that many (seed 0), which the manifest records (artifact v1: 3,000,000 of 67,286,117).
 - If the validation expected calibration error of `p_miss` (10 equal-mass bins) is still above 0.02, an isotonic map of `p_miss` is fitted on validation and `p_never` and `p_late` are rescaled in proportion so they still sum to the new `p_miss`.
 - Reliability tables before and after, Brier at 30 and 60 minutes, expected calibration error, calibration slope and intercept are all reported.
 - Under the default 3-2-1 weights, calibration changes the alert order across tiers, so it is part of the alert policy, not only of the display.
@@ -776,7 +776,7 @@ If the box runs short, drop A9, A8, A7, A4 and A3 in that order.
   - **Leads nowhere, and the specimen-only ablation equals the full model:** H₀ holds in this world too. Report it as a result: elapsed time and the window are enough, and a laboratory can deploy the analytic model and the window rule with no machine-learning infrastructure.
   - **Wins on v2, loses on `legacy_v1`:** it learned this generator. Recommend training on mixed generators (A8) and treat the v2 result as specific to it.
 
-### 8.10 The report (`results/neural/REPORT.md`, `results/neural/evaluation.json`)
+### 8.10 The report (`results/neural/REPORT.md`, `results/neural/<set>/evaluation.json`)
 
 1. Verdict against R1 to R4, with numbers, intervals and the synthetic-data notice.
 2. Headline table at 1, 2, 4 and 6 alerts per shift: every method and weighting, every alert metric.
@@ -1086,8 +1086,8 @@ python -m src.neural.pipeline run       --from-frozen [--evaluate-committed] [--
 ```
 
 **The single command.**
-- `run --from-frozen` regenerates everything from the committed library and splits with no API call: simulate, store, features, train the committed configuration into a scratch artifact, calibrate, evaluate on validation, compare with the committed artifact's validation metrics (`val_sel` within 0.5%), report. It never touches a test set: a retrained network is not bit-identical on MPS, so scoring test with it would be a second look.
-- `run --from-frozen --evaluate-committed` rebuilds the same data, then scores the committed artifact on every set, test included under the existing lock (every hash matches), and reproduces `results/neural/evaluation.json` byte for byte (inference on CPU).
+- `run --from-frozen` regenerates everything from the committed library and splits with no API call: simulate, store, features, train the committed configuration into a scratch artifact, calibrate, evaluate on validation, compare with the committed validation metrics (the ensemble's `val_sel`, and TracerNet's pooled AUROC, pooled AUPRC and Brier at 30 and 60 minutes, each within 0.5%; each seed's `val_sel` and the operating points are reported without a gate), report. It never touches a test set: a retrained network is not bit-identical on MPS, so scoring test with it would be a second look.
+- `run --from-frozen --evaluate-committed` rebuilds the same data, scores the committed artifact on validation and compares `results/neural/val/evaluation.json` with the committed copy on every field except the store's path, the store manifest's hash and the timing, which a rebuilt store always changes (DuckDB's file bytes differ from build to build); it also checks the simulation file by file and the store table by table. Inference runs on CPU of the processor type that scored the committed table. The test sets are not rescored: a TracerNet look after the decision layer's relock needs a relock of its own.
 - `run --generate` is the original build with O1 to O3 and every spend guard; each job needs its own `--budget-usd`.
 
 ### 12.2 Stages
@@ -1113,7 +1113,7 @@ Each stage writes `data/neural/stages/<stage>.json` with its input hashes, outpu
 | S14 evaluate validation | artifact, stores | `results/neural/val/` | repeatable |
 | S15 weak spots | validation results | `results/neural/generation/round2-plan.json` | |
 | S16 round 2 | S2 to S8 for O3, then S9 to S14 | | once |
-| S17 evaluate test sets | locked artifact | `results/neural/evaluation.json`, the lock | once per lock |
+| S17 evaluate test sets | locked artifact | `results/neural/test/evaluation.json`, `results/neural/test_ood/evaluation.json`, the lock | once per lock |
 | S18 ablate | features, configuration | `results/neural/ablations.json` | time-boxed |
 | S19 explain, export | artifact, alerts | `results/neural/predictions/`, `docs/demo/neural.json` | deterministic on CPU |
 | S20 decide | alerts, features, library summaries | `results/neural/decisions/` | cached |
