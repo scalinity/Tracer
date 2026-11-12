@@ -490,6 +490,13 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** the first revision paraphrased item 12's criterion instead of quoting the spec, left item 20's November 10 counts unlabeled, said no check was rerun while item 21 read PR metadata, and said the page renders from the committed results alone although section 9's spend table reads the local ledger mirror. The monitor subagent sat for 45 minutes on an `ls` that this shell runs as `eza`.
 - **Assumed:** the ledger mirror stays local, since `data/` is never committed, so the reproduction claims name it instead; the test checks the leakage line of `caveats.md` as well as the three lines the review named; the val_sel spike line stays unchecked, having no committed source.
 
+### Nov 11 · Report review · Name the commit range behind each count in appendix item 20 (this pull request)
+
+- **Agent:** made the one optional text fix a third independent review found (no critical issues or warnings): item 20's two "16 commits" bullets now name their ranges, checked with `git rev-list` (#49 to #62 plus two N11 branch commits at `ac94969`; #49 to #64 at `d087870`). It re-rendered the report and recorded the closed neural work in the local `AGENTS.md`.
+- **Daniel:** sent the review's result and the close-out list; no review of this pull request yet.
+- **Went wrong:** the second revision's new bullet repeated "16 commits" beside the November 10 one without naming either range, so the same count read as the same commits.
+- **Assumed:** the November 10 range is read from `ac94969`, the commit the audit names, which still exists in this repository.
+
 ## The Claude API jobs
 
 The dataset jobs (D4 to J2) call `claude-haiku-5-5` at low effort with thinking off. The demo's specimen stories (J3) and search briefs (J4) call `claude-sonnet-5-5`, the model for text a person reads. The reply must match a JSON schema, so replies parse and retries stay rare. Bulk jobs run through the Batch API at half price, and every call is logged to `data/claude/usage.jsonl` (kept local). The order for each job is a token count, a pilot, then the batch, and a job's estimate must be under the plan's gate before it starts.
