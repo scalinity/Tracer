@@ -75,10 +75,10 @@ per 8-hour shift, a chosen budget, R1 (warning) failed, R2 (losses) and R3 (cali
 failed. The analytic model stays primary because R1 failed. R4 also failed, mostly because the baselines leave part of
 the 6-alert budget unused (the window rule alerts on nothing in 268 of 782 scenarios). R1 cannot separate the methods
 here: a missed breach counts as 0 minutes and no method catches half the breaches, so every median warning is 0, while
-the capped mean warning is 23.9 minutes for TracerNet against 7.4 to 13.7 for the baselines. TracerNet is reported as
-a challenger result. The full report, with intervals, slices, ablations and the explanation checks, is
-`results/neural/REPORT.md`. This data is synthetic too:
-laboratory weeks designed by language models and simulated by this project's code, with no clinical review.
+the capped mean warning is 23.9 minutes for TracerNet against 7.4 to 13.7 for R1's three baselines at 3-2-1
+weights. TracerNet is reported as a challenger result. The full report, with intervals, slices, ablations and the
+explanation checks, is `results/neural/REPORT.md`. This data is synthetic too: laboratory weeks designed by language
+models and simulated by this project's code, with no clinical review.
 
 These run offline with the committed artifact. The v2 store in `data/store-v2/` comes from the frozen library
 through the pipeline's `simulate` and `store` commands; `export --source legacy_v1` reads the v1 store instead.

@@ -1,6 +1,6 @@
 # TracerNet against the baselines: the v2 report
 
-**Verdict on `test` at 6 alerts per shift, a chosen budget: R1 failed, R2 held, R3 held, R4 failed. The analytic model stays primary because R1 failed. R4 also failed, mostly because the baselines leave part of the 6-alert budget unused (the window rule alerts on nothing in 268 of 782 scenarios).** Under spec §8.6 the primary model follows R1 to R3, so R1 alone decides it. R1 (at least 5 minutes more warning than each baseline, with the interval's lower end above zero): TracerNet's and every baseline's median warning over all breaches was 0.0 min at 3-2-1 and equal weights (every difference 0.0, interval low 0.0). A missed breach counts as 0 minutes (spec §8.4), and at this budget no method catches half the breaches (best catch rate 39.2%), so every median is 0 and R1 cannot separate the methods; the pre-specified capped mean warning does (TracerNet 23.9 min against 7.4 to 13.7 for the baselines at 3-2-1 weights; section 1). R2 (deficit in never-received specimens alerted below 2 points) held at both weightings: at 3-2-1 weights TracerNet alerts on a share of never-received specimens 9.7 points above the window rule's, 8.1 above the global refit's and 3.5 above the local refit's; at equal weights it is even with all three, within 1 point (largest deficit 0.0 points, interval high 0.2). R3 (Brier no worse than the better analytic refit's by more than 0.01): at 30 min TracerNet 0.0473 against 0.0771 (excess -0.0299); at 60 min TracerNet 0.0312 against 0.0427 (excess -0.0116). R4 (realized alerts within 10% of each baseline's): the largest relative difference was 56.2% against window rule at 3-2-1 weights, so the comparison is reported as unequal and R1 is repeated at matched volume below. Every number in this report comes from synthetic data: laboratory weeks designed by language models and simulated by this project's own code, with no clinical review. They describe the simulator, not any laboratory.
+**Verdict on `test` at 6 alerts per shift, a chosen budget: R1 failed, R2 held, R3 held, R4 failed. The analytic model stays primary because R1 failed. R4 also failed, mostly because the baselines leave part of the 6-alert budget unused (the window rule alerts on nothing in 268 of 782 scenarios).** Under spec §8.6 the primary model follows R1 to R3, so R1 alone decides it. R1 (at least 5 minutes more warning than each baseline, with the interval's lower end above zero): TracerNet's and every baseline's median warning over all breaches was 0.0 min at 3-2-1 and equal weights (every difference 0.0, interval low 0.0). A missed breach counts as 0 minutes (spec §8.4), and at this budget no method catches half the breaches (best catch rate 39.2%), so every median is 0 and R1 cannot separate the methods; the pre-specified capped mean warning does (TracerNet 23.9 min against 7.4 to 13.7 for R1's three baselines at 3-2-1 weights; section 1). R2 (deficit in never-received specimens alerted below 2 points) held at both weightings: at 3-2-1 weights TracerNet alerts on a share of never-received specimens 9.7 points above the window rule's, 8.1 above the global refit's and 3.5 above the local refit's; at equal weights it is even with all three, within 1 point (largest deficit 0.0 points, interval high 0.2). R3 (Brier no worse than the better analytic refit's by more than 0.01): at 30 min TracerNet 0.0473 against 0.0771 (excess -0.0299); at 60 min TracerNet 0.0312 against 0.0427 (excess -0.0116). R4 (realized alerts within 10% of each baseline's): the largest relative difference was 56.2% against window rule at 3-2-1 weights, so the comparison is reported as unequal and R1 is repeated at matched volume below. Every number in this report comes from synthetic data: laboratory weeks designed by language models and simulated by this project's own code, with no clinical review. They describe the simulator, not any laboratory.
 
 **Read with the verdict:**
 
@@ -941,6 +941,8 @@ python -m src.neural.pipeline run --from-frozen --out SCRATCH
 python -m src.neural.pipeline run --from-frozen --evaluate-committed --out SCRATCH
 ```
 
+`report` renders this page byte for byte with the local ledger mirror (`data/openai/ledger.jsonl`, not committed), which section 9's spend table reads; without it, section 9 gives the library manifest's record of the ledger at the freeze instead.
+
 ### Hashes
 
 | Input | SHA-256 or hash |
@@ -1120,7 +1122,7 @@ Ablation test runs (each arm under its own lock, after the main lock):
 
 ## Appendix: acceptance criteria (spec §17)
 
-Audited on November 10, 2026, on branch `n11-closeout` at commit `ac94969` (main `95b4ac8` plus two N11 commits). Revised on November 11, 2026, after an independent review of the report: items 14 and 18 moved from held to partly held, item 6 states the truth-log rule as it holds, and items 12, 13, 20 and 21 were brought up to date. No check was rerun for the revision. Each item gives the criterion in short form, the verdict and the evidence. Evidence is labeled by where it comes from:
+Audited on November 10, 2026, on branch `n11-closeout` at commit `ac94969` (main `95b4ac8` plus two N11 commits). Revised on November 11, 2026, after an independent review of the report: items 14 and 18 moved from held to partly held, item 6 states the truth-log rule as it holds, and items 12, 13, 20 and 21 were brought up to date; after a second review, item 12's criterion was restored to the spec's text and item 20's counts were refreshed. No result was rerun; PR metadata was read. Each item gives the criterion in short form, the verdict and the evidence. Evidence is labeled by where it comes from:
 
 - **Run now:** a command or test run for this audit, with its result.
 - **Parent's run:** a check the parent session ran, with its log; not rerun here.
@@ -1248,9 +1250,9 @@ A check that nobody ran is reported as not run. Every number comes from syntheti
 
 ### 12. Verdict
 
-**Criterion.** R1 to R4 evaluated and quoted verbatim; the test set scored under a hash lock, with every rerun listed in `results/neural/test_runs.jsonl` with its reason.
+**Criterion.** R1 to R4 evaluated and quoted verbatim; the test set scored once, or every rescore listed with its reason.
 
-**Verdict: held.**
+**Verdict: held.** The test set was scored under a hash lock, and every rerun is listed with its reason in `results/neural/test_runs.jsonl`.
 
 - Run now: the 11 quoted lines of the rule in `results/neural/REPORT.md` section 1 are identical to spec §8.6.
 - Record: `REPORT.md` section 1 evaluates R1 (failed), R2 (held), R3 (held) and R4 (failed), each with its table. The analytic model stays primary because R1 failed: spec §8.6 lets R1 to R3 decide, and R4 only qualifies the comparison.
@@ -1342,12 +1344,13 @@ A check that nobody ran is reported as not run. Every number comes from syntheti
 
 **Criterion.** Every pull request merged to `main` and none open; no `Co-Authored-By` trailer and no "Generated with" or "Generated by" line in any commit message, title or body of this work; a teaming-log entry per pull request; tasks N0 to N11 ticked with their checks; `AGENTS.md` updated.
 
-**Verdict: partly held.** Every pull request through #63 (N11) is merged, none carries a trailer or a "Generated" line, and each has its teaming-log entry. The ticks are the part that does not hold from here: the published plan belongs to another organization, whose policy keeps its tick database closed to Claude Code even with editor access, so N0 to N11 are ticked by hand in the browser.
+**Verdict: partly held.** Every pull request through #64 is merged, none carries a trailer or a "Generated" line, and each has its teaming-log entry. The ticks are the part that does not hold from here: the published plan belongs to another organization, whose policy keeps its tick database closed to Claude Code even with editor access, so N0 to N11 are ticked by hand in the browser.
 
-- Run now: `gh pr list --state all`: 62 pull requests, all merged; `gh pr list --state open` is empty. This work's #49 to #62 all merged into `main`.
-- Run now: `git log 8686475..HEAD --format=%B` (16 commits) has no `Co-Authored-By`, "Generated with" or "Generated by" line, and no title or body of #49 to #62 has one. Outside this work: the bodies of #37 and #39 (October 30) ended with "Generated by Claude Code" (both lines were removed on November 11, for the revision), and commit `905b3c4` (October 28) uses "generated with the Claude API" in prose.
-- Run now: `docs/ai-teaming-log.md` has 14 entries for the 14 pull requests #49 to #62 (N0, the plan, N1, N2, N3, N4, two spend-path reviews, N5 to N10).
-- Run now: `AGENTS.md` (local only, untracked) was last changed at 11:43 PM on November 10 and states the test verdict, the failed deletion check and the decision layer's result.
+- Run now (Nov 10 audit): `gh pr list --state all`: 62 pull requests, all merged; `gh pr list --state open` is empty. This work's #49 to #62 all merged into `main`.
+- Run now (Nov 10 audit): `git log 8686475..HEAD --format=%B` (16 commits) has no `Co-Authored-By`, "Generated with" or "Generated by" line, and no title or body of #49 to #62 has one. Outside this work: the bodies of #37 and #39 (October 30) ended with "Generated by Claude Code" (both lines were removed on November 11, for the revision), and commit `905b3c4` (October 28) uses "generated with the Claude API" in prose.
+- Run now (Nov 10 audit): `docs/ai-teaming-log.md` has 14 entries for the 14 pull requests #49 to #62 (N0, the plan, N1, N2, N3, N4, two spend-path reviews, N5 to N10).
+- Run now (Nov 11 revision, PR metadata read at 6:57 PM EST): `gh pr list --state all`: 64 pull requests, all merged, none open, before this revision's own pull request (#65). `git log 8686475..main --format=%B` (16 commits, #49 to #64) has no `Co-Authored-By`, "Generated with" or "Generated by" line, and no title or body of #49 to #64 has one. `docs/ai-teaming-log.md` has 16 entries for #49 to #64, N11 and the first review revision included; #65 adds its own.
+- Run now (Nov 10 audit): `AGENTS.md` (local only, untracked) was last changed at 11:43 PM on November 10 and states the test verdict, the failed deletion check and the decision layer's result.
 - Parent's run: reading the plan's tick database (`state/main`) was refused ("shared with you from another organization"), so whether N0 to N11 are ticked could not be checked here. Republishing the plan was refused too: the live page is at a newer version whose source this machine could not receive, and overwriting it unseen would discard that version.
 - Parent's run: N11's commits and pull request carry no trailer and no "Generated" line, and its teaming-log entry is in place.
 

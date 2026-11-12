@@ -366,8 +366,8 @@ def verdict_paragraph(data: dict) -> str:
             + (f" A missed breach counts as 0 minutes (spec §8.4), and at this budget no method catches half the "
                f"breaches (best catch rate {pct(floored['best_catch'])}), so every median is 0 and R1 cannot "
                f"separate the methods; the pre-specified capped mean warning does (TracerNet "
-               f"{num(floored['tracernet_capped'])} min against {num(min(caps))} to {num(max(caps))} for the "
-               f"baselines at 3-2-1 weights; section 1)." if floored else "")
+               f"{num(floored['tracernet_capped'])} min against {num(min(caps))} to {num(max(caps))} for R1's "
+               f"{'three' if len(caps) == 3 else len(caps)} baselines at 3-2-1 weights; section 1)." if floored else "")
             + f" R2 (deficit in never-received specimens alerted below 2 points) {_r2_sentence(r2)}."
             + f" R3 (Brier no worse than the better analytic refit's by more than 0.01): {r3_txt}. R4 (realized "
             f"alerts within 10% of each baseline's): the largest relative difference was "
@@ -1422,7 +1422,10 @@ COMMANDS = ("python -m src.neural.pipeline freeze --jobs O1,O2,O3", "python -m s
 
 
 def section_reproduce(data: dict) -> list[str]:
-    out = ["## 11. How to reproduce", "", "```sh"] + list(COMMANDS) + ["```", "", "### Hashes", ""]
+    out = ["## 11. How to reproduce", "", "```sh"] + list(COMMANDS) + ["```", "",
+           "`report` renders this page byte for byte with the local ledger mirror (`data/openai/ledger.jsonl`, not "
+           "committed), which section 9's spend table reads; without it, section 9 gives the library manifest's record "
+           "of the ledger at the freeze instead.", "", "### Hashes", ""]
     m, art, lock = data["manifest"], data["artifact"], data["lock"]
     rows = []
     if m is not None:

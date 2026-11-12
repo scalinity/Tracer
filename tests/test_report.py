@@ -140,7 +140,7 @@ def test_a_floored_r1_says_why_beside_the_capped_mean_and_the_warning_check_that
             "part of the 6-alert budget unused (the window rule alerts on nothing in 261 of 772 scenarios).**") in first
     assert "median warning over all breaches was 0.0 min at 3-2-1 and equal weights" in first
     assert "A missed breach counts as 0 minutes (spec §8.4)" in first and "best catch rate 39.2%" in first
-    assert "TracerNet 23.9 min against 10.0 to 10.0 for the baselines" in first
+    assert "TracerNet 23.9 min against 10.0 to 10.0 for R1's three baselines at 3-2-1 weights" in first
     assert "**Why R1 cannot separate the methods here.**" in s1 and "November 8 at 11:42 PM EST" in s1
     assert "compared rung C's validation median warning with rung A's, 0.0 against 0.0 min, so it tested nothing." in s1
     assert "R1 cannot separate" not in section(page(tmp_path / "plain", evaluations={"test": make()}), 1)
@@ -528,3 +528,24 @@ def test_the_acceptance_appendix_comes_last_one_heading_down_or_says_not_run():
     assert out[0] == "## Appendix: acceptance criteria (spec §17)" and "### 1. Keys" in out and "**Verdict: held.**" in out
     missing = report.section_acceptance({"acceptance": None})
     assert missing[0].startswith("## Appendix") and "N11" in missing[-1]
+
+
+def test_the_caveats_under_the_verdict_match_their_committed_sources():
+    """results/neural/caveats.md restates numbers by hand; each must agree with the committed file it comes from."""
+    neural = R.ROOT / "results" / "neural"
+    text = (neural / "caveats.md").read_text(encoding="utf-8")
+    cal = json.loads((neural / "legacy_v1" / "evaluation.json").read_text())["calibration"]
+    tn, analytic = cal["tracernet"]["60"]["brier"], min(cal[m]["60"]["brier"] for m in ("analytic_global", "analytic_local"))
+    assert (round(tn, 4), round(analytic, 4)) == (0.2155, 0.1817)
+    assert f"at 60 minutes of silence is {tn:.3f} against the analytic model's {analytic:.3f}" in text
+    cells = json.loads((R.ROOT / "datasets" / "scenarios-v2.manifest.json").read_text())["coverage"]["cells"]
+    under = sum(c["count"] < c["target"] for c in cells.values())
+    assert (under, len(cells)) == (20, 32)
+    assert f"misses its coverage targets in {under} of {len(cells)} stratum-by-archetype cells" in text
+    deletion = json.loads((neural / "explanations.json").read_text())["checks"]["deletion"]
+    assert (round(deletion["share_top_beats_random"], 4), deletion["required_share"]) == (0.6821, 0.70)
+    assert (f"in {deletion['share_top_beats_random']:.1%} of test alerts, against the required "
+            f"{deletion['required_share']:.0%}") in text
+    lead = json.loads((neural / "control_v1world" / "evaluation.json").read_text())["differences"]["6/shift"]["3-2-1"]
+    m = lead["analytic_local"]["median_warning_all_breaches_min"]
+    assert f"by {m['point']:g} minutes (95% interval {m['low']:g} to {m['high']:g})" in text
