@@ -3,7 +3,9 @@
 The game's pure parts live in the page's <script id="core"> block and run here under node, as in
 tests/test_demo_page.py: the seeded generator against an independent Python mulberry32, the rounds for seed 18
 pinned once, round selection held to the fields it may read and to its rules for every seed tried, and the
-scoring of a player and of Tracer. A headless Chrome run plays a whole game with ?seed=18 in real time.
+scoring of a player and of Tracer. A headless Chrome run opens the QR code's address, ?seed=18#beat, and plays a
+whole game in real time: the game alone on the screen, nothing to scroll at a phone's visible height, and both
+totals added up from the rounds.
 """
 
 import json
@@ -172,50 +174,50 @@ const { chromium } = require(PLAYWRIGHT);
   try { browser = await chromium.launch({ channel: "chrome", headless: true }); }
   catch (e) { console.log(JSON.stringify({ skip: "Google Chrome did not start: " + String(e.message).split("\\n")[0] })); return; }
   const out = { runs: [] };
-  for (const [width, height, scheme] of [[375, 812, "dark"], [1280, 800, "light"]]) {
+  // 390 by 664 is what Safari on an iPhone shows with its bars; the laptop plays one round.
+  for (const [width, height, scheme] of [[390, 664, "dark"], [1440, 900, "light"]]) {
     const context = await browser.newContext({ viewport: { width, height }, colorScheme: scheme });
     const page = await context.newPage();
-    const run = { width, messages: [], errors: [], foreign: [], overflow: [] };
+    const run = { width, messages: [], errors: [], foreign: [], overflow: [], scroll: [] };
     page.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") run.messages.push(m.type() + ": " + m.text()); });
     page.on("pageerror", (e) => run.errors.push(String(e)));
     page.on("request", (r) => { const u = r.url(); if (!u.startsWith(BASE + "/") && !u.startsWith("data:")) run.foreign.push(u); });
-    await page.goto(BASE + "/demo/index.html?seed=18", { waitUntil: "load" });
-    await page.waitForSelector("#beat:not([hidden]) #game-go");
-    run.activity = await page.$$eval("#activity .act-steps li, #activity .act-qs li", (els) => els.map((e) => e.closest("ol, ul").className));
-    run.seedLine = await page.textContent("#game-seed");
-    run.targets = await page.$$eval("#game-go, #game-call", (els) => els.map((e) => { const r = e.getBoundingClientRect(); return [r.width, r.height]; }));
+    const fit = async () => {
+      run.overflow.push(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth));
+      run.scroll.push(await page.evaluate(() => document.documentElement.scrollHeight - document.documentElement.clientHeight));
+    };
+    // the address on the slides' QR code
+    await page.goto(BASE + "/demo/index.html?seed=18#beat", { waitUntil: "load" });
+    await page.waitForSelector("#game-go:not([disabled])");
+    run.alone = await page.evaluate(() => ["activity", "board", "threshold", "about"].every((id) => document.getElementById(id).offsetParent === null)
+      && document.querySelector(".mast").offsetParent === null && document.getElementById("beat").offsetParent !== null);
+    run.targets = await page.$$eval("#game-go, #game-feed .bt-card", (els) => els.map((e) => e.getBoundingClientRect().height));
+    await fit();
     const started = Date.now();
-    // Play as a person would, without reading the answer: call the one specimen still silent, or after 40
-    // minutes the first silent one, and let a wrong call rule it out. The phone plays the whole game; the
-    // laptop plays one round.
-    const rounds = width === 375 ? 3 : 1;
+    // Play as a person would, without reading the answer: tap the one card still waiting for its scan, or after
+    // 40 minutes the first waiting one.
+    const rounds = width === 390 ? 3 : 1;
     for (let round = 0; round < rounds; round++) {
       await page.click("#game-go");
       for (;;) {
         await page.waitForTimeout(200);
         const st = await page.evaluate(() => ({ phase: window.TracerDemo.game().phase, clock: +document.getElementById("game-clock").textContent,
-          open: Array.from(document.querySelectorAll("#game-feed .fs:not(:disabled)")).map((b) => b.getAttribute("data-id")) }));
+          open: Array.from(document.querySelectorAll("#game-feed .bt-card:not(:disabled)")).map((b) => b.getAttribute("data-id")) }));
         if (st.phase !== "running") break;
-        if (round === 0 && st.clock >= 6 && !run.rowTarget) {
-          run.rowTarget = await page.$eval("#game-feed .fs", (b) => b.getBoundingClientRect().height);
-          run.overflow.push(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth));
-        }
-        if (st.open.length === 1 || (st.clock >= 40 && st.open.length)) {
-          await page.click('#game-feed .fs[data-id="' + st.open[0] + '"]');
-          await page.click("#game-call");
-        }
+        if (round === 0 && st.clock >= 6 && run.scroll.length === 1) await fit();
+        if (st.open.length === 1 || (st.clock >= 40 && st.open.length)) await page.click('#game-feed .bt-card[data-id="' + st.open[0] + '"]');
       }
-      run.overflow.push(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth));
+      await fit();
     }
-    run.result = await page.textContent("#game-result");
+    run.result = await page.textContent("#game-status");
     await page.locator("#beat").screenshot({ path: SHOTS + "/game-round-" + width + ".png" });
     if (rounds === 3) {
       await page.click("#game-go");
       await page.waitForSelector("#game-end:not([hidden])");
       run.seconds = (Date.now() - started) / 1000;
       run.end = await page.textContent("#game-end");
-      run.medians = await page.$$eval("#game-end .end-pair dd", (els) => els.map((e) => e.firstChild.textContent));
-      run.overflow.push(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth));
+      run.scores = await page.$$eval("#game-end .bt-score dd .num", (els) => els.map((e) => e.textContent));
+      await fit();
       await page.locator("#beat").screenshot({ path: SHOTS + "/game-end-" + width + ".png" });
     }
     run.game = await page.evaluate(() => window.TracerDemo.game());
@@ -229,7 +231,7 @@ const { chromium } = require(PLAYWRIGHT);
 
 
 @needs_node
-def test_a_whole_game_with_seed_18_finishes_in_under_three_minutes_in_headless_chrome(tmp_path):
+def test_a_whole_game_with_seed_18_finishes_in_under_two_minutes_in_headless_chrome(tmp_path):
     playwright = playwright_dir()
     if playwright is None:
         pytest.skip("Playwright is not installed in visuals/exhibit-3d/node_modules")
@@ -257,16 +259,19 @@ def test_a_whole_game_with_seed_18_finishes_in_under_three_minutes_in_headless_c
         pytest.skip(result["skip"])
     for run in result["runs"]:
         assert run["messages"] == [] and run["errors"] == [] and run["foreign"] == [], run
-        assert run["activity"] == ["act-steps"] * 3 + ["act-qs"] * 2
-        assert "seed 18" in run["seedLine"] and run["game"]["rounds"] == SEED_18
-        last = run["game"]["results"][-1]["miss"]
-        assert "Tracer" in run["result"] and last == SEED_18[len(run["game"]["results"]) - 1]["miss"] and last in run["result"]
+        assert run["alone"], "the address #beat shows the game alone"
+        assert run["game"]["seed"] == 18 and run["game"]["rounds"] == SEED_18
+        last = run["game"]["results"][-1]
+        assert "Tracer" in run["result"] and last["miss"] == SEED_18[len(run["game"]["results"]) - 1]["miss"]
         assert all(o <= 0 for o in run["overflow"]), run["overflow"]
-        assert all(h >= 44 for _, h in run["targets"]) and run["rowTarget"] >= 44
+        assert all(s <= 0 for s in run["scroll"]), f"the game scrolls at {run['width']} px: {run['scroll']}"
+        assert all(h >= 44 for h in run["targets"]), run["targets"]
     phone = result["runs"][0]
-    assert phone["width"] == 375 and phone["game"]["phase"] == "end" and len(phone["game"]["results"]) == 3
-    assert phone["seconds"] < 180, phone["seconds"]
-    assert "Your median warning and Tracer's" in phone["end"] and "Silence carries information" in phone["end"]
-    you = sorted(r["you"]["warning"] for r in phone["game"]["results"])
-    tracer = sorted(r["tracer"]["warning"] for r in phone["game"]["results"])
-    assert phone["medians"] == [f"{you[1]:g} min", f"{tracer[1]:g} min"]
+    assert phone["width"] == 390 and phone["game"]["phase"] == "end" and len(phone["game"]["results"]) == 3
+    assert phone["seconds"] < 120, phone["seconds"]
+    assert "You vs Tracer" in phone["end"] and "Also flagged" in phone["end"]
+    you = sum(r["you"]["warning"] for r in phone["game"]["results"])
+    tracer = sum(r["tracer"]["warning"] for r in phone["game"]["results"])
+    assert phone["scores"] == [f"{you:g} min", f"{tracer:g} min"]
+    point = ("Tracer spoke up sooner" if tracer > you else "with a hint it never gets")
+    assert point in phone["end"]

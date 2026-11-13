@@ -60,6 +60,8 @@ const engines = { chromium, firefox, webkit };
         await page.keyboard.press("ArrowRight");
         // the page applies a window on the next animation frame, so wait for the label rather than read it at once
         run.windowChanged = await page.waitForFunction((was) => document.getElementById("th-win-out").textContent !== was, windowOut, { timeout: 3000 }).then(() => true, () => false);
+        await page.evaluate(() => { location.hash = "beat"; });
+        await page.waitForSelector("#game-go:not([disabled])", { state: "visible", timeout: 5000 });
         await page.click("#game-go");
         const clock = await page.textContent("#game-clock");
         await page.waitForTimeout(1500);

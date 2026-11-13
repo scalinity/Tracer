@@ -48,7 +48,7 @@ Your four sections of the Tracer talk on December 9, in the order they come. Und
 
 ## 3. Hosting the phone activity
 
-*Slides 7 and 8, 3:45 to 6:15 and about 9:50 to 10:45.* You run the room's hands-on time: you get the phones out and walk one specimen, and after Daniel starts the game you lead the debrief.
+*Slides 7 and 8, 3:45 to 6:15 and about 8:45 to 9:45.* You run the room's hands-on time: you get the phones out and walk one specimen, and after Daniel starts the game you lead the debrief.
 
 ### Slide 7 · Board and timeline · 3:45 to 6:15 · Karissa · hands-on
 
@@ -66,7 +66,7 @@ Your four sections of the Tracer talk on December 9, in the order they come. Und
 
 [About 120 words. Wait about 20 seconds after point 1. After point 3, give the room about a minute on their own, then Daniel switches the projector to the specimen tab. The rest of the time is the room's.]
 
-### Slide 8 · Beat Tracer · 6:15 to 10:45 · Daniel, then Karissa · hands-on
+### Slide 8 · Beat Tracer · 6:15 to 9:45 · Daniel, then Karissa · hands-on
 
 1. The end screen puts their warning next to Tracer's, on the same rounds.
 
@@ -82,9 +82,9 @@ Your four sections of the Tracer talk on December 9, in the order they come. Und
 
 ## 4. The data, the limits and the close
 
-*Slides 10, 12 and 13, from 11:45.* You say how we made the data, give the honest limits, and close before questions.
+*Slides 10, 12 and 13, from 10:45.* You say how we made the data, give the honest limits, and close before questions.
 
-### Slide 10 · How we built it · 11:45 to 12:30 · Karissa, then Daniel
+### Slide 10 · How we built it · 10:45 to 11:30 · Karissa, then Daniel
 
 1. No public data has these scans, so we made our own.
 
@@ -94,7 +94,7 @@ Your four sections of the Tracer talk on December 9, in the order they come. Und
 
 [About 45 words.]
 
-### Slide 12 · Limits and next steps · 13:00 to 13:45 · Karissa
+### Slide 12 · Limits and next steps · 12:00 to 12:45 · Karissa
 
 1. Tracer watches only time and place, so it cannot see a mislabeled or leaking specimen.
 
@@ -108,7 +108,7 @@ Your four sections of the Tracer talk on December 9, in the order they come. Und
 
 [About 90 words.]
 
-### Slide 13 · Questions · 13:45 to 15:00 · Both
+### Slide 13 · Questions · 12:45 to 15:00 · Both
 
 1. That's Tracer.
 

@@ -104,7 +104,7 @@ def test_the_run_of_show_runs_its_length_with_no_gap():
         assert f"{d['data-start']} to {d['data-end']}" in SCRIPT, d["data-beat"]
     hands_on = sum(secs(d["data-end"]) - secs(d["data-start"]) for d in timed
                    if d["data-beat"] in ("Board and timeline", "Beat Tracer", "Why this design"))
-    assert hands_on == 480  # 8 minutes, as the script says
+    assert hands_on == 420  # 7 minutes, as the script says
 
 
 def test_every_local_link_on_the_slides_exists():

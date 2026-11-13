@@ -1,10 +1,10 @@
 # The Tracer talk, December 9
 
-The in-class presentation for CAI 5724: the run of show, the slides, Daniel's lines and Karissa's outline. It runs 15:00, the length of the slot, so there is time to say what Tracer is, what it is built to fix, and how we built and tested it, with eight minutes of the class's hands on the demo.
+The in-class presentation for CAI 5724: the run of show, the slides, Daniel's lines and Karissa's outline. It runs 15:00, the length of the slot, so there is time to say what Tracer is, what it is built to fix, and how we built and tested it, with seven minutes of the class's hands on the demo.
 
 - **Slides:** `docs/talk/index.html`, published at <https://scalinity.github.io/Tracer/talk/>. It opens from disk too, with no server.
 - **Script:** `docs/talk/script.html`, published at <https://scalinity.github.io/Tracer/talk/script.html>. It is this file as a reading page for rehearsals and the day: a talk clock that lights the current beat and runs with the slides' clock, a speaker filter (`script.html?who=karissa` opens on Karissa's sections) and a print view of one speaker's part. It opens from disk too, and the presenter window links to it.
-- **Demo:** <https://scalinity.github.io/Tracer/demo/>. The class uses it on their phones for about 8 of the 15 minutes.
+- **Demo:** <https://scalinity.github.io/Tracer/demo/>. The class uses it on their phones for about 7 of the 15 minutes.
 - **Speakers:** Daniel Escalante and Karissa Kocourek. Daniel's lines are written out below. Karissa's sections are outlined instead: the points to cover, in order, and about how long, and she writes her own words from them. `docs/talk/karissa-outline.md` holds her part on its own. If she cannot be there, Daniel covers her points. The speaking time is split about evenly between the two of us, and the talk changes speaker ten times, so neither voice runs long.
 
 The numbers from the demo and its results come from synthetic data that had no clinical review, and the slides say so on each screen that shows one. The others are not synthetic: the 61.9% comes from a published audit, the 60-minute urine window and the 44 policy rows from Karissa's policy table and the guidelines it cites, and the 80.1 hours from the public MIMIC-IV demo extract. "Where the numbers come from" below gives the source of each.
@@ -21,7 +21,7 @@ The rubric gives the talk 10 points: a clear narrative for a mixed audience (2),
 
 ## Run of show
 
-The beats come from the run of show in `visuals/plan.html`, cut to fit the 15-minute slot. Hands-on time is the board, Beat Tracer and the threshold slider: 8 minutes, plus the discussion in the questions.
+The beats come from the run of show in `visuals/plan.html`, cut to fit the 15-minute slot. Hands-on time is the board, Beat Tracer and the threshold slider: 7 minutes, plus the discussion in the questions.
 
 | Clock | Slide | Beat | Who | On the screen | The room is |
 |---|---|---|---|---|---|
@@ -33,12 +33,12 @@ The beats come from the run of show in `visuals/plan.html`, cut to fit the 15-mi
 | 2:30 to 3:00 | 5 | What Tracer is built to fix | Karissa | Today and with Tracer, side by side | listening |
 | 3:00 to 3:45 | 6 | How Tracer works | Daniel | Three questions, then the self-playing 3D demo | watching |
 | 3:45 to 6:15 | 7 | Board and timeline | Karissa | QR code, then one specimen's timeline on the projector | on phones |
-| 6:15 to 10:45 | 8 | Beat Tracer | Daniel, then Karissa | Seeded QR code, then the game on the projector | playing |
-| 10:45 to 11:45 | 9 | Why this design | Daniel | The threshold slider, then the numbers slide | dragging the slider |
-| 11:45 to 12:30 | 10 | How we built it | Karissa, then Daniel | The data and the model, from briefs to the demo | listening |
-| 12:30 to 13:00 | 11 | A neural challenger | Daniel | TracerNet's warning beside the baselines, and the verdict | listening |
-| 13:00 to 13:45 | 12 | Limits and next steps | Karissa | Limits slide | listening |
-| 13:45 to 15:00 | 13 | Questions | Both | Closing slide with the QR code and the repo | asking |
+| 6:15 to 9:45 | 8 | Beat Tracer | Daniel, then Karissa | Seeded QR code, then the game on the projector | playing |
+| 9:45 to 10:45 | 9 | Why this design | Daniel | The threshold slider, then the numbers slide | dragging the slider |
+| 10:45 to 11:30 | 10 | How we built it | Karissa, then Daniel | The data and the model, from briefs to the demo | listening |
+| 11:30 to 12:00 | 11 | A neural challenger | Daniel | TracerNet's warning beside the baselines, and the verdict | listening |
+| 12:00 to 12:45 | 12 | Limits and next steps | Karissa | Limits slide | listening |
+| 12:45 to 15:00 | 13 | Questions | Both | Closing slide with the QR code and the repo | asking |
 
 Minute by minute, for whoever keeps time:
 
@@ -52,17 +52,17 @@ Minute by minute, for whoever keeps time:
 | 5 | The room is scrubbing a timeline. Karissa walks one specimen on the projector. |
 | 6 | "Show the truth" on their own specimen. Seeded QR code up at 6:15. Daniel explains Beat Tracer in 30 seconds. |
 | 7 | Round 1 under way by about 7:00. |
-| 8 | Round 1 or 2. |
-| 9 | Round 3 ends. End screens up by about 9:50. |
-| 10 | Karissa: who beat Tracer, and what made you call it. Daniel on the threshold slider at 10:45. |
-| 11 | Daniel on the numbers. At 11:45 Karissa on how we built the data, then Daniel on the model. |
-| 12 | Daniel on the neural challenger at 12:30. |
-| 13 | Karissa on the limits at 13:00. Her close at about 13:45, then questions. |
+| 8 | Rounds 2 and 3. Score screens up by about 8:45. |
+| 9 | Karissa: who beat Tracer, and what made you call it. Daniel on the threshold slider at 9:45. |
+| 10 | Daniel on the numbers. At 10:45 Karissa on how we built the data, then Daniel on the model. |
+| 11 | Daniel on the neural challenger at 11:30. |
+| 12 | Karissa on the limits at 12:00. Her close at about 12:45, then questions. |
+| 13 | Questions. |
 | 14 | Questions. Stop at 15:00 even mid-question, and offer to talk after. |
 
-If the hands-on part runs long, cut in this order: Karissa's projector walkthrough on slide 7 (the room keeps exploring alone), then the numbers slide in beat 9 (say the one headline sentence and stay on the slider), then the neural challenger on slide 11 (prepared answer 5 covers it). The game shows its end screen only after round 3, so if the room is still on round 2 at 9:45, Karissa asks for hands from the round result screens instead: who called it before Tracer did. Never cut the board or the limits.
+If the hands-on part runs long, cut in this order: Karissa's projector walkthrough on slide 7 (the room keeps exploring alone), then the numbers slide in beat 9 (say the one headline sentence and stay on the slider), then the neural challenger on slide 11 (prepared answer 5 covers it). The game shows its end screen only after round 3, so if the room is still on round 2 at 8:45, Karissa asks for hands from the round result screens instead: who called it before Tracer did. Never cut the board or the limits.
 
-Beat Tracer is the longest beat, 4:30 of the 15 minutes, and with it the questions get 1:15. Without it the questions get 5:45 and the hands-on time is the board and the slider, 3:30. It stays in until we decide at rehearsal.
+Beat Tracer is the longest beat, 3:30 of the 15 minutes, and with it the questions get 2:15. Without it the questions get 5:45 and the hands-on time is the board and the slider, 3:30. It stays in until we decide at rehearsal.
 
 ## Before the talk
 
@@ -190,15 +190,15 @@ So how does it know? Silence is evidence. Every five minutes, Tracer asks three 
 
 [In her own words, about 120 words. Wait about 20 seconds after point 1. After point 3, give the room about a minute on their own, then Daniel switches the projector to the specimen tab. The rest of the time is the room's.]
 
-### Slide 8 · Beat Tracer · 6:15 to 10:45 · Daniel, then Karissa · hands-on
+### Slide 8 · Beat Tracer · 6:15 to 9:45 · Daniel, then Karissa · hands-on
 
-**Screen:** The QR code for the seeded game, so everyone plays the same three rounds, and the rules in three lines: one of six specimens will miss its window; tap it and press Call it; a wrong call uses one of your three alerts. Then the projector shows the game.
+**Screen:** The QR code for the seeded game, so everyone plays the same three rounds, and the rules in three lines: six specimens leave and one will be late; tap it as soon as you can tell; one guess a round. Then the projector shows the game.
 
 **Daniel:**
 
-Now you get to compete with it. Scan this second code. It gives everyone in the room the same three rounds. Six specimens leave collection, and one of them will miss its window. Watch the receipt scans come in, tap the one you think is in trouble, and press Call it. Call too early and you might be wrong, and a wrong call uses one of your three alerts. Call too late, and you've given no warning. Ready? Start round one.
+Now you get to compete with it. Scan this second code. It gives everyone in the room the same three rounds. Six specimens leave, and one of them will be late. Watch the scans come in, and tap the late one as soon as you can tell. You get one guess. Tap too early and you might pick wrong. Wait too long, and you've given no warning. Press Start.
 
-[About 80 words. Three rounds take about three minutes. Walk the room. If phones struggle, play one round on the projector and ask for a show of hands.]
+[About 70 words. The three rounds take about a minute and a half. Walk the room. If phones struggle, play one round on the projector and ask for a show of hands.]
 
 **Karissa:**
 
@@ -214,7 +214,7 @@ Now you get to compete with it. Scan this second code. It gives everyone in the 
 
 [In her own words, about 65 words plus the answers. Start when most end screens are up. About a minute.]
 
-### Slide 9 · Why this design · 10:45 to 11:45 · Daniel · hands-on
+### Slide 9 · Why this design · 9:45 to 10:45 · Daniel · hands-on
 
 **Screen:** First the demo's "Set the threshold" section on the projector, while the room drags it on their phones. Then the numbers slide: median warning at 6 alerts per 8-hour shift on the held-out synthetic runs. The plan's time-limit rule 30 minutes, a rule that alerts at a fixed share of the window 45, Tracer 55 (45 with equal tier weights).
 
@@ -224,7 +224,7 @@ That trade is the threshold. Scroll down to Set the threshold and drag it both w
 
 [About 105 words, over the room dragging the slider.]
 
-### Slide 10 · How we built it · 11:45 to 12:30 · Karissa, then Daniel
+### Slide 10 · How we built it · 10:45 to 11:30 · Karissa, then Daniel
 
 **Screen:** "How we built and tested Tracer," in two rows. The data: briefs drawn by code (12,000 specimens, faults planted on purpose), then Claude writes the scans (each trail and its hidden true path), then a validator checks them (nine checks, 11,967 kept and frozen, $2.16 in all). The model: a three-part survival model is fit on 24 runs (normal trip times by type, hour and priority; trips that run far longer but arrive; specimens that never arrive), it is tested on 6 runs it never saw (2,378 specimens, 100 missed windows), and its numbers go to the demo you used (two files, no server). The hidden truth goes only to the test, never to the model.
 
@@ -244,7 +244,7 @@ Then a small survival model learns from twenty-four of the thirty runs: how long
 
 [About 50 words.]
 
-### Slide 11 · A neural challenger · 12:30 to 13:00 · Daniel
+### Slide 11 · A neural challenger · 11:30 to 12:00 · Daniel
 
 **Screen:** "We also trained a neural network." Average warning at 6 alerts per 8-hour shift, on a second, busier set of simulated lab weeks, with a miss counting as zero: the window rule 7.4 minutes, our survival model refit to those weeks 13.7, TracerNet 23.9. By the rule we set before testing, it did not win, so the survival model stays in charge.
 
@@ -254,7 +254,7 @@ We also trained a neural network, TracerNet, on a second, busier set of simulate
 
 [About 55 words.]
 
-### Slide 12 · Limits and next steps · 13:00 to 13:45 · Karissa
+### Slide 12 · Limits and next steps · 12:00 to 12:45 · Karissa
 
 **Screen:** What Tracer cannot see: a mislabeled or leaking specimen. Every specimen is synthetic, with no clinical review. 10 of the 44 policy rows are still assumed. At twice the volume, a simple window rule matches it. Next step: a real laboratory log with receipt scans.
 
@@ -272,7 +272,7 @@ We also trained a neural network, TracerNet, on a second, busier set of simulate
 
 [In her own words, about 90 words.]
 
-### Slide 13 · Questions · 13:45 to 15:00 · Both
+### Slide 13 · Questions · 12:45 to 15:00 · Both
 
 **Screen:** "Questions?" The demo's QR code, the demo address, the repository address, both names.
 
