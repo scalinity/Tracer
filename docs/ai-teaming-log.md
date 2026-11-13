@@ -504,12 +504,19 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** no browser could run in the build session, so the page was not seen rendered before merging; it was checked by syntax, by loading every vendored module under node and by the story tests.
 - **Assumed:** the three specimens are picked to show the three situations, not to favor a method (in the stalled one TracerNet alerts last); the fixed window rule is called "Fixed timer" on screen; alerts are the headline budget of 6 per 8-hour shift at 3-2-1 weights.
 
-### Nov 13 · Rework · The self-playing demo moves onto the original bench (this pull request)
+### Nov 13 · Rework · The self-playing demo moves onto the original bench (#68 to #70)
 
 - **Agent:** rebuilt `docs/demo/play/` on the Silent Specimen bench's own scene (`visuals/exhibit-3d`, new `play/index.html` and `src/play.ts`, built with `npm run build:play`): the same lab, glass tube, lighting, glow and console, with every control, the lesson and the loupe taken out. Four specimens play in turn (on time, stalled, lost, never sent) on the bench's scripted fates; the clock slows near each moment that matters and holds under one caption; a card names each specimen and gives its verdict. Every number comes from the bench's own model at that minute. PR 67's plain page, its data script and its tests are removed.
 - **Daniel:** said the original bench was beautiful and only too demanding to use, and asked for the self-playing version to keep its look.
 - **Went wrong:** PR 67's page was built from scratch with a plainer look; the cloud browser has no WebGL, so neither page could be seen rendered there.
 - **Assumed:** the demo shows the analytic Tracer model the bench was built on; TracerNet's numbers stay in the deck.
+
+### Nov 13 · Rework · A shorter phone page, and the 3D caption off the dials (this pull request)
+
+- **Agent:** cut the phone demo page to one line per idea: a one-line tagline and a "synthetic data, no clinical review" badge at the top, the class activity as three one-line steps and two short questions, one-line ledes for the board and the threshold, three short rules for Beat Tracer. The column key, the game's fine print, and the honesty note, the design reasons and the limits now open from folds, word for word, so nothing true was dropped. Karissa's problem paragraph stays on the page as a hidden slot until she writes it. On wide screens the self-playing 3D demo now puts its caption in a column under the risk card, with the bench framed to its left, so the caption no longer covers the console's dials.
+- **Daniel:** asked for front-end pages that are short ("nobody wants to read a wall of text"); the caption over the dials was a weak spot found when checking the demo in his Chrome.
+- **Went wrong:** nothing yet; the browser checks in the test suite skip here because Playwright isn't installed, so the page is checked in Daniel's Chrome after merging.
+- **Assumed:** Beat Tracer stays, as the class's hands-on activity; whether to cut it for time is Daniel's call with the deck.
 
 ## The Claude API jobs
 

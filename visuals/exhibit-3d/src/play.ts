@@ -120,16 +120,23 @@ stage.registerSet('room', lab.group);
 const top = $('.pl-top');
 const bar = $('.pl-bar');
 const riskBox = $('.pl-risk');
+const COLUMN = 1000; // from this width up, the caption sits in a column under the risk card
 const safeArea = (): SafeArea => {
   const w = root.clientWidth;
   const h = root.clientHeight;
   const phone = w <= 820;
+  const column = w >= COLUMN;
   // Keep the whole bench clear of the top row, the caption and the clock: a part hidden behind a
-  // panel is a part the audience can't follow.
+  // panel is a part the audience can't follow. On a wide screen the caption and risk share a
+  // right-hand column, so the bench moves left of it and nothing covers its dials.
+  const barRoom = h - bar.getBoundingClientRect().top;
+  if (column) {
+    return { top: top.getBoundingClientRect().bottom + 30, bottom: barRoom + 24, left: 16, right: riskBox.offsetWidth + 48, phone };
+  }
   const captionRoom = phone ? 96 : 104;
   return {
     top: top.getBoundingClientRect().bottom + (phone ? riskBox.offsetHeight + 12 : 40),
-    bottom: h - bar.getBoundingClientRect().top + captionRoom,
+    bottom: barRoom + captionRoom,
     left: 16,
     right: 16,
     phone,

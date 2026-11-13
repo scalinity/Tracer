@@ -103,6 +103,17 @@
 .pl-pause:hover { background: var(--hover-strong); }
 .paused .pl-pause { background: var(--on-bg); color: var(--on-text); }
 
+/* ---------- wide screens: risk and caption share a right-hand column, clear of the bench ---------- */
+@media (min-width: 1000px) {
+  .pl-risk { width: 340px; box-sizing: border-box; }
+  .pl-caption {
+    left: auto; right: 24px; top: 168px; bottom: auto; width: 340px; max-width: none;
+    transform: translateY(8px); padding: 16px 20px 18px 24px; font-size: 22px; line-height: 1.38; text-align: left;
+  }
+  .pl-caption.show { transform: translateY(0); }
+  .pl-card { left: calc((100% - 388px) / 2); }
+}
+
 /* ---------- narrow screens and phones ---------- */
 @media (max-width: 820px) {
   .pl-top { top: 12px; left: 12px; right: 12px; flex-direction: column; align-items: flex-start; gap: 8px; }
