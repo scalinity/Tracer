@@ -79,6 +79,7 @@ RUNS_CSV = ROOT / "results" / "neural" / "runs.csv"
 PROGRESS_EVERY_S = 10.0  # progress.jsonl: the mean training loss of the last 10 s of steps
 RUNS_CSV_DEV = ROOT / "data" / "neural" / "runs-dev.csv"
 FEATURES_DIR = ROOT / "data" / "neural" / "features"
+FROZEN_MANIFEST = ROOT / "datasets" / "scenarios-v2.manifest.json"   # the frozen library's checksum, not its rows
 TRAIN_SPLITS = ("train", "val")
 FINAL = ("finished", "stopped_early", "timed_out", "diverged", "pruned")
 BASE_KEYS = ("cat", "tests", "num", "fingerprint", "tick", "window")
@@ -110,7 +111,15 @@ def training_config(config: dict, overrides: dict | None = None) -> dict:
 
 
 def is_dev_store(store_dir: Path) -> bool:
-    return Path(store_dir).resolve() != Path(store.STORE_V2_DIR).resolve()
+    """Any store but data/store-v2 is a development store, unless its manifest names the frozen library's checksum
+    (FROZEN_MANIFEST): Phase 2 trains on a copy of the real store kept elsewhere."""
+    if Path(store_dir).resolve() == Path(store.STORE_V2_DIR).resolve():
+        return False
+    try:
+        built_from = store.store_v2_manifest(store_dir)["inputs"]["library_sha256"]
+        return built_from != json.loads(FROZEN_MANIFEST.read_text(encoding="utf-8"))["sha256"]
+    except (OSError, KeyError, TypeError, ValueError):
+        return True
 
 
 def default_runs_csv(store_dir: Path) -> Path:

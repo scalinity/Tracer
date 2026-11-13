@@ -296,6 +296,9 @@ def model_card(m: dict, selection: dict | None) -> str:
            "exercise the pipeline. Its numbers are a smoke check, not a result.\n" if m["development"] else "")
     chosen = "" if selection is None else (f" Rung {selection['chosen']} was chosen by the pre-registered rule "
                                            f"(spec §7.9); see `selection.json`.")
+    rule = ("It is a challenger to the analytic survival model under the rule of spec §8.6"
+            if m["version"] == "tracernet-v1"
+            else "It is tested against the analytic survival model by the rule of `docs/neural/preregistration-v2.md`")
     return f"""# TracerNet {m['version']}
 
 {m['notice']}
@@ -305,7 +308,7 @@ def model_card(m: dict, selection: dict | None) -> str:
 A research prototype for a course project (UF CAI 5724). Every 5 minutes, for every clinical-microbiology specimen
 collected but not yet scanned as received, it gives the probability that the receipt scan comes after the
 specimen's stability window (`p_miss`), split into late and never (`p_late`, `p_never`), with arrival quantiles and
-the spread across its members. It is a challenger to the analytic survival model under the rule of spec §8.6, not a
+the spread across its members. {rule}. It is not a
 clinical tool, and must not be used to make decisions about real specimens.
 
 ## Model

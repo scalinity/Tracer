@@ -1,0 +1,101 @@
+version: tracernet-v2
+rung: C
+seeds:
+- 0
+- 1
+- 2
+runs:
+- C-s0-3cc3fe72-20261113-033426
+- C-s1-3cc3fe72-20261113-040707
+- C-s2-3cc3fe72-20261113-050401
+net:
+  rung: C
+  edges: null
+  vocab:
+  - - variant
+    - 12
+    - 8
+  - - unit_kind
+    - 12
+    - 8
+  - - route_kind
+    - 5
+    - 4
+  - - tier
+    - 3
+    - 4
+  - - priority
+    - 2
+    - 2
+  - - weekday
+    - 7
+    - 4
+  - - weekday_tau
+    - 7
+    - 4
+  n_tests: 13
+  tests_dim: 8
+  num_groups:
+  - - specimen
+    - 2
+  - - window
+    - 9
+  - - silence
+    - 1
+  - - time_of_day
+    - 6
+  - - route_unit
+    - 7
+  - - batch_mates
+    - 6
+  - - route_flow
+    - 18
+  - - unit_flow
+    - 5
+  - - lab_flow
+    - 7
+  n_fingerprint: 30
+  fingerprint_dim: 32
+  series_channels:
+  - - series_lab
+    - 6
+  - - series_unit
+    - 4
+  - - series_route
+    - 4
+  token_features: 12
+  width: 128
+  temporal_channels: 48
+  temporal_dim: 64
+  attention_dim: 64
+  heads: 4
+  dropout: 0.2809288560133388
+training:
+  feature_version: tracernet-features-1
+  learning_rate: 0.002
+  weight_decay: 0.00012124301372748123
+  dropout: 0.2809288560133388
+  width: 128
+  temporal_channels: 48
+  lam: 2.0
+  eta: 0.0
+  batch: 2048
+  warmup_share: 0.03
+  grad_clip: 1.0
+  max_epochs: 20
+  patience: 20
+  epoch_minutes: 10
+  epoch_samples: 20000000
+  epochs_in_box: 6
+  ticks_per_specimen: 4
+  breach_factor: 3.0
+  device_benchmark_s: 30
+  schema_samples: 200000
+  workers: null
+  val_chunk: 16384
+  val_cache_gb: 4.0
+  max_nonfinite: 3
+  max_reloads: 3
+training_config_hashes:
+- 3cc3fe720017a629
+selection: null

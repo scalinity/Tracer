@@ -1,0 +1,280 @@
+{
+ "calibration_device": "cuda",
+ "created": "2026-11-13T06:51:11-05:00",
+ "development": false,
+ "feature_schema_sha256": "41a698db00536fe93bf1f8b00011c30378120eb7114d036d1b9369ba2f7481e3",
+ "feature_schema_version": "tracernet-features-1",
+ "files": {
+  "MODEL_CARD.md": "d53e8adc86dbc1f444697e2da84e947ab805287f8c90a05272579ba36c714ed0",
+  "bins.json": "7150b6155935e6882bdf40d24531fb31cc0c1d769c68826b029195e01d42d821",
+  "calibration.json": "1103ff7b70383328ae09a64410fecf94c13c8f95ecd4228b3c3e8bb5cca9ed55",
+  "config.yaml": "cfc75894b7219138ae8512488854d3687042ba5bb55d1d013b2fb4dfd59dedda",
+  "feature_schema.json": "41a698db00536fe93bf1f8b00011c30378120eb7114d036d1b9369ba2f7481e3",
+  "model.pt": "fe91ff7bc8a3d4c9d63417b712afea5f8d3f170778aa06b9093f1ceb639b5aaf"
+ },
+ "freeze_hash": "5d042e82702584a9",
+ "git_sha": "a58882551186a99f3ae7d80492d6b9187fd379f4",
+ "inference_device": "cpu",
+ "library_sha256": "204c41299477305efec98b1d34a952799577628d9d4f8290039464f0127922ca",
+ "notice": "Synthetic data: TracerNet was trained and checked only on simulated laboratory weeks, configured by language models and simulated by Tracer's own code, with no clinical review. Every parameter is an assumption, and its numbers describe the simulator, not any laboratory.",
+ "policy_hash": "9594d7c019363261",
+ "rung": "C",
+ "runs": [
+  "C-s0-3cc3fe72-20261113-033426",
+  "C-s1-3cc3fe72-20261113-040707",
+  "C-s2-3cc3fe72-20261113-050401"
+ ],
+ "seeds": [
+  0,
+  1,
+  2
+ ],
+ "sim_manifest_sha256": "e257ec775dcc78c4c108c055e2761321d2bd7152aec054c7e1ff8ce0f8483658",
+ "splits_sha256": "ccc97addce40a248003a6f84ffa9afee42e034c986c6a0139c462034cc2f182d",
+ "store_dir": "/blue/cai6734/daniel.escalante/tracer/store-v2-o4",
+ "store_hash": "bca1e1f97b1eb024",
+ "training_devices": [
+  "cuda"
+ ],
+ "training_samples": 1199995881,
+ "training_time_s": 17682.4,
+ "validation": {
+  "brier_after": {
+   "30": 0.04682159212780568,
+   "60": 0.023353009136976712
+  },
+  "brier_before": {
+   "30": 0.047622301144479295,
+   "60": 0.023503687881734653
+  },
+  "calibration_ticks": 3000000,
+  "ece_after": 0.01318452256439757,
+  "ece_after_temperature": 0.01318452256439757,
+  "ece_before": 0.016742229933177637,
+  "ensemble_val_sel": 0.07891588292513338,
+  "ensemble_val_sel_after_temperature": 0.08093887747155402,
+  "intercept_after": 0.3292559284062438,
+  "intercept_before": 0.4001066579623293,
+  "isotonic": false,
+  "members": [
+   {
+    "best_epoch": 18,
+    "device": "cuda",
+    "run_id": "C-s0-3cc3fe72-20261113-033426",
+    "seed": 0,
+    "val_sel": 0.07906208162431458
+   },
+   {
+    "best_epoch": 20,
+    "device": "cuda",
+    "run_id": "C-s1-3cc3fe72-20261113-040707",
+    "seed": 1,
+    "val_sel": 0.0791179961435786
+   },
+   {
+    "best_epoch": 20,
+    "device": "cuda",
+    "run_id": "C-s2-3cc3fe72-20261113-050401",
+    "seed": 2,
+    "val_sel": 0.07905875712426254
+   }
+  ],
+  "nll_after": 2.3309492961874008,
+  "nll_before": 2.3377510562948567,
+  "reliability_after": [
+   {
+    "bin": 0,
+    "mean_p": 0.0006939554665335163,
+    "n": 300000,
+    "observed": 0.0033466666666666666,
+    "p_hi": 0.000904309970792383,
+    "p_lo": 2.708161628106609e-05,
+    "weight": 300000.0
+   },
+   {
+    "bin": 1,
+    "mean_p": 0.0010824461479019374,
+    "n": 300000,
+    "observed": 0.00454,
+    "p_hi": 0.0012698627542704344,
+    "p_lo": 0.0009043104364536703,
+    "weight": 300000.0
+   },
+   {
+    "bin": 2,
+    "mean_p": 0.0015034301664094286,
+    "n": 300000,
+    "observed": 0.005663333333333334,
+    "p_hi": 0.0017671665409579873,
+    "p_lo": 0.0012698628706857562,
+    "weight": 300000.0
+   },
+   {
+    "bin": 3,
+    "mean_p": 0.002069169582458368,
+    "n": 300000,
+    "observed": 0.006406666666666666,
+    "p_hi": 0.002390314359217882,
+    "p_lo": 0.0017671689856797457,
+    "weight": 300000.0
+   },
+   {
+    "bin": 4,
+    "mean_p": 0.0027849997733929194,
+    "n": 300000,
+    "observed": 0.007136666666666667,
+    "p_hi": 0.0033006356097757816,
+    "p_lo": 0.002390323905274272,
+    "weight": 300000.0
+   },
+   {
+    "bin": 5,
+    "mean_p": 0.004654777797842399,
+    "n": 300000,
+    "observed": 0.0107,
+    "p_hi": 0.0070605590008199215,
+    "p_lo": 0.003300640732049942,
+    "weight": 300000.0
+   },
+   {
+    "bin": 6,
+    "mean_p": 0.019242153541819813,
+    "n": 300000,
+    "observed": 0.03698,
+    "p_hi": 0.042823269963264465,
+    "p_lo": 0.007060566917061806,
+    "weight": 300000.0
+   },
+   {
+    "bin": 7,
+    "mean_p": 0.1217861093811194,
+    "n": 300000,
+    "observed": 0.16319666666666666,
+    "p_hi": 0.2869257628917694,
+    "p_lo": 0.04282338172197342,
+    "weight": 300000.0
+   },
+   {
+    "bin": 8,
+    "mean_p": 0.7263812367507816,
+    "n": 300000,
+    "observed": 0.7734633333333333,
+    "p_hi": 0.9920702576637268,
+    "p_lo": 0.2869284152984619,
+    "weight": 300000.0
+   },
+   {
+    "bin": 9,
+    "mean_p": 0.9989198290810982,
+    "n": 300000,
+    "observed": 0.99953,
+    "p_hi": 1.000000238418579,
+    "p_lo": 0.9920702576637268,
+    "weight": 300000.0
+   }
+  ],
+  "reliability_before": [
+   {
+    "bin": 0,
+    "mean_p": 0.0003614819002119778,
+    "n": 300000,
+    "observed": 0.0034866666666666666,
+    "p_hi": 0.0004936805344186723,
+    "p_lo": 7.700384230702184e-06,
+    "weight": 300000.0
+   },
+   {
+    "bin": 1,
+    "mean_p": 0.0006151563680903443,
+    "n": 300000,
+    "observed": 0.004523333333333333,
+    "p_hi": 0.0007444236543960869,
+    "p_lo": 0.0004936816985718906,
+    "weight": 300000.0
+   },
+   {
+    "bin": 2,
+    "mean_p": 0.0009109574270774223,
+    "n": 300000,
+    "observed": 0.005646666666666667,
+    "p_hi": 0.0011029113084077835,
+    "p_lo": 0.0007444242364726961,
+    "weight": 300000.0
+   },
+   {
+    "bin": 3,
+    "mean_p": 0.0013340551177963304,
+    "n": 300000,
+    "observed": 0.00647,
+    "p_hi": 0.0015896764816716313,
+    "p_lo": 0.0011029113084077835,
+    "weight": 300000.0
+   },
+   {
+    "bin": 4,
+    "mean_p": 0.0018916173273577199,
+    "n": 300000,
+    "observed": 0.007033333333333333,
+    "p_hi": 0.002244245493784547,
+    "p_lo": 0.001589680672623217,
+    "weight": 300000.0
+   },
+   {
+    "bin": 5,
+    "mean_p": 0.0030628079996583985,
+    "n": 300000,
+    "observed": 0.010336666666666666,
+    "p_hi": 0.004589386284351349,
+    "p_lo": 0.0022442482877522707,
+    "weight": 300000.0
+   },
+   {
+    "bin": 6,
+    "mean_p": 0.012599324601086167,
+    "n": 300000,
+    "observed": 0.03519666666666667,
+    "p_hi": 0.029060127213597298,
+    "p_lo": 0.004589416086673737,
+    "weight": 300000.0
+   },
+   {
+    "bin": 7,
+    "mean_p": 0.09721408242898062,
+    "n": 300000,
+    "observed": 0.16206,
+    "p_hi": 0.25511252880096436,
+    "p_lo": 0.029060227796435356,
+    "weight": 300000.0
+   },
+   {
+    "bin": 8,
+    "mean_p": 0.726039816869994,
+    "n": 300000,
+    "observed": 0.7766833333333333,
+    "p_hi": 0.9958298206329346,
+    "p_lo": 0.2551136612892151,
+    "weight": 300000.0
+   },
+   {
+    "bin": 9,
+    "mean_p": 0.999511733961304,
+    "n": 300000,
+    "observed": 0.9995266666666667,
+    "p_hi": 1.0000003576278687,
+    "p_lo": 0.9958299398422241,
+    "weight": 300000.0
+   }
+  ],
+  "slope_after": 0.9177540685488644,
+  "slope_before": 0.8528161707422299,
+  "temperature": 1.1253974291613373,
+  "validation_ticks": 67286117
+ },
+ "version": "tracernet-v2",
+ "versions": {
+  "numpy": "2.5.4",
+  "polars": "2.1.0",
+  "python": "3.14.10",
+  "torch": "2.15.0+cu132"
+ }
+}
