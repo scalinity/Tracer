@@ -124,11 +124,14 @@ const safeArea = (): SafeArea => {
   const w = root.clientWidth;
   const h = root.clientHeight;
   const phone = w <= 820;
+  // Keep the whole bench clear of the top row, the caption and the clock: a part hidden behind a
+  // panel is a part the audience can't follow.
+  const captionRoom = phone ? 96 : 104;
   return {
-    top: top.getBoundingClientRect().bottom + (phone ? riskBox.offsetHeight + 12 : 8),
-    bottom: h - bar.getBoundingClientRect().top + 70,
+    top: top.getBoundingClientRect().bottom + (phone ? riskBox.offsetHeight + 12 : 40),
+    bottom: h - bar.getBoundingClientRect().top + captionRoom,
     left: 16,
-    right: phone ? 16 : Math.min(riskBox.offsetWidth + 24, w * 0.24),
+    right: 16,
     phone,
   };
 };
