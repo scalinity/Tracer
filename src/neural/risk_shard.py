@@ -6,12 +6,19 @@
 Scenarios are taken in sorted order, 50 to a part, every run of each (the history replicate and the scored ones), and
 each part is scored by `Predictor.score` on CPU exactly as `evaluate --artifact` scores a set, then written as
 `part-NNNN.parquet` with the columns the evaluation reads. Several shards side by side write one table, which
-`evaluate --split val --tracernet "DIR/*.parquet"` reads. A locked set (test, test_ood) is refused: it is scored only
-through `evaluate` under its lock.
+`evaluate --split val --tracernet "DIR/*.parquet"` reads. A locked set (test, test_ood, test_fresh) is refused: it is
+scored only through `evaluate` under its lock.
+
+The output folder records what made its parts (`inputs.json`: the split, the artifact's manifest and calibration
+SHA-256 and the store's manifest SHA-256). A shard writes into a folder only when that record matches its own, so a
+restarted or parallel shard resumes the same table and never mixes another model's or store's parts into it.
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -36,6 +43,37 @@ def scenario_runs(store_dir: Path, split: str) -> dict[str, list[int]]:
     return out
 
 
+def inputs_of(split: str, artifact: Path, store_dir: Path) -> dict:
+    """The identity of what a shard scores with: the split, the artifact and the store."""
+    sha = lambda p: hashlib.sha256(Path(p).read_bytes()).hexdigest()  # noqa: E731
+    manifest = json.loads((artifact / "manifest.json").read_text(encoding="utf-8"))
+    return {"split": split, "artifact_manifest_sha256": sha(artifact / "manifest.json"),
+            "calibration_sha256": (manifest.get("files") or {}).get("calibration.json"),
+            "store_manifest_sha256": sha(store_dir / store.STORE_V2_MANIFEST)}
+
+
+def claim(out_dir: Path, inputs: dict) -> None:
+    """Record the inputs in an empty folder, or check them against the record already there (refusing a mismatch, or
+    parts with no record). The record is created exclusively, so two shards starting together agree on one."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    record = out_dir / "inputs.json"
+    try:
+        fd = os.open(record, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    except FileExistsError:
+        have = json.loads(record.read_text(encoding="utf-8"))
+        if have != inputs:
+            changed = sorted(k for k in set(have) | set(inputs) if have.get(k) != inputs.get(k))
+            raise SystemExit(f"{out_dir} holds parts made from other inputs ({', '.join(changed)}); "
+                             "score into a new folder")
+        return
+    if any(out_dir.glob("part-*.parquet")):
+        os.close(fd)
+        record.unlink()
+        raise SystemExit(f"{out_dir} holds parts with no record of their inputs; score into a new folder")
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        fh.write(json.dumps(inputs, indent=1, sort_keys=True) + "\n")
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--split", required=True)
@@ -55,7 +93,7 @@ def main(argv: list[str] | None = None) -> int:
     parts = (len(sids) + PER_PART - 1) // PER_PART
     print(f"{args.split}: {len(sids)} scenarios, {parts} parts; this shard writes parts {lo} to {min(hi, parts) - 1}",
           flush=True)
-    args.out.mkdir(parents=True, exist_ok=True)
+    claim(args.out, inputs_of(args.split, args.artifact, args.store))
     predictor = Predictor.load(args.artifact, device="cpu")
     t0 = time.monotonic()
     for k in range(lo, min(hi, parts)):

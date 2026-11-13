@@ -22,5 +22,6 @@ echo "start $(TZ=America/New_York date) on $(hostname), $(nproc) cpus, $(lscpu |
 echo "code $(git rev-parse HEAD)"
 export TRACER_PROGRESS=$HPG/v2/progress/${SLURM_JOB_NAME}-${SLURM_JOB_ID}.json
 export OMP_NUM_THREADS=${TORCH_THREADS:-1} PYTHONUNBUFFERED=1
+set -f                     # keep a parquet glob (--tracernet DIR/*.parquet) as one argument
 /usr/bin/time -v $PY $CMD 2>&1
 echo "end $(TZ=America/New_York date)"

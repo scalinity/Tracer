@@ -1,10 +1,11 @@
 #!/bin/bash
 # One TracerNet seed on a HiPerGator B200, for the v2 work (docs/neural/preregistration-v2.md §7,
-# docs/neural/phase2-log.md). Every candidate is this script with its own ARGS, for example:
+# docs/neural/phase2-log.md). Every candidate is this script with its own ARGS, submitted with its fixed budget by
+# docs/neural/hpg/candidates-v2.sh, for example `bash docs/neural/hpg/candidates-v2.sh C2 0,1,2`, which runs
 #
-#   sbatch --account=cai6734 --job-name=v2-C2-s0 \
-#     --export=ALL,ARGS="train --rung C --seeds 0 --store $HPG/store-v2-r2 --set learning_rate=2.0e-3 --set rho=1.0" \
-#     docs/neural/hpg/train-v2.sbatch
+#   sbatch --account=cai6734 --mem=60G --job-name=v2-C2-s0 --export=ALL,ARGS="train --rung C --seeds 0 \
+#     --store $HPG/store-v2-o4 --set epoch_samples=20000000 --set max_epochs=20 --set learning_rate=2.0e-3 \
+#     --set rho=1.0" docs/neural/hpg/train-v2.sbatch
 #
 # A run that hits the time limit resumes exactly from its last epoch: the same ARGS plus --run-id RUN --resume.
 # CMD instead of ARGS runs any module on the GPU, for example a candidate's ensemble and calibration:
@@ -27,6 +28,7 @@ echo "start $(TZ=America/New_York date) on $(hostname), gpu: $(nvidia-smi --quer
 echo "code $(git rev-parse HEAD)"
 export TRACER_PROGRESS=$HPG/v2/progress/${SLURM_JOB_NAME}-${SLURM_JOB_ID}.json
 export OMP_NUM_THREADS=${TORCH_THREADS:-4} PYTHONUNBUFFERED=1
+set -f                     # a glob in ARGS or CMD (a risk table's parts) reaches Python as written
 if [ -n "${CMD:-}" ]; then
   /usr/bin/time -v $PY $CMD 2>&1
 else
