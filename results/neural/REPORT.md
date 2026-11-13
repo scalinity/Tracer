@@ -4,11 +4,12 @@
 
 **Read with the verdict:**
 
-- The negative control flags leakage: on `control_v1world`, where no context exists, TracerNet's median warning leads the local analytic refit by 10 minutes (95% interval 5 to 20). Flagged, explained, not resolved (sections 5 and 10).
-- TracerNet's calibration does not carry over to `legacy_v1`: its Brier score at 60 minutes of silence is 0.216 against the analytic model's 0.182 (sections 5 and 10).
+- The negative control flagged leakage: on `control_v1world` TracerNet's median warning leads the local analytic refit by 10 minutes (95% interval 5 to 20). A follow-up traced this to the training population, not leakage: a context-free analytic model fit on v2 weeks gets the same lead, and one fit on v1-world weeks gets none (sections 5 and 10).
+- TracerNet's calibration does not carry over to `legacy_v1` as trained: its Brier score at 60 minutes of silence is 0.216 against the analytic model's 0.182. A site map fit on that set's history alone brings it to 0.181 (sections 5 and 10).
 - The scenario library misses its coverage targets in 20 of 32 stratum-by-archetype cells (section 9).
 - Training was unstable: single-epoch validation spikes reached val_sel 1,444 against about 0.082, and each member kept its best validation epoch (section 10).
 - The explanations fail their deletion check: the top three factor groups beat three random groups in 68.2% of test alerts, against the required 70% (section 7).
+- R1 cannot be met on `test` at 6 alerts per shift: with 6.4 breaches per shift and misses counted as 0, every method's median warning is 0 (section 5).
 
 ## 1. Verdict against R1 to R4
 
@@ -904,9 +905,9 @@ Accounts: openai $62.1739 spent of $76.43; decide $2.9897 spent of $8.00.
 - The final ensemble trained with the searched peak learning rate (0.00499), found in search trials capped at 1.5 million samples. Under the 30-epoch schedule it stayed near its peak for hours and training was unstable: single-epoch validation spikes (val_sel 1.42, 7.96 and 1,444 against about 0.082) and surges in the mean training loss. Each member kept its best validation epoch (epochs 7, 11 and 3 for seeds 0, 1 and 2), as spec §7.7 sets. Searching the schedule at the length it runs is the next step.
 - CPU inference is bit-reproducible on one processor type only. HiPerGator's AMD Rome nodes and its Intel B200 nodes load the feature table with last-bit differences, so a byte-for-byte rerun (spec §17 item 18) must run on the node type that produced the result; every evaluation here ran on AMD Rome nodes.
 - On `test`, the first look's evaluation step ran out of memory after the risk table was scored and recorded in the lock; the evaluation was rerun on that recorded table and the run log lists it as a repeat with unchanged inputs. The explanation checks of section 7 add their own repeats.
-- On `legacy_v1`, TracerNet's Brier score at 60 minutes of silence is 0.216 against the analytic model's 0.182, so its calibration does not carry over to the v1 generator's world.
+- On `legacy_v1`, TracerNet's Brier score at 60 minutes of silence is 0.216 against the analytic model's 0.182, so its calibration does not carry over to the v1 generator's world as trained. A site map fit on `legacy_v1`'s history alone brings it to 0.181, and R3 then holds there (followup-2026-11-13.md, results/neural/sitecal/).
 - Ablation A8 is cut: it would train on the Claude-written v1 trails, which Anthropic's Usage Policy does not allow without prior authorization.
-- The negative control's rule flags leakage, and the flag stands: flagged, explained, not resolved. On `control_v1world` TracerNet's median warning leads the local analytic refit by 10 minutes (95% interval 5 to 20). Against the globally fit analytic model, which reads no context at all, the lead is 0 minutes (-5 to 0) on the median and -1.58 minutes (-2.82 to -0.13) on the capped mean, so TracerNet matches a context-free fit there. The likely explanation is the local refit's small history (428 specimens of one replicate); this evidence fits that explanation but does not rule leakage out, and no check here resolves it.
+- The negative control's rule flagged leakage, and a follow-up showed it is a false alarm caused by the training population (followup-2026-11-13.md, results/neural/control_audit/). On `control_v1world` TracerNet's median warning leads the local analytic refit by 10 minutes (95% interval 5 to 20). An analytic model fit on 40 fresh v1-world weeks does not lead it (0, interval -5 to 5), while the same context-free model fit on v2 train weeks leads it by 10 minutes (10 to 20), and TracerNet reads nothing after a tick (0 of 35,499 scores changed when later scans were deleted). The earlier explanation, the local refit's small history, was wrong.
 - The ablation arms took 1.5 million samples each, against the final ensemble's 216 to 556 million, so they compare designs under a short, equal training budget rather than at convergence. Their compute came to 73.7 hours across arms, over spec §8.8's 6-hour box, most of it CPU scoring.
 
 ### Recommendation (spec §8.9)
@@ -1274,7 +1275,7 @@ A check that nobody ran is reported as not run. Every number comes from syntheti
 **Verdict: partly held.** A1, A2, A5 and A6 are done and the negative control is reported. Two parts do not hold as written: A3 and A4 are marked "not run (not buildable in time)", since the pipeline could not build their inputs, rather than dropped for the time box; and the arms used 73.7 hours of compute against §8.8's budget of 6 hours (`REPORT.md` sections 6 and 10). A7, A8 and A9 are marked "not run" with their reasons (A7 outside the core set, A8 cut under Anthropic's Usage Policy, A9 first on the cut list).
 
 - Record: `results/neural/ablations.json`: A1 (4 arms), A2 (2 arms), A5 (rungs L, A, B, C and the ensemble) and A6 (5 arms) are `done`, three seeds per arm except the A5 ensemble, all at 733 steps (`steps_equal: true`).
-- Record: `ablations.A6.negative_control`: on `control_v1world` at 6 alerts per shift, TracerNet's median warning leads the local analytic refit by 10 minutes (95% interval 5 to 20), flagged `leakage_suspected: true`; `REPORT.md` section 10 reports the flag with the evidence that the lead over the context-free global fit is 0 minutes. The flag stands: flagged, explained, not resolved.
+- Record: `ablations.A6.negative_control`: on `control_v1world` at 6 alerts per shift, TracerNet's median warning leads the local analytic refit by 10 minutes (95% interval 5 to 20), flagged `leakage_suspected: true`; `REPORT.md` section 10 reports the flag with the evidence that the lead over the context-free global fit is 0 minutes. A follow-up on November 13 traced the flag to the training population, not leakage (`followup-2026-11-13.md`).
 - Run now: `pytest tests/test_ablations.py` passed (in the 284-test run of item 11).
 
 ### 15. Explanations

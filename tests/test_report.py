@@ -549,3 +549,19 @@ def test_the_caveats_under_the_verdict_match_their_committed_sources():
     lead = json.loads((neural / "control_v1world" / "evaluation.json").read_text())["differences"]["6/shift"]["3-2-1"]
     m = lead["analytic_local"]["median_warning_all_breaches_min"]
     assert f"by {m['point']:g} minutes (95% interval {m['low']:g} to {m['high']:g})" in text
+
+
+def test_the_follow_up_numbers_match_their_committed_sources():
+    """results/neural/caveats.md and limits.md restate the November 13 follow-up; each number must match its file."""
+    neural = R.ROOT / "results" / "neural"
+    text = (neural / "caveats.md").read_text(encoding="utf-8") + (neural / "limits.md").read_text(encoding="utf-8")
+    audit = json.loads((neural / "control_audit" / "summary.json").read_text())
+    assert audit["finding"]["leakage"] == "not supported"
+    assert not audit["placebo"]["flagged"] and audit["placebo_v2"]["flagged"]
+    assert audit["placebo_v2"]["median_warning_all_breaches_min"]["point"] == 10.0
+    assert audit["invariance"]["passed"] and audit["invariance"]["ticks_compared"] == 35499
+    assert "0 of 35,499 scores changed" in text
+    cal = json.loads((neural / "sitecal" / "legacy_v1" / "evaluation.json").read_text())
+    assert round(cal["calibration"]["tracernet"]["60"]["brier"], 3) == 0.181
+    assert cal["decision_rule"]["verdict"]["held"]["R3"]
+    assert "brings it to 0.181" in text

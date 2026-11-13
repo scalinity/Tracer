@@ -1,0 +1,100 @@
+{
+ "artifact": "/home/claude/tracer/artifacts/tracernet/v1",
+ "cuts": [
+  {
+   "cut_share_of_week": 0.575,
+   "max_abs_diff": 0.0,
+   "run": 190006,
+   "ticks": 3219,
+   "ticks_changed": 0
+  },
+  {
+   "cut_share_of_week": 0.719,
+   "max_abs_diff": 0.0,
+   "run": 190006,
+   "ticks": 3732,
+   "ticks_changed": 0
+  },
+  {
+   "cut_share_of_week": 0.789,
+   "max_abs_diff": 0.0,
+   "run": 190006,
+   "ticks": 4065,
+   "ticks_changed": 0
+  },
+  {
+   "cut_share_of_week": 0.531,
+   "max_abs_diff": 0.0,
+   "run": 190010,
+   "ticks": 3030,
+   "ticks_changed": 0
+  },
+  {
+   "cut_share_of_week": 0.661,
+   "max_abs_diff": 0.0,
+   "run": 190010,
+   "ticks": 3625,
+   "ticks_changed": 0
+  },
+  {
+   "cut_share_of_week": 0.805,
+   "max_abs_diff": 0.0,
+   "run": 190010,
+   "ticks": 4165,
+   "ticks_changed": 0
+  },
+  {
+   "cut_share_of_week": 0.152,
+   "max_abs_diff": 0.0,
+   "run": 190011,
+   "ticks": 455,
+   "ticks_changed": 0
+  },
+  {
+   "cut_share_of_week": 0.721,
+   "max_abs_diff": 0.0,
+   "run": 190011,
+   "ticks": 4061,
+   "ticks_changed": 0
+  },
+  {
+   "cut_share_of_week": 0.75,
+   "max_abs_diff": 0.0,
+   "run": 190011,
+   "ticks": 4194,
+   "ticks_changed": 0
+  },
+  {
+   "cut_share_of_week": 0.174,
+   "max_abs_diff": 0.0,
+   "run": 190014,
+   "ticks": 758,
+   "ticks_changed": 0
+  },
+  {
+   "cut_share_of_week": 0.273,
+   "max_abs_diff": 0.0,
+   "run": 190014,
+   "ticks": 1411,
+   "ticks_changed": 0
+  },
+  {
+   "cut_share_of_week": 0.661,
+   "max_abs_diff": 0.0,
+   "run": 190014,
+   "ticks": 2784,
+   "ticks_changed": 0
+  }
+ ],
+ "max_abs_diff": 0.0,
+ "passed": true,
+ "rule": "every tick at least a minute before the cut scores the same p_miss (within 1e-6) with every later scan of its run deleted",
+ "runs": [
+  190006,
+  190010,
+  190011,
+  190014
+ ],
+ "store": "/home/claude/tracer/data/store-v2-control",
+ "ticks_compared": 35499
+}
