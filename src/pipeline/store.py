@@ -145,7 +145,7 @@ def open_truth(store_dir: Path = STORE_DIR) -> duckdb.DuckDBPyConnection:
 
 STORE_V2_DIR = ROOT / "data" / "store-v2"
 STORE_V2_MANIFEST = "manifest.json"
-V2_SPLITS = ("train", "val", "test", "test_ood")
+V2_SPLITS = ("train", "val", "test", "test_ood", "test_fresh")
 V2_DAY0 = datetime(2026, 1, 5)  # Monday, day 0 of every simulated replicate (spec §5.2)
 V2_SCORED_DAYS = 7
 HISTORY_REPLICATE = 0

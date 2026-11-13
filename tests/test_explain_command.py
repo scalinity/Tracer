@@ -127,8 +127,10 @@ def test_a_locked_set_without_a_lock_is_refused_and_takes_none(env):
     assert not env.lock["lock_path"].exists() and not env.lock["runs_path"].exists() and not env.out.exists()
 
 
-@pytest.mark.parametrize("split", ne.LOCKED_SPLITS)
+@pytest.mark.parametrize("split", [s for s in ne.LOCKED_SPLITS if s != ne.FRESH_SPLIT])
 def test_a_repeat_of_the_locked_look_is_logged_and_writes_the_checks(env, split):
+    # test_fresh is not here: the explain command does not take it, and the fresh set allows no look after its one
+    # evaluation (docs/neural/preregistration-v2.md §8)
     env.look(split)
     before = env.lock["lock_path"].read_text()
     statuses = [e["status"] for e in logged(env.lock)]

@@ -538,7 +538,12 @@ def test_the_caveats_under_the_verdict_match_their_committed_sources():
     tn, analytic = cal["tracernet"]["60"]["brier"], min(cal[m]["60"]["brier"] for m in ("analytic_global", "analytic_local"))
     assert (round(tn, 4), round(analytic, 4)) == (0.2155, 0.1817)
     assert f"at 60 minutes of silence is {tn:.3f} against the analytic model's {analytic:.3f}" in text
-    cells = json.loads((R.ROOT / "datasets" / "scenarios-v2.manifest.json").read_text())["coverage"]["cells"]
+    # the caveats describe the first artifact's library (round two, 8,142 scenarios); the library has since grown
+    # (the coverage fill, O4 and O4b), so they are checked against that library's own manifest, kept beside them
+    round2 = json.loads((neural / "generation" / "library-round2.manifest.json").read_text())
+    assert round2["sha256"] == "257290db3d69618b5a488e59011d5283a4a873b14bae94d6d2f86edcd87528f6"
+    assert round2["sha256"] in (neural / "REPORT.md").read_text(encoding="utf-8")
+    cells = round2["coverage"]["cells"]
     under = sum(c["count"] < c["target"] for c in cells.values())
     assert (under, len(cells)) == (20, 32)
     assert f"misses its coverage targets in {under} of {len(cells)} stratum-by-archetype cells" in text

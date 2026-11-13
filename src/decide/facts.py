@@ -49,7 +49,7 @@ from src.pipeline import intervals, store
 MATE_WINDOW_MIN = 20.0
 OUTSTANDING_EXTRA_MIN = 60.0
 MIN_HISTORY = 20            # arrivals a route needs before its own history is used (source: assumed)
-LOCKED_SPLITS = ("test", "test_ood")
+LOCKED_SPLITS = ("test", "test_ood", "test_fresh")
 DAY_MIN = 24 * 60
 
 
