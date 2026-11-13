@@ -60,6 +60,12 @@ ROOT = evaluate.ROOT
 NEURAL_DIR = ROOT / "results" / "neural"
 LOCK_PATH = NEURAL_DIR / "test_lock.json"
 TEST_RUNS_PATH = NEURAL_DIR / "test_runs.jsonl"
+# The fresh test set of docs/neural/preregistration-v2.md has its own lock and run log, and is looked at once: no
+# relock, and no look once its evaluation is written.
+FRESH_SPLIT = "test_fresh"
+FRESH_DIR = NEURAL_DIR / FRESH_SPLIT
+FRESH_LOCK_PATH = FRESH_DIR / "test_lock.json"
+FRESH_RUNS_PATH = FRESH_DIR / "test_runs.jsonl"
 
 BUDGETS = evaluate.BUDGETS                  # alerts per 8-hour shift: 1, 2, 4, 6
 HEADLINE_BUDGET = 6
@@ -76,7 +82,7 @@ ECE_BINS = 10
 TRACERNET = "tracernet"
 BASELINES = ("window_rule", "analytic_global", "analytic_local")
 WEIGHTINGS = ("3-2-1", "equal")
-LOCKED_SPLITS = ("test", "test_ood")
+LOCKED_SPLITS = ("test", "test_ood", "test_fresh")
 EASTERN = ZoneInfo("America/New_York")
 
 # ---------------------------------------------------------------------------------------------------------
@@ -943,8 +949,15 @@ def guard_test_run(split: str, hashes: Mapping, relock_reason: str | None = None
     a TestRun, the context the locked steps need."""
     if split not in LOCKED_SPLITS:
         return None
-    lock_path = LOCK_PATH if lock_path is None else Path(lock_path)
-    runs_path = TEST_RUNS_PATH if runs_path is None else Path(runs_path)
+    default_lock, default_runs = lock_paths(split)
+    lock_path = default_lock if lock_path is None else Path(lock_path)
+    runs_path = default_runs if runs_path is None else Path(runs_path)
+    if split == FRESH_SPLIT:
+        if relock_reason is not None:
+            raise LockError("the fresh test set has no relock (docs/neural/preregistration-v2.md §8)")
+        if (lock_path.parent / "evaluation.json").exists():
+            raise LockError(f"the fresh test set was looked at: {lock_path.parent / 'evaluation.json'} exists, and "
+                            "there is no second look (docs/neural/preregistration-v2.md §8)")
     missing = [k for k in HASH_FIELDS if k not in hashes]
     if missing:
         raise ValueError(f"the lock record lacks {missing}")
@@ -988,6 +1001,12 @@ def guard_test_run(split: str, hashes: Mapping, relock_reason: str | None = None
                                                     indent=1, sort_keys=True) + "\n")
         _log(runs_path, entry)
     return TestRun(entry, lock_path, runs_path, relock_reason)
+
+
+def lock_paths(split: str) -> tuple[Path, Path]:
+    """The lock file and run log a locked split is checked against: the fresh set's own, or the shared one of test
+    and test_ood."""
+    return (FRESH_LOCK_PATH, FRESH_RUNS_PATH) if split == FRESH_SPLIT else (LOCK_PATH, TEST_RUNS_PATH)
 
 
 def record_risk_parts(test_run: TestRun, parts: Mapping, now=None) -> None:
@@ -1048,10 +1067,12 @@ SETS = {
     "val": "validation scenarios; history replicate 0 sets the knobs, scored replicates are scored",
     "test": "test scenarios, under the test lock; history replicate 0 sets the knobs",
     "test_ood": "out-of-distribution scenarios, under the test lock; history replicate 0 sets the knobs",
+    "test_fresh": "the fresh test set of docs/neural/preregistration-v2.md, under its own lock and looked at once; "
+                  "history replicate 0 sets the knobs; the global fits come from the training store's train split",
     "legacy_v1": "the v1 store: knobs set on fit runs 0 to 23, held-out runs 24 to 29 scored",
     "control_v1world": "the v1-world scenario: replicate 0 sets the knobs, every other replicate is scored",
 }
-V2_SPLIT_SETS = ("val", "test", "test_ood")
+V2_SPLIT_SETS = ("val", "test", "test_ood", "test_fresh")
 OOD_FEATURE = "ood_feature"             # the subset of test_ood whose scenarios carry the feature themselves
 OOD_ARCHETYPE, OOD_DISRUPTION = "multi_site_system", "scanner_downtime"   # spec §6.2 (src/scenarios/freeze.py is_ood)
 SUBSET_CONTEXT = ("set", "description", "notice", "settings", "methods", "store")
@@ -2661,6 +2682,9 @@ def command_evaluate(split: str, *, store_dir: Path | None = None, out_dir: Path
     `train_store_dir` the v2 store whose train split gives the global fits. On test_ood the same look also reports
     the subset `ood_feature`, the scenarios that carry the out-of-distribution feature themselves, found in the
     store's truth (ood_feature_scenarios)."""
+    if split == FRESH_SPLIT and train_store_dir is None:
+        raise ValueError("the fresh test set's global fits come from the training store: pass train_store_dir "
+                         "(--train-store), the store the frozen model trained on")
     score_artifact = tracernet is None and artifact_dir is not None
     if score_artifact:
         tracernet = RISK_DIR / split / "*.parquet"

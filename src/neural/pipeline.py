@@ -838,19 +838,23 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("freeze", help="freeze accepted scenarios into datasets/scenarios-v2.* (spec §4.11)")
     p.add_argument("--jobs", required=True, help="comma-separated, for example O1,O2")
     p.add_argument("--workers", type=int, default=16)
+    p = sub.add_parser("freeze-fresh", help="freeze the fresh test set, job T1 (docs/neural/preregistration-v2.md §5)")
+    p.add_argument("--workers", type=int, default=16)
     p = sub.add_parser("simulate", help="simulate the frozen library (spec §5, §6.1)")
     p.add_argument("--workers", type=int, default=16)
+    p.add_argument("--fresh", action="store_true", help="the fresh test set (preregistration-v2 §5), into its own folder")
     p.add_argument("--out", default=None, help="output folder (default: the simulation folder)")
     p.add_argument("--a1", action="store_true", help="ablation A1's train replicates (its plan, a1-replicates.json) "
                                                      "and every validation replicate, into A1's own folder (spec §8.8)")
     p = sub.add_parser("store", help="load the simulation into the v2 store (spec §6.3)")
     p.add_argument("--workers", type=int, default=None)
+    p.add_argument("--fresh", action="store_true", help="the fresh test set's simulation, into its own store")
     p.add_argument("--a1", action="store_true", help="load A1's simulation into A1's own store (spec §8.8)")
     p.add_argument("--control", action="store_true", help="simulate the v1-world scenario's replicates into the "
                                                           "control_v1world store (spec §8.1)")
     p = sub.add_parser("evaluate", help="score every method on a set (spec §8); test sets go through the lock")
     p.add_argument("--split", required=True,
-                   choices=("val", "test", "test_ood", "legacy_v1", "control_v1world"))
+                   choices=("val", "test", "test_ood", "test_fresh", "legacy_v1", "control_v1world"))
     p.add_argument("--workers", type=int, default=None)
     p.add_argument("--store", default=None, help="store folder (default: the v2 store)")
     p.add_argument("--out", default=None, help="output folder (default: results/neural/<split>/)")
@@ -994,10 +998,20 @@ def main(argv: list[str] | None = None, *, paths: runner.Paths | None = None, se
             freeze.freeze(tuple(j.strip() for j in args.jobs.split(",") if j.strip()), paths=pipe.paths,
                           workers=args.workers, out=out)
             return 0
+        if args.command == "freeze-fresh":
+            from src.scenarios import fresh
+            fresh.freeze_fresh(paths=pipe.paths, workers=args.workers, out=out)
+            return 0
         if args.command == "simulate":
+            if args.fresh:
+                from src.scenarios import fresh
+                return fresh.simulate_fresh(args.workers, Path(args.out) if args.out else None, out)
             return simulate_command(args.workers, args.out, pipe.paths, out, a1=args.a1)
         if args.command == "store":
             from src.pipeline import store
+            if args.fresh:
+                from src.scenarios import fresh
+                return fresh.store_fresh(workers=args.workers, out=out)
             if args.control:
                 counts = store.build_control_v2(workers=args.workers or 1)
                 out(f"control_v1world store {store.CONTROL_STORE_DIR}: {json.dumps(counts, sort_keys=True)}")
