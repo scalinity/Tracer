@@ -343,3 +343,13 @@ def test_r5_a_p_miss_that_is_not_a_probability_is_refused():
     for bad in (-0.2, 1.2, float("inf"), float("nan")):
         with pytest.raises(ValueError, match="not a probability"):
             P._with_harm(pl.DataFrame({"tier": [3], "p_miss": [bad]}), scheme)
+
+
+def test_an_artifact_can_be_named_for_its_version(built):
+    """The v2 artifacts are built as tracernet-v2 (calibrate --version) without changing the configuration."""
+    runs = sorted((built["dir"] / "runs").glob("A-*"))
+    manifest = ensemble.build(T.load_config(), runs, store_dir=built["store"], out_dir=built["dir"] / "artifact-v2",
+                              table=built["table"], workers=1, cache_root=built["dir"] / "cache", device="cpu",
+                              version="tracernet-v2", log=lambda *_: None)
+    assert manifest["version"] == "tracernet-v2"
+    assert Predictor.load(built["dir"] / "artifact-v2").version == "tracernet-v2"
