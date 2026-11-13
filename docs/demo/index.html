@@ -253,69 +253,68 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .act-qs li{margin-bottom:6px}
 .act-qs li::marker{color:var(--observed)}
 
-/* ───────── Beat Tracer ───────── */
-.game-seed{margin-top:10px;font-size:13.5px;color:var(--ink-dim);max-width:76ch}
-.game{margin-top:16px;border:1px solid var(--hair);border-radius:3px;background:var(--panel)}
-.game-bar{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 20px;padding:14px 16px;border-bottom:1px solid var(--hair-soft);background:var(--raised)}
-.game-round{font-family:var(--serif);font-size:18px}
-.game-clock{display:flex;align-items:baseline;gap:8px;font-size:13px;color:var(--ink-mute)}
-.game-clock .clock{min-width:2.5ch;text-align:right}
-.game-alerts{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-dim)}
-.pip{display:inline-block;width:11px;height:11px;border-radius:50%;border:1.5px solid var(--warn)}
-.pip.on{background:var(--warn)}
-.feed{margin:0}
-.feed li{border-bottom:1px solid var(--hair-soft)}
-.fs{display:block;width:100%;min-height:56px;padding:9px 16px 10px;text-align:left}
-.fs:hover:not(:disabled){background:var(--raised)}
-.fs[aria-pressed=true]{background:var(--raised);box-shadow:inset 3px 0 0 var(--warn)}
-.fs:disabled{cursor:default}
-.fs *{pointer-events:none} /* a tap lands on the row's button even while its text redraws */
-.fs-top{display:flex;justify-content:space-between;align-items:baseline;gap:4px 12px;flex-wrap:wrap}
-.fs-id{font-family:var(--mono);font-size:13.5px;color:var(--observed)}
-.fs-meta{display:block;margin-top:2px;font-size:12.5px;line-height:1.45;color:var(--ink-mute)}
-.fs-type{font-family:var(--serif);font-size:14.5px;color:var(--ink)}
-.fs-state{text-align:right;font-size:13px;white-space:nowrap}
-.fs-state .num{font-size:14.5px}
-.fs-silent{color:var(--infer);font-style:italic}
-.fs-in{color:var(--observed)}
-.fs-out{color:var(--ink-mute)}
-.fs-miss{color:var(--alarm)}
-.fs-pick{margin-left:8px;padding:0 5px;border:1px solid var(--warn);border-radius:2px;font-size:11.5px;font-style:normal;color:var(--warn)}
-.fs-track{display:block;position:relative;height:10px;margin-top:6px}
-.game-result .v{white-space:normal}
-.fs-track::before{content:"";position:absolute;left:0;right:0;top:4px;height:2px;background:var(--hair-soft)}
-.fs-quiet{position:absolute;left:0;top:1px;height:8px;background:repeating-linear-gradient(135deg,var(--infer) 0 1.3px,transparent 1.3px 5px);opacity:.75}
-.fs-scan{position:absolute;top:0;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:var(--observed)}
-.fs-win{position:absolute;top:-2px;width:2px;height:14px;margin-left:-1px;background:var(--alarm)}
-.fs-out .fs-quiet,.fs.ruled .fs-quiet{opacity:.3}
-.game-actions{display:flex;gap:12px;padding:14px 16px;flex-wrap:wrap}
-.game-go,.game-call{min-height:48px;padding:0 20px;border-radius:3px;font-size:15px}
-.game-go{border:1px solid var(--observed-deep);background:var(--obs-wash);color:var(--ink)}
-.game-go:hover{border-color:var(--observed)}
-.game-call{border:1px solid var(--warn);background:var(--warn-wash);color:var(--warn);font-weight:600}
-.game-call:disabled{opacity:.4;cursor:default}
-.game-go[hidden],.game-call[hidden]{display:none}
-.game-status{padding:0 16px 14px;font-size:14px;color:var(--ink-dim);min-height:1.55em}
-.game-result{padding:14px 16px 16px;border-top:1px solid var(--hair-soft);font-size:14px;color:var(--ink-dim)}
-.game-result p+p{margin-top:6px}
-.game-result b{color:var(--ink)}
-.game-end{margin-top:16px;padding:18px 16px 20px;border:1px solid var(--hair);border-radius:3px;background:var(--panel)}
-.end-h{font-family:var(--serif);font-weight:400;font-size:22px}
-.end-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px;max-width:520px}
-.end-pair div{padding:12px 14px;border:1px solid var(--hair-soft);border-radius:3px;background:var(--raised)}
-.end-pair dt{font-size:13px;color:var(--ink-mute)}
-.end-pair dd{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:30px;line-height:1.2;color:var(--ink)}
-.end-pair .you dd{color:var(--warn)}
-.end-pair .tracer dd{color:var(--infer)}
-.end-pair small{display:block;font-family:var(--sans);font-size:12px;color:var(--ink-mute)}
-.end-point{margin-top:16px;max-width:62ch;font-family:var(--serif);font-size:19px;line-height:1.5;color:var(--ink)}
-.end-rounds{margin-top:12px;font-size:13.5px;color:var(--ink-dim)}
-.end-rounds li{padding:2px 0}
-.end-again{margin-top:14px;display:flex;gap:12px;flex-wrap:wrap}
-.end-again button{min-height:44px;padding:0 16px;border:1px solid var(--hair);border-radius:3px;background:var(--raised);font-size:14px;color:var(--ink-dim)}
-.end-again button:hover{border-color:var(--observed-deep);color:var(--ink)}
-.game-fine{margin-top:14px;max-width:76ch;font-size:12.5px;color:var(--ink-mute)}
-.game-fine b{color:var(--ink-dim)}
+/* ───────── Beat Tracer: the address #beat shows the game alone, full screen ───────── */
+#beat{display:none}
+body.play .skip,body.play .mast,body.play main>:not(#beat),body.play footer{display:none}
+body.play .page{padding-bottom:0}
+body.play #beat{display:flex;flex-direction:column;gap:14px;max-width:640px;min-height:100vh;min-height:100dvh;margin:0 auto;
+  padding:14px 0 max(14px,env(safe-area-inset-bottom,0px))}
+.bt-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+#beat h2{margin:0;font-size:26px;line-height:1.15}
+.bt-round{font-size:14px;color:var(--ink-mute)}
+.bt-clock{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:34px;line-height:1;color:var(--observed);white-space:nowrap}
+.bt-clock small{margin-left:5px;font-family:var(--sans);font-size:15px;color:var(--ink-mute)}
+.bt-clock[hidden]{display:none}
+.bt-play,.bt-end{display:flex;flex-direction:column;gap:14px;flex:1 1 auto}
+.bt-play[hidden],.bt-end[hidden]{display:none}
+.bt-rules{font-size:16.5px;line-height:1.45;color:var(--ink)}
+.bt-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.bt-card{display:flex;flex-direction:column;gap:10px;width:100%;min-height:92px;padding:12px 12px 11px;border:1.5px solid var(--hair);
+  border-radius:3px;background:var(--panel);text-align:left;touch-action:manipulation}
+.bt-card *{pointer-events:none} /* a tap lands on the card's button even while its text redraws */
+.bt-card:not(:disabled):hover{border-color:var(--infer-deep)}
+.bt-card:not(:disabled):active{background:var(--raised)}
+.bt-card:disabled{cursor:default}
+.bt-name{font-family:var(--serif);font-size:19px;line-height:1.15;color:var(--ink)}
+.bt-letter{margin-right:7px;font-family:var(--sans);font-size:14px;color:var(--ink-mute)}
+/* the silence: violet hatch growing toward the red line of the specimen's own window */
+.bt-bar{position:relative;display:block;height:12px;margin-right:2px;background:var(--hair-soft)}
+.bt-bar::after{content:"";position:absolute;right:-2px;top:-4px;bottom:-4px;width:3px;background:var(--alarm)}
+.bt-fill{position:absolute;left:0;top:0;bottom:0;width:0;background:repeating-linear-gradient(135deg,var(--infer) 0 2px,transparent 2px 6px)}
+.bt-scan{position:absolute;top:-3px;width:18px;height:18px;margin-left:-9px;border-radius:50%;background:var(--observed);border:3px solid var(--panel)}
+.bt-scan[hidden]{display:none}
+.bt-foot{display:flex;justify-content:space-between;gap:8px;font-size:14px;color:var(--ink-mute);white-space:nowrap}
+.bt-state{color:var(--infer);font-style:italic}
+.bt-card.in{opacity:.5}
+.bt-card.in .bt-state{color:var(--observed);font-style:normal}
+.bt-card.pick{border-color:var(--warn);box-shadow:inset 0 0 0 1.5px var(--warn)}
+.bt-card.late{border-color:var(--alarm);background:var(--alarm-wash)}
+.bt-card.late .bt-state{color:var(--alarm);font-style:normal;font-weight:600}
+.bt-status{margin-top:auto;min-height:3em;font-size:17px;line-height:1.5;color:var(--ink-dim)}
+.bt-status b{color:var(--ink)}
+.bt-go{width:100%;min-height:56px;border:1px solid var(--observed);border-radius:3px;background:var(--obs-wash);font-size:17px;font-weight:600;color:var(--ink);touch-action:manipulation}
+.bt-go:hover:not(:disabled){background:var(--raised)}
+.bt-go:disabled{opacity:.5;cursor:default}
+.bt-go[hidden]{display:none}
+.bt-end-h{font-family:var(--serif);font-weight:400;font-size:22px;color:var(--ink-dim)}
+.bt-score{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.bt-score div{padding:14px;border:1.5px solid var(--hair);border-radius:3px;background:var(--panel)}
+.bt-score .tracer{border-color:var(--infer-deep)}
+.bt-score dt{font-size:15px;color:var(--ink-dim)}
+.bt-score dd{font-size:15px;color:var(--ink-dim)}
+.bt-score dd .num{display:block;font-size:34px;line-height:1.2;color:var(--warn)}
+.bt-score .tracer dd .num{color:var(--infer)}
+.bt-score dd.bt-sub{margin-top:8px;font-size:13.5px;line-height:1.4;color:var(--ink-mute)}
+.bt-point{font-family:var(--serif);font-size:20px;line-height:1.5;color:var(--ink)}
+.bt-end .bt-go{margin-top:auto}
+.bt-link{align-self:center;display:inline-flex;align-items:center;min-height:44px;font-size:15px;color:var(--ink-dim);
+  text-decoration:underline;text-decoration-color:var(--hair);text-underline-offset:4px}
+.bt-note{font-size:12.5px;color:var(--ink-mute)}
+@media (min-width:600px){
+  .bt-cards{grid-template-columns:repeat(3,minmax(0,1fr))}
+  /* the bottom of the screen is for a thumb; on a laptop or projector the result sits under the cards */
+  .bt-status,.bt-end .bt-go{margin-top:0}
+}
 
 /* ───────── later tasks and limits ───────── */
 .later{margin:0 0 14px;padding:10px 0;border-top:1px dashed var(--hair-soft);font-size:13px;color:var(--ink-mute)}
@@ -334,9 +333,6 @@ footer{padding-top:20px;border-top:1px solid var(--hair);font-size:12.5px;color:
 .badge{display:inline-block;margin-top:14px;padding:4px 10px;border:1px solid var(--warn);border-radius:999px;font-size:12.5px;color:var(--ink-dim)}
 .act-steps .t{margin-left:6px;font-family:var(--mono);font-size:12px;color:var(--ink-mute);white-space:nowrap}
 .act-steps li{padding-bottom:9px}
-.rules{margin-top:8px;padding-left:18px;list-style:disc;color:var(--ink-dim);max-width:62ch}
-.rules li{margin-bottom:4px}
-.rules li::marker{color:var(--warn)}
 details.more{margin-top:16px;max-width:980px}
 details.more>summary{display:inline-flex;align-items:center;gap:8px;min-height:44px;cursor:pointer;list-style:none;font-size:14px;color:var(--ink-dim);text-decoration:underline;text-decoration-color:var(--hair);text-underline-offset:4px}
 details.more>summary::-webkit-details-marker{display:none}
@@ -377,6 +373,19 @@ details.about section{margin-bottom:32px}
 </style>
 </head>
 <body>
+<script>
+/* The address #beat, which the game's QR code opens, shows Beat Tracer alone, full screen. Set before the first
+   paint, so the rest of the page never flashes up. */
+(function () {
+  function mode() {
+    var play = location.hash === "#beat";
+    document.body.classList.toggle("play", play);
+    if (play) window.scrollTo(0, 0);
+  }
+  mode();
+  window.addEventListener("hashchange", mode);
+})();
+</script>
 <a class="skip" href="#board">Skip to the board</a>
 <div class="page">
 
@@ -394,7 +403,7 @@ details.about section{margin-bottom:32px}
   <ol class="act-steps">
     <li><a href="#board">Follow one specimen.</a> Tap a row, drag the scrubber. <span class="t">4 min</span></li>
     <li><a href="#threshold">Move the threshold.</a> Both ways; watch warning and alerts trade. <span class="t">2 min</span></li>
-    <li><a href="#beat">Play Beat Tracer.</a> Spot the specimen in trouble before Tracer does. <span class="t">3 min</span></li>
+    <li><a href="#beat">Play Beat Tracer.</a> Spot the late specimen before Tracer does. <span class="t">2 min</span></li>
   </ol>
   <h3 class="act-h">Then discuss</h3>
   <ul class="act-qs">
@@ -565,35 +574,22 @@ details.about section{margin-bottom:32px}
   <p class="th-sentence" id="th-sentence" aria-live="polite"></p>
   <p class="th-note" id="th-note"></p>
 </section>
-<section id="beat" aria-labelledby="beat-h" hidden>
-  <h2 id="beat-h">Beat Tracer</h2>
-  <ul class="rules">
-    <li>Six specimens leave together. One will miss its window.</li>
-    <li>Tap the one you think is in trouble, then press <b>Call it</b>. Sooner is better.</li>
-    <li>You have three alerts a round; a wrong call uses one.</li>
-  </ul>
-  <p class="game-seed" id="game-seed"></p>
-  <div class="game" id="game">
-    <div class="game-bar">
-      <p class="game-round" id="game-round"></p>
-      <p class="game-clock"><output class="clock" id="game-clock">0</output><span> min since they left</span></p>
-      <p class="game-alerts" id="game-alerts"></p>
+<section id="beat" aria-labelledby="beat-h">
+  <div class="bt-head">
+    <div>
+      <h2 id="beat-h">Beat Tracer</h2>
+      <p class="bt-round" id="game-round">Round 1 of 3</p>
     </div>
-    <ul class="feed" id="game-feed" aria-label="The six specimens"></ul>
-    <div class="game-actions">
-      <button type="button" class="game-go" id="game-go">Start round 1</button>
-      <button type="button" class="game-call" id="game-call" disabled>Call it</button>
-    </div>
-    <p class="game-status" id="game-status" aria-live="polite"></p>
-    <div class="game-result" id="game-result" hidden></div>
+    <p class="bt-clock" id="game-clock-wrap"><output id="game-clock">0</output><small>min</small></p>
   </div>
-  <div class="game-end" id="game-end" hidden></div>
-  <details class="more"><summary>Where the rounds come from</summary>
-  <p class="game-fine">Rounds come from the held-out runs in the bundle: each round's six specimens were collected
-    near the same time in one run and are shown as if they left together, each against its own window. Rounds use each
-    specimen's own window and Tracer's stored alerts, whatever the controls above are set to. Scores never leave
-    this page. <b>Synthetic data, no clinical review.</b></p>
-  </details>
+  <div class="bt-play" id="game-play">
+    <p class="bt-rules">One of these 6 will be late.<br>Tap it as soon as you can tell. One guess.</p>
+    <ul class="bt-cards" id="game-feed" aria-label="The six specimens"></ul>
+    <p class="bt-status" id="game-status" aria-live="polite"></p>
+    <button type="button" class="bt-go" id="game-go" disabled>Loading the game</button>
+  </div>
+  <div class="bt-end" id="game-end" hidden></div>
+  <p class="bt-note">Synthetic data, no clinical review</p>
 </section>
 <details class="more about" id="about">
 <summary>How it works, and its limits</summary>
@@ -1178,6 +1174,8 @@ var TracerCore = (function () {
     box.innerHTML = "<b>The demo data did not load.</b> " + why + " To fix it, open this page from its web address, " +
       "or serve the folder yourself: in a terminal, run <code>python3 -m http.server</code> inside the " +
       "<code>docs/demo</code> folder and open the address it prints.";
+    $("game-go").textContent = "The game could not load";
+    $("game-status").innerHTML = box.innerHTML;
   }
 
   function start(bundle) {
@@ -1910,27 +1908,29 @@ var TracerCore = (function () {
   }
 
   /* ---------- Beat Tracer (P5) ---------- */
-  /* Simulated time runs at 3 minutes a second, the 3D bench's normal speed, so a 60-minute window lasts 20 s and
-     a 120-minute one 40 s. Rounds come from C.gameRounds; the cues are what the board shows before the truth
-     toggle (type, unit, route, priority, window, minutes silent, the receipt scan), and Tracer's alert is shown
-     only once the round is over. */
-  var GAME_SPEED = 3, GAME_ALERTS = 3;
-  var game = { seed: null, fromAddress: false, rounds: [], i: 0, phase: "ready", t: 0, start: 0, calls: [],
-    ruled: {}, selected: null, results: [], rows: {}, scale: 120 };
+  /* The address #beat shows the game alone (the script after <body> sets body.play). Each round is six specimens
+     from C.gameRounds, one of which misses its window. Simulated time runs at 3 minutes a second, the 3D bench's
+     normal speed, so a 60-minute window lasts 20 s and a 120-minute one 40 s. A tap on a card is the player's one
+     guess and ends the round; with no guess the round ends when the late one's window closes. Each card shows only
+     what a person watching would see: its kind, its window and whether its receipt scan has come. Tracer's play is
+     its stored alert (C.tracerRound), shown once the round is over. The score is the minutes of warning, added up
+     over the rounds. */
+  var GAME_SPEED = 3, GAME_GUESSES = 1, LETTERS = "ABCDEF";
+  var game = { seed: null, rounds: [], i: 0, phase: "ready", t: 0, start: 0, calls: [], results: [], cards: {} };
 
-  function newGame(seed, fromAddress) {
+  function plainType(type) {
+    return /^urine/.test(type) ? "Urine" : /^BAL/.test(type) ? "Lung wash" : /^tissue/.test(type) ? "Tissue"
+      : /swab/i.test(type) ? "Swab" : "Body fluid";
+  }
+
+  function newGame(seed) {
     game.seed = seed;
-    game.fromAddress = fromAddress;
     game.rounds = C.gameRounds(B.specimens, seed);
     game.i = 0;
     game.results = [];
     $("game-end").hidden = true;
-    $("game").hidden = false;
-    var addr = location.origin + location.pathname + "?seed=" + seed + "#beat";
-    $("game-seed").innerHTML = fromAddress
-      ? "Rounds from seed " + n(seed) + ", set in the address: everyone who opens this address plays the same three rounds."
-      : "Rounds from seed " + n(seed) + ", chosen at random. To give a room the same rounds, share the address " +
-        "<code>" + esc(addr) + "</code>.";
+    $("game-play").hidden = false;
+    $("game-clock-wrap").hidden = false;
     prepareRound();
   }
 
@@ -1945,178 +1945,127 @@ var TracerCore = (function () {
     game.phase = "ready";
     game.t = 0;
     game.calls = [];
-    game.ruled = {};
-    game.selected = null;
-    game.scale = Math.max.apply(null, r.ids.map(function (id) { return byId[id].window_min; }));
     $("game-round").textContent = "Round " + (game.i + 1) + " of " + game.rounds.length;
-    $("game-result").hidden = true;
-    $("game-result").innerHTML = "";
-    $("game-status").textContent = "Press Start to send the six specimens on their way.";
-    $("game-feed").innerHTML = r.ids.map(function (id) {
+    $("game-status").innerHTML = "";
+    $("game-feed").innerHTML = r.ids.map(function (id, k) {
       var s = byId[id];
-      var type = shortType(s.type);
-      return '<li><button type="button" class="fs" data-id="' + esc(id) + '" aria-pressed="false" disabled>' +
-        '<span class="fs-top"><span class="fs-id">' + esc(id) + '</span><span class="fs-state"></span></span>' +
-        '<span class="fs-meta"><span class="fs-type">' + esc(type.charAt(0).toUpperCase() + type.slice(1)) + "</span>, " +
-        esc(UNIT[s.unit] || s.unit) + ", " + esc(ROUTE[s.route] || s.route) + ", " + esc(s.priority) +
-        '. Window <span class="num">' + esc(mins(s.window_min)) + "</span>.</span>" +
-        '<span class="fs-track" aria-hidden="true"><span class="fs-quiet"></span><span class="fs-scan" hidden></span>' +
-        '<span class="fs-win" style="left:' + (100 * s.window_min / game.scale).toFixed(2) + '%"></span></span></button></li>';
+      return '<li><button type="button" class="bt-card" data-id="' + esc(id) + '" disabled>' +
+        '<span class="bt-name"><span class="bt-letter">' + LETTERS[k] + "</span>" + esc(plainType(s.type)) + "</span>" +
+        '<span class="bt-bar" aria-hidden="true"><i class="bt-fill"></i><b class="bt-scan" hidden></b></span>' +
+        '<span class="bt-foot"><span class="bt-state"></span><span>by ' + esc(mins(s.window_min)) + "</span></span></button></li>";
     }).join("");
-    game.rows = {};
-    Array.prototype.forEach.call($("game-feed").querySelectorAll(".fs"), function (b) { game.rows[b.getAttribute("data-id")] = b; });
+    game.cards = {};
+    Array.prototype.forEach.call($("game-feed").querySelectorAll(".bt-card"), function (b) { game.cards[b.getAttribute("data-id")] = b; });
+    $("game-go").textContent = "Start";
+    $("game-go").disabled = false;
     $("game-go").hidden = false;
-    $("game-go").textContent = "Start round " + (game.i + 1);
-    $("game-call").hidden = false;
     renderGame();
   }
 
   function arrived(s, t) { return s.received_min != null && t >= s.received_min; }
 
   function renderGame() {
-    var r = game.rounds[game.i], t = game.t, minute = Math.floor(t), over = game.phase === "result";
-    $("game-clock").textContent = String(minute);
-    var wrong = C.scoreRound(r, game.calls, GAME_ALERTS).wrong, left = GAME_ALERTS - wrong;
-    $("game-alerts").innerHTML = '<span class="vh">' + left + " of " + GAME_ALERTS + " alerts left</span>" +
-      [0, 1, 2].map(function (k) { return '<span class="pip' + (k < left ? " on" : "") + '" aria-hidden="true"></span>'; }).join("") +
-      '<span aria-hidden="true">' + left + (left === 1 ? " alert" : " alerts") + " left</span>";
+    var r = game.rounds[game.i], t = game.t, over = game.phase === "result", guess = game.calls.length ? game.calls[0].id : null;
+    $("game-clock").textContent = String(Math.floor(t));
     r.ids.forEach(function (id) {
-      var s = byId[id], b = game.rows[id], st = b.querySelector(".fs-state"), cls, html;
-      var got = arrived(s, t), quietTo = got ? s.received_min : t;
-      if (over && id === r.miss) { cls = "fs-miss"; html = "missed its window"; }
-      else if (got) { cls = "fs-in"; html = "receipt scan at " + n(mins(s.received_min)); }
-      else if (game.ruled[id] != null) { cls = "fs-out"; html = "not this one: it arrives in time"; }
-      else { cls = "fs-silent"; html = "silent " + n(mins(minute)); }
-      if (game.selected === id && !over) html += '<span class="fs-pick">selected</span>';
-      if (st._html !== html) { st._html = html; st.className = "fs-state " + cls; st.innerHTML = html; }
-      b.classList.toggle("ruled", game.ruled[id] != null);
-      b.querySelector(".fs-quiet").style.width = (100 * Math.min(quietTo, game.scale) / game.scale).toFixed(2) + "%";
-      var scan = b.querySelector(".fs-scan");
+      var s = byId[id], b = game.cards[id], got = arrived(s, t), late = over && id === r.miss;
+      var words = late ? "Late" : got ? "✓ Arrived" : game.phase === "ready" ? "" : "No scan";
+      var st = b.querySelector(".bt-state");
+      if (st.textContent !== words) st.textContent = words;
+      b.classList.toggle("in", got);
+      b.classList.toggle("late", late);
+      b.classList.toggle("pick", id === guess);
+      b.querySelector(".bt-fill").style.width = (100 * Math.min(got ? s.received_min : t, s.window_min) / s.window_min).toFixed(2) + "%";
+      var scan = b.querySelector(".bt-scan");
       scan.hidden = !got;
-      if (got) scan.style.left = (100 * Math.min(s.received_min, game.scale) / game.scale).toFixed(2) + "%";
-      var callable = game.phase === "running" && !got && game.ruled[id] == null;
-      b.disabled = !callable;
-      if (!callable && game.selected === id) game.selected = null;
-      b.setAttribute("aria-pressed", String(game.selected === id));
+      if (got) scan.style.left = (100 * s.received_min / s.window_min).toFixed(2) + "%";
+      b.disabled = !(game.phase === "running" && !got);
     });
-    $("game-call").disabled = !(game.phase === "running" && game.selected);
   }
 
   function startRound() {
     game.phase = "running";
     game.start = performance.now();
     $("game-go").hidden = true;
-    $("game-status").textContent = "They are on their way. Tap a specimen, then Call it.";
+    $("game-status").innerHTML = "";
     renderGame();
-    var first = $("game-feed").querySelector(".fs:not(:disabled)");
-    if (first) first.focus();
     requestAnimationFrame(tick);
   }
 
   function tick(now) {
     if (game.phase !== "running") return;
-    var r = game.rounds[game.i], before = game.t;
+    var r = game.rounds[game.i];
     game.t = Math.min(r.window, (now - game.start) / 1000 * GAME_SPEED);
-    var news = r.ids.filter(function (id) { var s = byId[id]; return !arrived(s, before) && arrived(s, game.t); });
-    if (news.length) $("game-status").textContent = news.map(function (id) { return id + " was scanned in the laboratory."; }).join(" ");
     if (game.t >= r.window) { endRound(); return; }
     renderGame();
     requestAnimationFrame(tick);
   }
 
-  function callIt() {
-    if (game.phase !== "running" || !game.selected) return;
-    var r = game.rounds[game.i], id = game.selected, minute = Math.floor(game.t);
-    game.calls.push({ id: id, minute: minute });
-    var sc = C.scoreRound(r, game.calls, GAME_ALERTS);
-    if (sc.called) { endRound(); return; }
-    game.ruled[id] = minute;
-    game.selected = null;
-    if (sc.wrong >= GAME_ALERTS) { endRound(); return; }
-    $("game-status").textContent = id + " is not the one: it arrives in time. That used one alert.";
-    renderGame();
+  function guess(id) {
+    if (game.phase !== "running") return;
+    game.calls.push({ id: id, minute: Math.floor(game.t) });
+    endRound();
   }
 
   function endRound() {
-    var r = game.rounds[game.i], you = C.scoreRound(r, game.calls, GAME_ALERTS);
-    var tr = C.tracerRound(r, function (id) { return byId[id].alerts.model; }), s = byId[r.miss];
+    var r = game.rounds[game.i], you = C.scoreRound(r, game.calls, GAME_GUESSES);
+    var tr = C.tracerRound(r, function (id) { return byId[id].alerts.model; }), late = LETTERS[r.ids.indexOf(r.miss)];
     game.phase = "result";
     game.results.push({ miss: r.miss, you: you, tracer: tr });
     renderGame();
-    var lines = [];
-    lines.push(you.called
-      ? "<p><b>You called " + esc(r.miss) + " at " + n(mins(you.at)) + ": " + n(mins(you.warning)) + " of warning.</b></p>"
-      : "<p><b>" + (you.wrong >= GAME_ALERTS ? "Your three alerts went on specimens that arrived in time"
-        : "You did not call " + esc(r.miss) + " before its window closed at " + n(mins(r.window))) + ": no warning.</b></p>");
-    lines.push("<p>" + (tr.warning > 0
-      ? '<span class="v v-t on">Tracer alerted on ' + esc(r.miss) + " at " + n(mins(tr.at)) + ": " + n(mins(tr.warning)) + " of warning.</span>"
-      : '<span class="v v-t off">Tracer did not alert on ' + esc(r.miss) + " before its window closed: no warning.</span>") +
-      " It also alerted on " + n(tr.falseAlerts) + " of the other five, which arrived in time" +
-      (you.wrong ? "; you used " + n(you.wrong) + (you.wrong === 1 ? " alert" : " alerts") + " on them." : ".") + "</p>");
-    lines.push("<p>" + esc(r.miss) + " had no receipt scan when its " + esc(mins(r.window)) + " window closed" +
-      (s.received_min != null ? "; its receipt scan came at " + n(mins(s.received_min)) + "." : ", and none ever came.") + "</p>");
-    $("game-result").innerHTML = lines.join("");
-    $("game-result").hidden = false;
-    $("game-status").textContent = "Round " + (game.i + 1) + " is over.";
-    var last = game.i === game.rounds.length - 1;
-    $("game-go").textContent = last ? "See how you did" : "Start round " + (game.i + 2);
+    $("game-status").innerHTML = "<b>" + (you.called ? "Right: " + esc(mins(you.warning)) + " early."
+      : (game.calls.length ? "Not that one. " : "Time’s up. ") + late + " was late.") + "</b><br>" +
+      (tr.warning > 0 ? "Tracer: " + esc(mins(tr.warning)) + " early." : "Tracer: no warning.");
+    $("game-go").textContent = game.i === game.rounds.length - 1 ? "See your score" : "Next round";
     $("game-go").hidden = false;
-    $("game-call").hidden = true;
     $("game-go").focus();
   }
 
-  function nextRound() {
+  function go() {
     if (game.phase === "ready") { startRound(); return; }
     if (game.phase !== "result") return;
     if (game.i < game.rounds.length - 1) { game.i++; prepareRound(); startRound(); return; }
     showEnd();
   }
 
+  /* The one result screen: both totals, what each cost, and one sentence on what it means. */
   function showEnd() {
+    function sum(f) { return game.results.reduce(function (a, x) { return a + f(x); }, 0); }
+    var you = sum(function (x) { return x.you.warning; }), tracer = sum(function (x) { return x.tracer.warning; });
+    var wrong = sum(function (x) { return x.you.wrong; }), flagged = sum(function (x) { return x.tracer.falseAlerts; });
+    var point = tracer > you ? "Tracer spoke up sooner because it knows how long each kind of trip usually takes."
+      : (you > tracer ? "You beat Tracer" : "You kept pace with Tracer") + ", with a hint it never gets: you knew one of the six would be late.";
     game.phase = "end";
-    var yours = game.results.map(function (x) { return x.you.warning; }), his = game.results.map(function (x) { return x.tracer.warning; });
-    var wrong = game.results.reduce(function (a, x) { return a + x.you.wrong; }, 0);
-    var fa = game.results.reduce(function (a, x) { return a + x.tracer.falseAlerts; }, 0);
-    var mine = C.median(yours), tracer = C.median(his);
-    $("game").hidden = true;
+    $("game-play").hidden = true;
+    $("game-clock-wrap").hidden = true;
+    $("game-round").textContent = "All " + game.results.length + " rounds";
     var end = $("game-end");
-    end.innerHTML = '<h3 class="end-h" tabindex="-1" id="end-h">Your median warning and Tracer\'s, on the same three rounds</h3>' +
-      '<dl class="end-pair"><div class="you"><dt>You</dt><dd>' + esc(C.fmtWarn(mine)) + " min<small>" + wrong +
-      (wrong === 1 ? " wrong call" : " wrong calls") + "</small></dd></div>" +
-      '<div class="tracer"><dt>Tracer</dt><dd>' + esc(C.fmtWarn(tracer)) + " min<small>" + fa +
-      (fa === 1 ? " alert" : " alerts") + " on specimens that arrived in time</small></dd></div></dl>" +
-      '<p class="end-point">Silence carries information: the longer a specimen goes without a scan, the likelier it is ' +
-      "the one in trouble. A fixed threshold trades warning against false alarms: call sooner and you warn more, and " +
-      "alert on more specimens that were fine.</p>" +
-      '<ol class="end-rounds">' + game.results.map(function (x, k) {
-        return "<li>Round " + (k + 1) + ", " + esc(x.miss) + ": you " + n(mins(x.you.warning)) + ", Tracer " + n(mins(x.tracer.warning)) + ".</li>";
-      }).join("") + "</ol>" +
-      '<div class="end-again"><button type="button" id="game-replay">Play these rounds again</button>' +
-      '<button type="button" id="game-new">Play new rounds</button></div>';
+    end.innerHTML = '<h3 class="bt-end-h" id="end-h" tabindex="-1">You vs Tracer</h3>' +
+      '<dl class="bt-score">' +
+      '<div class="you"><dt>You</dt><dd>' + n(mins(you)) + ' early</dd><dd class="bt-sub">' + wrong +
+      (wrong === 1 ? " wrong guess" : " wrong guesses") + "</dd></div>" +
+      '<div class="tracer"><dt>Tracer</dt><dd>' + n(mins(tracer)) + ' early</dd><dd class="bt-sub">Also flagged ' + flagged +
+      " that arrived fine</dd></div></dl>" +
+      '<p class="bt-point">' + esc(point) + "</p>" +
+      '<button type="button" class="bt-go" id="game-again">Play again</button>' +
+      '<a class="bt-link" href="./">See the full demo</a>';
     end.hidden = false;
-    $("game-status").textContent = "";
     $("end-h").focus();
   }
 
   function initGame() {
     var q = /[?&]seed=([^&#]*)/.exec(location.search), seed = q ? C.parseSeed(decodeURIComponent(q[1])) : null;
-    $("beat").hidden = false;
-    $("game-go").addEventListener("click", nextRound);
-    $("game-call").addEventListener("click", callIt);
+    $("game-go").addEventListener("click", go);
     $("game-feed").addEventListener("click", function (e) {
-      var b = e.target.closest(".fs");
-      if (!b || b.disabled || game.phase !== "running") return;
-      var id = b.getAttribute("data-id");
-      game.selected = game.selected === id ? null : id;
-      renderGame();
+      var b = e.target.closest(".bt-card");
+      if (b && !b.disabled) guess(b.getAttribute("data-id"));
     });
     $("game-end").addEventListener("click", function (e) {
-      if (e.target.id === "game-replay") newGame(game.seed, game.fromAddress);
-      else if (e.target.id === "game-new") newGame(randomSeed(), false);
-      else return;
+      if (e.target.id !== "game-again") return;
+      newGame(randomSeed());
       $("game-go").focus();
     });
-    newGame(seed == null ? randomSeed() : seed, seed != null);
+    newGame(seed == null ? randomSeed() : seed);
   }
 
   /* ---------- events ---------- */

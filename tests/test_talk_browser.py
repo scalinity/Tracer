@@ -24,7 +24,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 DECK = (ROOT / "docs" / "talk" / "index.html").read_text(encoding="utf-8")
 NODE = shutil.which("node")
-SYNTHETIC = {0, 7, 8, 9, 10, 12}  # the slides that show the demo or its numbers
+SYNTHETIC = {0, 6, 7, 8, 9, 10, 11, 13}  # the slides that show the demo or its numbers
 LENGTH = "15:00"  # the talk's length, where its last beat ends
 SLIDES = 14
 SMALLEST_PX = 24  # the shortest line of text allowed on the 1280 by 800 screen
