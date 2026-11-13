@@ -13,8 +13,8 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-LENGTH = "17:00"  # the run of show at its own lengths, 2 minutes over the 15-minute slot by choice
-SLIDES = 13
+LENGTH = "15:00"  # the run of show, the length of the slot
+SLIDES = 14
 TALK = ROOT / "docs" / "talk"
 SCRIPT = (TALK / "README.md").read_text(encoding="utf-8")
 DECK = (TALK / "index.html").read_text(encoding="utf-8")
@@ -104,7 +104,7 @@ def test_the_run_of_show_runs_its_length_with_no_gap():
         assert f"{d['data-start']} to {d['data-end']}" in SCRIPT, d["data-beat"]
     hands_on = sum(secs(d["data-end"]) - secs(d["data-start"]) for d in timed
                    if d["data-beat"] in ("Board and timeline", "Beat Tracer", "Why this design"))
-    assert hands_on == 510  # 8.5 minutes, as the script says
+    assert hands_on == 480  # 8 minutes, as the script says
 
 
 def test_every_local_link_on_the_slides_exists():
@@ -124,20 +124,50 @@ def test_the_slides_that_show_the_demo_or_its_numbers_say_it_is_synthetic():
             assert "Synthetic data, no clinical review" in visible, plain(visible)[:60]
 
 
-def test_the_two_speakers_split_the_words_evenly_and_trade_often():
-    """The script says the words are split about evenly and the talk changes speaker ten times."""
+def test_the_two_speakers_split_the_time_evenly_and_trade_often():
+    """The script says the speaking time is split about evenly and the talk changes speaker ten times.
+
+    Daniel's lines are written out, so his words are counted. Karissa's sections are points she says in her own
+    words, so each one's length is the word count its stage direction gives ("about 50 words"). Daniel's
+    directions give a count too, and it has to be close to the words written, so the two are comparable.
+    """
     words, order = {"Daniel": 0, "Karissa": 0}, []
     for n, lines in sorted(script_notes().items()):
-        who = None
+        blocks, who = [], None
         for line in lines:
             if line in words:
                 who = line
                 order.append(who)
-            elif who and not re.fullmatch(r"\[[^\]]*\]", line):
-                words[who] += len(re.sub(r"\[[^\]]*\]", " ", line).split())
+                blocks.append([who, 0, None])
+            elif who:
+                stated = re.search(r"\[(?:In her own words, about|About) (\d+) words", line)
+                if stated:
+                    blocks[-1][2] = int(stated.group(1))
+                if not re.fullmatch(r"\[[^\]]*\]", line):
+                    blocks[-1][1] += len(re.sub(r"\[[^\]]*\]", " ", line).split())
+        for who, written, stated in blocks:
+            assert stated, f"slide {n}: {who}'s section gives no word count"
+            if who == "Daniel":
+                assert abs(written - stated) <= max(10, stated * 0.15), (n, written, stated)
+                words[who] += written
+            else:
+                words[who] += stated
     assert 0.45 <= words["Daniel"] / sum(words.values()) <= 0.55, words
     assert sum(a != b for a, b in zip(order, order[1:])) == 10, order
     assert "changes speaker ten times" in SCRIPT
+
+
+def test_karissa_has_an_outline_not_lines():
+    """Karissa writes her own lines (Daniel's rule of November 12), so her sections are numbered points."""
+    for n, lines in script_notes().items():
+        who = None
+        for line in lines:
+            if line in ("Daniel", "Karissa"):
+                who = line
+            elif who == "Karissa" and not re.fullmatch(r"\[[^\]]*\]", line):
+                assert re.match(r"\d+\. ", line), f"slide {n}: Karissa has a written line, not a point: {line[:60]}"
+    for answer in re.findall(r"^\d+\. \*\*.+?\*\* \[Karissa\] (.+)$", SCRIPT, flags=re.M):
+        assert answer.startswith("Points: "), answer[:60]
 
 
 def test_the_talk_never_says_the_clock_stops_at_plating():
@@ -334,14 +364,20 @@ def test_stage_directions_are_only_directions():
         assert " ".join(section["lines"]) == " ".join(readme), f"beat {n}: spoken text was lost"
 
 
-def test_karissas_lines_are_the_scripts_lines():
-    """docs/talk/karissa-lines.md is a copy of Karissa's part of this script, so a change here is copied there."""
-    lines = (TALK / "karissa-lines.md").read_text(encoding="utf-8")
-    for para in (p.strip() for p in lines.split("\n\n")):
-        if para and not para.startswith("# "):
-            assert para in SCRIPT, para
-    karissas = re.findall(r"^\*\*Karissa:\*\*\n\n(.+?)\n\n", SCRIPT, flags=re.M | re.S)
-    karissas += re.findall(r"^\d+\. \*\*.+?\*\* \[Karissa\] .+$", SCRIPT, flags=re.M)
-    assert len(karissas) >= 11  # 8 slide paragraphs and 3 prepared answers
-    for para in karissas:
-        assert para in lines, para
+def test_karissas_outline_is_the_scripts_outline():
+    """docs/talk/karissa-outline.md is Karissa's part of this script on its own, so a change here is copied there."""
+    outline = (TALK / "karissa-outline.md").read_text(encoding="utf-8")
+    mine = re.findall(r"^\*\*Karissa:\*\*\n\n(.+?)(?=\n\n\*\*|\n\n### |\n\n## |\Z)", SCRIPT, flags=re.M | re.S)
+    assert len(mine) == 8  # her eight sections across slides 1, 2, 5, 7, 8, 10, 12 and 13
+    points = []
+    for block in mine:
+        for para in (p.strip() for p in block.split("\n\n")):
+            if para.startswith("[In her own words, about "):
+                para = "[About " + para[len("[In her own words, about "):]
+            assert para in outline, para
+            points.append(para)
+    for para in (p.strip() for p in outline.split("\n\n")):
+        if re.match(r"\d+\. |\[About ", para):
+            assert para in points, para
+    for q, a in re.findall(r"^\d+\. (\*\*.+?\*\*) \[Karissa\] (.+)$", SCRIPT, flags=re.M):
+        assert f"- {q} {a}" in outline, q

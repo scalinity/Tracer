@@ -114,7 +114,7 @@ starts a look of its own.
 | `src/` | `generator/` (briefs, prompt, validator, batch runs), `pipeline/` (store, fit, evaluate, triage), `models/` (risk, location), `api/` |
 | `tests/` | `pytest`: the policy and config loaders, the generator and its validator, the store, the fit, the models, the evaluation and the midterm snapshot |
 | `docs/demo/` | The public demo, published by GitHub Pages from `docs/`: `index.html` (the board, the specimen timeline, the threshold control, Beat Tracer and the link to the 3D bench in `exhibit/`), `qr.png` (the QR code for the address, written by `python -m src.api.qr`), and the data it reads: `bundle.json` (the held-out specimens with their risk, alerts and truth, and a grid of 20 operating points) with its `bundle.schema.json`, `briefs.json` (a template and a Claude search brief for each alert) and `heroes.json` (the showcase stories); `python -m src.api.export`, `python -m src.api.search_briefs` and `python -m src.api.heroes` write them |
-| `docs/talk/` | The talk on November 18: the run of show, the slides and speaker notes in `README.md`, and the slide deck `index.html`, published at <https://scalinity.github.io/Tracer/talk/> |
+| `docs/talk/` | The talk on December 9: the run of show, the slides and speaker notes in `README.md`, Karissa's outline in `karissa-outline.md`, and the slide deck `index.html`, published at <https://scalinity.github.io/Tracer/talk/> |
 | `results/` | Fitted parameters, the evaluation, the alert list, the location scores, the recovery plot and the midterm snapshot `mvp-nov8.json` |
 | `notes/` | Working notes, questions, meeting capture; kept local, not in the repository |
 | `data/` | Claude output, the two-file store in `data/store/` and MIMIC extracts (gitignored) |

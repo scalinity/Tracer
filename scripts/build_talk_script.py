@@ -188,6 +188,8 @@ def line(para: str) -> str:
     text = " ".join(para.split())
     if DIRECTION.fullmatch(text):
         return f'<p class="line sd">{esc(text)}</p>'
+    if re.match(r"\d+\. ", text):  # one of Karissa's points: she says it in her own words
+        return f'<p class="line point">{inline(text, directions=True)}</p>'
     return f'<p class="line">{inline(text, directions=True)}</p>'
 
 
