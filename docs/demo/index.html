@@ -2133,6 +2133,9 @@ var TracerCore = (function () {
     if (id && byId[id]) {
       if (id !== state.open) openSpecimen(id, { focus: !initial });
       if (initial) $("timeline").scrollIntoView({ block: "start" });
+    } else if (initial && /^(board|threshold|beat)$/.test(id)) {
+      // A QR code's address names its section, which was hidden until the data loaded: land on it now.
+      $(id).scrollIntoView({ block: "start" });
     } else if (state.open && !id) {
       closeTimeline();
     }
