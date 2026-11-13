@@ -1,0 +1,198 @@
+{
+ "alerts": 2000,
+ "alerts_given": 398643,
+ "alerts_with_factors": 2000,
+ "attributed_alerts": 1820,
+ "baseline_scopes": {
+  "laboratory": 1,
+  "unit and route": 1999
+ },
+ "budget_per_shift": 6.0,
+ "checks": {
+  "completeness": {
+   "alerts": 1820,
+   "limit": 0.01,
+   "median_absolute_gap": 0.00020290423680768832,
+   "median_relative_gap": 0.0010821570727561616,
+   "passed": true,
+   "steps": 64
+  },
+  "deletion": {
+   "alerts": 1820,
+   "mean_drop_random": 0.01381186599076453,
+   "mean_drop_top": 0.0394189651439856,
+   "passed": false,
+   "random_draws": 10,
+   "required_share": 0.7,
+   "share_top_beats_random": 0.6884615384615385
+  },
+  "randomization": {
+   "alerts": 902,
+   "limit": 0.3,
+   "mean_spearman": -0.0043870763382958524,
+   "median_spearman": 0.0,
+   "passed": true
+  }
+ },
+ "closed_window_alerts": 180,
+ "examples": [
+  {
+   "alert_id": "SP-r171551-001771@2835",
+   "baseline": {
+    "hours_each_side": 1,
+    "probes": 30,
+    "scope": "unit and route",
+    "silence_min": 110.68871740233465
+   },
+   "factors": [
+    {
+     "attribution": 5.2714354656636715,
+     "direction": "raises",
+     "group": "silence",
+     "share": 0.5892602956815608,
+     "text": "Silent 2,835 min; courier specimens here usually arrive in 111 min, 9 in 10 within 195"
+    },
+    {
+     "attribution": 3.28924332783987,
+     "direction": "raises",
+     "group": "route_flow",
+     "share": 0.3676836240444237,
+     "text": "No receipts via this route for 31 min, usually none within an hour"
+    },
+    {
+     "attribution": 0.385173327020766,
+     "direction": "raises",
+     "group": "unit_flow",
+     "share": 0.04305608027401546,
+     "text": "1 specimen from this on-site clinic is still outstanding"
+    },
+    {
+     "attribution": -3.3613386085562524,
+     "direction": "lowers",
+     "group": "batch_mates",
+     "share": 0.9829286426507788,
+     "text": "No other specimens were sent from this unit around the same time"
+    }
+   ],
+   "p_miss": 1.0000000155553752,
+   "related": [
+    {
+     "specimen_id": "SP-r171551-001760",
+     "weight": 0.31054916977882385
+    },
+    {
+     "specimen_id": "SP-r171551-001747",
+     "weight": 0.2890112102031708
+    }
+   ],
+   "scenario_id": "S7155",
+   "tick_min": 2835,
+   "window_min": 2880
+  },
+  {
+   "alert_id": "SP-r149753-001940@5",
+   "baseline": {
+    "hours_each_side": 0,
+    "probes": 62,
+    "scope": "unit and route",
+    "silence_min": 5.0
+   },
+   "factors": [
+    {
+     "attribution": 0.03141745404764151,
+     "direction": "raises",
+     "group": "lab_flow",
+     "share": 1.0,
+     "text": "Receiving is behind: 28 receipts in the last hour against 30 collections the hour before"
+    },
+    {
+     "attribution": -0.0529111767817767,
+     "direction": "lowers",
+     "group": "unit_flow",
+     "share": 0.6141630819474014,
+     "text": "17 specimens from this off-site clinic are still outstanding"
+    }
+   ],
+   "p_miss": 0.3839975280244657,
+   "related": [
+    {
+     "specimen_id": "SP-r149753-001894",
+     "weight": 0.05907508358359337
+    },
+    {
+     "specimen_id": "SP-r149753-001893",
+     "weight": 0.05709296464920044
+    },
+    {
+     "specimen_id": "SP-r149753-001899",
+     "weight": 0.05172087252140045
+    },
+    {
+     "specimen_id": "SP-r149753-001904",
+     "weight": 0.049446698278188705
+    },
+    {
+     "specimen_id": "SP-r149753-001905",
+     "weight": 0.04807254299521446
+    }
+   ],
+   "scenario_id": "S4975",
+   "tick_min": 5,
+   "window_min": 120
+  },
+  {
+   "alert_id": "SP-r146331-000117@5",
+   "baseline": {
+    "hours_each_side": 4,
+    "probes": 24,
+    "scope": "unit and route",
+    "silence_min": 5.0
+   },
+   "factors": [
+    {
+     "attribution": 0.1094871565976483,
+     "direction": "raises",
+     "group": "route_flow",
+     "share": 0.712515087329018,
+     "text": "No receipts via this route for 63 min, usually none within an hour"
+    },
+    {
+     "attribution": 0.04417577425772379,
+     "direction": "raises",
+     "group": "lab_flow",
+     "share": 0.287484912670982,
+     "text": "Receiving is keeping up: 2 receipts in the last hour against 2 collections the hour before"
+    },
+    {
+     "attribution": -0.012301150783770254,
+     "direction": "lowers",
+     "group": "unit_flow",
+     "share": 1.0,
+     "text": "1 specimen from this on-site clinic is still outstanding"
+    }
+   ],
+   "p_miss": 0.0011412064087867602,
+   "related": [],
+   "scenario_id": "S4633",
+   "tick_min": 5,
+   "window_min": 1440
+  }
+ ],
+ "model_version": "tracernet-v2",
+ "notice": "Synthetic data: TracerNet was trained and checked only on simulated laboratory weeks, configured by language models and simulated by Tracer's own code, with no clinical review. Every parameter is an assumption, and its numbers describe the simulator, not any laboratory.",
+ "passed": false,
+ "policy_hash": "9594d7c019363261",
+ "raising_groups": {
+  "batch_mates": 820,
+  "lab_flow": 755,
+  "route_flow": 930,
+  "silence": 113,
+  "unit_flow": 777,
+  "window": 520
+ },
+ "saturated_alerts": 0,
+ "seed": 0,
+ "set": "val",
+ "steps": 64,
+ "weights": "default"
+}

@@ -28,7 +28,7 @@ for ((k = 0; k < SHARDS; k++)); do
 --store $TRAIN --out $RISK --parts $((k * per)):$(((k + 1) * per)) --workers 31" "$HERE/cpu-v2.sbatch")
   deps="$deps:$j"; echo "risk shard $k $j"
 done
-ev=$(sbatch --parsable --account=cai6734 --qos=cai6734-b --cpus-per-task=32 --mem=160G --job-name=v2-eval-$NAME \
+ev=$(sbatch --parsable --account=cai6734 --qos=cai6734-b --cpus-per-task=32 --mem=400G --job-name=v2-eval-$NAME \
   --dependency=afterok$deps --export=ALL,CODE=$CODE,CMD="-m src.neural.pipeline evaluate --split val \
 --tracernet $RISK/*.parquet --store $EVAL --out $OUT --workers 31" "$HERE/cpu-v2.sbatch")
 echo "evaluate $ev"

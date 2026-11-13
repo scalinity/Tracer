@@ -528,6 +528,7 @@ Target: at most 2 seconds per simulated 1,000-specimen week on one core. Scenari
 | `data/neural/` | Tick tables, series arrays, token tensors, checkpoints, run logs | no |
 | `data/decide/` | Decision-model response cache | no |
 | `artifacts/tracernet/v1/` | The trained ensemble, configuration, calibration, manifest, model card (≤ 10 MB) | yes |
+| `artifacts/tracernet/v2/` | The same files for the model Phase 2 froze (`docs/neural/preregistration-v2.md` §6, `docs/neural/phase2-log.md`) | yes |
 | `results/neural/` | Reports, metrics, plots (SVG), small example outputs, frozen decision outputs | yes |
 
 Formats: gzip JSONL for records (as v1), DuckDB for stores, Parquet (through polars) for tick tables, NumPy memory-mapped arrays for series and tokens. **Hash chain:** library SHA-256 → simulation manifest → store checksums → feature hash → artifact manifest → results. Every stage checks its inputs' hashes and refuses on a mismatch, as `store.py` does today.
@@ -1201,7 +1202,7 @@ Each stage writes `data/neural/stages/<stage>.json` with its input hashes, outpu
 - `src/neural/`: `samplers.py`, `train.py`, `hpo.py`, `calibrate.py`, `ablations.py`, `weakspots.py`, `pipeline.py`, `report.py`, `stages.py`.
 - `src/decide/`: `client.py`, `render.py`, `rules.py`, `dispatcher.py`, `zeroshot.py`, `critic.py`, `distill.py`.
 - `src/pipeline/neural_eval.py`, `src/pipeline/dispatch_eval.py`, `src/api/export_neural.py`.
-- `datasets/scenarios-v2.jsonl.gz`, `.manifest.json`, `.splits.json`; `artifacts/tracernet/v1/`; `results/neural/`; `requirements-neural.txt`; the tests of §15.
+- `datasets/scenarios-v2.jsonl.gz`, `.manifest.json`, `.splits.json`; `artifacts/tracernet/v1/` and `v2/`; `results/neural/`; `requirements-neural.txt`; the tests of §15.
 
 **Changed, backward compatible**
 - `.env.example`: add `OPENAI_API_KEY=` and `OPENROUTER_API_KEY=` under the existing line.

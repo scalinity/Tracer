@@ -588,12 +588,19 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** the isolation test caught a help text naming the simulation folder inside a training module, and the explanation command's repeat-look test needed to leave `test_fresh` out, since that command does not take it. The full suite also showed that #84 had broken a report test on main: it held the first artifact's caveat (20 of 32 cells short) to the current library manifest, which now says 3. The caveat describes the first artifact's library, so the round-two manifest is kept at `results/neural/generation/library-round2.manifest.json` and the test reads it; #84's own run had covered only the freeze, ledger, planner and store tests. Codex's review found two ways the one look could have been weakened, both fixed with tests: the no-second-look guard checked one output path while the fresh store's default output went elsewhere (a completed look now leaves `looked.json` beside the lock, and the fresh evaluation is written there by default), and a replicate dropped in simulation would have been scored around silently (the fresh simulation and store now refuse unless every scenario has all four replicates).
 - **Assumed:** the explanation deletion check is reported on validation, not on the fresh set, because the fresh set allows no look after its one evaluation.
 
-### Nov 13 · Neural · A version name for the v2 artifacts (this pull request)
+### Nov 13 · Neural · A version name for the v2 artifacts (#87)
 
 - **Agent:** `ensemble calibrate --version NAME` names the artifact it builds, so the Phase 2 candidates and the frozen model are `tracernet-v2` while the configuration, the first artifact and the tests that pin `tracernet-v1` stay as they are; the candidate scoring script passes it.
 - **Daniel:** no request; it keeps the two artifacts apart in risk tables and the demo's export.
 - **Went wrong:** nothing.
 - **Assumed:** a command-line name is simpler than a second configuration file for one string.
+
+### Nov 13 · Neural · Phase 2: the model chosen on validation and frozen as tracernet-v2 (this pull request)
+
+- **Agent:** trained three candidates on train and scored them beside the first artifact on validation only (`docs/neural/phase2-log.md`): C1, a lower peak learning rate on a fixed budget of 20 epochs with the coverage fill; C2, C1 plus the shift ranking term; C2x5, C2 with five seeds. Their average capped mean warning at 6 alerts per shift was 16.78, 16.83 and 16.85 minutes against the first artifact's 16.48, so the preregistered tie band of 0.2 minutes picks the simplest, C1, frozen as `artifacts/tracernet/v2`. The site map stays on (it moves C1's Brier score by +0.00014). The lower learning rate removed the first artifact's training spikes. On validation the explanation deletion check reads 70.0% for the first artifact and 68.9% for C1, both within sampling noise of the 70% line. `rule_v2 --markdown` renders the verdict as tables for the results page.
+- **Daniel:** asked for improvements on train and validation only, chosen by validation capped mean warning, with every candidate logged.
+- **Went wrong:** the frozen artifact's manifest said `development: true` and its card called it a smoke check, because the check judged a store by its path and Phase 2's store sits outside `data/store-v2`; the check now reads the store's manifest, and the flag and card were rewritten with a test, the weights and calibration unchanged. The first explanation job ran out of memory at 120 GB with 31 workers (rerun with 12 workers and 300 GB), the validation evaluation needed 400 GB rather than 160 GB, and with the class's GPU allocation full, C2 and C2x5 were calibrated on CPU in about 1.5 hours instead of 6 minutes.
+- **Assumed:** "fewer changes from the first artifact" counts the ranking term as a change, so C1 is simpler than C2; the corrected label needed no re-scoring, because predictions read only the unchanged files.
 
 ## The Claude API jobs
 

@@ -347,3 +347,14 @@ def test_set_overrides_read_yaml_values_and_refuse_unknown_keys():
         T.parse_overrides(["learnig_rate=1e-3"])
     with pytest.raises(ValueError, match="key=value"):
         T.parse_overrides(["rho"])
+
+
+def test_a_store_built_from_the_frozen_library_is_not_a_development_store(tmp_path):
+    """Phase 2 trains on a copy of the real store kept outside data/store-v2; its manifest names the frozen library."""
+    from src.pipeline import store
+    real, other = tmp_path / "real", tmp_path / "other"
+    for d, sha in ((real, store.sha256_path(store.LIBRARY_V2)), (other, "0" * 64)):   # the library's own bytes
+        d.mkdir()
+        (d / store.STORE_V2_MANIFEST).write_text(json.dumps({"inputs": {"library_sha256": sha}}))
+    assert not T.is_dev_store(real) and not T.is_dev_store(store.STORE_V2_DIR)
+    assert T.is_dev_store(other) and T.is_dev_store(tmp_path / "missing")
