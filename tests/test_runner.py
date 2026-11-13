@@ -346,6 +346,24 @@ def test_o2_needs_the_o1_gate_and_o3_a_weak_spot_plan(tmp_path):
     assert code == 1 and "weak-spot plan" in out
 
 
+def test_t1_spends_nothing_until_the_preregistration_names_the_frozen_model(tmp_path):
+    env = Env(tmp_path, jobs_changes=[lambda c: c["jobs"]["T1"].update(briefs=8)])
+    ok(env.cli("dry-run", "--job", "T1"))
+    code, out = env.cli("generate", "--job", "T1", "--budget-usd", "20")
+    assert code == 1 and "section 6" in out
+    prereg = env.paths.preregistration
+    prereg.parent.mkdir(parents=True)
+    merged = (ROOT / "docs" / "neural" / "preregistration-v2.md").read_text(encoding="utf-8")
+    prereg.write_text(merged, encoding="utf-8")  # as merged in Phase 1: section 6 still reads "to be filled"
+    assert env.cli("generate", "--job", "T1", "--budget-usd", "20")[0] == 1
+    prereg.write_text(merged.replace("to be filled", "filled", 3), encoding="utf-8")  # one field left
+    assert env.cli("generate", "--job", "T1", "--budget-usd", "20")[0] == 1
+    assert env.client.calls == [] and env.ledger().entries() == []
+    prereg.write_text(merged.replace("to be filled", "filled"), encoding="utf-8")
+    ok(env.cli("generate", "--job", "T1", "--budget-usd", "20"))
+    assert len(env.client.calls) == 8
+
+
 def test_an_unreleased_job_cannot_spend(tmp_path):
     env = Env(tmp_path)
     ok(env.cli("dry-run", "--job", "O1b"))

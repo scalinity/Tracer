@@ -553,12 +553,19 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** #79's rewrite of the round loop left out the old `focus()` call, and the game test only clicked with a mouse, so nothing caught it until Codex's review.
 - **Assumed:** focus goes to the first waiting card, as it did before #79.
 
-### Nov 13 · Neural · A second rule for TracerNet, fixed before any new data (this pull request)
+### Nov 13 · Neural · A second rule for TracerNet, fixed before any new data (#82)
 
 - **Agent:** wrote `docs/neural/preregistration-v2.md` before generating any data or training anything. The primary endpoint is the capped mean warning at 6 alerts per shift (spec §8.4's 120-minute cap), won only if the lower end of the 95% scenario-bootstrap interval of TracerNet minus every baseline is above 0 at both the 3-2-1 and equal weights. Four guardrails: R3's calibration margin unchanged, AUROC at 30 minutes at least every baseline's, false alerts per alert sent no higher than every baseline's, and R2's losses margin unchanged. The fresh set is a new job (T1) with every setting of the main run that made `test`, a new planner seed and new simulator indices; about 800 scenarios, sized so every interval's projected half-width is at most 2 minutes. Section 6, the model's commit and checksums, is left to fill at the end of Phase 2.
 - **Daniel:** asked for the rule to be written and merged before any new data or training, with the capped mean, a bootstrap that resamples whole shifts, and guardrails for calibration, AUROC and false alerts, and for `test` never to be read again.
 - **Went wrong:** nothing yet.
 - **Assumed:** the bootstrap resamples whole scenarios (each a laboratory week of 63 scored shifts), not single shifts, because shifts in one week share a knob and its disruptions; false alerts are compared per alert sent, because on validation the window rule sends 3.66 alerts per shift against TracerNet's 5.84 and a per-shift count would reward sending fewer; R2 is kept as a guardrail since it is an existing rule; the baselines are all five of spec §8.2, not only R1's three.
+
+### Nov 13 · Neural · The OpenAI cap raised by $60, and jobs O4 and T1 (this pull request)
+
+- **Agent:** the ledger refused any cap change once an account had entries, so it now accepts one other kind: a dated raise listed under the account's `raises` in `config/openai_jobs.yaml`, which lifts the cap by exactly that amount once, is recorded in the ledger's meta table and mirror, and is refused if the amount does not match, the margin moves, or the date or reason is missing. The OpenAI cap goes from $76.43 to $136.43 with one raise of $60.00 dated 2026-11-13. Two jobs take part of it: O4 ($8.00, seed 401) fills the 18 in-distribution stratum-by-archetype cells the library left below target (487 briefs, 1.25 times each shortfall plus one), and T1 ($20.00, seed 501, 950 briefs) is the fresh test set, which `generate` refuses until section 6 of the preregistration names the frozen model. The job caps sum to $102.00, so at least $10 of the account can never be spent. The planner gained a cell-pinned job type for O4; its grid is unchanged, pinned by a hash test.
+- **Daniel:** added $60 to the OpenAI budget, asked for the cap to rise by exactly that with today's date, and for $10 to stay unspent.
+- **Went wrong:** the raise's date key was first written `on`, which YAML reads as the boolean true; it is `date`. A zero raise with an unchanged cap passed the first version's checks; every listed raise is now validated on every open.
+- **Assumed:** the two `multi_site_system` cells (4 scenarios short) are left short, since they would join `test_ood`, which is spent; O4 plans 1.25 times each shortfall because O2 accepted 98.7% of briefs and round two's freeze left out about 12% of its items.
 
 ## The Claude API jobs
 

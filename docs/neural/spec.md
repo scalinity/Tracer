@@ -251,6 +251,8 @@ Worst case = the request's input bound priced at the Standard cache-write rate (
 | Contingency | $7.00 | Released only by the rule below | |
 | **Total** | **$76.43** | | |
 
+**The raise of November 13, 2026.** The account's cap rose by exactly $60, to $136.43, for the second rule of `docs/neural/preregistration-v2.md`: O4 ($8.00) fills the in-distribution coverage cells left below target, and T1 ($20.00) is the fresh test set. The job caps then sum to $102.00, so at least $10 of the account can never be spent. The ledger records the raise once, from the account's dated `raises` entry in `config/openai_jobs.yaml`.
+
 Counts are computed at run time as `floor(cap / (measured cost per accepted scenario))` per model and stratum, with the stratum shares above. The contingency is released to an O3b only after O2 and O3 are settled, and only if the round-2 slices on validation are still the worst slices after retraining. Unused money stays unspent.
 
 **Execution tier.** Flex is the default for O1 to O3: Batch prices, synchronous responses, no 24-hour window. A Flex `429 Resource Unavailable` is not billed; retry it with exponential backoff and jitter (up to 6 tries over about 20 minutes), then move the item to Batch. Batch submissions are chunked so the enqueued input tokens stay under the model's queue limit (default 2.5M, or the limit the account shows), and a chunk not finished after 6 hours is cancelled: its items whose lines say `batch_expired` go back to Flex, and the rest are settled as unknown and get their repair attempt. Standard tier is used only when a stage would otherwise miss its day, and its reservations are at Standard rates. Client timeout for Flex is 15 minutes.
