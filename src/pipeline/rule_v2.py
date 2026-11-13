@@ -136,12 +136,57 @@ def verdict(ev: dict, reported: dict | None = None, site_map: bool = False) -> d
                      "TracerNet stays a challenger; the analytic model stays primary.")}
 
 
+NAMES = {"tracernet": "TracerNet", "window_rule": "Window rule", "analytic_global": "Analytic, global refit",
+         "analytic_local": "Analytic, local refit", "quantile_local": "Quantile rule, local",
+         "quantile_global": "Quantile rule, global"}
+
+
+def markdown(v: dict, ev: dict) -> str:
+    """The verdict's tables, every number read from the verdict and its evaluation, for docs/neural/results-v2.md."""
+    f1 = lambda x: f"{x:.1f}"   # noqa: E731
+    yes = lambda h: "held" if h else "failed"   # noqa: E731
+    out = [f"**Verdict: {v['text']}** P {yes(v['held']['P'])}, G1 {yes(v['held']['G1'])}, G2 {yes(v['held']['G2'])}, "
+           f"G3 {yes(v['held']['G3'])}, G4 {yes(v['held']['G4'])}.", ""]
+    out += ["### Capped mean warning at 6 alerts per shift (minutes per late specimen)", "",
+            "| Method | 3-2-1 weights | 95% interval | Equal weights | 95% interval |", "|---|---|---|---|---|"]
+    for m in (TRACERNET,) + BASELINES:
+        cells = []
+        for w in WEIGHTINGS:
+            c = _op(ev, m, w)["capped_mean_warning_min"]
+            cells += [f1(c["point"]), f"{f1(c['low'])} to {f1(c['high'])}"]
+        out.append(f"| {NAMES[m]} | " + " | ".join(cells) + " |")
+    out += ["", "### P: TracerNet minus each baseline", "",
+            "| Weights | Baseline | Difference (min) | 95% interval | Held |", "|---|---|---|---|---|"]
+    out += [f"| {c['weighting']} | {NAMES[c['baseline']]} | {f1(c['difference_min'])} | "
+            f"{f1(c['interval_low_min'])} to {f1(c['interval_high_min'])} | {yes(c['held'])} |" for c in v["P"]["checks"]]
+    out += ["", "### G1: Brier score (lower is better)", "",
+            "| Silence (min) | TracerNet | Better analytic refit | Excess | Allowed | Held |", "|---|---|---|---|---|---|"]
+    out += [f"| {c['landmark_min']} | {c['tracernet_brier']:.4f} | {c['better_analytic_brier']:.4f} | {c['excess']:+.4f} | "
+            f"{c['allowed_excess']:.2f} | {yes(c['held'])} |" for c in v["G1"]["checks"]]
+    out += ["", "### G2: AUROC at 30 minutes of silence", "", "| Baseline | TracerNet | Baseline | Held |", "|---|---|---|---|"]
+    out += [f"| {NAMES[c['baseline']]} | {c['tracernet_auroc']:.3f} | {c['baseline_auroc']:.3f} | {yes(c['held'])} |"
+            for c in v["G2"]["checks"]]
+    out += ["", "### G3: false alerts per alert sent (false alerts per shift beside)", "",
+            "| Weights | Baseline | TracerNet per alert | Baseline per alert | TracerNet per shift | Baseline per shift | Held |",
+            "|---|---|---|---|---|---|---|"]
+    out += [f"| {c['weighting']} | {NAMES[c['baseline']]} | {c['tracernet_false_per_alert']:.3f} | "
+            f"{c['baseline_false_per_alert']:.3f} | {c['tracernet_false_per_shift']:.2f} | {c['baseline_false_per_shift']:.2f} | "
+            f"{yes(c['held'])} |" for c in v["G3"]["checks"]]
+    out += ["", "### G4: never-received specimens alerted before the window closed", "",
+            "| Weights | Baseline | TracerNet | Baseline | Deficit (points) | Interval high | Held |", "|---|---|---|---|---|---|---|"]
+    out += [f"| {c['weighting']} | {NAMES[c['baseline']]} | {c['tracernet_share_alerted']:.1%} | "
+            f"{c['baseline_share_alerted']:.1%} | {100 * c['deficit']:+.1f} | {100 * c['deficit_interval_high']:+.1f} | "
+            f"{yes(c['held'])} |" for c in v["G4"]["checks"]]
+    return "\n".join(out) + "\n"
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Apply the second decision rule to an evaluation.")
     ap.add_argument("evaluation", type=Path)
     ap.add_argument("--reported", type=Path, default=None)
     ap.add_argument("--site-map", action="store_true", help="G1 and G2 on tracernet_site, the reported probability")
     ap.add_argument("--out", type=Path, default=None)
+    ap.add_argument("--markdown", type=Path, default=None, help="also write the verdict's tables as markdown")
     args = ap.parse_args(argv)
     ev = json.loads(args.evaluation.read_text(encoding="utf-8"))
     reported = json.loads(args.reported.read_text(encoding="utf-8")) if args.reported else None
@@ -149,6 +194,8 @@ def main(argv: list[str] | None = None) -> int:
     text = json.dumps(v, indent=1, sort_keys=True) + "\n"
     if args.out:
         args.out.write_text(text, encoding="utf-8")
+    if args.markdown:
+        args.markdown.write_text(markdown(v, ev), encoding="utf-8")
     print(f"{ev.get('set')}: " + ", ".join(f"{k} {'held' if h else 'failed'}" for k, h in v["held"].items())
           + f"; {v['text']}")
     return 0

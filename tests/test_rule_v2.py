@@ -75,3 +75,12 @@ def test_the_site_mapped_method_can_sit_beside_tracernet():
     beside = sitecal.tracernet_sitecal("x/*.parquet", name=sitecal.SITE_METHOD)
     assert beside.name == "tracernet_site" == R.SITE_METHOD and beside.probabilistic
     assert sitecal.tracernet_sitecal("x/*.parquet").name == "tracernet"
+
+
+def test_the_markdown_tables_read_every_number_from_the_verdict():
+    v = R.verdict(VAL)
+    md = R.markdown(v, VAL)
+    assert md.startswith("**Verdict: TracerNet becomes Tracer's primary risk model.**")
+    assert "| TracerNet | 21.5 | 20.2 to 22.8 | 11.5 | 10.3 to 12.7 |" in md
+    assert "| 3-2-1 | Analytic, local refit | 9.0 | 8.4 to 9.6 | held |" in md
+    assert md.count("| held |") == 10 + 2 + 5 + 10 + 6
