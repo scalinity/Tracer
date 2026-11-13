@@ -1566,3 +1566,20 @@ def test_evaluate_on_test_ood_reports_the_ood_feature_from_the_same_look(ood_sto
         ood_store["store"], ne.baselines(), subsets={ne.OOD_FEATURE: ood_store["feature"]})["configuration_sha256"]
     assert [e["status"] for e in logged(files)] == ["first"]
     assert f"{ne.OOD_FEATURE}: 2 of the 3 test_ood scenarios, from the same look" in capsys.readouterr().out
+
+
+def test_the_site_mapped_probability_sits_beside_tracernet_without_moving_its_alerts(v2_store):
+    """preregistration-v2 §4: one evaluation scores TracerNet's alerts on its own ranking and the reported (site-mapped)
+    probability's calibration and discrimination, as the method tracernet_site."""
+    from src.neural.sitecal import SITE_METHOD, SiteCalibrated
+    from src.pipeline import rule_v2
+
+    own = ne.RiskMethod(ne.TRACERNET, wobbly_risk, monotone=False, probabilistic=True)
+    alone = ne.evaluate_split("val", ne.baselines() + [own], store_dir=v2_store, workers=1, write=False)
+    both = ne.evaluate_split("val", ne.baselines() + [own, SiteCalibrated(wobbly_risk, name=SITE_METHOD)],
+                             store_dir=v2_store, workers=1, write=False)
+    assert both["operating_points"]["6/shift"]["tracernet"] == alone["operating_points"]["6/shift"]["tracernet"]
+    assert SITE_METHOD in both["calibration"] and SITE_METHOD in both["discrimination"]
+    assert both["decision_rule"]["R2"] == alone["decision_rule"]["R2"]
+    reported = rule_v2.site_reported(both)
+    assert reported["calibration"]["30"]["brier"] == both["calibration"][SITE_METHOD]["30"]["brier"]

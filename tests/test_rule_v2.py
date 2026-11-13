@@ -57,3 +57,21 @@ def test_a_reported_probability_replaces_the_calibrated_output_for_g1_and_g2():
                 "discrimination": {"landmark_30": {"auroc": 0.5}}}
     v = R.verdict(VAL, reported)
     assert v["held"]["G1"] is False and v["held"]["G2"] is False and v["probability_scored"] == "reported (site map)"
+
+
+def test_the_site_map_reads_the_same_evaluations_tracernet_site():
+    ev = copy.deepcopy(VAL)
+    with pytest.raises(ValueError, match="--site-map"):
+        R.verdict(ev, site_map=True)
+    ev["calibration"]["tracernet_site"] = {"30": {"brier": 0.5}, "60": {"brier": 0.5}}
+    ev["discrimination"]["tracernet_site"] = {"landmark_30": {"auroc": 0.99}}
+    v = R.verdict(ev, site_map=True)
+    assert v["held"]["G1"] is False and v["held"]["G2"] is True and v["probability_scored"] == "reported (site map)"
+    assert R.verdict(ev)["held"]["G1"] is True     # without the flag, TracerNet's own calibrated output
+
+
+def test_the_site_mapped_method_can_sit_beside_tracernet():
+    from src.neural import sitecal
+    beside = sitecal.tracernet_sitecal("x/*.parquet", name=sitecal.SITE_METHOD)
+    assert beside.name == "tracernet_site" == R.SITE_METHOD and beside.probabilistic
+    assert sitecal.tracernet_sitecal("x/*.parquet").name == "tracernet"

@@ -862,7 +862,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--artifact", default=None, help="TracerNet artifact: scores the set (after the lock on a test set)")
     p.add_argument("--matched", action="store_true", help="also tune knobs to matched alert volume (R4)")
     p.add_argument("--relock-reason", default=None)
-    p.add_argument("--train-store", default=None, help="for control_v1world: the v2 store giving global fits")
+    p.add_argument("--train-store", default=None, help="for control_v1world and test_fresh: the v2 store giving global "
+                                                       "fits")
+    p.add_argument("--site-map", action="store_true", help="also score TracerNet's site-mapped probability, as "
+                                                           "tracernet_site (preregistration-v2 §4)")
     p = sub.add_parser("train", help="train a rung, or search on rung B with --hpo (spec §7.7, §7.8)")
     p.add_argument("--rung", choices=("L", "A", "B", "C"))
     p.add_argument("--seeds", default="0", help="comma-separated, for example 0,1,2")
@@ -1030,7 +1033,7 @@ def main(argv: list[str] | None = None, *, paths: runner.Paths | None = None, se
                                                 workers=args.workers, tracernet=tracernet,
                                                 artifact_dir=opt(args.artifact), matched=args.matched,
                                                 relock_reason=args.relock_reason,
-                                                train_store_dir=opt(args.train_store))
+                                                train_store_dir=opt(args.train_store), site_map=args.site_map)
         if args.command == "train":
             opt = (lambda v: Path(v) if v else None)
             if args.hpo:

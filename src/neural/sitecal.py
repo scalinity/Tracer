@@ -103,8 +103,8 @@ def history_xy(specs, series) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
 class SiteCalibrated(ne.RiskMethod):
     """TracerNet's risk table, mapped per tuning group by fit_map on that group's history."""
 
-    def __init__(self, series, prior_ticks: float = PRIOR_TICKS, form: str = FORM):
-        super().__init__(ne.TRACERNET, series, monotone=False, probabilistic=True,
+    def __init__(self, series, prior_ticks: float = PRIOR_TICKS, form: str = FORM, name: str = ne.TRACERNET):
+        super().__init__(name, series, monotone=False, probabilistic=True,
                          fitted_on="train (TracerNet artifact), recalibrated on each tuning group's history")
         self.prior_ticks, self.form = prior_ticks, form
 
@@ -123,8 +123,15 @@ class SiteCalibrated(ne.RiskMethod):
         return apply_map(raw, state, np.asarray(flat.t, float))
 
 
-def tracernet_sitecal(risk_table, value: str = "p_miss", prior_ticks: float = PRIOR_TICKS, form: str = FORM):
-    return SiteCalibrated(ne.FrameRisk(risk_table, value), prior_ticks, form)
+SITE_METHOD = "tracernet_site"   # the site-mapped probability beside TracerNet's own, in one evaluation
+
+
+def tracernet_sitecal(risk_table, value: str = "p_miss", prior_ticks: float = PRIOR_TICKS, form: str = FORM,
+                      name: str = ne.TRACERNET):
+    """TracerNet with the site map. Named "tracernet" it replaces TracerNet's own scores; named SITE_METHOD it sits
+    beside them, so one evaluation scores alerts on TracerNet's own ranking and calibration on the mapped probability
+    (docs/neural/preregistration-v2.md §4, G1 and G2)."""
+    return SiteCalibrated(ne.FrameRisk(risk_table, value), prior_ticks, form, name=name)
 
 
 def maps(result: Mapping) -> list:

@@ -2674,7 +2674,7 @@ def lock_record(store_dir: Path, methods: Sequence[Method], *, artifact_dir: Pat
 def command_evaluate(split: str, *, store_dir: Path | None = None, out_dir: Path | None = None,
                      workers: int | None = None, tracernet: Path | None = None, artifact_dir: Path | None = None,
                      matched: bool = False, relock_reason: str | None = None,
-                     train_store_dir: Path | None = None) -> int:
+                     train_store_dir: Path | None = None, site_map: bool = False) -> int:
     """`evaluate --split SPLIT`: every baseline (and TracerNet, from its RiskTable parquet `tracernet`, or scored
     here by the artifact) on the set, written to <out_dir>/evaluation.json, with the headline table printed. On a
     test set the lock is taken and the run recorded first; only then does the artifact score the set, and the
@@ -2689,6 +2689,11 @@ def command_evaluate(split: str, *, store_dir: Path | None = None, out_dir: Path
     if score_artifact:
         tracernet = RISK_DIR / split / "*.parquet"
     methods = baselines() + ([tracernet_method(tracernet)] if tracernet is not None else [])
+    if site_map:        # the probability TracerNet reports, beside its own scores, in the same evaluation and lock
+        if tracernet is None:
+            raise ValueError("the site map needs TracerNet's risk table")
+        from src.neural.sitecal import SITE_METHOD, tracernet_sitecal
+        methods.append(tracernet_sitecal(tracernet, name=SITE_METHOD))
     store_path = Path(store_dir) if store_dir is not None else store.STORE_V2_DIR
     feature = ood_feature_scenarios(store_path) if split == "test_ood" else []
     subsets = {OOD_FEATURE: feature} if feature else None

@@ -689,6 +689,7 @@ The final model is 3 seeds of the chosen rung with the searched configuration, t
 | `test_ood` | `multi_site_system` and `scanner_downtime` scenarios | 1 to 3 | replicate 0 | Generalization, reported beside the claim |
 | `legacy_v1` | v1 runs 24 to 29 | (the runs) | v1 runs 0 to 23 | Cross-generator check, reported beside the claim |
 | `control_v1world` | 20 replicates of the v1-world scenario | all | its own replicate 0 | Negative control (§8.8, A6) |
+| `test_fresh` | Job T1's fresh scenarios (`datasets/scenarios-v2-fresh.*`), placed outside every library family | 1 to 3 | replicate 0 | The second rule's one look (`docs/neural/preregistration-v2.md`); global fits from the training store |
 
 ### 8.2 Methods
 
@@ -749,6 +750,7 @@ Reported beside the claim, never folded into it: `test_ood`, `legacy_v1`, budget
 - The first evaluation of `test` or `test_ood` writes `results/neural/test_lock.json`: the artifact, calibration, configuration, split manifest and store hashes, the git blob SHAs of `neural_eval.py` and `evaluate.py`, the decision-model configuration hash if X2 runs on test, and the time.
 - A later test evaluation runs only if every hash matches. Otherwise it refuses unless given `--relock --reason "..."`, which appends to `results/neural/test_runs.jsonl`. The report lists every test run and its reason.
 - Rung selection, calibration, prompt revisions and weak-spot analysis use validation only. Ablations run after the lock; their test numbers are descriptive and never change the headline model.
+- `test_fresh` has its own lock and run log (`results/neural/test_fresh/`). It takes no relock, and no look once its evaluation is written; a look that crashed may resume on unchanged inputs. `src/pipeline/rule_v2.py` applies the second rule to that evaluation.
 
 ### 8.8 Ablations
 

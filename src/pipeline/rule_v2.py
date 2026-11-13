@@ -14,9 +14,9 @@ look's own record:
 - G4 (R2): never-received specimens alerted before the window closes not lower than the window rule's or either
   analytic refit's by more than 2 points (upper end of the 95% interval of the deficit), at both weightings.
 
-G1 and G2 score the probability TracerNet reports. When that is its site-mapped probability, `reported` gives the
-calibration and discrimination of that probability on the same look ({"calibration": {"30": {"brier": ...}, ...},
-"discrimination": {"landmark_30": {"auroc": ...}}}); otherwise the evaluation's own TracerNet entries are used.
+G1 and G2 score the probability TracerNet reports. When that is its site-mapped probability (`site_map`), the
+evaluation must hold it as the method `tracernet_site` (evaluate --site-map), scored in the same look; otherwise the
+evaluation's own TracerNet entries are used. `reported` may also give those blocks directly.
 TracerNet becomes the primary model only if P and G1 to G4 all hold.
 """
 from __future__ import annotations
@@ -113,7 +113,19 @@ def g4(ev: dict) -> dict:
     return {"held": all(c["held"] for c in checks), "checks": checks}
 
 
-def verdict(ev: dict, reported: dict | None = None) -> dict:
+SITE_METHOD = "tracernet_site"
+
+
+def site_reported(ev: dict) -> dict:
+    """The site-mapped probability's calibration and discrimination, from the same evaluation."""
+    if SITE_METHOD not in ev.get("calibration", {}) or SITE_METHOD not in ev.get("discrimination", {}):
+        raise ValueError(f"the evaluation holds no {SITE_METHOD}: run evaluate with --site-map")
+    return {"calibration": ev["calibration"][SITE_METHOD], "discrimination": ev["discrimination"][SITE_METHOD]}
+
+
+def verdict(ev: dict, reported: dict | None = None, site_map: bool = False) -> dict:
+    if site_map:
+        reported = site_reported(ev)
     parts = {"P": primary(ev), "G1": g1(ev, reported), "G2": g2(ev, reported), "G3": g3(ev), "G4": g4(ev)}
     passed = all(p["held"] for p in parts.values())
     return {"set": ev.get("set"), "rule": "docs/neural/preregistration-v2.md", "budget": BUDGET,
@@ -128,11 +140,12 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Apply the second decision rule to an evaluation.")
     ap.add_argument("evaluation", type=Path)
     ap.add_argument("--reported", type=Path, default=None)
+    ap.add_argument("--site-map", action="store_true", help="G1 and G2 on tracernet_site, the reported probability")
     ap.add_argument("--out", type=Path, default=None)
     args = ap.parse_args(argv)
     ev = json.loads(args.evaluation.read_text(encoding="utf-8"))
     reported = json.loads(args.reported.read_text(encoding="utf-8")) if args.reported else None
-    v = verdict(ev, reported)
+    v = verdict(ev, reported, site_map=args.site_map)
     text = json.dumps(v, indent=1, sort_keys=True) + "\n"
     if args.out:
         args.out.write_text(text, encoding="utf-8")
