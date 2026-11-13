@@ -602,12 +602,19 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** the frozen artifact's manifest said `development: true` and its card called it a smoke check, because the check judged a store by its path and Phase 2's store sits outside `data/store-v2`; the check now reads the store's manifest, and the flag and card were rewritten with a test, the weights and calibration unchanged. The first explanation job ran out of memory at 120 GB with 31 workers (rerun with 12 workers and 300 GB), the validation evaluation needed 400 GB rather than 160 GB, and with the class's GPU allocation full, C2 and C2x5 were calibrated on CPU in about 1.5 hours instead of 6 minutes.
 - **Assumed:** "fewer changes from the first artifact" counts the ranking term as a change, so C1 is simpler than C2; the corrected label needed no re-scoring, because predictions read only the unchanged files.
 
-### Nov 13 · Neural · The preregistration names the frozen model (this pull request)
+### Nov 13 · Neural · The preregistration names the frozen model (#89)
 
 - **Agent:** filled the preregistration's section 6 with #88's merge commit, the artifact's manifest, weights and calibration checksums, the site map's validation effect, and the training store, library and split map. Until this merges, the fresh test set job (T1) refuses to run.
 - **Daniel:** asked for the model to be named before any fresh data exists.
 - **Went wrong:** the store's splits checksum differs from the splits file's, which looked like a mismatch; the store hashes the sorted scenario-to-split map inside the file, and that map gives the store's value exactly, so both are named.
 - **Assumed:** a second pull request is the simplest way to record the freezing commit, since a commit cannot name its own hash and the repository squash-merges.
+
+### Nov 13 · Neural · The fresh test set, generated and frozen (this pull request)
+
+- **Agent:** re-checked the OpenAI prices on the pricing page and the Flex guide (unchanged), dry-ran T1, then generated it through the ledger with O2's model, tier, prompt and validation: 950 briefs, 1,112 requests with repairs, 940 accepted and 10 dropped, $6.81 against the $6.83 the preregistration projected from O2's cost per brief. `freeze-fresh` left out 162 scenarios within 1.5 δ of the library and 2 near duplicates, freezing 776 (`datasets/scenarios-v2-fresh.*`). `docs/neural/hpg/fresh-v2.sh` simulates and stores them and runs the one look on the default partition. The OpenAI account stands at $73.22 spent of its $136.43 cap.
+- **Daniel:** asked for the fresh set's cost to be estimated before generating it, every spend logged, and at least $10 kept unspent.
+- **Went wrong:** the dry run's expected cost ($22.17) estimates input from characters and roughly doubled the measured input; the measured cost per brief of O4 ($0.0076) gave the right figure.
+- **Assumed:** none beyond the preregistration.
 
 ## The Claude API jobs
 
