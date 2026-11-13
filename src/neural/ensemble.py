@@ -197,11 +197,12 @@ def miss_log_loss_of(logits: torch.Tensor, window: torch.Tensor, breach, specime
 
 def build(config: dict, run_dirs: list[Path], *, store_dir: Path, out_dir: Path, selection: dict | None = None,
           table: F.Table | None = None, workers: int | None = None, cache_root: Path = S.CACHE_ROOT,
-          device: str = "auto", log: Callable = print) -> dict:
+          device: str = "auto", version: str | None = None, log: Callable = print) -> dict:
     """Average the members, fit the calibration on validation, and write the artifact. Returns the manifest.
+    `version` names the artifact (default: the configuration's ensemble.version, tracernet-v1).
     The validation logits are computed on `device` (auto: MPS or CUDA when available, which is far faster for
     rungs B and C than CPU); the artifact itself is a CPU artifact."""
-    ecfg = config["ensemble"]
+    ecfg = dict(config["ensemble"]) | ({"version": version} if version else {})
     store_dir, out_dir = Path(store_dir), Path(out_dir)
     members, schema, results, configs = load_members([Path(d) for d in run_dirs])
     rung = members[0].rung
@@ -395,7 +396,7 @@ def select_command(*, store_dir: Path | None = None, runs: list[Path] | None = N
 def calibrate_command(*, store_dir: Path | None = None, rung: str | None = None, runs: list[Path] | None = None,
                       runs_csv: Path | None = None, runs_dir: Path = T.RUNS_DIR, selection_path: Path | None = None,
                       out_dir: Path | None = None, workers: int | None = None, config_path: Path = T.CONFIG_PATH,
-                      out=print) -> int:
+                      version: str | None = None, out=print) -> int:
     """`calibrate`: the ensemble of the chosen rung's seeds (config ensemble.seeds), its calibration and the artifact.
     The rung comes from `rung`, else from selection.json; the runs are given or the latest finished per seed."""
     config = T.load_config(config_path)
@@ -415,7 +416,8 @@ def calibrate_command(*, store_dir: Path | None = None, rung: str | None = None,
             out(f"error: rung {rung} has no finished run for seeds {missing}; train them with --seeds")
             return 1
         runs = [found[(rung, s)] for s in seeds]
-    build(config, list(runs), store_dir=store_dir, out_dir=out_dir, selection=selection, workers=workers, log=out)
+    build(config, list(runs), store_dir=store_dir, out_dir=out_dir, selection=selection, workers=workers,
+          version=version, log=out)
     return 0
 
 
@@ -431,11 +433,14 @@ def main(argv: list[str] | None = None) -> int:
     sub.choices["calibrate"].add_argument("--rung", default=None)
     sub.choices["calibrate"].add_argument("--out", type=Path, default=None)
     sub.choices["calibrate"].add_argument("--workers", type=int, default=None)
+    sub.choices["calibrate"].add_argument("--version", default=None,
+                                          help="the artifact's name, for example tracernet-v2 (default: the config's)")
     args = ap.parse_args(argv)
     if args.command == "select":
         return select_command(store_dir=args.store, runs=args.run, runs_csv=args.runs_csv, selection_path=args.selection)
     return calibrate_command(store_dir=args.store, rung=args.rung, runs=args.run, runs_csv=args.runs_csv,
-                             selection_path=args.selection, out_dir=args.out, workers=args.workers)
+                             selection_path=args.selection, out_dir=args.out, workers=args.workers,
+                             version=args.version)
 
 
 if __name__ == "__main__":

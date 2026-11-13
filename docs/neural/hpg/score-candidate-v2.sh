@@ -18,7 +18,8 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 ART=$HPG/v2/artifacts/$NAME; RISK=$HPG/v2/risk/$NAME; OUT=$HPG/v2/eval/$NAME
 cal=$(sbatch --parsable --account=${GPU_ACCOUNT:-cai6734} --mem=60G --time=2:00:00 --job-name=v2-cal-$NAME \
   ${DEPENDENCY:+--dependency=$DEPENDENCY} \
-  --export=ALL,CODE=$CODE,CMD="-m src.neural.ensemble calibrate --store $TRAIN$RUNS --out $ART" "$HERE/train-v2.sbatch")
+  --export=ALL,CODE=$CODE,CMD="-m src.neural.ensemble calibrate --store $TRAIN$RUNS --out $ART --version tracernet-v2" \
+  "$HERE/train-v2.sbatch")
 echo "calibrate $cal"
 parts=$(( (1091 + 49) / 50 )); per=$(( (parts + SHARDS - 1) / SHARDS )); deps=""
 for ((k = 0; k < SHARDS; k++)); do
