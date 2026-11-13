@@ -1,8 +1,8 @@
 #!/bin/bash
 # The Phase 2 candidates of docs/neural/phase2-log.md, each one command (docs/neural/preregistration-v2.md §7).
 # Every candidate trains rung C on the coverage-fill store with one fixed budget: 20 epochs of 20 million samples on
-# a cosine schedule (the spec's early stopping, 4 epochs without improvement, still applies), so no node's speed can
-# change a schedule. Run from a checkout of this repository on HiPerGator:
+# a cosine schedule, run to the end (patience 20), keeping its best validation epoch, so no node's speed and no early
+# stop can change how much a candidate trains. Run from a checkout of this repository on HiPerGator:
 #
 #   bash docs/neural/hpg/candidates-v2.sh C2 0,1,2 cai6734
 #
@@ -10,7 +10,7 @@
 set -euo pipefail
 HPG=${HPG:-/blue/cai6734/daniel.escalante/tracer}
 STORE=${STORE:-$HPG/store-v2-o4}
-BUDGET="--set epoch_samples=20000000 --set max_epochs=20 --set learning_rate=2.0e-3"
+BUDGET="--set epoch_samples=20000000 --set max_epochs=20 --set patience=20 --set learning_rate=2.0e-3"
 case "$1" in
   C1) EXTRA="" ;;                      # the learning rate and the fixed budget alone
   C2) EXTRA="--set rho=1.0" ;;         # plus the shift ranking term

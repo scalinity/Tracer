@@ -4,8 +4,8 @@
 # docs/neural/hpg/candidates-v2.sh, for example `bash docs/neural/hpg/candidates-v2.sh C2 0,1,2`, which runs
 #
 #   sbatch --account=cai6734 --mem=60G --job-name=v2-C2-s0 --export=ALL,ARGS="train --rung C --seeds 0 \
-#     --store $HPG/store-v2-o4 --set epoch_samples=20000000 --set max_epochs=20 --set learning_rate=2.0e-3 \
-#     --set rho=1.0" docs/neural/hpg/train-v2.sbatch
+#     --store $HPG/store-v2-o4 --set epoch_samples=20000000 --set max_epochs=20 --set patience=20 \
+#     --set learning_rate=2.0e-3 --set rho=1.0" docs/neural/hpg/train-v2.sbatch
 #
 # A run that hits the time limit resumes exactly from its last epoch: the same ARGS plus --run-id RUN --resume.
 # CMD instead of ARGS runs any module on the GPU, for example a candidate's ensemble and calibration:
