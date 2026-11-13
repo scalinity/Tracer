@@ -57,3 +57,40 @@ def test_a_later_freeze_skips_the_first_freezes_left_out_items_and_refuses_any_o
     manifest = {"near_duplicates": {"left_out": 21}, "left_out_other": {"plausibility": 2}}
     assert freeze.first_round_left_out(manifest) == 23
     assert freeze.first_round_left_out(manifest | {"first_round_left_out": 21}) == 21
+
+
+def test_a_later_freeze_takes_coverage_fill_items_too():
+    known = {f"O2-{k}" for k in range(3)}
+    items = [{"item_id": f"O2-{k}", "job": "O2"} for k in range(4)] + [{"item_id": "O3-0", "job": "O3"},
+                                                                         {"item_id": "O4-0", "job": "O4"}]
+    assert [i["item_id"] for i in freeze.round2_items(items, known, 1)] == ["O3-0", "O4-0"]
+
+
+def test_fill_jobs_are_the_coverage_fill_and_keep_validation_unchanged():
+    """O4's new families go to train only (preregistration-v2 §7): the source says so, beside round two's 85/15."""
+    import inspect
+    assert freeze.FILL_JOBS == ("O4", "O4b") and set(freeze.LATER_JOBS) == {"O3", "O3b", "O4", "O4b"}
+    src = inspect.getsource(freeze.freeze)
+    assert 'if all(m["job"] in FILL_JOBS for m in members):' in src
+    assert '(fill_only and split_of_family[fid] == "val")' in src
+    assert 'split_of_family[fid] = "train"' in src
+
+
+def test_a_later_freeze_keeps_out_what_an_earlier_freeze_of_the_same_job_left_out():
+    """Freezing O4 must not reconsider O3 items the round-two freeze left out."""
+    known = {"O2-0", "O3-0"}
+    items = [{"item_id": "O2-0", "job": "O2"}, {"item_id": "O3-0", "job": "O3"}, {"item_id": "O3-1", "job": "O3"},
+             {"item_id": "O4-0", "job": "O4"}]
+    got = freeze.round2_items(items, known, 0, frozen_jobs={"O2", "O3"})
+    assert [i["item_id"] for i in got] == ["O4-0"]
+
+
+def test_every_earlier_freezes_left_out_counts_are_kept():
+    """Codex on #84: a manifest that already has a history must also add its own freeze's counts to it."""
+    first = {"jobs": {"O1": {}, "O2": {}, "O3": {}}, "near_duplicates": {"left_out": 22},
+             "left_out_other": {"would bridge families of different splits": 253}}
+    second = {"jobs": {"O1": {}, "O4": {}}, "near_duplicates": {"left_out": 8},
+              "left_out_other": {"would join a val family": 8}, "earlier_freezes": freeze.earlier_freezes(first)}
+    history = freeze.earlier_freezes(second)
+    assert [h["near_duplicates_left_out"] for h in history] == [22, 8]
+    assert history[0]["jobs"] == ["O1", "O2", "O3"] and history[1]["left_out_other"] == {"would join a val family": 8}

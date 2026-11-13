@@ -15,7 +15,11 @@ family: every family holding a `multi_site_system` scenario or a `scanner_downti
 (the pre-registered out-of-distribution set); the rest are ranked within each (archetype, stratum) cell by a seeded
 hash of their id and split 70% train, 15% validation, 15% test. A later freeze (after round 2) keeps every existing
 scenario, id, family and split; its new families go 85% to train and 15% to validation, never to a test set, and a
-new scenario that would join a test family or bridge two families of different splits is left out.
+new scenario that would join a test family or bridge two families of different splits is left out. The coverage fill
+(O4, docs/neural/preregistration-v2.md §7) freezes the same way, except that a new family made only of its
+scenarios goes to train and a fill scenario that would join a validation family is left out, so validation stays the
+set the first artifact was judged on; and its briefs add no coverage target, so coverage is still measured against
+the design's planned cells (O1 to O3).
 
 Writes `datasets/scenarios-v2.jsonl.gz` (one sorted-key JSON line per scenario, gzip with mtime 0),
 `datasets/scenarios-v2.manifest.json` and `datasets/scenarios-v2.splits.json`. Every value in the library is an
@@ -48,6 +52,8 @@ SHARES = (("train", 0.70), ("val", 0.15), ("test", 0.15))
 ROUND2_TRAIN_SHARE = 0.85
 FIRST_FREEZE_JOBS = ("O1", "O2")
 ROUND2_JOBS = ("O3", "O3b")
+FILL_JOBS = ("O4", "O4b")          # coverage fill: train only, never a validation family; briefs add no target
+LATER_JOBS = ROUND2_JOBS + FILL_JOBS
 RANDOM_REFERENCE_N = 2000
 VENDI_SAMPLE = 2000
 TIMING_SECTIONS = ("units", "tube_system", "couriers", "receiving", "processing", "disruptions")
@@ -154,15 +160,18 @@ def first_round_left_out(manifest: dict) -> int:
     return int(manifest["near_duplicates"]["left_out"]) + sum(manifest.get("left_out_other", {}).values())
 
 
-def round2_items(items: list[dict], known: set, left_out_before: int) -> list[dict]:
-    """A later freeze adds round-2 items only. Accepted first-round items missing from the library are the ones the
-    first freeze left out, and their count must match its manifest; any other first-round item refuses the freeze."""
-    first = [i for i in items if i["item_id"] not in known and i["job"] not in ROUND2_JOBS]
+def round2_items(items: list[dict], known: set, left_out_before: int, frozen_jobs=()) -> list[dict]:
+    """A later freeze adds round-2 and coverage-fill items only, from jobs it freezes for the first time. Accepted
+    first-round items missing from the library are the ones the first freeze left out, and their count must match its
+    manifest; any other first-round item refuses the freeze. Items of a later job already in the library
+    (`frozen_jobs`) that are missing from it were left out by that job's own freeze and stay out."""
+    first = [i for i in items if i["item_id"] not in known and i["job"] not in LATER_JOBS]
     if len(first) != left_out_before:
-        raise runner.JobError(f"a later freeze may only add round-2 (O3, O3b) scenarios: {len(first)} accepted "
-                              f"first-round items are missing from the library, but the first freeze left out "
-                              f"{left_out_before}")
-    return [i for i in items if i["item_id"] not in known and i["job"] in ROUND2_JOBS]
+        raise runner.JobError(f"a later freeze may only add round-2 (O3, O3b) or coverage-fill (O4) scenarios: "
+                              f"{len(first)} accepted first-round items are missing from the library, but the first "
+                              f"freeze left out {left_out_before}")
+    return [i for i in items if i["item_id"] not in known and i["job"] in LATER_JOBS
+            and i["job"] not in set(frozen_jobs)]
 
 
 def freeze(jobs: tuple[str, ...], *, paths: runner.Paths | None = None, workers: int = 16,
@@ -178,7 +187,7 @@ def freeze(jobs: tuple[str, ...], *, paths: runner.Paths | None = None, workers:
     first_left_out = None
     if round2:
         first_left_out = first_round_left_out(json.loads(manifest_path.read_text(encoding="utf-8")))
-        new = round2_items(items, known, first_left_out)
+        new = round2_items(items, known, first_left_out, frozen_jobs={r["meta"]["job"] for r in existing})
     else:
         new = [i for i in items if i["item_id"] not in known]
     out(f"freeze: {len(existing)} in the library, {len(new)} new accepted items from {', '.join(jobs)}")
@@ -226,7 +235,8 @@ def freeze(jobs: tuple[str, ...], *, paths: runner.Paths | None = None, workers:
             continue
         if old_fams:
             fid = sorted(old_fams)[0]
-            if split_of_family[fid] not in ("train", "val"):
+            fill_only = all(pool[k]["job"] in FILL_JOBS for k in members if pool[k]["item_id"] not in fam_of_old)
+            if split_of_family[fid] not in ("train", "val") or (fill_only and split_of_family[fid] == "val"):
                 for k in members:
                     if pool[k]["item_id"] not in fam_of_old:
                         left_out[pool[k]["item_id"]] = f"would join a {split_of_family[fid]} family"
@@ -256,11 +266,14 @@ def freeze(jobs: tuple[str, ...], *, paths: runner.Paths | None = None, workers:
         rec = {"meta": meta, "scenario": p["scenario"], "source": "assumed"}
         records.append(rec)
         new_members.setdefault(family_of[k], []).append({"scenario": p["scenario"], "brief": p["brief"],
-                                                         "scenario_id": meta["scenario_id"]})
+                                                         "scenario_id": meta["scenario_id"], "job": p["job"]})
     if round2:
         for fid, members in new_members.items():
             if fid not in split_of_family:
-                split_of_family[fid] = "train" if unit_hash(fid) < ROUND2_TRAIN_SHARE else "val"
+                if all(m["job"] in FILL_JOBS for m in members):
+                    split_of_family[fid] = "train"
+                else:
+                    split_of_family[fid] = "train" if unit_hash(fid) < ROUND2_TRAIN_SHARE else "val"
     else:
         split_of_family.update(assign_first_splits(new_members))
     if next_index > 9000:
@@ -280,11 +293,21 @@ def freeze(jobs: tuple[str, ...], *, paths: runner.Paths | None = None, workers:
     manifest = build_manifest(records, sha, len(data), counts, jobs, paths, loaded, ref, x, kp, splits,
                               duplicates, left_out, random_n, workers,
                               first_round_left_out=first_left_out if round2 else len(duplicates) + len(left_out))
+    if round2:  # each freeze reports what it left out; keep what every earlier freeze reported beside it
+        manifest["earlier_freezes"] = earlier_freezes(json.loads(manifest_path.read_text(encoding="utf-8")))
     manifest_path.write_text(json.dumps(manifest, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     out(f"froze {len(records)} scenarios ({len(duplicates)} near duplicates and {len(left_out)} others left out); "
         f"splits {splits['counts']}; {len(split_of_family)} families, largest "
         f"{max(Counter(r['meta']['family_id'] for r in records).values())}; delta {delta:.3f}")
     return manifest
+
+
+def earlier_freezes(before: dict) -> list[dict]:
+    """The left-out counts of every freeze before this one: the previous manifest's own history, then the previous
+    manifest's own counts appended, so a run of freezes never loses one."""
+    return list(before.get("earlier_freezes") or []) + [{
+        "jobs": sorted(before.get("jobs") or {}), "near_duplicates_left_out": before["near_duplicates"]["left_out"],
+        "left_out_other": before.get("left_out_other")}]
 
 
 def build_manifest(records, sha, size, counts, jobs, paths, loaded, ref, x, kp, splits, duplicates, left_out,
@@ -299,11 +322,12 @@ def build_manifest(records, sha, size, counts, jobs, paths, loaded, ref, x, kp, 
             spent[e["job"]] += e["micros"] / 1e6 if e.get("micros") is not None else float(e["usd"])
     metas = [r["meta"] for r in records]
     strata = [m["stratum"] for m in metas]
-    planned = []
+    planned, fill = [], []
     for job in jobs:
         brief_path = paths.briefs(job)
         if brief_path.exists():
-            planned += [json.loads(line) for line in brief_path.read_text().splitlines() if line]
+            (fill if job in FILL_JOBS else planned).extend(
+                json.loads(line) for line in brief_path.read_text().splitlines() if line)
     random_sc = [random_baseline.random_scenario(seed) for seed in range(random_n)]
     random_x = ref.standardize(np.array([signature.signature(s, k, ref) for s, k in
                                          zip(random_sc, kpis_parallel(random_sc, workers))])) if random_n else None
@@ -328,7 +352,7 @@ def build_manifest(records, sha, size, counts, jobs, paths, loaded, ref, x, kp, 
                             "delta_fitted_on": "the accepted library (half its median nearest-neighbor distance)"},
         "left_out_other": dict(Counter(v.split(":")[0] for v in left_out.values())),
         "first_round_left_out": first_round_left_out,
-        "coverage": signature.coverage([{"brief_id": r["meta"]["brief_id"]} for r in records], planned)
+        "coverage": signature.coverage([{"brief_id": r["meta"]["brief_id"]} for r in records], planned, fill)
         if planned else None,
         "dispersion": {"library": signature.dispersion(sample(x), None),
                        "library_by_stratum": {s: signature.dispersion(sample(x[[k for k, t in enumerate(strata)
@@ -337,7 +361,8 @@ def build_manifest(records, sha, size, counts, jobs, paths, loaded, ref, x, kp, 
                        "code_random": None if random_x is None else signature.dispersion(sample(random_x), None),
                        "code_random_n": random_n},
         "ledger": {"spent_usd_by_job": {j: round(v, 6) for j, v in sorted(spent.items())},
-                   "spent_usd_total": round(sum(spent.values()), 6), "cap_usd": 76.43},
+                   "spent_usd_total": round(sum(spent.values()), 6),
+                   "cap_usd": float(jobs_cfg["accounts"]["openai"]["cap_usd"])},
         "prices_verified_at": table.get("verified_at"),
         "splits": {"file": SPLITS_PATH.name, "counts": splits["counts"], "family_counts": splits["family_counts"],
                    "families": len(splits["families"])},

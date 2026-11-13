@@ -279,3 +279,18 @@ def test_median_transit_prefers_the_explicit_key_then_averages_routes():
     assert signature.median_transit({"median_transit_min": 33, "median_tube_min": 10}) == 33
     assert signature.median_transit({"median_tube_min": 10, "median_courier_min": 30, "median_walk_in_min": 0}) == 20
     assert signature.median_transit({}) == 0
+
+
+def test_a_fill_jobs_scenarios_count_toward_cells_but_its_briefs_add_no_target():
+    """The coverage fill (O4) is measured against the design's targets: its briefs only say which cell a filled
+    scenario belongs to."""
+    cell = {"stratum": "normal", "archetype": "cancer_center", "size_band": "small", "transport_mix": "mixed",
+            "staffing": "full_24_7", "failure_focus": "surge", "edge_tags": []}
+    planned = [{"brief_id": f"O2-{i}", **cell} for i in range(10)]
+    fill = [{"brief_id": f"O4-{i}", **cell} for i in range(4)]
+    accepted = [{"brief_id": b["brief_id"]} for b in planned[:7] + fill[:3]]
+    short = signature.coverage(accepted[:7], planned)
+    filled = signature.coverage(accepted, planned, fill)
+    key = "normal/cancer_center"
+    assert (short["cells"][key]["count"], short["cells"][key]["target"]) == (7, 10) and not short["ok"]
+    assert (filled["cells"][key]["count"], filled["cells"][key]["target"]) == (10, 10) and filled["ok"]

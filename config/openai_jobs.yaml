@@ -4,8 +4,8 @@
 # job that already has entries, except by a dated raise under the account's `raises`, which the ledger applies once and
 # mirrors. Money is USD. An account's margin is never reservable. The openai account's first $76.43 was split so its
 # job caps summed to cap_usd - margin_usd = $74.00; the $60 raise of November 13, 2026 funds O4 ($8) and T1 ($20)
-# (docs/neural/preregistration-v2.md), and the job caps now sum to $102.00, so at least $10 of the account always
-# stays unspent. Jobs with released: false (the retries O1b and O3b) take no reservation until
+# (docs/neural/preregistration-v2.md), O4b ($2) tops up what O4 left short, and the job caps now sum to $104.00,
+# so at least $10 of the account always stays unspent. Jobs with released: false (the retries O1b and O3b) take no reservation until
 # `ledger release-job JOB --reason TEXT`.
 #
 # Every token count below is an estimate (source: assumed) until the O1 pilot measures it; prices live in
@@ -65,6 +65,9 @@ jobs:
   # O4 fills the stratum-by-archetype cells the library left below target (train and validation families only);
   # its briefs come from the coverage shortfall in config/scenario_planner.yaml.
   O4:  {account: openai, cap_usd: 8.00, released: true, tier: flex, seed: 401, briefs: null,
+        arms: {normal: [terra-low], stressed: [terra-low], disrupted: [terra-low], edge: [terra-low]}}
+  # O4b tops up the cells O4 still left short after its freeze (same arm and tier, a new seed).
+  O4b: {account: openai, cap_usd: 2.00, released: true, tier: flex, seed: 402, briefs: null,
         arms: {normal: [terra-low], stressed: [terra-low], disrupted: [terra-low], edge: [terra-low]}}
   # T1 is the fresh test set of docs/neural/preregistration-v2.md: O2's arm and tier, a new seed, in-distribution
   # cells only. It runs only once the preregistration names the frozen model (needs: frozen_model).

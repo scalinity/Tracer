@@ -257,13 +257,15 @@ def _counts(rows: list[dict], key) -> dict:
     return out
 
 
-def coverage(accepted: list[dict], planned: list[dict]) -> dict:
+def coverage(accepted: list[dict], planned: list[dict], fill: list[dict] = ()) -> dict:
     """Accepted counts against the planned briefs' counts, per cell, per factor level and per edge tag.
 
     A cell is (stratum, archetype), assumed: the full five-factor cell has far more combinations
     than briefs. accepted rows carry a brief_id; their factors are read from the planned brief.
+    `fill` holds the briefs of a job that fills cells left short (O4): its accepted scenarios count toward
+    the cells, but its briefs add nothing to any target, which stays the design's.
     """
-    by_id = {b["brief_id"]: b for b in planned}
+    by_id = {b["brief_id"]: b for b in list(planned) + list(fill)}
     have = [by_id[a["brief_id"]] for a in accepted if a["brief_id"] in by_id]
     report: dict = {"marginals": {}, "ok": True}
 
