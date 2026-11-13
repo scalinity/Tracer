@@ -9,8 +9,8 @@
 # retention, so cache_write is the rate a worst-case reservation charges for uncached input. Batch and Flex are
 # exactly half of Standard in every column on the page.
 
-verified_at: "2026-11-13T02:27:20-05:00"
-checked_by: "Claude Code (Opus 5.5), re-checked on the pricing page, the Flex guide and the gpt-6.1-terra page before O4; unchanged"
+verified_at: "2026-11-13T14:29:44-05:00"
+checked_by: "Claude Code (Opus 5.5), re-checked on the pricing page and the Flex guide before T1; unchanged"
 source_url: "https://developers.openai.com/api/docs/pricing"
 model_pages:
   gpt-6.1-terra: "https://developers.openai.com/api/docs/models/gpt-6.1-terra"
