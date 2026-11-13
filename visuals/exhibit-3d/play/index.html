@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0f1a" />
+  <meta name="description" content="Four specimens ride the same pneumatic tube bench, one after another. Watch where each one really goes, and where Tracer thinks it is." />
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <title>Tracer · Watch it play</title>
+</head>
+<body>
+  <div id="app" class="play">
+    <main id="world" role="img" aria-label="A pneumatic tube bench in a lab: a ward, a glass tube, the lab's tube station, a lost bin and the lab's scanner"><div id="loading">Pressurizing the tube…</div></main>
+    <div id="veil"></div>
+    <div class="vignette"></div>
+
+    <header class="pl-top">
+      <div class="pl-brand"><span class="pl-dot"></span>Tracer</div>
+      <nav class="pl-steps" aria-label="Specimens"></nav>
+    </header>
+
+    <aside class="pl-risk" aria-live="polite">
+      <div class="pl-risk-k">Chance it misses the deadline</div>
+      <div class="pl-risk-v">0%</div>
+      <div class="pl-risk-s"></div>
+    </aside>
+
+    <div class="pl-caption" aria-live="polite"></div>
+
+    <footer class="pl-bar">
+      <div class="pl-clock"><span class="pl-clock-v">0</span><span class="pl-clock-k">min since it left the ward</span></div>
+      <div class="pl-rail">
+        <div class="pl-track"><div class="pl-fill"></div></div>
+        <div class="pl-mark pl-deadline"><span>Deadline</span></div>
+        <div class="pl-mark pl-alert"><span>Alert</span></div>
+        <div class="pl-mark pl-scan"><span>Scanned in</span></div>
+      </div>
+    </footer>
+
+    <div class="pl-legend">
+      <span><i class="pl-sw-truth"></i>White capsule: where it really is</span>
+      <span><i class="pl-sw-glow"></i>Glow: where Tracer thinks it is</span>
+    </div>
+
+    <div class="pl-card" hidden>
+      <div class="pl-card-n"></div>
+      <div class="pl-card-t"></div>
+      <div class="pl-card-s"></div>
+    </div>
+
+    <button class="pl-pause" type="button" aria-label="Pause">❚❚</button>
+  </div>
+  <script type="module" src="../src/play.ts"></script>
+</body>
+</html>

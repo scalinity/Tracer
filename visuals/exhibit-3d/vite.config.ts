@@ -9,6 +9,15 @@ export default defineConfig(async ({ mode }) => {
     const { viteSingleFile } = await import('vite-plugin-singlefile');
     plugins.push(viteSingleFile());
   }
+  // `--mode play` builds the self-playing page (play/index.html) on its own, into dist-play/.
+  if (mode === 'play') {
+    return {
+      root: 'play',
+      base: './',
+      publicDir: '../public',
+      build: { outDir: '../dist-play', emptyOutDir: true, target: 'es2024', assetsInlineLimit: 4096 },
+    };
+  }
   return {
     base: './',
     plugins,
