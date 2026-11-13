@@ -328,6 +328,26 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .prov{margin-top:18px;max-width:90ch;font-size:12.5px;color:var(--ink-mute);overflow-wrap:anywhere}
 footer{padding-top:20px;border-top:1px solid var(--hair);font-size:12.5px;color:var(--ink-mute)}
 
+/* ───────── short by default: one line each, the detail folds away ───────── */
+.mast{padding:26px 0 22px;margin-bottom:28px}
+.tagline{margin-top:10px}
+.badge{display:inline-block;margin-top:14px;padding:4px 10px;border:1px solid var(--warn);border-radius:999px;font-size:12.5px;color:var(--ink-dim)}
+.act-steps .t{margin-left:6px;font-family:var(--mono);font-size:12px;color:var(--ink-mute);white-space:nowrap}
+.act-steps li{padding-bottom:9px}
+.rules{margin-top:8px;padding-left:18px;list-style:disc;color:var(--ink-dim);max-width:62ch}
+.rules li{margin-bottom:4px}
+.rules li::marker{color:var(--warn)}
+details.more{margin-top:16px;max-width:980px}
+details.more>summary{display:inline-flex;align-items:center;gap:8px;min-height:44px;cursor:pointer;list-style:none;font-size:14px;color:var(--ink-dim);text-decoration:underline;text-decoration-color:var(--hair);text-underline-offset:4px}
+details.more>summary::-webkit-details-marker{display:none}
+details.more>summary::before{content:"+";display:inline-grid;place-items:center;width:20px;height:20px;border:1px solid var(--hair);border-radius:50%;font-family:var(--mono);font-size:13px;line-height:1;text-decoration:none}
+details.more[open]>summary::before{content:"−"}
+details.more[open]>summary{color:var(--ink)}
+details.more .key{margin-top:6px}
+details.about{margin:0 0 40px;padding-top:18px;border-top:1px solid var(--hair)}
+details.about>summary{font-family:var(--serif);font-size:20px;color:var(--ink)}
+details.about .honesty{margin:10px 0 28px}
+details.about section{margin-bottom:32px}
 @media (max-width:900px){
   .tl-grid,.th-grid{grid-template-columns:1fr}
 }
@@ -362,38 +382,28 @@ footer{padding-top:20px;border-top:1px solid var(--hair);font-size:12.5px;color:
 
 <header class="mast">
   <h1 class="wordmark">Tracer</h1>
-  <p class="tagline">Between a specimen's collection scan and its receipt scan in the laboratory, there is no record.
-    Tracer re-scores every unreceived specimen on a clock tick, estimates the chance it misses its stability
-    window and where it probably is, and alerts while it can still be recovered.</p>
-  <p class="honesty"><b>Synthetic data, no clinical review.</b> Every specimen here was written by
-    <span id="fill-model">a language model</span> from briefs drawn by seeded code, and no clinical scientist has
-    reviewed the data or the model. Every parameter is an assumption, and the same assumptions shaped both the data
-    and the model. <span id="fill-budget">The alert budget is generous: a large share of all specimens get an alert.</span>
-    Warning means the minutes from an alert to the window closing.</p>
+  <p class="tagline">Spots lab specimens that have gone quiet in transit, and raises the alarm while there is still time to find them.</p>
+  <p class="badge">Synthetic data · no clinical review</p>
 </header>
 
 <main id="main">
 
 <section id="activity" class="activity" aria-labelledby="activity-h">
-  <h2 id="activity-h">In class: about ten minutes</h2>
-  <p class="act-lede">Work through these in order on your phone, then talk them over.</p>
+  <h2 id="activity-h">In class</h2>
+  <p class="act-lede">On your phone, in order, then talk it over.</p>
   <ol class="act-steps">
-    <li><a href="#board">Follow one specimen.</a> Tap a row on the board to open its timeline, then move the
-      scrubber. Watch the risk climb while no scan comes, and see who the alert goes to. About four minutes.</li>
-    <li><a href="#threshold">Move the threshold.</a> Slide it both ways and watch warning and alerts per shift
-      move together, for Tracer and for the plan's rule. About two minutes.</li>
-    <li><a href="#beat">Play Beat Tracer.</a> Three short rounds: call the specimen in trouble before its window
-      closes, and compare your warning with Tracer's. Under three minutes.</li>
+    <li><a href="#board">Follow one specimen.</a> Tap a row, drag the scrubber. <span class="t">4 min</span></li>
+    <li><a href="#threshold">Move the threshold.</a> Both ways; watch warning and alerts trade. <span class="t">2 min</span></li>
+    <li><a href="#beat">Play Beat Tracer.</a> Spot the specimen in trouble before Tracer does. <span class="t">3 min</span></li>
   </ol>
   <h3 class="act-h">Then discuss</h3>
   <ul class="act-qs">
-    <li>In the game, what told you a specimen was in trouble, and when did you know enough to call it?</li>
-    <li>A lower threshold warns sooner and raises more false alarms. Who in a hospital should answer those
-      alarms, and how many a shift would they accept?</li>
+    <li>In the game, when did you know enough to call it?</li>
+    <li>Earlier alerts mean more false alarms. Who should answer them, and how many a shift?</li>
   </ul>
 </section>
 
-<section id="problem" aria-labelledby="problem-h">
+<section id="problem" aria-labelledby="problem-h" hidden><!-- shown once Karissa's paragraph replaces the placeholder -->
   <h2 id="problem-h">The problem in sixty seconds</h2>
   <div class="placeholder">
     <p><b>Placeholder.</b> Karissa Kocourek, the project's clinical microbiology scientist, writes this paragraph:
@@ -403,9 +413,7 @@ footer{padding-top:20px;border-top:1px solid var(--hair);font-size:12.5px;color:
 
 <section id="board" aria-labelledby="board-h">
   <h2 id="board-h" tabindex="-1">The board</h2>
-  <p class="lede">Pick a day and move the clock. The board lists every specimen collected and not yet received at
-    that moment, ranked by expected harm: the chance it misses its stability window, times the weight of its
-    urgency tier. Select a specimen to open its timeline.</p>
+  <p class="lede">Every specimen not yet received, riskiest first. Tap one to open its story.</p>
   <p class="headline" id="headline" hidden></p>
   <div class="load" id="load-status" role="status">Loading the demo data.</div>
   <noscript><p class="load failed"><b>This demo needs JavaScript.</b> It reads its data and computes every score in the browser.</p></noscript>
@@ -448,12 +456,14 @@ footer{padding-top:20px;border-top:1px solid var(--hair);font-size:12.5px;color:
     </table>
   </div>
   <p class="older" id="older" hidden></p>
+  <details class="more"><summary>What the columns mean</summary>
   <div class="key" id="key" hidden>
     <p id="key-tracer"></p>
     <p id="key-plan"></p>
     <p id="key-score"></p>
     <p id="key-route"></p>
   </div>
+  </details>
 </section>
 
 <section id="timeline" class="timeline" aria-labelledby="tl-title" hidden>
@@ -518,10 +528,7 @@ footer{padding-top:20px;border-top:1px solid var(--hair);font-size:12.5px;color:
 
 <section id="threshold" aria-labelledby="threshold-h" hidden>
   <h2 id="threshold-h">Set the threshold</h2>
-  <p class="lede">An alert threshold is a trade. Set it low and Tracer warns early, and alerts on many specimens that
-    would have arrived anyway; set it high and it alerts less, and later. The plan's rule makes the same trade with a
-    time limit. Move the threshold to see both methods on the held-out runs. The board and the timeline above follow
-    it.</p>
+  <p class="lede">Lower warns sooner and alerts more. Slide it and watch Tracer and the plan's rule trade.</p>
   <div class="controls th-controls">
     <div class="field">
       <label for="th-point">Alert threshold</label>
@@ -560,10 +567,11 @@ footer{padding-top:20px;border-top:1px solid var(--hair);font-size:12.5px;color:
 </section>
 <section id="beat" aria-labelledby="beat-h" hidden>
   <h2 id="beat-h">Beat Tracer</h2>
-  <p class="lede">Six specimens leave collection. One of them will miss its stability window; the other five arrive
-    in time, though some take a while. Watch for receipt scans, tap the specimen you think is in trouble and press
-    Call it. The sooner you call the right one, the more warning you give. Each round has three alerts, and a wrong
-    call uses one. Tracer plays the same rounds with the alerts it raised at the board's headline setting.</p>
+  <ul class="rules">
+    <li>Six specimens leave together. One will miss its window.</li>
+    <li>Tap the one you think is in trouble, then press <b>Call it</b>. Sooner is better.</li>
+    <li>You have three alerts a round; a wrong call uses one.</li>
+  </ul>
   <p class="game-seed" id="game-seed"></p>
   <div class="game" id="game">
     <div class="game-bar">
@@ -580,11 +588,21 @@ footer{padding-top:20px;border-top:1px solid var(--hair);font-size:12.5px;color:
     <div class="game-result" id="game-result" hidden></div>
   </div>
   <div class="game-end" id="game-end" hidden></div>
+  <details class="more"><summary>Where the rounds come from</summary>
   <p class="game-fine">Rounds come from the held-out runs in the bundle: each round's six specimens were collected
     near the same time in one run and are shown as if they left together, each against its own window. Rounds use each
     specimen's own window and Tracer's stored alerts, whatever the controls above are set to. Scores never leave
     this page. <b>Synthetic data, no clinical review.</b></p>
+  </details>
 </section>
+<details class="more about" id="about">
+<summary>How it works, and its limits</summary>
+<p class="honesty"><b>Synthetic data, no clinical review.</b> Every specimen here was written by
+    <span id="fill-model">a language model</span> from briefs drawn by seeded code, and no clinical scientist has
+    reviewed the data or the model. Every parameter is an assumption, and the same assumptions shaped both the data
+    and the model. <span id="fill-budget">The alert budget is generous: a large share of all specimens get an alert.</span>
+    Warning means the minutes from an alert to the window closing.</p>
+
 <section id="why" aria-labelledby="why-h">
   <h2 id="why-h">Why it is built this way</h2>
   <p class="lede">Each choice below follows from one fact: a specimen that goes missing makes no scan, so nothing in
@@ -649,6 +667,7 @@ footer{padding-top:20px;border-top:1px solid var(--hair);font-size:12.5px;color:
   </ul>
   <p class="prov" id="provenance"></p>
 </section>
+</details>
 
 </main>
 
