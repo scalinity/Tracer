@@ -66,6 +66,7 @@ FRESH_SPLIT = "test_fresh"
 FRESH_DIR = NEURAL_DIR / FRESH_SPLIT
 FRESH_LOCK_PATH = FRESH_DIR / "test_lock.json"
 FRESH_RUNS_PATH = FRESH_DIR / "test_runs.jsonl"
+LOOKED_NAME = "looked.json"   # beside the fresh lock once its evaluation is written, wherever that went
 
 BUDGETS = evaluate.BUDGETS                  # alerts per 8-hour shift: 1, 2, 4, 6
 HEADLINE_BUDGET = 6
@@ -955,9 +956,10 @@ def guard_test_run(split: str, hashes: Mapping, relock_reason: str | None = None
     if split == FRESH_SPLIT:
         if relock_reason is not None:
             raise LockError("the fresh test set has no relock (docs/neural/preregistration-v2.md §8)")
-        if (lock_path.parent / "evaluation.json").exists():
-            raise LockError(f"the fresh test set was looked at: {lock_path.parent / 'evaluation.json'} exists, and "
-                            "there is no second look (docs/neural/preregistration-v2.md §8)")
+        done = [p for p in (lock_path.parent / LOOKED_NAME, lock_path.parent / "evaluation.json") if p.exists()]
+        if done:
+            raise LockError(f"the fresh test set was looked at: {done[0]} exists, and there is no second look "
+                            "(docs/neural/preregistration-v2.md §8)")
     missing = [k for k in HASH_FIELDS if k not in hashes]
     if missing:
         raise ValueError(f"the lock record lacks {missing}")
@@ -2054,6 +2056,8 @@ def _calibration_from_rows(rows: Sequence[dict]) -> dict:
 
 
 def _out_dir(split: str, store_dir: Path, kind: str) -> Path:
+    if split == FRESH_SPLIT:
+        return FRESH_DIR
     real = kind == "legacy" or Path(store_dir).resolve() == store.STORE_V2_DIR.resolve()
     return (NEURAL_DIR if real else DEV_EVAL_DIR) / split
 
@@ -2296,6 +2300,10 @@ def evaluate_split(split: str, methods: Sequence[Method] | None = None, *, store
         written = {k: v for k, v in result.items() if k != "detail"}
         _write_atomic(out_dir / "evaluation.json", json.dumps(written, indent=1, allow_nan=False) + "\n")
         result["written"] = str(out_dir / "evaluation.json")
+        if split == FRESH_SPLIT and test_run is not None:   # the one look is done: no guard lets another start
+            _write_atomic(Path(test_run.lock_path).parent / LOOKED_NAME, json.dumps(
+                {"time": _now(None), "evaluation": result["written"],
+                 "sha256": sha256_file(out_dir / "evaluation.json")}, indent=1, sort_keys=True) + "\n")
     return result
 
 

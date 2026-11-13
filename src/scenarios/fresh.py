@@ -179,6 +179,19 @@ def simulation_inputs(records: list[dict] | None = None) -> list[dict]:
                              "split": FRESH_SPLIT, "scenario_index": r["meta"]["scenario_index"]} for r in records]
 
 
+def check_complete(manifest: dict, records: list[dict]) -> None:
+    """Every frozen fresh scenario must have every replicate (0 to 3) simulated and none dropped: the preregistration
+    scores every scenario it froze, each with three scored replicates (§5), so a dropped replicate stops the look."""
+    want = {(r["meta"]["scenario_id"], k) for r in records for k in REPLICATES[FRESH_SPLIT]}
+    have = {(e["scenario_id"], int(e["replicate"])) for e in manifest["runs"] if "dropped" not in e}
+    dropped = sorted((e["scenario_id"], e["replicate"]) for e in manifest["runs"] if "dropped" in e)
+    missing = sorted(want - have)
+    if dropped or missing:
+        raise runner.JobError(f"the fresh simulation is incomplete ({len(dropped)} replicates dropped, "
+                              f"{len(missing)} missing, first {(dropped or missing)[:3]}): the fresh set is scored "
+                              "whole or not at all; investigate before any look")
+
+
 def simulate_fresh(workers: int, out_dir: Path | None = None, out=print) -> int:
     from src.sim import run as sim_run
     records = freeze.read_library(FRESH_LIBRARY)
@@ -189,6 +202,7 @@ def simulate_fresh(workers: int, out_dir: Path | None = None, out=print) -> int:
         raise runner.JobError("the fresh splits file was made for a different fresh library")
     manifest = sim_run.simulate_library(simulation_inputs(records), out_dir or FRESH_SIM_DIR, REPLICATES, workers,
                                         library_sha256=sha)
+    check_complete(manifest, records)
     out(json.dumps({k: v for k, v in manifest.items() if not isinstance(v, (list, dict))}, indent=1))
     return 0
 
@@ -196,7 +210,9 @@ def simulate_fresh(workers: int, out_dir: Path | None = None, out=print) -> int:
 def store_fresh(workers: int | None = None, sim_dir: Path | None = None, store_dir: Path | None = None,
                 out=print) -> int:
     from src.pipeline import store
-    counts = store.build_v2(sim_dir or FRESH_SIM_DIR, FRESH_LIBRARY, FRESH_SPLITS, store_dir or FRESH_STORE_DIR,
-                            workers=workers)
+    sim_dir = Path(sim_dir or FRESH_SIM_DIR)
+    check_complete(json.loads((sim_dir / "manifest.json").read_text(encoding="utf-8")),
+                   freeze.read_library(FRESH_LIBRARY))
+    counts = store.build_v2(sim_dir, FRESH_LIBRARY, FRESH_SPLITS, store_dir or FRESH_STORE_DIR, workers=workers)
     out(json.dumps(counts, indent=1))
     return 0

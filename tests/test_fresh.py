@@ -80,3 +80,27 @@ def test_the_rule_reads_the_five_baselines_and_both_weightings():
                                  "quantile_global")
     assert rule_v2.WEIGHTINGS == ("3-2-1", "equal") and rule_v2.BUDGET == "6/shift"
     assert rule_v2.BRIER_MARGIN == 0.01 and rule_v2.LOSS_MARGIN == 0.02
+
+
+def test_a_written_look_leaves_a_marker_that_stops_any_other(fresh_files):
+    """Codex on #86: the no-second-look guard must not depend on where the evaluation was written."""
+    ne.guard_test_run("test_fresh", hashes(), **fresh_files)
+    (fresh_files["lock_path"].parent / ne.LOOKED_NAME).write_text("{}")
+    with pytest.raises(ne.LockError, match="no second look"):
+        ne.guard_test_run("test_fresh", hashes(), **fresh_files)
+
+
+def test_the_fresh_evaluation_is_written_beside_its_lock():
+    assert ne._out_dir("test_fresh", ne.store.ROOT / "data" / "store-v2-fresh", "v2") == ne.FRESH_DIR
+
+
+def test_a_fresh_simulation_missing_or_dropping_a_replicate_is_refused():
+    """Codex on #86: every frozen fresh scenario is scored with all its replicates, or nothing is scored."""
+    records = [{"meta": {"scenario_id": "S20001"}}, {"meta": {"scenario_id": "S20002"}}]
+    whole = {"runs": [{"scenario_id": s, "replicate": r} for s in ("S20001", "S20002") for r in range(4)]}
+    fresh.check_complete(whole, records)
+    dropped = {"runs": whole["runs"][:-1] + [{"scenario_id": "S20002", "replicate": 3, "dropped": ["validator"]}]}
+    with pytest.raises(Exception, match="1 replicates dropped"):
+        fresh.check_complete(dropped, records)
+    with pytest.raises(Exception, match="1 missing"):
+        fresh.check_complete({"runs": whole["runs"][:-1]}, records)
