@@ -511,11 +511,11 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** PR 67's page was built from scratch with a plainer look; the cloud browser has no WebGL, so neither page could be seen rendered there.
 - **Assumed:** the demo shows the analytic Tracer model the bench was built on; TracerNet's numbers stay in the deck.
 
-### Nov 13 · Rework · A shorter phone page, and the 3D caption off the dials (this pull request)
+### Nov 13 · Rework · A shorter phone page, and the 3D caption off the dials (#71 to #76)
 
 - **Agent:** cut the phone demo page to one line per idea: a one-line tagline and a "synthetic data, no clinical review" badge at the top, the class activity as three one-line steps and two short questions, one-line ledes for the board and the threshold, three short rules for Beat Tracer. The column key, the game's fine print, and the honesty note, the design reasons and the limits now open from folds, word for word, so nothing true was dropped. Karissa's problem paragraph stays on the page as a hidden slot until she writes it. On wide screens the self-playing 3D demo now puts its caption in a column under the risk card, with the bench framed to its left, so the caption no longer covers the console's dials.
 - **Daniel:** asked for front-end pages that are short ("nobody wants to read a wall of text"); the caption over the dials was a weak spot found when checking the demo in his Chrome.
-- **Went wrong:** nothing yet; the browser checks in the test suite skip here because Playwright isn't installed, so the page is checked in Daniel's Chrome after merging.
+- **Went wrong:** the caption column took five passes after the first merge (#72 to #76): the breakpoint was too wide for a 928-pixel window, then the bench was framed too far left, then too small, before the shot kept its height and took only its width from the bench. The game's QR code also landed at the top of the page until #75. The browser checks in the test suite skip here because Playwright isn't installed, so each pass was checked in Daniel's Chrome after merging.
 - **Assumed:** Beat Tracer stays, as the class's hands-on activity; whether to cut it for time is Daniel's call with the deck.
 
 ### Nov 13 · Neural · The open caveats revisited (#77)
@@ -524,6 +524,13 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Daniel:** asked to close what was still open and improve TracerNet further, with HiPerGator only if needed; no review of this pull request yet.
 - **Went wrong:** the earlier explanation of the control's lead was accepted without a placebo check; one run of an independent fit showed it was wrong. Alerting on the mapped scores cost warning time on `legacy_v1`, found only on its scored weeks.
 - **Assumed:** `legacy_v1` and the control are development sets, so choosing to keep alerts on TracerNet's own ranking after seeing `legacy_v1`'s scored weeks is allowed if disclosed; a second test look is not worth taking when nothing changes the alert ranking.
+
+### Nov 13 · Rework · The deck cut to 15 minutes, a TracerNet slide, and Karissa's outline (this pull request)
+
+- **Agent:** cut the talk from 17:00 to the 15:00 slot and moved it to December 9. Slide 2 and slide 5 are shorter, Karissa now hosts the whole board activity on slide 7, slide 6 opens the self-playing 3D demo instead of the old bench, and a new slide 11 shows TracerNet as a challenger: 23.9 minutes of average warning against 13.7 for the survival model on the second set of simulated weeks, with the verdict that it did not win by the pre-set rule. The slide leaves out the negative control's leakage flag, which #77 showed is a false alarm. Karissa's written lines are replaced by an outline, numbered points in order with a length for each, in `docs/talk/README.md`, on the slides' notes and in `docs/talk/karissa-outline.md`, which replaces `karissa-lines.md`. The tests now check her sections are points, not lines, and split the speaking time by the length each of her sections is given.
+- **Daniel:** asked on November 12 for Karissa to write her own lines from guidance on what to cover and in what order, and approved the plan's deck step: the talk at 15 minutes and one TracerNet slide.
+- **Went wrong:** nothing yet; the slides' layout test needs Playwright, so the new slide is checked in Daniel's Chrome after merging.
+- **Assumed:** Beat Tracer stays, at 4:30 of the 15 minutes, which leaves the questions 1:15; the README says what dropping it would give back, for Daniel to decide at rehearsal. TracerNet's numbers are the first test look's, which #77 left unchanged.
 
 ## The Claude API jobs
 

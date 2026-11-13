@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Tracer talk script</title>
-<meta name="description" content="Every line of the Tracer talk, CAI 5724, November 18, with the run of show and a talk clock. Built from docs/talk/README.md by scripts/build_talk_script.py; do not edit by hand.">
+<meta name="description" content="Every line and outline of the Tracer talk, CAI 5724, December 9, with the run of show and a talk clock. Built from docs/talk/README.md by scripts/build_talk_script.py; do not edit by hand.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='5' fill='none' stroke='%2363C4D3' stroke-width='2'/%3E%3C/svg%3E">
 <style>
 /* The deck's tokens (docs/talk/index.html). Cyan is the clock and the current beat; each speaker has a colour.
@@ -149,6 +149,8 @@ strong{font-weight:650}
 .line{max-width:62ch;color:var(--ink)}
 .line + .line{margin-top:.75em}
 .line.t-note{color:var(--ink-dim)}
+.line.point{font:400 clamp(19px,13px + .8vw,23px)/1.45 var(--sans)}
+.line.point + .line.point{margin-top:.45em}
 .sd{font-family:var(--sans);font-style:italic;font-weight:400;font-size:.7em;letter-spacing:0;color:var(--ink-mute)}
 p.line.sd{font:italic 400 15.5px/1.5 var(--sans)}
 .line + p.line.sd,p.line.sd + .line{margin-top:1em}
@@ -438,7 +440,7 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
       btn.setAttribute("aria-pressed", String(btn.dataset.filterBtn === f));
     });
     var who = NAMES[f];
-    $("print-who").textContent = who ? who + "’s lines" : "";
+    $("print-who").textContent = who ? who + "’s part" : "";
     var shown = who ? document.querySelectorAll('.answer[data-who="' + who + '"]').length : 0;
     $("answers-note").textContent = who ? "Showing the " + shown + " answers suggested for " + who + ". Choose Both to see all " +
       document.querySelectorAll(".answer").length + "." : "";
@@ -463,7 +465,9 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
     var spoken = Array.prototype.filter.call(block.querySelectorAll(".line"), function (p) { return !p.classList.contains("sd"); });
     if (!spoken.length) return;
     var text = spoken[spoken.length - 1].textContent.replace(/\[[^\]]*\]/g, " ").replace(/\s+/g, " ").trim();
-    var m = text.match(/[^.?!]*[.?!]+["'”’)]*$/);
+    var point = spoken[spoken.length - 1].classList.contains("point");
+    var m = point ? null : text.match(/[^.?!]*[.?!]+["'”’)]*$/);
+    if (point) text = "her last point, " + text.replace(/^\d+\.\s*/, "");
     var cue = document.createElement("p"), who = document.createElement("span");
     cue.className = "cue";
     who.className = "cue-who";

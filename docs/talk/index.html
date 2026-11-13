@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Tracer talk</title>
-<meta name="description" content="The slides for the Tracer talk, CAI 5724, November 18. Synthetic data with no clinical review.">
+<meta name="description" content="The slides for the Tracer talk, CAI 5724, December 9. Synthetic data with no clinical review.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='5' fill='none' stroke='%2363C4D3' stroke-width='2'/%3E%3C/svg%3E">
 <style>
 /* The demo page's colour grammar: cyan is observed (scans, the clock), violet is inferred (risk, places, the
@@ -196,6 +196,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 @keyframes bar-rise{from{transform:scaleX(0)}}
 @keyframes fade-in{from{opacity:0}}
 
+/* A neural challenger: the same bars on a 30-minute scale */
+.chart.c30 .bar{width:calc(var(--v) / 30 * 100%)}
+.chart.c30 .axis span{left:calc(var(--t) / 30 * 100%)}
+.verdict{max-width:none}
+
 /* Limits */
 .limits{display:grid;gap:calc(var(--u)*1.5);max-width:calc(var(--u)*84)}
 .limits li{padding-left:calc(var(--u)*3.4);position:relative}
@@ -292,10 +297,10 @@ body.presenter .pnav{display:flex}
   <p class="t-lead measure">Predictive specimen tracking for the clinical microbiology laboratory: which specimens will miss their stability window, while there is still time to find them.</p>
   <div class="byline">
     <p class="t-body">Daniel Escalante and Karissa Kocourek</p>
-    <p class="t-cap">CAI 5724, AI in Health Design Studio I, University of Florida. November 18, 2026.</p>
+    <p class="t-cap">CAI 5724, AI in Health Design Studio I, University of Florida. December 9, 2026.</p>
   </div>
   <div class="foot"><p class="caveat">Synthetic data, no clinical review</p></div>
-  <aside class="notes-src"><p>Nothing is said. Switch to the 3D bench tab with the truth hidden when the instructor hands over.</p></aside>
+  <aside class="notes-src"><p>Nothing is said. Karissa starts when the instructor hands over.</p></aside>
 </section>
 
 <!-- 1 -->
@@ -310,13 +315,11 @@ body.presenter .pnav{display:flex}
     <g class="mark"><line x1="374" y1="52" x2="374" y2="88"/><text x="374" y="36" text-anchor="middle" font-size="30">30 min</text></g>
     <g class="mark"><line x1="726" y1="52" x2="726" y2="88"/><text x="726" y="36" text-anchor="middle" font-size="30">1 hour</text></g>
   </svg>
-  <p><a class="btn" href="../demo/exhibit/index.html?truth=0" target="_blank" rel="noopener">Open the 3D bench <span aria-hidden="true">↗</span></a></p>
-  <p class="t-cap">The bench opens with the truth hidden. On the bench, T shows or hides it.</p>
-  <aside class="notes-src"><p class="who">Karissa</p><p>A tube leaves the ward. Nothing beeps, and nothing gets logged. Nobody knows yet if it's late. So, raise your hand if you'd start to worry after fifteen minutes. Thirty? An hour? Hold on to that number, because that's the guess Tracer has to make, for every specimen, all day.</p><p><em>[About 50 words. Pause for each show of hands.]</em></p></aside>
+  <aside class="notes-src"><p class="who">Karissa</p><p>1. A tube has left the ward: nothing beeps, nothing is logged, and nobody knows yet if it is late.</p><p>2. The hand vote: who would start to worry at 15 minutes, at 30, at an hour?</p><p>3. Their number is the guess Tracer has to make, for every specimen, all day.</p><p><em>[In her own words, about 50 words. Pause for each show of hands.]</em></p></aside>
 </section>
 
 <!-- 2 -->
-<section class="slide" data-beat="Why it matters" data-who="Karissa" data-start="0:30" data-end="1:30">
+<section class="slide" data-beat="Why it matters" data-who="Karissa" data-start="0:30" data-end="1:15">
   <h2 class="t-h3">Most lab errors happen before the test, and the specimen is on a clock.</h2>
   <div class="facts">
     <div class="fact">
@@ -335,11 +338,11 @@ body.presenter .pnav{display:flex}
       <p class="t-cap">Spinal fluid must not be refrigerated. IDSA and ASM 2018.</p>
     </div>
   </div>
-  <aside class="notes-src"><p class="who">Karissa</p><p>Most lab errors don't happen during testing. In one stat laboratory's audit, about sixty-two percent of errors happened before the specimen was ever analyzed. And a microbiology specimen is on a clock. Unpreserved urine at room temperature has about an hour before bacteria overgrow and the colony count stops meaning anything. Spinal fluid has to come straight to the lab, and it must not be refrigerated. When a specimen misses its window, it's often rejected and has to be collected again. For the patient, that's another needle stick or another lumbar puncture, and hours of delay. And the lab has no record of where a specimen is between collection and receipt, so a missing one often isn't noticed until someone calls asking for the result.</p><p><em>[About 125 words.]</em></p></aside>
+  <aside class="notes-src"><p class="who">Karissa</p><p>1. Most lab errors happen before testing: about 62% in one stat laboratory's audit.</p><p>2. A microbiology specimen is on a clock: unpreserved urine has about an hour at room temperature, and spinal fluid must come straight to the lab and never be refrigerated.</p><p>3. A missed window often means rejection and a new collection: another needle stick or lumbar puncture, and hours of delay.</p><p>4. Between collection and receipt the lab has no record, so a missing specimen is noticed only when someone calls for the result.</p><p><em>[In her own words, about 95 words.]</em></p></aside>
 </section>
 
 <!-- 3 -->
-<section class="slide" data-beat="The missing data" data-who="Daniel" data-start="1:30" data-end="2:00">
+<section class="slide" data-beat="The missing data" data-who="Daniel" data-start="1:15" data-end="1:45">
   <h2 class="t-h3">Public records stamp a specimen twice, with nothing in between.</h2>
   <svg class="diagram gap" viewBox="0 0 860 170" role="img" aria-label="A line from Collected to Result filed, median 80.1 hours apart. Where a transport record and a receipt scan would be, there is nothing.">
     <line class="silent" x1="40" y1="96" x2="820" y2="96" stroke-width="4" stroke-dasharray="1 11" stroke-linecap="round"/>
@@ -358,7 +361,7 @@ body.presenter .pnav{display:flex}
 </section>
 
 <!-- 4 -->
-<section class="slide" data-beat="Meet Tracer" data-who="Daniel" data-start="2:00" data-end="2:45">
+<section class="slide" data-beat="Meet Tracer" data-who="Daniel" data-start="1:45" data-end="2:30">
   <h2 class="t-h3">An early warning for specimens in transit.</h2>
   <p class="t-lead">Like package tracking with no scans along the way.</p>
   <div class="flow">
@@ -385,7 +388,7 @@ body.presenter .pnav{display:flex}
 </section>
 
 <!-- 5 -->
-<section class="slide" data-beat="What Tracer is built to fix" data-who="Karissa" data-start="2:45" data-end="3:30">
+<section class="slide" data-beat="What Tracer is built to fix" data-who="Karissa" data-start="2:30" data-end="3:00">
   <h2 class="t-h3">What Tracer is built to fix.</h2>
   <div class="fix" role="table" aria-label="What labs have today, and what Tracer is built to give them">
     <div class="fix-row fix-head" role="row"><p role="columnheader">Today</p><p role="columnheader">With Tracer</p></div>
@@ -395,12 +398,15 @@ body.presenter .pnav{display:flex}
     <div class="fix-row" role="row"><p role="cell">Tags and readers in every hallway</p><p role="cell">Only the scans the lab records</p></div>
   </div>
   <p class="t-step why">The aim: fewer repeat collections and quicker results for patients, and less time chasing specimens for the lab.</p>
-  <aside class="notes-src"><p class="who">Karissa</p><p>So what does that change in the lab? Today, the lab's screens only show what's been scanned, so a missing specimen stays silent until someone calls asking for the result. A fixed time limit is too late for urine and too early for a swab. And tracking tags would need a tag on every tube and a reader in every hallway. Tracer is built to close those gaps with data the lab already has. The aim is fewer repeat collections and quicker results for the patient, and less time chasing for the lab.</p><p><em>[About 90 words.]</em></p></aside>
+  <aside class="notes-src"><p class="who">Karissa</p><p>1. Today a missing specimen stays silent until someone calls for the result.</p><p>2. One fixed time limit is too late for urine and too early for a swab.</p><p>3. Tracking tags would need a tag on every tube and a reader in every hallway.</p><p>4. Tracer closes those gaps with the scans the lab already records.</p><p>5. The aim: fewer repeat collections, quicker results for the patient, and less time chasing for the lab.</p><p><em>[In her own words, about 65 words.]</em></p></aside>
 </section>
 
 <!-- 6 -->
-<section class="slide" data-beat="How Tracer works" data-who="Daniel" data-start="3:30" data-end="4:15">
-  <h2 class="t-h2">Silence is evidence.</h2>
+<section class="slide" data-beat="How Tracer works" data-who="Daniel" data-start="3:00" data-end="3:45">
+  <div class="head-row">
+    <h2 class="t-h2">Silence is evidence.</h2>
+    <a class="btn" href="../demo/play/index.html?scene=2" target="_blank" rel="noopener">The 3D demo <span aria-hidden="true">↗</span></a>
+  </div>
   <p class="t-lead">Every 5 minutes, for every specimen not yet received, Tracer asks:</p>
   <ol class="qs3" aria-label="Every 5 minutes, for every specimen not yet received">
     <li>
@@ -440,17 +446,18 @@ body.presenter .pnav{display:flex}
     </li>
   </ol>
   <p class="then t-lead">Then an alert, sent to the role that can check that place.</p>
-  <aside class="notes-src"><p class="who">Daniel</p><p>So how does it know? Silence is evidence. Under the hood, Tracer asks three questions. How unusual is this much silence, for this kind of specimen? Where is it most likely to be right now: still on the unit, in the tube, or sitting at the tube station? And if we alert now, is there still time to act before its window closes? <em>[Switch to the 3D bench.]</em> This is a tube bench built from the same model. The light along the tube is what Tracer infers. <em>[Press T to show the truth.]</em> And this carrier is where the specimen really was. It's a small model you can read, not a black box.</p><p><em>[About 100 words.]</em></p></aside>
+  <div class="foot"><p class="caveat">Synthetic data, no clinical review</p></div>
+  <aside class="notes-src"><p class="who">Daniel</p><p>So how does it know? Silence is evidence. Every five minutes, Tracer asks three questions. How unusual is this much silence, for this kind of specimen? Where is it most likely to be right now: on the unit, in the tube, or at the tube station? And if we alert now, is there still time to act? <em>[Switch to the 3D demo.]</em> This is that, playing by itself. The glow along the tube is where Tracer thinks the specimen is. The carrier is where it really is. It's a small model you can read, not a black box.</p><p><em>[About 95 words.]</em></p></aside>
 </section>
 
 <!-- 7 -->
-<section class="slide" data-beat="Board and timeline" data-who="Daniel, then Karissa" data-start="4:15" data-end="7:15" data-hands="1" data-layout="hands">
+<section class="slide" data-beat="Board and timeline" data-who="Karissa" data-start="3:45" data-end="6:15" data-hands="1" data-layout="hands">
   <div class="hands">
     <div>
       <div class="qr"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAlAAAAJQAQAAAABpmWfoAAAD4UlEQVR4nO2dgW6rMBRDidX//+VMhbYkBWY7agXvzUdaR8EcUZCuQghQ6vQp8DHTFJUOjCwhKh0YWUJUOjCyhKh0YGQJUenAyBKi0oGRJUSlAyNLiEoHRpYQlQ6MLCEqHRhZQlQ6MLKEqHTwv6tuz4nSza7z9+VznXeUvfIPRFQy0KOMqHRgZP+66nZUj54V6/7tfcm0W7uu+QMRlQz0KCMqHRjZv666tV+W2tPWoqU29fVrP3vVH4ioZKBHGVHpwMj+ddXtaMG9Vi01qTTfS1ehvrZViEoGepQRlQ6MLCGqD9Sr6XWm1/Zi1V9U2e06MLKEqHRgZAlRnd++qm8L75Vq+ZvmttXaf7VXuXIEdWBkCVHpwMgSojq7XpXDarX2Y9XuHPFrW4WoZKBHGVHpwMgSohqoV3WzaDvCoR5m72S368DIEqLSgZElRHXKvirP2vOsRmsbav2/N3fajHbIEdSBkSVEpQMjS4jq3PPBOn+2/VXr/L5C1df3vgWWI6gDI0uISgdGlhDV2ePba9PG2lal8pjzXLa2y76wVYhKBnqUEZUOjCwhqoHzwTvt+d86tfaz13nuWrv6udntOjCyhKh0YGQJUV1jPEPpequ2lLc7ctZ6lyOoAyNLiEoHRpYQ1XX621fe73qur7kraV/5YGCdA6LSgZElRHVuvZqa+5v3ntBQX/3wbc9V25OVI6gDI0uISgdGlhDVFfrbp+bq4Fqd9nre69uVwxxBB1jpX4lKB0aWENX54xnqPNW2q9oxWFPX2mrX+/hWISoZ6FFGVDowsoSoBvuvymO678E67r+quT44CEZX3BKVDowsIaorjBet8+f7CPZ+qmzGOXx8qxCVDPQoIyodGFlCVMPPkynz5/EY99K1qvpRD9ntOjCyhKh0YGQJUZ09nuFO32Zqe96ngye65/rgCBhaa5eodGBkCVGdPZ6h53jMaH0tb//nCDrASv9KVDowsoSozh7P0NI+k2FvXEPtWl4LOYI6MLKEqHRgZAlRXe/9OKW5x7k8Mv0TRtN/NQYG19shKh0YWUJU598/WDZPltne6Tx1raxcHxwDg+vtEJUOjCwhqmu9H6duntFXd97q9aWtQlQy0KOMqHRgZAlRfeT9OPU11Y5lmHaefLWQ3a4DI0uISgdGlhDV9d6PU7p3TkzN2yb23lefI6gDI0uISgdGlhDVtd6PUx69U30Nq5s3euX+wREwtNYuUenAyBKiutb4Kx8MrHNAVDowsoSodGBkCVHpwMgSotKBkSVEpQMjS4hKB0aWEJUOjCwhKh0YWUJUOjCyhKh0YGQJUenAyBKi0oGR/SdVP8gFtr8q5MJBAAAAAElFTkSuQmCC" alt="QR code for the Tracer demo"></div>
     </div>
     <div class="hands-text">
-      <p class="lead-in">Your turn, for about 3 minutes</p>
+      <p class="lead-in">Your turn, for about 2 and a half minutes</p>
       <h2 class="t-h2">Phones out.</h2>
       <p class="t-url"><span>scalinity.github.io/</span><wbr><span>Tracer/</span><wbr><span>demo</span></p>
       <ol class="steps t-step">
@@ -462,11 +469,11 @@ body.presenter .pnav{display:flex}
     </div>
   </div>
   <div class="foot"><p class="caveat">Synthetic data, no clinical review</p></div>
-  <aside class="notes-src"><p class="who">Daniel</p><p>Phones out. Scan this code, or type the address. <em>[Wait about 20 seconds, and watch the room.]</em> You're on the board. Every row is a specimen that's been collected and not received yet, ranked by expected harm. Tap any row to open its timeline, then drag the scrubber slowly to the right. Watch three things: the risk climbing while no scan comes, where Tracer thinks it is, and the moment the alert fires and who it goes to.</p><p><em>[About 70 words. Then switch the projector to the specimen tab, and give the room about a minute on their own first.]</em></p><p class="who">Karissa</p><p>Here's one on the screen. A stat tissue specimen from the emergency department. It sat at the lab's tube station for almost an hour. Tracer alerted at minute twenty, with a hundred minutes of its window left, and put it most likely at the tube station. It was received inside its window. Now tap Show the truth on yours, and see where your specimen really was.</p><p><em>[About 65 words. The rest of the three minutes is the room's.]</em></p></aside>
+  <aside class="notes-src"><p class="who">Karissa</p><p>1. Phones out: scan the code or type the address.</p><p>2. What the board is: every specimen collected and not yet received, ranked by expected harm.</p><p>3. What to do: tap a row, drag the scrubber slowly to the right, and watch the risk climb, where Tracer thinks it is, and when the alert fires and who gets it.</p><p>4. On the projector, one specimen: a stat tissue specimen from the emergency department that sat at the lab's tube station for almost an hour.</p><p>5. Tracer alerted at minute 20 with 100 minutes of its window left, put it most likely at the tube station, and it was received in time.</p><p>6. Their turn: tap Show the truth and see where their own specimen really was.</p><p><em>[In her own words, about 120 words. Wait about 20 seconds after point 1. After point 3, give the room about a minute on their own, then Daniel switches the projector to the specimen tab. The rest of the time is the room's.]</em></p></aside>
 </section>
 
 <!-- 8 -->
-<section class="slide" data-beat="Beat Tracer" data-who="Daniel, then Karissa" data-start="7:15" data-end="11:45" data-hands="1" data-layout="hands">
+<section class="slide" data-beat="Beat Tracer" data-who="Daniel, then Karissa" data-start="6:15" data-end="10:45" data-hands="1" data-layout="hands">
   <div class="hands">
     <div>
       <div class="qr"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAApAAAAKQAQAAAAAAznf9AAADSUlEQVR4nO3d0Y7jIAyFYbPq+78ye9Fx7AOkK6RBLM1vaTptk36CGwtiQkq1344/vy5CQkJCQkJCQkJCQkJCQkJCQkJCPpJ8+ZsiX9f0TbVy/eVvRr9Z1EpISEjI/eQr3kblp1yf33mxXv/fR8t1bvubRa2EhISE3E++8ofIk5H/fFyZx5iRSfU3y1oJCQkJuZ983R+qV06saURpg5m4xhkdh4SEhJyMD/my/PzV611+vV+3eUbHISEhISdD8qXmQB9Hxtgyaj715jdmp3QcEhIScjJSvuzn2HHNUmfkfmw8Lz+j45CQkJCTUe7m1ZEJva4Tq4g+30N5RschISEhJ6P0c22zXAH3+Xeui7frMamPQ0JCPoC85uNRCc8V8Jwt9XOswIy60LJWQkJCQu4nb8aXlio77aizPVpN6+VndBwSEhJyMqTeE+PGYqMVl8XqII+2NZ8zOg4JCQk5Gc183EzvhrSfDFktrl7GkX6+vqiVkJCQkPvJNB/3iKpOZNH72o9ZzrCLWgkJCQm5n5R8qTsQ9e/iPH2na4zO6DgkJCTkZAzm47nyPV5zWWT23q5lP6PjkJCQkJMh+1/q7Drv4fb+Pq5i6nhUM+oZHYeEhIScjGY+bjKebMeW9+uNKvkSEhLy28lm/WVtRpdtnad241Az1l9CQkI+gix6XTKPFHV0qftr6Aoi/25ZKyEhISH3k8P1RP2o0s9pr2b2u6uf0nFISEjIyZDn98T4UtcQ5ZXr7dlxpznjS0hIyK8mm/3V8+4Zea/g9p4erZyz/hISEvIBZPc8Cq3l6PVLv6t8tIZ9aSshISEh95NFr0228/D+bnI/d7RX5rJWQkJCQu4nu/0vPfo7yP1Vnz2en7W7rJWQkJCQ+0m5vyeiWq7n6FPO4vO4cn5GxyEhISEnQ+rjHrnmE5mzdGsuR1cvT+k4JCQk5GRIvadfTRl3kevqdc2erL+EhIR8ANnVx3P47sC1m4PnnYvY/xISEvIR5Id82T5v3K9m+hy93zd4WSshISEh95OSL/uZeP+sM5+J1/S6vJWQkJCQ+0l53lmOfKVydK+PVsipj0NCQn49Weq/z5mMMzoOCQkJCQkJCQkJCQkJCQkJCQkJ+d+TfwEyPQJB4jQ0BwAAAABJRU5ErkJggg==" alt="QR code for Beat Tracer with the room's shared rounds"></div>
@@ -484,11 +491,11 @@ body.presenter .pnav{display:flex}
     </div>
   </div>
   <div class="foot"><p class="caveat">Synthetic data, no clinical review</p></div>
-  <aside class="notes-src"><p class="who">Daniel</p><p>Now you get to compete with it. Scan this second code. It gives everyone in the room the same three rounds. Six specimens leave collection, and one of them will miss its window. Watch the receipt scans come in, tap the one you think is in trouble, and press Call it. Call too early and you might be wrong, and a wrong call uses one of your three alerts. Call too late, and you've given no warning. Ready? Start round one.</p><p><em>[About 80 words. Three rounds take about three minutes. Walk the room. If phones struggle, play one round on the projector and ask for a show of hands.]</em></p><p class="who">Karissa</p><p><em>[When most end screens are up.]</em> Okay, look at your end screen. It puts your warning next to Tracer's, on the same rounds. Raise your hand if you beat Tracer. <em>[Pause.]</em> What did you notice that made you call it? <em>[Take one or two answers.]</em> That's the whole idea. The silence itself was telling you something. And the people who called early, some of you called the wrong one. That trade is what Daniel's going to show you next.</p><p><em>[About 65 words, plus the answers. About a minute.]</em></p></aside>
+  <aside class="notes-src"><p class="who">Daniel</p><p>Now you get to compete with it. Scan this second code. It gives everyone in the room the same three rounds. Six specimens leave collection, and one of them will miss its window. Watch the receipt scans come in, tap the one you think is in trouble, and press Call it. Call too early and you might be wrong, and a wrong call uses one of your three alerts. Call too late, and you've given no warning. Ready? Start round one.</p><p><em>[About 80 words. Three rounds take about three minutes. Walk the room. If phones struggle, play one round on the projector and ask for a show of hands.]</em></p><p class="who">Karissa</p><p>1. The end screen puts their warning next to Tracer's, on the same rounds.</p><p>2. Hands up if you beat Tracer.</p><p>3. What made you call it? Take one or two answers.</p><p>4. The idea: the silence itself was telling them something.</p><p>5. Some early callers picked the wrong one, and that trade is what Daniel shows next.</p><p><em>[In her own words, about 65 words plus the answers. Start when most end screens are up. About a minute.]</em></p></aside>
 </section>
 
 <!-- 9 -->
-<section class="slide" data-beat="Why this design" data-who="Daniel" data-start="11:45" data-end="12:45" data-hands="1">
+<section class="slide" data-beat="Why this design" data-who="Daniel" data-start="10:45" data-end="11:45" data-hands="1">
   <div class="head-row">
     <h2 class="t-h3">Judged by minutes of warning, at alerts a shift can take.</h2>
     <a class="btn" href="../demo/index.html#threshold" target="_blank" rel="noopener">The threshold slider <span aria-hidden="true">↗</span></a>
@@ -510,7 +517,7 @@ body.presenter .pnav{display:flex}
 </section>
 
 <!-- 10 -->
-<section class="slide" data-beat="How we built it" data-who="Karissa, then Daniel" data-start="12:45" data-end="13:30">
+<section class="slide" data-beat="How we built it" data-who="Karissa, then Daniel" data-start="11:45" data-end="12:30">
   <h2 class="t-h3">How we built and tested Tracer.</h2>
   <svg class="diagram pipe" viewBox="0 0 860 296" role="img" aria-label="The data: code draws 12,000 specimen briefs with planted faults, Claude writes each scan trail and its hidden true path, and a validator with nine checks keeps 11,967 and freezes them, for 2.16 dollars. The model: a three-part survival model fit on 24 runs, tested on 6 runs it never saw, with 2,378 specimens and 100 missed windows, and its numbers go to the demo. The hidden truth goes only to the test.">
     <defs><marker id="pipe-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0 0L10 5L0 10z"/></marker></defs>
@@ -533,11 +540,30 @@ body.presenter .pnav{display:flex}
   </svg>
   <p class="t-cap pipe-note">Three parts: normal trip times by type, hour and priority; trips that run far longer but still arrive; and specimens that never arrive.</p>
   <div class="foot"><p class="caveat">Synthetic data, no clinical review</p></div>
-  <aside class="notes-src"><p class="who">Karissa</p><p>Here's how we built it. We couldn't find public data with these scans, so we wrote our own. Code draws twelve thousand specimens from assumed timings and my policy table. Claude writes each one's scans and its hidden true path, and a validator keeps the ones that pass nine checks.</p><p><em>[About 50 words.]</em></p><p class="who">Daniel</p><p>Then a small survival model learns from twenty-four of the thirty runs: how long a normal trip takes for each kind of specimen and time of day, how often a trip runs far longer and still arrives, and how often one never does. We test it on the other six, and only that test sees the hidden truth.</p><p><em>[About 60 words.]</em></p></aside>
+  <aside class="notes-src"><p class="who">Karissa</p><p>1. No public data has these scans, so we made our own.</p><p>2. Code draws 12,000 specimens from assumed timings and the policy table.</p><p>3. Claude writes each one's scans and its hidden true path, and a validator keeps the ones that pass nine checks.</p><p><em>[In her own words, about 45 words.]</em></p><p class="who">Daniel</p><p>Then a small survival model learns from twenty-four of the thirty runs: how long a normal trip takes, how often one runs far longer and still arrives, and how often one never does. We test it on the other six, and only that test sees the hidden truth.</p><p><em>[About 50 words.]</em></p></aside>
 </section>
 
 <!-- 11 -->
-<section class="slide" data-beat="Limits and next steps" data-who="Karissa" data-start="13:30" data-end="14:15">
+<section class="slide" data-beat="A neural challenger" data-who="Daniel" data-start="12:30" data-end="13:00">
+  <h2 class="t-h3">We also trained a neural network.</h2>
+  <p class="t-lead">TracerNet warned earlier, on a second, busier set of simulated lab weeks.</p>
+  <div class="chart c30" role="img" aria-label="Average warning at 6 alerts per 8-hour shift, a miss counting as zero: the window rule 7.4 minutes, our survival model 13.7 minutes, TracerNet 23.9 minutes.">
+    <div class="row" style="--v:7.4"><span class="lab">Window rule</span><span class="plot"><span class="bar base"></span></span><span class="val">7.4 min</span></div>
+    <div class="row" style="--v:13.7"><span class="lab">Our survival model</span><span class="plot"><span class="bar tracer-eq"></span></span><span class="val">13.7 min</span></div>
+    <div class="row result" style="--v:23.9"><span class="lab">TracerNet</span><span class="plot"><span class="bar tracer"></span></span><span class="val">23.9 min</span></div>
+    <div class="axis" aria-hidden="true"><span style="--t:0">0</span><span style="--t:10">10</span><span style="--t:20">20</span><span style="--t:30">30 min</span></div>
+  </div>
+  <ul class="limits verdict t-step">
+    <li>It did not win by the rule we set before testing.</li>
+    <li class="next">The survival model stays in charge. TracerNet is a challenger.</li>
+  </ul>
+  <p class="t-cap">Average warning at 6 alerts per 8-hour shift, a miss counting as zero, each warning capped at 2 hours. The survival model is refit to these weeks.</p>
+  <div class="foot"><p class="caveat">Synthetic data, no clinical review</p></div>
+  <aside class="notes-src"><p class="who">Daniel</p><p>We also trained a neural network, TracerNet, on a second, busier set of simulated lab weeks. It warned about twenty-four minutes ahead on average, against fourteen for our survival model. But by the rule we wrote down before testing, it didn't win. So the survival model stays in charge, and TracerNet stays a challenger.</p><p><em>[About 55 words.]</em></p></aside>
+</section>
+
+<!-- 12 -->
+<section class="slide" data-beat="Limits and next steps" data-who="Karissa" data-start="13:00" data-end="13:45">
   <h2 class="t-h2">What Tracer cannot tell you.</h2>
   <ul class="limits t-lead" style="color:var(--ink)">
     <li>A mislabeled or leaking specimen is invisible to it.</li>
@@ -546,11 +572,11 @@ body.presenter .pnav{display:flex}
     <li>At twice the volume, the window-share rule matches it.</li>
     <li class="next">Next: test it on a real laboratory log with receipt scans.</li>
   </ul>
-  <aside class="notes-src"><p class="who">Karissa</p><p>Some honest limits. Tracer only watches time and place, so it can't see a mislabeled or leaking specimen. Every specimen you saw is synthetic, and there's been no clinical review of the data or the model. I wrote the policy table behind the stability windows, and ten of its forty-four rows still have no published source, so they're marked as assumptions. Tracer's lead also depends on the setting: at twice the volume, the simple window rule matches it. The real next step is to test it on a real laboratory log with receipt scans.</p><p><em>[About 95 words.]</em></p></aside>
+  <aside class="notes-src"><p class="who">Karissa</p><p>1. Tracer watches only time and place, so it cannot see a mislabeled or leaking specimen.</p><p>2. Every specimen is synthetic, with no clinical review of the data or the model.</p><p>3. The policy table behind the stability windows: 10 of its 44 rows still have no published source, so they are marked as assumptions.</p><p>4. Tracer's lead depends on the setting: at twice the volume, the simple window rule matches it.</p><p>5. The next step: test it on a real laboratory log with receipt scans.</p><p><em>[In her own words, about 90 words.]</em></p></aside>
 </section>
 
-<!-- 12 -->
-<section class="slide" data-beat="Questions" data-who="Both" data-start="14:15" data-end="17:00" data-layout="hands">
+<!-- 13 -->
+<section class="slide" data-beat="Questions" data-who="Both" data-start="13:45" data-end="15:00" data-layout="hands">
   <div class="hands">
     <div>
       <div class="qr"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAlAAAAJQAQAAAABpmWfoAAAD4UlEQVR4nO2dgW6rMBRDidX//+VMhbYkBWY7agXvzUdaR8EcUZCuQghQ6vQp8DHTFJUOjCwhKh0YWUJUOjCyhKh0YGQJUenAyBKi0oGRJUSlAyNLiEoHRpYQlQ6MLCEqHRhZQlQ6MLKEqHTwv6tuz4nSza7z9+VznXeUvfIPRFQy0KOMqHRgZP+66nZUj54V6/7tfcm0W7uu+QMRlQz0KCMqHRjZv666tV+W2tPWoqU29fVrP3vVH4ioZKBHGVHpwMj+ddXtaMG9Vi01qTTfS1ehvrZViEoGepQRlQ6MLCGqD9Sr6XWm1/Zi1V9U2e06MLKEqHRgZAlRnd++qm8L75Vq+ZvmttXaf7VXuXIEdWBkCVHpwMgSojq7XpXDarX2Y9XuHPFrW4WoZKBHGVHpwMgSohqoV3WzaDvCoR5m72S368DIEqLSgZElRHXKvirP2vOsRmsbav2/N3fajHbIEdSBkSVEpQMjS4jq3PPBOn+2/VXr/L5C1df3vgWWI6gDI0uISgdGlhDV2ePba9PG2lal8pjzXLa2y76wVYhKBnqUEZUOjCwhqoHzwTvt+d86tfaz13nuWrv6udntOjCyhKh0YGQJUV1jPEPpequ2lLc7ctZ6lyOoAyNLiEoHRpYQ1XX621fe73qur7kraV/5YGCdA6LSgZElRHVuvZqa+5v3ntBQX/3wbc9V25OVI6gDI0uISgdGlhDVFfrbp+bq4Fqd9nre69uVwxxBB1jpX4lKB0aWENX54xnqPNW2q9oxWFPX2mrX+/hWISoZ6FFGVDowsoSoBvuvymO678E67r+quT44CEZX3BKVDowsIaorjBet8+f7CPZ+qmzGOXx8qxCVDPQoIyodGFlCVMPPkynz5/EY99K1qvpRD9ntOjCyhKh0YGQJUZ09nuFO32Zqe96ngye65/rgCBhaa5eodGBkCVGdPZ6h53jMaH0tb//nCDrASv9KVDowsoSozh7P0NI+k2FvXEPtWl4LOYI6MLKEqHRgZAlRXe/9OKW5x7k8Mv0TRtN/NQYG19shKh0YWUJU598/WDZPltne6Tx1raxcHxwDg+vtEJUOjCwhqmu9H6duntFXd97q9aWtQlQy0KOMqHRgZAlRfeT9OPU11Y5lmHaefLWQ3a4DI0uISgdGlhDV9d6PU7p3TkzN2yb23lefI6gDI0uISgdGlhDVtd6PUx69U30Nq5s3euX+wREwtNYuUenAyBKiutb4Kx8MrHNAVDowsoSodGBkCVHpwMgSotKBkSVEpQMjS4hKB0aWEJUOjCwhKh0YWUJUOjCyhKh0YGQJUenAyBKi0oGR/SdVP8gFtr8q5MJBAAAAAElFTkSuQmCC" alt="QR code for the Tracer demo"></div>
@@ -567,7 +593,7 @@ body.presenter .pnav{display:flex}
     </div>
   </div>
   <div class="foot"><p class="caveat">Synthetic data, no clinical review</p></div>
-  <aside class="notes-src"><p class="who">Karissa</p><p>That's Tracer. The demo stays up at this address, and everything is on GitHub: the code, the data, and how we made it. We'd love your questions.</p><p><em>[About 30 words. Then the questions below. Stop at 17:00.]</em></p></aside>
+  <aside class="notes-src"><p class="who">Karissa</p><p>1. That's Tracer.</p><p>2. The demo stays up at this address, and the code, the data and how we made it are on GitHub.</p><p>3. Invite their questions.</p><p><em>[In her own words, about 30 words. Then the questions below. Stop at 15:00.]</em></p></aside>
 </section>
 
 </main>
