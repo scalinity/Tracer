@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <title>Tracer explained</title>
-<meta name="description" content="How Tracer works, who built which part, one specimen from collection to alert, and the questions to expect. Synthetic data with no clinical review.">
+<meta name="description" content="Tracer in about five minutes: the problem, how it works, the TracerNet challenger, the talk and what is left. Synthetic data with no clinical review.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='5' fill='none' stroke='%2363C4D3' stroke-width='2'/%3E%3C/svg%3E">
 <style>
 :root {
@@ -247,6 +247,56 @@ footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary);
   .panel, .instrument { padding: 16px 14px; border-radius: 20px; }
   summary .by { display: none; }
 }
+
+/* rebuilt Nov 13: one idea per line on top, the depth in folds */
+.lines { list-style: none; padding: 0; margin: 0 0 1.2rem; }
+.lines li { padding: .45rem 0; margin: 0; border-bottom: 1px solid var(--separator); }
+.lines li:last-child { border-bottom: 0; }
+.lines strong { color: var(--text-primary); }
+ol.qs { padding-left: 1.4rem; }
+details.more { margin: 1rem 0; }
+details.more > summary { font-weight: 500; color: var(--text-secondary); }
+details.more > summary b { color: var(--text-primary); font-weight: 600; }
+details.more[open] > summary { color: var(--text-primary); }
+.more-body { padding: 0 16px 16px; }
+.more-body > h3:first-child, .more-body > .panel:first-child { margin-top: .4rem; }
+.more-body .instrument { margin: .6rem 0 1rem; }
+.key-line { font-size: .92rem; color: var(--text-secondary); margin-top: .2rem; }
+dl.stats { margin: 1rem 0 1.4rem; display: grid; gap: 10px; }
+dl.stats > div { background: var(--bg-primary); border: 1px solid var(--border-button); border-radius: 18px; padding: 14px 16px; }
+dl.stats dt { font-weight: 600; }
+dl.stats dd { margin: 4px 0 0; }
+dl.stats .nums { font-size: .98rem; }
+dl.stats .nums b { color: var(--known); font-size: 1.25rem; }
+dl.stats .mean { color: var(--text-secondary); font-size: .95rem; }
+.checked { border-color: var(--known-deep); background: linear-gradient(var(--known-soft), var(--known-soft)), var(--bg-primary); }
+.checked h3 { color: var(--known); }
+.talk td.t { white-space: nowrap; color: var(--text-tertiary); }
+.talk td.w { white-space: nowrap; }
+.talk tr.k td.w { color: var(--known); }
+.cards3 { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); margin: 1rem 0 1.4rem; }
+.cards3 > div { background: var(--bg-primary); border: 1px solid var(--border-button); border-radius: 20px; padding: 16px 18px; }
+.cards3 b { display: block; font-family: var(--serif); font-size: 1.15rem; margin-bottom: 4px; }
+.cards3 p { margin: 0; color: var(--text-secondary); font-size: .95rem; }
+ol.todo { list-style: none; padding: 0; margin: 1rem 0; }
+ol.todo li { display: grid; grid-template-columns: 1.6rem 1fr auto; gap: 4px 10px; align-items: baseline; padding: 12px 0; margin: 0; border-bottom: 1px solid var(--separator); }
+ol.todo li::before { content: ""; width: 18px; height: 18px; border: 2px solid var(--text-tertiary); border-radius: 5px; transform: translateY(3px); }
+ol.todo .owner { font-weight: 600; margin-right: .3rem; }
+ol.todo li:last-child { border-bottom: 0; }
+ol.todo .due { color: var(--alert); font-size: .9rem; white-space: nowrap; }
+@media (min-width: 760px) { dl.stats { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) {
+  ol.todo li { grid-template-columns: 1.6rem 1fr; }
+  ol.todo .due { grid-column: 2; }
+  /* the run of show stacks: time and owner on one line, the part under it */
+  .talk thead { display: none; }
+  .talk tr { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; padding: 10px 14px; border-bottom: 1px solid var(--separator); }
+  .talk tr:last-child { border-bottom: 0; }
+  .talk td { padding: 0; border: 0; }
+  .talk td.t, .talk td.w { grid-row: 1; }
+  .talk td.w { grid-column: 2; }
+  .talk td:nth-child(2) { grid-column: 1 / -1; }
+}
 </style>
 </head>
 <body>
@@ -254,7 +304,7 @@ footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary);
 
 <header class="hero">
   <h1>Silence is evidence.</h1>
-  <p class="lede">Tracer watches every specimen the microbiology lab is still waiting for. Every 5 minutes it estimates the chance each one misses its stability window and where it probably is, and it alerts someone while there is still time to find it. This page explains how it works and who built which part, for the talk on December 9.</p>
+  <p class="lede">Tracer is an early warning for lab samples that go quiet on their way to the lab. This page explains the project in about five minutes, for the talk on December 9. Open <b>More detail</b> wherever you want to go deeper.</p>
   <figure aria-label="One specimen: collected at 7:15 AM, received at 8:57 AM, with 102 minutes and no scan in between">
     <div class="hero-mid" aria-hidden="true">102 minutes with no scan</div>
     <svg viewBox="0 0 640 28" aria-hidden="true">
@@ -273,14 +323,14 @@ footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary);
 <div class="layout">
 <nav class="toc" aria-label="Sections">
   <ol>
-    <li><a href="#problem">The problem</a></li>
-    <li><a href="#how">How Tracer works</a></li>
-    <li><a href="#daniel">What Daniel built</a></li>
-    <li><a href="#karissa">What Karissa built</a></li>
-    <li><a href="#walkthrough">One specimen, start to flag</a></li>
+    <li><a href="#problem">What Tracer is</a></li>
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#tracernet">TracerNet</a></li>
+    <li><a href="#talk">The talk</a></li>
+    <li><a href="#left">What's left</a></li>
     <li><a href="#glossary">Glossary</a></li>
     <li><a href="#questions">Likely questions</a></li>
-    <li><a href="#limits">Honest limits</a></li>
+    <li><a href="#limits">Limits</a></li>
     <li><a href="#links">Links</a></li>
   </ol>
 </nav>
@@ -288,7 +338,17 @@ footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary);
 <main>
 
 <section id="problem" aria-labelledby="problem-h">
-  <h2 id="problem-h">The problem</h2>
+  <h2 id="problem-h">What Tracer is, and the problem it solves</h2>
+  <ul class="lines">
+    <li>A nurse collects a sample, say urine, and sends it to the lab.</li>
+    <li>Two moments get recorded: when it's collected, and when the lab receives it.</li>
+    <li>In between, nothing. It could be in the tube system, stuck at a station, or still on the ward.</li>
+    <li>Many samples spoil on a clock. Urine at room temperature lasts about an hour.</li>
+    <li>A spoiled sample is thrown out and taken again: another needle, hours of delay.</li>
+    <li>Today a missing sample makes no noise. Someone notices when the result never comes.</li>
+    <li><strong>Tracer watches that silence, and warns someone while there's still time to find the sample.</strong></li>
+  </ul>
+  <details class="more"><summary><span>More detail: <b>the evidence</b></span></summary><div class="more-body">
   <p>A specimen leaving a hospital ward has two scans in its future: one when it is collected and one when the lab receives it. Between them, nothing is recorded. Nobody can see whether a tube is riding the pneumatic system, waiting at a station, or still sitting on the unit.</p>
   <p>That matters because microbiology specimens are on a clock. Unpreserved urine at room temperature has about 60 minutes before bacteria overgrow and the colony count stops meaning anything. Spinal fluid has to come straight to the lab and must not be refrigerated. A specimen that misses its window is usually rejected and collected again, which for the patient means another needle stick or lumbar puncture and hours of delay.</p>
   <p>Today a missing specimen makes no noise. It is usually noticed when someone calls asking for the result.</p>
@@ -297,11 +357,34 @@ footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary);
     <li><strong>Windows differ a lot.</strong> They run from 60 minutes for unpreserved urine to days for a swab in transport medium, so one time limit is too late for some specimens and far too early for others. <span class="from">config/policy_table.csv</span></li>
     <li><strong>Public records skip the journey.</strong> The public MIMIC-IV demo extract stamps 1,291 microbiology specimens twice, at collection and when the result is filed, a median of 80.1 hours apart, with nothing in between. <span class="from">docs/mimic-demo-findings.md</span></li>
   </ul>
+  </div></details>
 </section>
 
 <section id="how" aria-labelledby="how-h">
-  <h2 id="how-h">How Tracer works</h2>
-  <p>Four parts, in the order the data flows. Karissa's policy table sets the rules. Code and Claude make the data. A small statistical model learns from it. A static web page shows the results. Tap a box to jump to its part.</p>
+  <h2 id="how-h">How it works</h2>
+  <p>Think of package tracking with no scans along the way.</p>
+  <ul class="lines">
+    <li>You know when it shipped, and how long trips like it usually take.</li>
+    <li>Early silence means nothing.</li>
+    <li>The longer it stays quiet past normal, and the closer its deadline, the more you worry.</li>
+  </ul>
+  <p>Tracer does that for every sample the lab is waiting on, every 5 minutes. It asks three questions:</p>
+  <ol class="qs">
+    <li>How unusual is this silence, for this kind of sample?</li>
+    <li>Where is it most likely to be?</li>
+    <li>Is there still time to act?</li>
+  </ol>
+  <p>When the answer is worrying enough, it alerts the person who can go and look. It's a small statistical model, not a black box: a few learned numbers per kind of sample, which a lab scientist can check by eye.</p>
+  <p style="margin-top:1.4rem"><strong>Did it work?</strong> On test data it never saw, here is the median warning (the middle value) before a sample's deadline, in minutes, at 6 alerts per 8-hour shift:</p>
+  <div class="bars" role="img" aria-label="Tracer 55 minutes, window-aware rule 45, Tracer with equal weights 45, plan's rule 30">
+    <div class="bar us"><span>Tracer</span><div class="track"><div class="fill" style="width:91.7%"></div></div><span class="v">55</span></div>
+    <div class="bar"><span>Window-aware rule</span><div class="track"><div class="fill" style="width:75%"></div></div><span class="v">45</span></div>
+    <div class="bar"><span>Tracer, equal weights</span><div class="track"><div class="fill" style="width:75%"></div></div><span class="v">45</span></div>
+    <div class="bar"><span>Plan's rule</span><div class="track"><div class="fill" style="width:50%"></div></div><span class="v">30</span></div>
+  </div>
+  <p class="key-line">The plan's rule is a fixed time limit for each kind of sample. The window-aware rule alerts once a set share of each sample's deadline has passed. Equal weights treats every sample as equally urgent.</p>
+  <p class="small">Every method caught all 100 late samples here; Tracer caught them sooner. Most of its gain comes from using each sample's own deadline. <span class="from">results/README.md, results/mvp-nov8.json</span></p>
+  <details class="more"><summary><span>More detail: <b>the four parts, and who built each</b></span></summary><div class="more-body">
   <figure class="diagram">
     <svg viewBox="0 0 420 430" role="img" aria-labelledby="dg-t">
       <title id="dg-t">Pipeline: the policy table feeds data generation and the prediction logic; data generation feeds the prediction logic and a held-out test; both feed the demo.</title>
@@ -345,12 +428,14 @@ footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary);
     </li>
     <li id="stage-demo">
       <h3>Demo <span class="who">Daniel</span></h3>
-      <p>A static page on GitHub Pages, with no server, no key and no live AI calls. It reads files made ahead of time: the fitted numbers, the 2,378 held-out test specimens with their scans, risk and likely place every 5 minutes, each method's alert moment and the hidden truth, and short stories and search briefs written in advance. The board ranks specimens by expected harm, the timeline lets you scrub through one, Show the truth reveals where it really was, Set the threshold trades warning against alert count, and Beat Tracer has you race the model. A 3D tube bench draws the same model.</p>
+      <p>A static page on GitHub Pages, with no server, no key and no live AI calls. It reads files made ahead of time: the fitted numbers, the 2,378 held-out test specimens with their scans, risk and likely place every 5 minutes, each method's alert moment and the hidden truth, and short stories and search briefs written in advance. The board ranks specimens by expected harm, the timeline lets you scrub through one, Show the truth reveals where it really was, Set the threshold trades warning against alert count, and Beat Tracer has you race the model. A self-playing 3D tube bench draws the same model.</p>
       <p class="like"><b>Like</b> a flight recorder you can replay: everything already happened, and you scrub back and forth to see what Tracer knew at each minute.</p>
       <p class="say"><b>On stage</b>"Everything on your phone already happened. You're replaying what Tracer knew minute by minute, and then checking it against the truth."</p>
     </li>
   </ol>
 
+  </div></details>
+  <details class="more"><summary><span>More detail: <b>try the risk math</b></span></summary><div class="more-body">
   <div class="instrument" id="lab">
     <h3 style="margin-top:0">Try the risk math</h3>
     <p class="muted" style="font-size:.95rem">This runs Tracer's real risk formula in your browser with the fitted numbers from <code>results/interval_params.json</code>, for a routine specimen collected between 6 and 11 AM. Pick a type and drag the silence.</p>
@@ -366,104 +451,8 @@ footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary);
     </div>
     <p class="small" style="margin:0">Notice that even a swab with a 24-hour window climbs fast after two hours: by then most specimens still silent are the ones that never arrive. Urine waits for a higher risk before alerting because its weight is 1, against 3 for tissue.</p>
   </div>
-</section>
-
-<section id="daniel" aria-labelledby="daniel-h">
-  <h2 id="daniel-h">What Daniel built</h2>
-  <p>Daniel built everything technical: the data generator, the model, the evaluation and the demo. Claude Code, a coding agent, wrote code and tests under rules Daniel set, and Daniel made the calls the repo could not settle.</p>
-
-  <div class="panel plain">
-    <h3>Plainly: this is a statistical model, not a trained black box</h3>
-    <p>Tracer has no neural network, no gradient boosting, and no AI model making live predictions. Its shape is written by hand: a three-part survival model, a location filter and a threshold rule. What it learns from data is a short list of numbers, fit by maximum likelihood on 24 training runs. Claude wrote the synthetic data and predicts nothing.</p>
-    <p style="margin:0">It learns its numbers from data and gives a probability, not a yes or no. A gradient-boosted challenger is planned and has not been run.</p>
-  </div>
-
-  <h3>The synthetic dataset, and why</h3>
-  <p>There was no data to learn from: MIMIC-IV has no transit scans, and nothing from a real workplace is used. So the data is generated. Code owns the statistics and Claude supplies the texture, because timings written by a language model have thin tails (too few very long delays) and cannot be redrawn on demand.</p>
-  <ul>
-    <li><strong>Briefs, by code.</strong> 30 runs of 400 specimens from seed 1. Faults are planted on purpose, at inflated rates so each appears often enough to test: of the 12,000 requested, 262 stall at the station, 218 are mislabeled or leaking, 128 are never sent, 96 go to the wrong station, 75 are never collected, 74 are lost in the tube, and 11,147 have no fault.</li>
-    <li><strong>Trails, by Claude.</strong> claude-haiku-5-5 writes each specimen's scan events and its hidden true path from the brief. It never sees the window or whether the specimen breached.</li>
-    <li><strong>Nine checks.</strong> The reply's shape, the event order, the hidden stages, the true-path segments, their lengths, the planted fault, the receipt scan, locations and notes, and no personal data. A failing trail gets one retry with the error text; a second failure drops it.</li>
-    <li><strong>Result.</strong> 11,967 accepted (99.7%), 99.4% on the first try, 33 dropped, $2.16 in all. The dropped ones lean toward long delays, because the model resists writing very long waits.</li>
-    <li><strong>Not reviewed.</strong> Karissa's planned review of twenty pilot timelines was skipped, so the dataset has had no clinical review.</li>
-  </ul>
-
-  <h3>How predictions are made</h3>
-  <p><strong>1. Risk: a three-part survival model.</strong> Fit on runs 0 to 23 (9,514 specimens). A trip is one of three kinds: normal (93.1% of specimens, typically about 21 minutes), far longer but still arriving (5.3%, typically about 89 minutes), or never arriving (1.6%). The normal trip time is fit separately for 96 groups, specimen type × six-hour block × priority; a group with fewer than 30 received specimens borrows the fit of a broader group. Risk is then one division:</p>
-  <div class="panel" style="font-family:var(--serif);font-size:1.08rem;text-align:center">
-    chance it misses = <span style="white-space:nowrap">(still out at the window)</span> ÷ <span style="white-space:nowrap">(still out now)</span>
-  </div>
-  <p>As the silence passes a normal trip, the specimens still out are more and more the long-delayed and lost ones, so risk rises on its own and never falls while the silence lasts. Once the receipt scan arrives the outcome is known and scoring stops.</p>
-  <p><strong>2. Location: a forward filter.</strong> On a one-minute grid, the filter moves probability through the legs of a trip (on the unit, hand carry, in the tube, at the station) and the ways it can fail (stalled, misrouted, lost). Each minute, anything that would have been received is removed, because it wasn't, and the rest is rescaled. Silence is the input. The split of time between legs and of failures between places are assumptions, not learned.</p>
-  <p><strong>3. Alerts: a threshold rule.</strong> Expected harm is risk × urgency weight (tier 1 = 3, tier 2 = 2, tier 3 = 1, all assumed). Each specimen gets at most one alert, when its harm reaches a threshold. The threshold is set on the training runs from alert volume alone, with no labels, as the most eager setting that stays within 6 alerts per 8-hour shift (an assumed budget); it comes out at 0.137. Alerts go to the receiving technologist for a tube specimen, the courier coordinator for a hand carry, and the charge nurse when the filter places the specimen still on its unit.</p>
-  <p><strong>The two rules it is compared with.</strong> The plan's rule alerts when the time since collection passes a percentile of that group's usual trip times, and ignores the window. The window-aware rule alerts once a fixed share of the window has passed. Each gets the same alert budget.</p>
-
-  <h3 id="checked">How it was checked</h3>
-  <ul>
-    <li><strong>A test it never saw.</strong> Runs 24 to 29: 2,378 specimens with a clock, 100 missed windows, 126 shifts. Only the evaluation code reads the hidden truth, and a test fails if the model code touches it.</li>
-    <li><strong>A bar set in advance:</strong> at least 5 more minutes of median warning than the plan's rule at the same alerts per shift. Cleared at 2, 4 and 6 alerts per shift, with both weightings.</li>
-    <li><strong>Parameter recovery.</strong> The fit gets back what the generator planted: 29.55% of specimens planted still out at 30 minutes against 29.97% fitted; 1.78% planted never arriving against 1.63% fitted; inside the bar at every checkpoint.</li>
-    <li><strong>Parity.</strong> The Python risk matches the original JavaScript page within one part in a million at every minute of its scenario.</li>
-    <li><strong>Sensitivity.</strong> The time-of-day profile did not matter. Volume did: at every other volume tested, from half to twice, the window-aware rule ties Tracer.</li>
-  </ul>
-
-  <p style="margin-top:1.4rem"><strong>Median warning on the test runs at 6 alerts per shift,</strong> in minutes from alert to window close, counting a missed breach as zero:</p>
-  <div class="bars" role="img" aria-label="Tracer 55 minutes, window-aware rule 45, Tracer with equal weights 45, plan's rule 30">
-    <div class="bar us"><span>Tracer</span><div class="track"><div class="fill" style="width:91.7%"></div></div><span class="v">55</span></div>
-    <div class="bar"><span>Window-aware rule</span><div class="track"><div class="fill" style="width:75%"></div></div><span class="v">45</span></div>
-    <div class="bar"><span>Tracer, equal weights</span><div class="track"><div class="fill" style="width:75%"></div></div><span class="v">45</span></div>
-    <div class="bar"><span>Plan's rule</span><div class="track"><div class="fill" style="width:50%"></div></div><span class="v">30</span></div>
-  </div>
-  <p class="small">All 100 breaches were caught by every method at this budget. The lead over the plan's rule is 20 to 25 minutes (95% paired bootstrap). Most of that gain comes from using the window. <span class="from">results/README.md, results/mvp-nov8.json</span></p>
-
-  <h3>Key numbers</h3>
-  <div class="tablewrap"><table>
-    <thead><tr><th>Number</th><th>What it is</th><th>From</th></tr></thead>
-    <tbody>
-      <tr><td class="n">11,967 / 12,000</td><td>Specimens accepted by the validator (99.7%)</td><td class="from">datasets/manifest.json</td></tr>
-      <tr><td class="n">$2.16</td><td>Cost to generate the whole dataset</td><td class="from">datasets/manifest.json</td></tr>
-      <tr><td class="n">24 / 6</td><td>Runs used to fit / runs held out for the test</td><td class="from">results/interval_params.json, docs/demo/bundle.json</td></tr>
-      <tr><td class="n">9,514</td><td>Specimens in the fit; 155 of them never arrived</td><td class="from">results/interval_params.json</td></tr>
-      <tr><td class="n">2,378 / 100</td><td>Test specimens with a clock / missed windows among them</td><td class="from">docs/demo/bundle.json</td></tr>
-      <tr><td class="n">55 / 45 / 30 min</td><td>Median warning: Tracer / window-aware rule / plan's rule, at 6 alerts a shift</td><td class="from">results/README.md</td></tr>
-      <tr><td class="n">806 / 706</td><td>Tracer's alerts over 126 test shifts / those on specimens that arrived in time</td><td class="from">docs/demo/bundle.json</td></tr>
-      <tr><td class="n">55% / 88%</td><td>Place right on the first guess / in the top three, at 30 minutes of silence</td><td class="from">results/location-accuracy.json</td></tr>
-      <tr><td class="n">0.109 vs 0.119</td><td>Brier score against the base rate at 30 minutes (lower is better)</td><td class="from">results/README.md</td></tr>
-    </tbody>
-  </table></div>
-</section>
-
-<section id="karissa" aria-labelledby="karissa-h">
-  <h2 id="karissa-h">What Karissa built</h2>
-  <p>Karissa Kocourek is a clinical microbiology scientist. She wrote the policy table that every part of Tracer runs on, owns clinical review, and gives the clinical half of the talk.</p>
-  <h3>The policy table</h3>
-  <p>44 rows across the five specimen families in scope (urine, body fluid, bronchoalveolar lavage, culture swabs, tissue) and their tests. Each row holds the stability window in minutes, where the clock stops, the urgency tier, transport temperature, preservative, whether a stain is needed, rejection criteria, and the source. Karissa checked 30 rows against a published source herself and initialed them: most cite the IDSA and ASM 2024 guide to microbiology specimen collection, by table, and the eSwab rows cite Copan's instructions for use. Every row runs the clock from collection to receipt in the lab.</p>
-  <h3>How it drives the system</h3>
-  <ul>
-    <li><strong>It defines a miss.</strong> A specimen not received within its window is a breach. That is the label the test scores against.</li>
-    <li><strong>It sets each specimen's deadline.</strong> The window is the deadline in the risk formula, so the same 40 minutes of silence means far more for urine (60 minutes) than for a swab (24 hours).</li>
-    <li><strong>It sets urgency.</strong> The tier becomes the alert weight: tissue and lavage cannot be collected again, so they alert sooner.</li>
-    <li><strong>It settles multi-test specimens.</strong> A specimen with several tests takes the shortest window among them.</li>
-    <li><strong>It is locked to the results.</strong> Every result carries a fingerprint of the table, and scoring refuses one that does not match, so no number can drift away from her table unnoticed.</li>
-  </ul>
-  <p>The fairest credit is in the results: most of Tracer's gain over the plan's simple rule comes from using the window, and the window is hers. A rule built on her windows alone gets 45 minutes of warning where the plan's rule gets 30.</p>
-  <h3>Rows still marked assumed</h3>
-  <p>10 of the 44 rows have no published source for their window yet. They are labeled assumed everywhere and never called sourced.</p>
-  <div class="tablewrap"><table>
-    <thead><tr><th>Specimen</th><th>Tests</th><th>Window</th><th>Why it is assumed</th></tr></thead>
-    <tbody>
-      <tr><td>Urine, unpreserved, refrigerated</td><td>Culture</td><td class="n">24 h</td><td>The guide recommends refrigeration but gives no time limit</td></tr>
-      <tr><td>Body fluid, sterile container, refrigerated</td><td>Gram stain, bacterial culture, anaerobic culture</td><td class="n">24 h</td><td>The guide says refrigerate after 1 hour but gives no limit</td></tr>
-      <tr><td>Body fluid in a blood culture bottle</td><td>Bottle culture</td><td class="n">24 h</td><td>The guide says send at once, never refrigerate, with no limit</td></tr>
-      <tr><td>Culture swab (Stuart's)</td><td>Fungal smear, fungal culture</td><td class="n">24 h</td><td>No source found</td></tr>
-      <tr><td>eSwab</td><td>Fungal smear, fungal culture, AFB culture</td><td class="n">48 h</td><td>Copan's instructions cover bacteria only</td></tr>
-    </tbody>
-  </table></div>
-  <p class="small">Four more rows that the sheet left without a source (boric-acid urine, the Stuart's swab Gram stain and bacterial culture, and tissue AFB culture) were filled from sources listed in <code>config/policy_sources.csv</code>. <span class="from">config/policy_table.csv, config/breach_policy.yaml</span></p>
-</section>
-
-<section id="walkthrough" aria-labelledby="walk-h">
-  <h2 id="walk-h">One specimen, from collection to flag</h2>
+  </div></details>
+  <details class="more" id="walkthrough"><summary><span>More detail: <b>replay one specimen, minute by minute</b></span></summary><div class="more-body">
   <p>SP-r27-000368 is the specimen Karissa walks through on slide 7. Drag the minute and watch what Tracer knew. Then show the truth.</p>
 
   <div class="instrument" id="replay">
@@ -527,13 +516,190 @@ footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary);
     <li class="k"><span class="when">8:57 AM, minute 102</span>Received, inside its window, which would have closed at 9:15. The clock stops here. Accessioning at minute 142 and plating at 153 happen after the clock and do not count.</li>
   </ol>
   <p class="small">A 79% risk that ends in an on-time arrival is not a wrong prediction: risk is a chance, not a verdict. <span class="from">docs/demo/bundle.json, docs/demo/heroes.json, results/alerts.csv</span></p>
+  </div></details>
+  <details class="more" id="daniel"><summary><span>More detail: <b>the data, the model and how it was checked</b></span></summary><div class="more-body">
+  <p>Daniel built everything technical: the data generator, the model, the evaluation and the demo. Claude Code, a coding agent, wrote code and tests under rules Daniel set, and Daniel made the calls the repo could not settle.</p>
+
+  <div class="panel plain">
+    <h3>Plainly: this is a statistical model, not a trained black box</h3>
+    <p>Tracer's main model has no neural network and no AI model making live predictions. Its shape is written by hand: a three-part survival model, a location filter and a threshold rule. What it learns from data is a short list of numbers, fit by maximum likelihood on 24 training runs. Claude wrote the synthetic data and predicts nothing.</p>
+    <p style="margin:0">It learns its numbers from data and gives a probability, not a yes or no. A neural challenger, TracerNet, came later and is described below; the gradient-boosted challenger was cut.</p>
+  </div>
+
+  <h3>The synthetic dataset, and why</h3>
+  <p>There was no data to learn from: MIMIC-IV has no transit scans, and nothing from a real workplace is used. So the data is generated. Code owns the statistics and Claude supplies the texture, because timings written by a language model have thin tails (too few very long delays) and cannot be redrawn on demand.</p>
+  <ul>
+    <li><strong>Briefs, by code.</strong> 30 runs of 400 specimens from seed 1. Faults are planted on purpose, at inflated rates so each appears often enough to test: of the 12,000 requested, 262 stall at the station, 218 are mislabeled or leaking, 128 are never sent, 96 go to the wrong station, 75 are never collected, 74 are lost in the tube, and 11,147 have no fault.</li>
+    <li><strong>Trails, by Claude.</strong> claude-haiku-5-5 writes each specimen's scan events and its hidden true path from the brief. It never sees the window or whether the specimen breached.</li>
+    <li><strong>Nine checks.</strong> The reply's shape, the event order, the hidden stages, the true-path segments, their lengths, the planted fault, the receipt scan, locations and notes, and no personal data. A failing trail gets one retry with the error text; a second failure drops it.</li>
+    <li><strong>Result.</strong> 11,967 accepted (99.7%), 99.4% on the first try, 33 dropped, $2.16 in all. The dropped ones lean toward long delays, because the model resists writing very long waits.</li>
+    <li><strong>Not reviewed.</strong> Karissa's planned review of twenty pilot timelines was skipped, so the dataset has had no clinical review.</li>
+  </ul>
+
+  <h3>How predictions are made</h3>
+  <p><strong>1. Risk: a three-part survival model.</strong> Fit on runs 0 to 23 (9,514 specimens). A trip is one of three kinds: normal (93.1% of specimens, typically about 21 minutes), far longer but still arriving (5.3%, typically about 89 minutes), or never arriving (1.6%). The normal trip time is fit separately for 96 groups, specimen type × six-hour block × priority; a group with fewer than 30 received specimens borrows the fit of a broader group. Risk is then one division:</p>
+  <div class="panel" style="font-family:var(--serif);font-size:1.08rem;text-align:center">
+    chance it misses = <span style="white-space:nowrap">(still out at the window)</span> ÷ <span style="white-space:nowrap">(still out now)</span>
+  </div>
+  <p>As the silence passes a normal trip, the specimens still out are more and more the long-delayed and lost ones, so risk rises on its own and never falls while the silence lasts. Once the receipt scan arrives the outcome is known and scoring stops.</p>
+  <p><strong>2. Location: a forward filter.</strong> On a one-minute grid, the filter moves probability through the legs of a trip (on the unit, hand carry, in the tube, at the station) and the ways it can fail (stalled, misrouted, lost). Each minute, anything that would have been received is removed, because it wasn't, and the rest is rescaled. Silence is the input. The split of time between legs and of failures between places are assumptions, not learned.</p>
+  <p><strong>3. Alerts: a threshold rule.</strong> Expected harm is risk × urgency weight (tier 1 = 3, tier 2 = 2, tier 3 = 1, all assumed). Each specimen gets at most one alert, when its harm reaches a threshold. The threshold is set on the training runs from alert volume alone, with no labels, as the most eager setting that stays within 6 alerts per 8-hour shift (an assumed budget); it comes out at 0.137. Alerts go to the receiving technologist for a tube specimen, the courier coordinator for a hand carry, and the charge nurse when the filter places the specimen still on its unit.</p>
+  <p><strong>The two rules it is compared with.</strong> The plan's rule alerts when the time since collection passes a percentile of that group's usual trip times, and ignores the window. The window-aware rule alerts once a fixed share of the window has passed. Each gets the same alert budget.</p>
+
+  <h3 id="checked">How it was checked</h3>
+  <ul>
+    <li><strong>A test it never saw.</strong> Runs 24 to 29: 2,378 specimens with a clock, 100 missed windows, 126 shifts. Only the evaluation code reads the hidden truth, and a test fails if the model code touches it.</li>
+    <li><strong>A bar set in advance:</strong> at least 5 more minutes of median warning than the plan's rule at the same alerts per shift. Cleared at 2, 4 and 6 alerts per shift, with both weightings; at 6, the lead over the plan's rule is 20 to 25 minutes (95% paired bootstrap).</li>
+    <li><strong>Parameter recovery.</strong> The fit gets back what the generator planted: 29.55% of specimens planted still out at 30 minutes against 29.97% fitted; 1.78% planted never arriving against 1.63% fitted; inside the bar at every checkpoint.</li>
+    <li><strong>Parity.</strong> The Python risk matches the original JavaScript page within one part in a million at every minute of its scenario.</li>
+    <li><strong>Sensitivity.</strong> The time-of-day profile did not matter. Volume did: at every other volume tested, from half to twice, the window-aware rule ties Tracer.</li>
+  </ul>
+
+  <h3>Key numbers</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Number</th><th>What it is</th><th>From</th></tr></thead>
+    <tbody>
+      <tr><td class="n">11,967 / 12,000</td><td>Specimens accepted by the validator (99.7%)</td><td class="from">datasets/manifest.json</td></tr>
+      <tr><td class="n">$2.16</td><td>Cost to generate the whole dataset</td><td class="from">datasets/manifest.json</td></tr>
+      <tr><td class="n">24 / 6</td><td>Runs used to fit / runs held out for the test</td><td class="from">results/interval_params.json, docs/demo/bundle.json</td></tr>
+      <tr><td class="n">9,514</td><td>Specimens in the fit; 155 of them never arrived</td><td class="from">results/interval_params.json</td></tr>
+      <tr><td class="n">2,378 / 100</td><td>Test specimens with a clock / missed windows among them</td><td class="from">docs/demo/bundle.json</td></tr>
+      <tr><td class="n">55 / 45 / 30 min</td><td>Median warning: Tracer / window-aware rule / plan's rule, at 6 alerts a shift</td><td class="from">results/README.md</td></tr>
+      <tr><td class="n">806 / 706</td><td>Tracer's alerts over 126 test shifts / those on specimens that arrived in time</td><td class="from">docs/demo/bundle.json</td></tr>
+      <tr><td class="n">55% / 88%</td><td>Place right on the first guess / in the top three, at 30 minutes of silence</td><td class="from">results/location-accuracy.json</td></tr>
+      <tr><td class="n">0.109 vs 0.119</td><td>Brier score against the base rate at 30 minutes (lower is better)</td><td class="from">results/README.md</td></tr>
+    </tbody>
+  </table></div>
+  </div></details>
+  <details class="more" id="karissa"><summary><span>More detail: <b>Karissa's policy table</b></span></summary><div class="more-body">
+  <p>Karissa Kocourek is a clinical microbiology scientist. She wrote the policy table that every part of Tracer runs on, owns clinical review, and gives the clinical half of the talk.</p>
+  <h3>The policy table</h3>
+  <p>44 rows across the five specimen families in scope (urine, body fluid, bronchoalveolar lavage, culture swabs, tissue) and their tests. Each row holds the stability window in minutes, where the clock stops, the urgency tier, transport temperature, preservative, whether a stain is needed, rejection criteria, and the source. Karissa checked 30 rows against a published source herself and initialed them: most cite the IDSA and ASM 2024 guide to microbiology specimen collection, by table, and the eSwab rows cite Copan's instructions for use. Every row runs the clock from collection to receipt in the lab.</p>
+  <h3>How it drives the system</h3>
+  <ul>
+    <li><strong>It defines a miss.</strong> A specimen not received within its window is a breach. That is the label the test scores against.</li>
+    <li><strong>It sets each specimen's deadline.</strong> The window is the deadline in the risk formula, so the same 40 minutes of silence means far more for urine (60 minutes) than for a swab (24 hours).</li>
+    <li><strong>It sets urgency.</strong> The tier becomes the alert weight: tissue and lavage cannot be collected again, so they alert sooner.</li>
+    <li><strong>It settles multi-test specimens.</strong> A specimen with several tests takes the shortest window among them.</li>
+    <li><strong>It is locked to the results.</strong> Every result carries a fingerprint of the table, and scoring refuses one that does not match, so no number can drift away from her table unnoticed.</li>
+  </ul>
+  <p>The fairest credit is in the results: most of Tracer's gain over the plan's simple rule comes from using the window, and the window is hers. A rule built on her windows alone gets 45 minutes of warning where the plan's rule gets 30.</p>
+  <h3>Rows still marked assumed</h3>
+  <p>10 of the 44 rows have no published source for their window yet. They are labeled assumed everywhere and never called sourced.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Specimen</th><th>Tests</th><th>Window</th><th>Why it is assumed</th></tr></thead>
+    <tbody>
+      <tr><td>Urine, unpreserved, refrigerated</td><td>Culture</td><td class="n">24 h</td><td>The guide recommends refrigeration but gives no time limit</td></tr>
+      <tr><td>Body fluid, sterile container, refrigerated</td><td>Gram stain, bacterial culture, anaerobic culture</td><td class="n">24 h</td><td>The guide says refrigerate after 1 hour but gives no limit</td></tr>
+      <tr><td>Body fluid in a blood culture bottle</td><td>Bottle culture</td><td class="n">24 h</td><td>The guide says send at once, never refrigerate, with no limit</td></tr>
+      <tr><td>Culture swab (Stuart's)</td><td>Fungal smear, fungal culture</td><td class="n">24 h</td><td>No source found</td></tr>
+      <tr><td>eSwab</td><td>Fungal smear, fungal culture, AFB culture</td><td class="n">48 h</td><td>Copan's instructions cover bacteria only</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small">Four more rows that the sheet left without a source (boric-acid urine, the Stuart's swab Gram stain and bacterial culture, and tissue AFB culture) were filled from sources listed in <code>config/policy_sources.csv</code>. <span class="from">config/policy_table.csv, config/breach_policy.yaml</span></p>
+  </div></details>
+</section>
+
+<section id="tracernet" aria-labelledby="tn-h">
+  <h2 id="tn-h">TracerNet: the neural challenger</h2>
+  <ul class="lines">
+    <li>Tracer's main model looks at one sample at a time.</li>
+    <li>TracerNet, a neural network, also reads the whole lab: how busy it is, what's waiting, and which samples traveled together.</li>
+    <li>It was trained and tested on a second, bigger dataset: simulated lab weeks, busier and more varied than the first.</li>
+  </ul>
+  <p><strong>What it achieved,</strong> on the test weeks at 6 alerts per shift:</p>
+  <dl class="stats">
+    <div><dt>Average warning</dt><dd class="nums"><b>23.9 min</b> TracerNet, against 13.7 for Tracer's model refit to these weeks and 7.4 for the window rule</dd><dd class="mean">It spoke up about 10 minutes sooner than Tracer's own model.</dd></div>
+    <div><dt>Late samples caught</dt><dd class="nums"><b>39.2%</b> TracerNet, against 35.3% for Tracer's model and 22.9% for the window rule</dd><dd class="mean">With only 6 alerts a shift, it still caught the most.</dd></div>
+    <div><dt>Ranking (AUROC, at 30 minutes of silence)</dt><dd class="nums"><b>0.957</b> TracerNet, against 0.917 for Tracer's model</dd><dd class="mean">It was better at putting a late sample above an on-time one.</dd></div>
+    <div><dt>Honest chances (Brier score, at 30 minutes)</dt><dd class="nums"><b>0.047</b> TracerNet, against 0.077 for Tracer's model; lower is better</dd><dd class="mean">Its percentages were closer to what actually happened.</dd></div>
+  </dl>
+  <p><strong>Why it's a challenger, not the main model:</strong></p>
+  <ul class="lines">
+    <li>Before testing, we wrote down the rule it had to pass: beat every other method's <em>median</em> warning by at least 5 minutes.</li>
+    <li>The test weeks had more late samples per shift (6.4) than alerts (6), so no method caught even half of them.</li>
+    <li>A miss counts as zero warning, so every method's median was zero: a tie.</li>
+    <li>A tie fails the rule. Tracer's simpler model stays in charge, and we kept the rule as written.</li>
+  </ul>
+  <div class="panel checked">
+    <h3>Today's check, November 13</h3>
+    <ul class="lines" style="margin:0">
+      <li><strong>The leakage flag was a false alarm.</strong> A safety test had hinted TracerNet might be seeing answers early. A simple model trained on the same weeks showed the same lead, and hiding every later scan changed none of TracerNet's earlier scores.</li>
+      <li><strong>The original-lab calibration gap is fixed.</strong> On the first dataset its chances ran high. A small adjustment fit only on that lab's history brought its Brier score from 0.216 to 0.181, level with Tracer's 0.182 (at 60 minutes of silence).</li>
+    </ul>
+  </div>
+  <details class="more"><summary><span>More detail: <b>the four rules, and what stays open</b></span></summary><div class="more-body">
+    <p>The rule had four parts, all judged on the test weeks at 6 alerts per shift. TracerNet would take over only if the first three held.</p>
+    <ul>
+      <li><strong>R1, warning: failed.</strong> Every method's median warning was 0 minutes, at both weightings, because no method caught half the late samples. The average warning, set beforehand as a non-binding companion, does separate them: 23.9 minutes against 13.7, 12.0 and 7.4.</li>
+      <li><strong>R2, lost samples: held.</strong> It alerted on 48.2% of samples that never arrived, against 44.7% for Tracer's local refit.</li>
+      <li><strong>R3, calibration: held.</strong> Brier 0.0473 against 0.0771 at 30 minutes, and 0.0312 against 0.0427 at 60.</li>
+      <li><strong>R4, equal alerts: failed.</strong> The window rule alerts only about 3.7 times a shift and cannot fill a budget of 6, so the comparison is reported as unequal.</li>
+    </ul>
+    <p>The calibration fix is for the chances a lab would see; alerts keep TracerNet's own ranking, because alerting on the adjusted scores cut the median warning there from 55 to 47.5 minutes. That split was chosen after seeing the first dataset's scored weeks, which are development data.</p>
+    <p>Still open, and fixed only by a new library, a retrain or a new test look: the scenario library misses its coverage targets in 20 of 32 cells, training had unstable spikes, and the explanations pass their deletion check in 68.2% of alerts against the 70% required. The decision layer that would choose where to look and whom to call failed its own rule, so alerts are routed by a fixed rule.</p>
+    <p class="small"><span class="from">results/neural/REPORT.md, results/neural/followup-2026-11-13.md, results/neural/caveats.md</span></p>
+  </div></details>
+</section>
+
+<section id="talk" aria-labelledby="talk-h">
+  <h2 id="talk-h">The talk, December 9</h2>
+  <p>15 minutes. Seven of them are the class's hands on the demo.</p>
+  <div class="tablewrap"><table class="talk">
+    <thead><tr><th>Starts</th><th>Part</th><th>Who</th></tr></thead>
+    <tbody>
+      <tr class="k"><td class="t">0:00</td><td>Opening: the silent tube, and why it matters</td><td class="w">Karissa</td></tr>
+      <tr><td class="t">1:15</td><td>The missing data</td><td class="w">Daniel</td></tr>
+      <tr><td class="t">1:45</td><td>Meet Tracer</td><td class="w">Daniel</td></tr>
+      <tr class="k"><td class="t">2:30</td><td>What Tracer is built to fix</td><td class="w">Karissa</td></tr>
+      <tr><td class="t">3:00</td><td>How Tracer works, then the 3D demo</td><td class="w">Daniel</td></tr>
+      <tr class="k"><td class="t">3:45</td><td>Phones out: the board, one specimen on the projector</td><td class="w">Karissa</td></tr>
+      <tr><td class="t">6:15</td><td>Beat Tracer: Daniel starts it, Karissa leads the debrief</td><td class="w">Both</td></tr>
+      <tr><td class="t">9:45</td><td>Why this design: the threshold slider</td><td class="w">Daniel</td></tr>
+      <tr><td class="t">10:45</td><td>How we built it: Karissa on the data, Daniel on the model</td><td class="w">Both</td></tr>
+      <tr><td class="t">11:30</td><td>TracerNet, the neural challenger</td><td class="w">Daniel</td></tr>
+      <tr class="k"><td class="t">12:00</td><td>Limits and next steps</td><td class="w">Karissa</td></tr>
+      <tr class="k"><td class="t">12:45</td><td>Close, then questions until 15:00</td><td class="w">Karissa, then both</td></tr>
+    </tbody>
+  </table></div>
+  <p>Karissa owns the opening, what Tracer fixes, hosting the phone activity, and the data, limits and close. She writes her own words from <a href="https://scalinity.github.io/Tracer/talk/script.html?who=karissa">her outline</a>.</p>
+  <h3>What each demo shows</h3>
+  <div class="cards3">
+    <div><b>3D demo</b><p>It plays by itself: four samples on a tube bench, on time, stalled, lost and never sent. The glow is where Tracer thinks each one is. The carrier is where it really is.</p></div>
+    <div><b>Phone page</b><p>Every sample not yet received, riskiest first. Tap one, drag through time, then show the truth. A slider trades warning against alerts.</p></div>
+    <div><b>Beat Tracer</b><p>One of six samples will be late. Tap it before Tracer flags it. Your minutes of warning against Tracer's, over three rounds.</p></div>
+  </div>
+</section>
+
+<section id="left" aria-labelledby="left-h">
+  <h2 id="left-h">What's left</h2>
+  <ol class="todo">
+    <li><span><span class="owner">Daniel</span>Decide whether Beat Tracer stays in the talk, now that it's simplified.</span><span class="due">By Dec 6</span></li>
+    <li><span><span class="owner">Karissa</span>Write her own lines for her four sections, from <a href="https://scalinity.github.io/Tracer/talk/script.html?who=karissa">the outline</a>.</span><span class="due">By Dec 6</span></li>
+    <li><span><span class="owner">Both</span>Check the 3D demo for one full loop on the laptop we present from (it works the GPU hard), and the phone page at phone width.</span><span class="due">By Dec 6</span></li>
+    <li><span><span class="owner">Both</span>Rehearse the full 15-minute talk at least once.</span><span class="due">By Dec 6</span></li>
+    <li><span><span class="owner">Both</span>Freeze everything, then present.</span><span class="due">Freeze Dec 6, present Dec 9</span></li>
+  </ol>
 </section>
 
 <section id="glossary" aria-labelledby="gloss-h">
   <h2 id="gloss-h">Glossary</h2>
   <label for="gq" class="small">Filter the terms</label>
-  <input id="gq" class="search" type="search" placeholder="Type a word, like window or Brier" autocomplete="off">
+  <input id="gq" class="search" type="search" placeholder="Type a word, like median or AUROC" autocomplete="off">
   <dl class="gloss" id="gl">
+    <div><dt>Median</dt><dd>The middle value: half are higher, half are lower.</dd></div>
+    <div><dt>Analytic model</dt><dd>Tracer's main model: the survival model, written by hand with a few learned numbers.</dd></div>
+    <div><dt>Neural network</dt><dd>A model with many learned weights that finds patterns itself, instead of following a formula written by hand.</dd></div>
+    <div><dt>TracerNet</dt><dd>The project's neural network, trained on simulated lab weeks to challenge Tracer's main model.</dd></div>
+    <div><dt>Challenger</dt><dd>A model tested against the main one. It takes over only if it passes a rule set in advance.</dd></div>
+    <div><dt>Pre-registered rule</dt><dd>A pass or fail rule written down before seeing the test results, so it can't be bent afterward.</dd></div>
+    <div><dt>Simulated lab weeks</dt><dd>TracerNet's dataset: lab weeks designed by language models and played out by the project's simulator. Busier and more varied than the first dataset.</dd></div>
+    <div><dt>Capped mean warning</dt><dd>The average warning, with a miss counted as zero and very long warnings capped.</dd></div>
+    <div><dt>Catch rate</dt><dd>The share of late samples that got an alert before their deadline.</dd></div>
+    <div><dt>AUROC</dt><dd>How well a model ranks late samples above on-time ones: 0.5 is a coin flip, 1 is perfect.</dd></div>
+    <div><dt>Calibration</dt><dd>Whether a model's chances come true: of samples given 20%, about 20% should be late.</dd></div>
+    <div><dt>Leakage</dt><dd>A model accidentally seeing answers it shouldn't, which makes it look better than it is.</dd></div>
+    <div><dt>Negative control</dt><dd>A test where a fair model should show no advantage. A lead there is a warning sign.</dd></div>
     <div><dt>Specimen</dt><dd>A sample sent to the lab for testing, here urine, body fluid, bronchoalveolar lavage, a culture swab or tissue.</dd></div>
     <div><dt>Stability window</dt><dd>How long a specimen stays usable, in minutes, from Karissa's policy table. Miss it and the specimen is usually rejected.</dd></div>
     <div><dt>Clock start and stop</dt><dd>Where the window is measured from and to. In Tracer it runs from collection to receipt in the lab, for every row.</dd></div>
@@ -572,20 +738,26 @@ footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary);
   <details><summary>Why not just alert on everything after 30 minutes?<span class="by">Daniel</span></summary><div class="ans">That's close to the simple rule we compared against. It ignores the window, and the windows in our table run from 60 minutes for unpreserved urine to days for a swab in transport medium, so one time limit is too late for some and far too early for others.</div></details>
   <details><summary>What would someone actually do with an alert?<span class="by">Karissa</span></summary><div class="ans">Go to the place Tracer names, like the tube station or the collecting unit, and look for it. Who gets which alert is an assumption we made, and a real lab would set it.</div></details>
   <details><summary>Isn't it circular to test on data you generated?<span class="by">Daniel</span></summary><div class="ans">Partly, yes. The data and the model share our assumptions, so a good result shows the method behaves as designed, not that it works in a real lab. That's why the next step is a real log with receipt scans.</div></details>
-  <details><summary>Why a simple model and not deep learning?<span class="by">Daniel</span></summary><div class="ans">A lab scientist can read its numbers: how long a normal trip takes, how often a trip runs far longer and still arrives, how often it never does. A gradient-boosted challenger is planned and hasn't been run.</div></details>
+  <details><summary>Why a simple model and not deep learning?<span class="by">Daniel</span></summary><div class="ans">We trained one too, TracerNet, and it gave more warning on a second set of simulated weeks, but it didn't pass the rule we set before testing. A lab scientist can read the survival model's numbers: how long a normal trip takes, how often one runs far longer and still arrives, how often it never does. So the survival model stays in charge.</div></details>
   <details><summary>How often is it right about where the specimen is?<span class="by">Daniel</span></summary><div class="ans">At 30 minutes of silence, the true place is in its top three about 88% of the time and its first guess about 55%, on synthetic data. So an alert says something is off more reliably than it says where.</div></details>
   <details><summary>How many false alarms?<span class="by">Daniel</span></summary><div class="ans">Plenty, by design. At 6 alerts a shift about a third of all specimens get an alert, and most of them arrive in time. Its risk scores are only slightly sharper than guessing the average rate, so the gain is in timing, not in sorting.</div></details>
   <details><summary>Why does the clock stop at receipt?<span class="by">Karissa</span></summary><div class="ans">Where a window ends is a clinical judgement, and receipt in the lab is the standard measure. That's what the policy table uses, so a delay at the bench after receipt is outside what Tracer watches.</div></details>
   <details><summary>Is any real patient or hospital data in this?<span class="by">Karissa</span></summary><div class="ans">No. We checked a public 100-patient MIMIC-IV extract and set it aside because it describes intensive care, not a general lab. No workplace data is used anywhere.</div></details>
   <details><summary>How did you use AI to build it?<span class="by">Daniel</span></summary><div class="ans">Claude Code, a coding agent, wrote the code and tests under rules I set, and I made the calls the repo couldn't. A small Claude model wrote the scan trails: 12,000 requested, 11,967 passed a nine-check validator, for about two dollars. It's all in the AI teaming log in the repo.</div></details>
-  <details><summary>So is Tracer machine learning, or a set of rules?<span class="by">Daniel</span></summary><div class="ans">Both, in a specific way. The model's shape is chosen by hand and its numbers are learned from data by maximum likelihood: a typical trip time for each of 96 groups, plus how often a trip runs far longer and how often a specimen never arrives. The alert itself is a threshold rule on top. There is no neural network, and no AI model runs when Tracer scores a specimen.</div></details>
+  <details><summary>So is Tracer machine learning, or a set of rules?<span class="by">Daniel</span></summary><div class="ans">Both, in a specific way. The model's shape is chosen by hand and its numbers are learned from data by maximum likelihood: a typical trip time for each of 96 groups, plus how often a trip runs far longer and how often a specimen never arrives. The alert itself is a threshold rule on top. The main model has no neural network, and no AI model runs when it scores a specimen. TracerNet, the neural challenger, is a separate model.</div></details>
   <details><summary>What does Claude do inside Tracer?<span class="by">Daniel</span></summary><div class="ans">Nothing at run time. A small Claude model wrote the synthetic scan trails before any model was fit, and a larger one wrote the demo's specimen stories and search briefs ahead of time, stored as files. The predictions are plain arithmetic on fitted numbers.</div></details>
   <details><summary>Why did it alert on a tissue specimen at only 5.5% risk?<span class="by">Daniel</span></summary><div class="ans">Because tissue can't be collected again, so its weight is 3, and 3 × 5.5% passes the 0.137 harm threshold. A urine specimen, weight 1, would wait until its risk reached about 14%.</div></details>
   <details><summary>Why six alerts a shift?<span class="by">Karissa</span></summary><div class="ans">It's an assumption, about a third of all specimens, and a real lab would choose its own number. The demo's threshold slider shows the trade: fewer alerts, less warning.</div></details>
 </section>
 
 <section id="limits" aria-labelledby="lim-h">
-  <h2 id="lim-h">Honest limits</h2>
+  <h2 id="lim-h">Limits</h2>
+  <ul class="lines">
+    <li>Every sample is synthetic, with no clinical review.</li>
+    <li>The data and the model share our assumptions, so the results are best-case.</li>
+    <li>The next step is a real lab's log with receipt scans.</li>
+  </ul>
+  <details class="more"><summary><span>More detail: <b>every limit, and what a real deployment would need</b></span></summary><div class="more-body">
   <ul>
     <li><strong>Every specimen is synthetic,</strong> and neither the data nor the model has had clinical review.</li>
     <li><strong>The data and the model share our assumptions,</strong> so the results are best-case: they show the method behaves as designed, not that it works in a real lab.</li>
@@ -595,7 +767,7 @@ footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary);
     <li><strong>It is better at timing than at sorting.</strong> About a third of specimens get an alert, 706 of 806 test alerts were on specimens that arrived in time, and its Brier score is only slightly better than the base rate.</li>
     <li><strong>Location is a hint.</strong> The first guess is right about 55% of the time at 30 minutes of silence.</li>
     <li><strong>The lead depends on the setting.</strong> At every other volume tested, from half to twice, the window-aware rule ties it, and its 10-minute lead over that rule at the original volume comes from the urgency weights. The generator does not model congestion.</li>
-    <li><strong>The gradient-boosted challenger has not been run.</strong></li>
+    <li><strong>The neural challenger did not take over.</strong> TracerNet gave more warning on a second set of simulated weeks but did not pass the rule set before testing, and the gradient-boosted challenger was cut.</li>
   </ul>
   <h3>What a real deployment would need</h3>
   <ul>
@@ -604,14 +776,17 @@ footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary);
     <li>A feed from the lab information system. The design maps onto standard FHIR Specimen and Task records; no such feed is built.</li>
   </ul>
   <p class="small"><span class="from">results/README.md, datasets/manifest.json, docs/architecture.md</span></p>
+  </div></details>
 </section>
 
 <section id="links" aria-labelledby="links-h">
   <h2 id="links-h">Links</h2>
   <div class="links">
-    <a href="https://scalinity.github.io/Tracer/demo/"><b>Live demo</b><span>scalinity.github.io/Tracer/demo/</span></a>
+    <a href="https://scalinity.github.io/Tracer/demo/"><b>Phone page</b><span>scalinity.github.io/Tracer/demo/</span></a>
     <a href="https://scalinity.github.io/Tracer/demo/?seed=18#beat"><b>Beat Tracer, seed 18</b><span>The room's three rounds</span></a>
+    <a href="https://scalinity.github.io/Tracer/demo/play/"><b>3D demo</b><span>Plays by itself</span></a>
     <a href="https://scalinity.github.io/Tracer/talk/"><b>Slides</b><span>scalinity.github.io/Tracer/talk/</span></a>
+    <a href="https://scalinity.github.io/Tracer/talk/script.html?who=karissa"><b>Karissa's outline</b><span>Her sections, in order</span></a>
     <a href="https://github.com/scalinity/Tracer"><b>Code and data</b><span>github.com/scalinity/Tracer</span></a>
   </div>
 </section>
@@ -619,7 +794,7 @@ footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary);
 </main>
 </div>
 
-<footer>Built on November 8, 2026 from the Tracer repository. Each figure names the file it comes from, and tests/test_explained.py fails if one drifts from it. Daniel Escalante and Karissa Kocourek, CAI 5724, University of Florida.</footer>
+<footer>Updated November 13, 2026 from the Tracer repository. Each figure names the file it comes from, and tests/test_explained.py fails if one drifts from it. Daniel Escalante and Karissa Kocourek, CAI 5724, University of Florida.</footer>
 </div>
 
 <script>
@@ -758,6 +933,18 @@ footer { padding: 2.5rem 0 4rem; font-size: .85rem; color: var(--text-tertiary);
     }, { rootMargin: "-30% 0px -60% 0px" });
     links.forEach(function (a) { var s = document.querySelector(a.getAttribute("href")); if (s) io.observe(s); });
   }
+
+
+  // --- A link into a closed fold opens the fold first, so the jump lands on what it points at ---
+  function reveal(id) {
+    var t = id && document.getElementById(id);
+    for (var d = t && t.closest("details"); d; d = d.parentElement && d.parentElement.closest("details")) d.open = true;
+  }
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest("a[href^='#']");
+    if (a) reveal(a.getAttribute("href").slice(1));
+  });
+  if (location.hash) reveal(decodeURIComponent(location.hash.slice(1)));
 
   // --- Diagram boxes light their stage ---
   [].forEach.call(document.querySelectorAll(".node"), function (n) {
