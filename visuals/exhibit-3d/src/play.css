@@ -104,14 +104,15 @@
 .paused .pl-pause { background: var(--on-bg); color: var(--on-text); }
 
 /* ---------- wide screens: risk and caption share a right-hand column, clear of the bench ---------- */
-@media (min-width: 1000px) {
-  .pl-risk { width: 340px; box-sizing: border-box; }
+@media (min-width: 860px) {
+  .autoplay { --col: clamp(270px, 30vw, 340px); }
+  .pl-risk { width: var(--col); box-sizing: border-box; }
   .pl-caption {
-    left: auto; right: 24px; top: 168px; bottom: auto; width: 340px; max-width: none;
-    transform: translateY(8px); padding: 16px 20px 18px 24px; font-size: 22px; line-height: 1.38; text-align: left;
+    left: auto; right: 24px; top: 168px; bottom: auto; width: var(--col); max-width: none;
+    transform: translateY(8px); padding: 16px 20px 18px 24px; font-size: clamp(18px, 1.75vw, 22px); line-height: 1.38; text-align: left;
   }
   .pl-caption.show { transform: translateY(0); }
-  .pl-card { left: calc((100% - 388px) / 2); }
+  .pl-card { left: calc((100% - var(--col) - 48px) / 2); }
 }
 
 /* ---------- narrow screens and phones ---------- */
