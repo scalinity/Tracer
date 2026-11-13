@@ -54,24 +54,24 @@ def inputs_of(split: str, artifact: Path, store_dir: Path) -> dict:
 
 def claim(out_dir: Path, inputs: dict) -> None:
     """Record the inputs in an empty folder, or check them against the record already there (refusing a mismatch, or
-    parts with no record). The record is created exclusively, so two shards starting together agree on one."""
+    parts with no record). The record is written whole to a private file and then linked into place, which fails if a
+    record exists, so a reader never sees a partial record and two shards starting together agree on one."""
     out_dir.mkdir(parents=True, exist_ok=True)
     record = out_dir / "inputs.json"
+    if not record.exists() and any(out_dir.glob("part-*.parquet")):
+        raise SystemExit(f"{out_dir} holds parts with no record of their inputs; score into a new folder")
+    tmp = out_dir / f".inputs-{os.getpid()}-{time.monotonic_ns()}.json"
+    tmp.write_text(json.dumps(inputs, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     try:
-        fd = os.open(record, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+        os.link(tmp, record)
     except FileExistsError:
         have = json.loads(record.read_text(encoding="utf-8"))
         if have != inputs:
             changed = sorted(k for k in set(have) | set(inputs) if have.get(k) != inputs.get(k))
             raise SystemExit(f"{out_dir} holds parts made from other inputs ({', '.join(changed)}); "
-                             "score into a new folder")
-        return
-    if any(out_dir.glob("part-*.parquet")):
-        os.close(fd)
-        record.unlink()
-        raise SystemExit(f"{out_dir} holds parts with no record of their inputs; score into a new folder")
-    with os.fdopen(fd, "w", encoding="utf-8") as fh:
-        fh.write(json.dumps(inputs, indent=1, sort_keys=True) + "\n")
+                             "score into a new folder") from None
+    finally:
+        tmp.unlink()
 
 
 def main(argv: list[str] | None = None) -> int:

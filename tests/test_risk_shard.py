@@ -48,3 +48,21 @@ def test_parts_with_no_record_are_refused(tmp_path):
     with pytest.raises(SystemExit, match="no record"):
         risk_shard.claim(out, risk_shard.inputs_of("val", _artifact(tmp_path, "a"), _store(tmp_path)))
     assert not (out / "inputs.json").exists()
+
+
+def test_a_record_is_published_whole(tmp_path, monkeypatch):
+    """Codex on #85: a second shard must never read a record that is created but not yet written."""
+    out = tmp_path / "risk"
+    inputs = risk_shard.inputs_of("val", _artifact(tmp_path, "a"), _store(tmp_path))
+    risk_shard.claim(out, inputs)
+    assert json.loads((out / "inputs.json").read_text()) == inputs
+    assert [p.name for p in out.iterdir()] == ["inputs.json"]          # no temporary file left behind
+    seen = []
+    real_link = risk_shard.os.link
+
+    def link(src, dst):                                                 # the record must be complete when it appears
+        seen.append(json.loads(Path(src).read_text()))
+        return real_link(src, dst)
+    monkeypatch.setattr(risk_shard.os, "link", link)
+    risk_shard.claim(tmp_path / "risk2", inputs)
+    assert seen == [inputs]
