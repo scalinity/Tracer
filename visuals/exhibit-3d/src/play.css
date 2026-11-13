@@ -1,14 +1,14 @@
 /* Tracer, self-playing: a quiet overlay sized for a projector. Nothing here needs pressing. */
-.play { --good: #6ff0ae; --pl-glass: linear-gradient(150deg, #131a2bdd, #0c1120d8); }
-.play #world { cursor: default; }
-.play .vignette { background: radial-gradient(ellipse at 54% 46%, #00000000 55%, #000000a0 100%); }
+.autoplay { --good: #6ff0ae; --pl-glass: linear-gradient(150deg, #131a2bdd, #0c1120d8); }
+.autoplay #world { cursor: default; }
+.autoplay .vignette { background: radial-gradient(ellipse at 54% 46%, #00000000 55%, #000000a0 100%); }
 
 /* World labels read from the back of a room. */
-.play .wl { font-size: 13.5px; padding: 5px 11px 5px 9px; }
-.play .wl .wv { font-size: 12.5px; color: #cfd7ea; }
-.play .wl .dot { width: 7px; height: 7px; }
+.autoplay .wl { font-size: 13.5px; padding: 5px 11px 5px 9px; }
+.autoplay .wl .wv { font-size: 12.5px; color: #cfd7ea; }
+.autoplay .wl .dot { width: 7px; height: 7px; }
 
-.play .pl-top, .play .pl-risk, .play .pl-caption, .play .pl-bar, .play .pl-legend, .play .pl-card, .play .pl-pause { position: absolute; z-index: 4; }
+.autoplay .pl-top, .autoplay .pl-risk, .autoplay .pl-caption, .autoplay .pl-bar, .autoplay .pl-legend, .autoplay .pl-card, .autoplay .pl-pause { position: absolute; z-index: 4; }
 
 /* ---------- top: brand and the four specimens ---------- */
 .pl-top { top: 20px; left: 24px; right: 24px; display: flex; align-items: center; gap: 22px; pointer-events: none; }
