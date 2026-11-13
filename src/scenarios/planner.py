@@ -570,6 +570,23 @@ def _round2(job: str, seed: int, n: int, targets: list[dict]) -> list[dict]:
     return [briefs[int(i)] for i in _rng(seed, job, 6666).permutation(len(briefs))]
 
 
+# --- Coverage fill ----------------------------------------------------------------------------
+
+def _fill(job: str, seed: int, cells: dict[str, int]) -> list[dict]:
+    """Briefs pinned to stratum-by-archetype cells ({"normal/community_hospital": 84, ...}), every other factor
+    filled by the level furthest behind its share, as round 2 fills its slices. Out-of-distribution cells are refused."""
+    rng = _rng(seed, job, 4444)
+    briefs: list[dict] = []
+    for key in sorted(cells):
+        stratum, archetype = key.split("/")
+        pins, tally = _validate_target({"stratum": stratum, "archetype": archetype}), {}
+        for _ in range(int(cells[key])):
+            brief = make_brief(_pinned_cell(rng, pins, tally))
+            brief["origin"] = f"coverage:{key}"
+            briefs.append(brief)
+    return [briefs[int(i)] for i in _rng(seed, job, 6666).permutation(len(briefs))]
+
+
 # --- The entry point --------------------------------------------------------------------------
 
 def plan(job: str, seed: int, *, n: int | dict | None = None, targets: list | None = None,
@@ -592,6 +609,10 @@ def plan(job: str, seed: int, *, n: int | dict | None = None, targets: list | No
             raise ValueError("job O3 is planned from a weak-spot list: pass targets")
         total = int(spec["total"] if n is None else n)
         briefs = _round2(job, seed, total, targets)
+    elif "cells" in spec:
+        if n is not None:
+            raise ValueError(f"job {job} is planned from its cells; it takes no n")
+        briefs = _fill(job, seed, spec["cells"])
     else:
         avoid = None
         if job == "O1b":

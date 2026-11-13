@@ -202,6 +202,9 @@ class Pipeline:
                                       'with "passed": true)')
         if j.get("needs") == "weak_spot_plan" and not self.paths.weak_spot_plan.exists():
             raise runner.JobError(f"{job} needs a weak-spot plan ({self.paths.weak_spot_plan.relative_to(self.paths.root)})")
+        if j.get("needs") == "frozen_model" and not runner.model_named(self.paths.preregistration):
+            raise runner.JobError(f"{job} needs the frozen model named in section 6 of "
+                                  f"{self.paths.preregistration.relative_to(self.paths.root)} first")
         requests = runner.plan_requests(self.seams, cfg, job, self.read_briefs(job), tier)
         set_hash = runner.request_set_hash(job, tier, requests)
         dry = runner.check_dry_run(self.paths, job, tier, set_hash, now)

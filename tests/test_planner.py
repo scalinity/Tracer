@@ -345,3 +345,44 @@ def test_o3_needs_targets_and_other_jobs_refuse_them():
 def test_o3_refuses_slices_it_cannot_plan(bad):
     with pytest.raises(ValueError):
         planner.plan("O3", 1, n=20, targets=[bad])
+
+
+# --- The v2 preregistration's jobs: O4 (coverage fill) and T1 (the fresh test set) ------------------------------
+
+def test_the_grid_is_unchanged_since_the_preregistration():
+    """Only job entries were added after commit 7a6bc8e (docs/neural/preregistration-v2.md §5): every other key of
+    config/scenario_planner.yaml, and the jobs O1 to O3, hash as they did then."""
+    import hashlib
+    import json
+    cfg = planner.config()
+    grid = {k: v for k, v in cfg.items() if k != "jobs"}
+    digest = hashlib.sha256(json.dumps(grid, sort_keys=True).encode()).hexdigest()
+    assert digest == "1e6fcde7d1c658d41d360b9f1102cb49b16d712d8469c213452a5b3a100f8ecc"
+    assert cfg["jobs"]["O2"] == {"total": 2250, "ood": True}
+    assert cfg["jobs"]["O3"] == {"total": 600, "ood": False}
+
+
+def test_t1_is_950_in_distribution_briefs_on_o2s_grid():
+    briefs = planner.plan("T1", 501)
+    assert len(briefs) == 950 and len({b["brief_id"] for b in briefs}) == 950
+    assert not any(b["ood"] for b in briefs)
+    assert OOD_ARCHETYPE not in {b["archetype"] for b in briefs}
+    assert "scanner_downtime" not in {b["failure_focus"] for b in briefs}
+    counts = collections.Counter(b["stratum"] for b in briefs)
+    for stratum, share in planner.config()["strata"].items():
+        assert abs(counts[stratum] - share * 950) <= 1, (stratum, counts)
+    assert worst_marginal_gap(briefs, ood=False) <= 1.0
+    assert briefs == planner.plan("T1", 501)
+    assert [b["brief_id"] for b in briefs[:2]] == ["T1-0001", "T1-0002"]
+
+
+def test_o4_fills_each_short_cell_and_only_those():
+    cells = planner.config()["jobs"]["O4"]["cells"]
+    briefs = planner.plan("O4", 401)
+    got = collections.Counter(f"{b['stratum']}/{b['archetype']}" for b in briefs)
+    assert dict(got) == cells and len(briefs) == sum(cells.values()) == 487
+    assert not any(b["ood"] for b in briefs) and all(b["origin"].startswith("coverage:") for b in briefs)
+    assert all(not planner.compatibility_errors({**b, "edge_tags": b["edge_tags"]}) for b in briefs)
+    assert briefs == planner.plan("O4", 401)
+    with pytest.raises(ValueError, match="no n"):
+        planner.plan("O4", 401, n=10)

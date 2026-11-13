@@ -80,7 +80,7 @@ def test_status_shows_stages_the_ledger_and_items(tmp_path):
     out = ok(env.cli("status"))
     for stage in ("plan-O1", "dry-run-O1", "generate-O1"):
         assert stage in out
-    assert "account openai  cap $76.4300 (margin $2.4300): spent $0.3943" in out
+    assert "account openai  cap $136.4300 (margin $2.4300): spent $0.3943" in out
     assert "job O1   cap $3.0000: spent $0.3943, held $0.0000" in out
     assert "job O1b  cap $2.0000: spent $0.0000, held $0.0000, headroom $2.0000  (not released)" in out
     assert "Items O1: accepted 72; 0 Batch chunks open" in out

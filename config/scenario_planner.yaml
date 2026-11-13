@@ -16,6 +16,18 @@ jobs:
   O1b: {counts: {normal: 3, stressed: 3, disrupted: 3, edge: 3}, ood: false}   # 12 new briefs, 3 per stratum
   O2:  {total: 2250, ood: true}                                                # the main run; counts are reset from pilot costs
   O3:  {total: 600, ood: false}                                                # round 2: weak spots (§4.12)
+  # O4 fills the in-distribution stratum-by-archetype cells the library left below target: 1.25 times each cell's
+  # shortfall plus one, for repairs, drops and family exclusions (docs/neural/preregistration-v2.md §7). The two
+  # multi_site_system cells (4 short) are left: they would join test_ood, which is spent.
+  O4:
+    ood: false
+    cells: {disrupted/academic_medical_center: 13, disrupted/community_hospital: 9, edge/academic_medical_center: 8,
+            edge/childrens_hospital: 4, edge/safety_net_urban: 10, normal/academic_medical_center: 76,
+            normal/cancer_center: 16, normal/childrens_hospital: 48, normal/community_hospital: 84,
+            normal/critical_access_rural: 20, normal/safety_net_urban: 61, normal/surgical_specialty: 28,
+            stressed/academic_medical_center: 18, stressed/cancer_center: 3, stressed/childrens_hospital: 20,
+            stressed/community_hospital: 51, stressed/critical_access_rural: 4, stressed/safety_net_urban: 14}
+  T1:  {total: 950, ood: false}   # the fresh test set: O2's grid, in-distribution cells only (preregistration-v2 §5)
 
 # Round 2 shares of the O3 briefs (spec §4.12 step 4).
 round2_shares: {slices: 0.60, general_edge: 0.25, under_covered: 0.15}

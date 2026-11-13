@@ -52,28 +52,101 @@ def check_caps(lg, jobs=SMALL):
 def test_the_real_caps_match_the_spec():
     jobs = REAL_JOBS["jobs"]
     openai = REAL_JOBS["accounts"]["openai"]
-    assert (openai["cap_usd"], openai["margin_usd"]) == (76.43, 2.43)
+    assert (openai["cap_usd"], openai["margin_usd"]) == (136.43, 2.43)
+    # the one raise: exactly $60, dated November 13, 2026 (docs/neural/preregistration-v2.md)
+    assert [(r["usd"], r["date"]) for r in openai["raises"]] == [(60.00, "2026-11-13")]
+    assert m(openai["cap_usd"]) - sum(m(r["usd"]) for r in openai["raises"]) == m("76.43")
     assert REAL_JOBS["accounts"]["decide"] == {"cap_usd": 8.00, "margin_usd": 0.00}
     caps = {j: v["cap_usd"] for j, v in jobs.items()}
-    assert caps == {"O1": 3.00, "O1b": 2.00, "O2": 44.00, "O3": 18.00, "O3b": 7.00, "X1": 1.00, "X2": 4.50,
-                    "X3": 0.75, "X4": 1.75}
+    assert caps == {"O1": 3.00, "O1b": 2.00, "O2": 44.00, "O3": 18.00, "O3b": 7.00, "O4": 8.00, "T1": 20.00,
+                    "X1": 1.00, "X2": 4.50, "X3": 0.75, "X4": 1.75}
     assert {j for j, v in jobs.items() if not v["released"]} == {"O1b", "O3b"}
     openai_jobs = sum(m(v["cap_usd"]) for v in jobs.values() if v["account"] == "openai")
-    assert openai_jobs == m(openai["cap_usd"]) - m(openai["margin_usd"]) == m("74.00")
+    assert openai_jobs == m("102.00")
+    # every job capped, so at least $10 of the account can never be spent, whatever is released
+    assert m(openai["cap_usd"]) - openai_jobs >= m("10.00")
     assert sum(m(v["cap_usd"]) for v in jobs.values() if v["account"] == "decide") == m("8.00")
+    assert jobs["T1"]["needs"] == "frozen_model" and jobs["T1"]["seed"] == 501 and jobs["T1"]["briefs"] == 950
+    used = {v["seed"] for j, v in jobs.items() if "seed" in v and j not in ("O4", "T1")}
+    assert {jobs["O4"]["seed"], jobs["T1"]["seed"]}.isdisjoint(used)
 
 
-def test_the_real_ledger_never_lets_more_than_74_dollars_be_held(tmp_path):
+def test_the_real_ledger_never_lets_more_than_102_dollars_be_held(tmp_path):
     lg = open_ledger(tmp_path, jobs=REAL_JOBS)
     lg.release_job("O1b", "test")
     lg.release_job("O3b", "test")
-    for job, cap in (("O1", "3"), ("O1b", "2"), ("O2", "44"), ("O3", "18"), ("O3b", "7")):
+    for job, cap in (("O1", "3"), ("O1b", "2"), ("O2", "44"), ("O3", "18"), ("O3b", "7"), ("O4", "8"), ("T1", "20")):
         lg.reserve(job, f"{job}-all", cap)
-    with pytest.raises(L.CapReached) as e:
-        lg.reserve("O2", "one-more", "0.000001")
-    assert e.value.scope in ("account", "job")
-    assert lg.totals()["accounts"]["openai"]["held"] == m("74.00")
+    for job in ("O2", "T1"):
+        with pytest.raises(L.CapReached) as e:
+            lg.reserve(job, "one-more", "0.000001")
+        assert e.value.scope == "job"
+    totals = lg.totals()["accounts"]["openai"]
+    assert totals["held"] == m("102.00") and totals["cap"] - totals["held"] >= m("10.00")
     lg.reserve("X2", "decide-still-has-room", "4.50")  # the decision account is separate
+
+
+def _spent_small(tmp_path):
+    lg = open_ledger(tmp_path)
+    r = lg.reserve("A", "a1", "0.20")
+    lg.settle(r, "0.15", {}, "req-1", "flex")
+    lg.close()
+
+
+def raised(usd="0.50", date="2026-11-13", reason="more room", cap=None, margin=0.10):
+    jobs = deepcopy(SMALL)
+    jobs["accounts"]["openai"] = {"cap_usd": cap if cap is not None else 1.00 + float(usd), "margin_usd": margin,
+                                  "raises": [{"usd": float(usd), "date": date, "reason": reason}]}
+    return jobs
+
+
+def test_a_dated_raise_lifts_the_cap_by_exactly_its_amount_once(tmp_path):
+    _spent_small(tmp_path)
+    lg = open_ledger(tmp_path, jobs=raised(), create=False)
+    acct = lg.totals()["accounts"]["openai"]
+    assert acct["cap"] == m("1.50") and acct["spent"] == m("0.15")
+    lines = [json.loads(x) for x in lg.mirror.read_text().splitlines()]
+    raises = [x for x in lines if "cap_raise" in x]
+    assert len(raises) == 1
+    assert {k: raises[0][k] for k in ("cap_raise", "usd", "date", "cap_before", "cap_after")} == \
+        {"cap_raise": "openai", "usd": 0.5, "date": "2026-11-13", "cap_before": 1.0, "cap_after": 1.5}
+    assert L.replay(lg.mirror) == lg.balances()
+    lg.close()
+    # reopening with the same config records nothing more and keeps the cap
+    lg = open_ledger(tmp_path, jobs=raised(), create=False)
+    assert lg.totals()["accounts"]["openai"]["cap"] == m("1.50")
+    assert sum("cap_raise" in x for x in lg.mirror.read_text().splitlines()) == 1
+    lg.close()
+
+
+@pytest.mark.parametrize("bad", [
+    {"cap": 1.60},                    # the cap moves by more than the raise
+    {"cap": 1.40},                    # by less
+    {"margin": 0.05},                 # the margin may not move with it
+    {"usd": "0", "cap": 1.00},        # a raise must be positive
+    {"date": " "},                    # and dated
+    {"reason": ""},                   # and say why
+])
+def test_a_raise_is_refused_unless_exact_dated_and_explained(tmp_path, bad):
+    _spent_small(tmp_path)
+    with pytest.raises(L.LedgerError, match="raise|cannot change"):
+        open_ledger(tmp_path, jobs=raised(**bad), create=False)
+    # nothing was written: the old config still opens and the cap is unchanged
+    lg = open_ledger(tmp_path, create=False)
+    assert lg.totals()["accounts"]["openai"]["cap"] == m("1.00")
+    assert not any("cap_raise" in x for x in lg.mirror.read_text().splitlines())
+
+
+def test_a_cap_raise_in_the_mirror_that_the_database_lacks_stops_everything(tmp_path):
+    _spent_small(tmp_path)
+    lg = open_ledger(tmp_path, create=False)
+    mirror = lg.mirror
+    lg.close()
+    with mirror.open("a") as fh:
+        fh.write(json.dumps({"cap_raise": "openai", "usd": 5.0, "date": "2026-11-13", "reason": "forged",
+                             "cap_before": 1.0, "cap_after": 6.0, "at": "x"}) + "\n")
+    with pytest.raises(L.LedgerUnavailable, match="cap raise"):
+        open_ledger(tmp_path, create=False)
 
 
 def test_a_reservation_is_refused_past_the_job_cap_and_past_the_account_cap(tmp_path):
@@ -566,3 +639,50 @@ def test_cover_refuses_a_top_up_that_does_not_fit_and_leaves_the_old_reservation
     lg.void(lg.open_reservations()[-1]["entry_id"], "done")
     with pytest.raises(L.LedgerError, match="closed"):
         lg.cover(rid, "0.07")
+
+
+def test_a_raise_in_the_starting_cap_is_recorded_so_a_later_raise_counts_alone(tmp_path):
+    """Codex on #83: a ledger created from a config that already lists a raise records it as part of its starting
+    cap; a second raise added after entries exist then lifts the cap by its own amount only."""
+    start = raised()                                  # cap $1.50, of which $0.50 is a listed raise
+    lg = open_ledger(tmp_path, jobs=start)
+    lines = [json.loads(x) for x in lg.mirror.read_text().splitlines() if "cap_raise" in x]
+    assert [(x["usd"], x["cap_before"], x["cap_after"], x["how"]) for x in lines] == \
+        [(0.5, 1.0, 1.5, "part of the starting cap")]
+    r = lg.reserve("A", "a1", "0.20")
+    lg.settle(r, "0.10", {}, "req-1", "flex")
+    lg.close()
+    later = deepcopy(start)
+    later["accounts"]["openai"]["cap_usd"] = 1.75
+    later["accounts"]["openai"]["raises"].append({"usd": 0.25, "date": "2026-11-20", "reason": "a second one"})
+    lg = open_ledger(tmp_path, jobs=later, create=False)
+    assert lg.totals()["accounts"]["openai"]["cap"] == m("1.75")
+    lines = [json.loads(x) for x in lg.mirror.read_text().splitlines() if "cap_raise" in x]
+    assert [(x["usd"], x["how"]) for x in lines] == [(0.5, "part of the starting cap"), (0.25, "lifted the cap")]
+    lg.close()
+
+
+def test_a_raise_listed_twice_is_refused(tmp_path):
+    """Codex on #83: two identical $0.50 raises must not lift a $1.00 cap to $2.00."""
+    _spent_small(tmp_path)
+    twice = raised(cap=2.00)
+    twice["accounts"]["openai"]["raises"].append(dict(twice["accounts"]["openai"]["raises"][0]))
+    with pytest.raises(L.LedgerError, match="more than once"):
+        open_ledger(tmp_path, jobs=twice, create=False)
+    assert open_ledger(tmp_path, create=False).totals()["accounts"]["openai"]["cap"] == m("1.00")
+
+
+def test_a_mirrored_raise_whose_record_was_altered_stops_everything(tmp_path):
+    """Codex on #83: the mirror's raise must match the database's record field for field, not only by identity."""
+    _spent_small(tmp_path)
+    lg = open_ledger(tmp_path, jobs=raised(), create=False)
+    mirror = lg.mirror
+    lg.close()
+    lines = mirror.read_text().splitlines()
+    k = next(i for i, x in enumerate(lines) if "cap_raise" in x)
+    rec = json.loads(lines[k])
+    rec["cap_after"], rec["reason"] = 1000.0, "something else"
+    lines[k] = json.dumps(rec, sort_keys=True)
+    mirror.write_text("\n".join(lines) + "\n")
+    with pytest.raises(L.LedgerUnavailable, match="cap raise"):
+        open_ledger(tmp_path, jobs=raised(), create=False)

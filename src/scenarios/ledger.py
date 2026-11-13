@@ -2,7 +2,8 @@
 
 docs/neural/spec.md §4.6 is the design. Storage is SQLite in WAL mode (`data/openai/ledger.sqlite`) with a
 human-readable, append-only mirror beside it (`ledger.jsonl`). Accounts and job caps come from
-config/openai_jobs.yaml; the ledger refuses a cap change for a job or account that already has entries.
+config/openai_jobs.yaml; the ledger refuses a cap change for a job or account that already has entries, except a
+dated raise listed under the account's `raises`, which lifts its cap by exactly that amount once and is mirrored.
 
 Money is integer micro-dollars (`micros`); each entry also carries `usd` for reading. Five entry kinds:
 
@@ -136,8 +137,14 @@ def _entry_line(row: dict) -> str:
     return json.dumps({**row, "usd": as_usd(row["micros"])}, sort_keys=True)
 
 
-def _read_mirror(path: Path) -> tuple[dict[str, dict], dict[str, dict]]:
-    """Entries by id and job releases by job, from the mirror. Raises LedgerUnavailable on any malformed line."""
+def _raise_key(account: str, r: dict) -> str:
+    """The identity of one dated cap raise: account, date and amount in micros."""
+    return f"{account}:{r['date']}:{to_micros(r['usd'])}"
+
+
+def _read_mirror(path: Path, raises: dict | None = None) -> tuple[dict[str, dict], dict[str, dict]]:
+    """Entries by id and job releases by job, from the mirror; cap raises go into `raises` by key when given.
+    Raises LedgerUnavailable on any malformed line."""
     entries: dict[str, dict] = {}
     releases: dict[str, dict] = {}
     if not path.exists():
@@ -151,6 +158,10 @@ def _read_mirror(path: Path) -> tuple[dict[str, dict], dict[str, dict]]:
             raise LedgerUnavailable(f"{path} line {n} is not JSON; the ledger mirror is corrupt") from None
         if "job_release" in rec:
             releases[rec["job_release"]] = rec
+            continue
+        if "cap_raise" in rec:
+            if raises is not None:
+                raises[_raise_key(rec["cap_raise"], rec)] = rec
             continue
         if not isinstance(rec, dict) or any(k not in rec for k in FIELDS) or rec["kind"] not in KINDS:
             raise LedgerUnavailable(f"{path} line {n} is not a ledger entry")
@@ -254,25 +265,80 @@ class Ledger:
             raise LedgerUnavailable(f"ledger {self.path} has schema version {row and row[0]!r}, "
                                     f"expected {SCHEMA_VERSION}")
 
+    @staticmethod
+    def _recorded_raises(cur) -> dict:
+        row = cur.execute("SELECT value FROM meta WHERE key='cap_raises'").fetchone()
+        return json.loads(row[0]) if row else {}
+
     def _sync_config(self, cfg: dict) -> None:
-        """Load accounts and job caps; refuse a cap change where entries exist."""
-        releases = []
+        """Load accounts and job caps; refuse a cap change where entries exist, except a dated raise.
+
+        An account's `raises` list ({usd, date, reason}) is the one way to lift a cap that has entries: each raise not
+        yet recorded lifts the ledger's cap by exactly its amount, once, and is written to the meta table and the
+        mirror. The config's cap must equal the ledger's cap plus the new raises, and the margin cannot change. While
+        an account has no entries its cap is taken from the config as it is, and the raises it lists are recorded as
+        part of that starting cap, so a later raise is counted alone. A raise listed twice is refused."""
+        releases, raised = [], []
         with self._tx() as cur:
+            recorded = self._recorded_raises(cur)
+            at = now_iso()
+
+            def record(account: str, r: dict, before: int, how: str) -> int:
+                after = before + to_micros(r["usd"])
+                rec = {"cap_raise": account, "usd": as_usd(to_micros(r["usd"])), "date": str(r["date"]),
+                       "reason": str(r["reason"]).strip(), "cap_before": as_usd(before), "cap_after": as_usd(after),
+                       "how": how, "at": at}
+                recorded[_raise_key(account, r)] = rec
+                raised.append(rec)
+                return after
+
             for account, a in cfg["accounts"].items():
                 cap, margin = to_micros(a["cap_usd"]), to_micros(a.get("margin_usd", 0))
                 if margin < 0 or margin > cap:
                     raise LedgerError(f"account {account}: margin must be between 0 and the cap")
+                listed = a.get("raises") or []
+                for r in listed:
+                    if Decimal(str(r.get("usd", 0))) <= 0 or not str(r.get("date", "")).strip() \
+                            or not str(r.get("reason", "")).strip():
+                        raise LedgerError(f"account {account}: a cap raise needs a positive usd, a date and a reason")
+                keys = [_raise_key(account, r) for r in listed]
+                if len(set(keys)) != len(keys):
+                    raise LedgerError(f"account {account} lists the same raise (date and amount) more than once")
+                new = [r for r in listed if _raise_key(account, r) not in recorded]
+                lift = sum(to_micros(r["usd"]) for r in new)
                 row = cur.execute("SELECT cap_micros, margin_micros FROM accounts WHERE account=?",
                                   (account,)).fetchone()
-                if row is None:
-                    cur.execute("INSERT INTO accounts VALUES (?, ?, ?)", (account, cap, margin))
+                spent_any = row is not None and cur.execute("SELECT 1 FROM entries WHERE account=? LIMIT 1",
+                                                            (account,)).fetchone() is not None
+                if not spent_any:
+                    if lift > cap:
+                        raise LedgerError(f"account {account}: its raises add up to more than its cap")
+                    if row is None:
+                        cur.execute("INSERT INTO accounts VALUES (?, ?, ?)", (account, cap, margin))
+                    elif tuple(row) != (cap, margin):
+                        cur.execute("UPDATE accounts SET cap_micros=?, margin_micros=? WHERE account=?",
+                                    (cap, margin, account))
+                    before = cap - lift
+                    for r in new:
+                        before = record(account, r, before, "part of the starting cap")
                 elif tuple(row) != (cap, margin):
-                    if cur.execute("SELECT 1 FROM entries WHERE account=? LIMIT 1", (account,)).fetchone():
+                    if not new or margin != row[1] or cap != row[0] + lift:
                         raise LedgerError(f"account {account} has entries; its cap and margin cannot change "
-                                          f"(ledger ${as_usd(row[0]):.2f}/${as_usd(row[1]):.2f}, config "
+                                          f"except by a dated raise of exactly the difference (ledger "
+                                          f"${as_usd(row[0]):.2f}/${as_usd(row[1]):.2f}, config "
                                           f"${as_usd(cap):.2f}/${as_usd(margin):.2f})")
+                    before = row[0]
+                    for r in new:
+                        before = record(account, r, before, "lifted the cap")
                     cur.execute("UPDATE accounts SET cap_micros=?, margin_micros=? WHERE account=?",
                                 (cap, margin, account))
+                elif new:
+                    raise LedgerError(f"account {account} lists a raise the ledger has not applied, but its cap "
+                                      f"already equals the config's (${as_usd(cap):.2f})")
+            if raised:
+                cur.execute("INSERT INTO meta (key, value) VALUES ('cap_raises', ?) "
+                            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                            (json.dumps(recorded, sort_keys=True),))
             for job, j in cfg["jobs"].items():
                 account, cap, released = j["account"], to_micros(j["cap_usd"]), bool(j.get("released", True))
                 if account not in cfg["accounts"]:
@@ -293,8 +359,8 @@ class Ledger:
                                 (at, "released in config/openai_jobs.yaml", job))
                     releases.append({"job_release": job, "reason": "released in config/openai_jobs.yaml",
                                      "at": at})
-        if releases:
-            self._append_mirror([json.dumps(r, sort_keys=True) for r in releases])
+        if releases or raised:
+            self._append_mirror([json.dumps(r, sort_keys=True) for r in releases + raised])
 
     def _rows(self, where: str = "", args=()) -> list[dict]:
         cur = self._con.execute(f"SELECT {', '.join(FIELDS)} FROM entries {where} ORDER BY seq", args)
@@ -308,7 +374,8 @@ class Ledger:
     def _check_mirror(self, mirror_had_entries: bool) -> None:
         with self._lock:
             rows = self._rows()
-            mirrored, releases = _read_mirror(self.mirror)
+            mirrored_raises: dict = {}
+            mirrored, releases = _read_mirror(self.mirror, mirrored_raises)
             if rows and not mirror_had_entries:
                 raise LedgerUnavailable(f"ledger {self.path.name} has {len(rows)} entries but its mirror "
                                         f"{self.mirror.name} is missing or empty")
@@ -335,6 +402,16 @@ class Ledger:
                     if j not in releases]
             if gone:
                 self._append_mirror([json.dumps(r, sort_keys=True) for r in gone])
+            recorded = self._recorded_raises(self._con.cursor())
+            if set(mirrored_raises) - set(recorded):
+                raise LedgerUnavailable(f"mirror {self.mirror.name} records a cap raise the database lacks")
+            for key in set(mirrored_raises) & set(recorded):
+                if mirrored_raises[key] != recorded[key]:
+                    raise LedgerUnavailable(f"mirror {self.mirror.name} disagrees with the database on the cap raise "
+                                            f"{key}")
+            lost = [recorded[k] for k in sorted(recorded) if k not in mirrored_raises]
+            if lost:
+                self._append_mirror([json.dumps(r, sort_keys=True) for r in lost])
             if replay(self.mirror) != self.balances():
                 raise LedgerUnavailable(f"replaying {self.mirror.name} does not reproduce the database balances")
 

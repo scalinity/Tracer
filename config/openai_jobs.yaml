@@ -1,9 +1,12 @@
 # Spend accounts, job caps and request settings for the v2 API jobs (docs/neural/spec.md §4.5, §4.6, §11.5).
 #
 # The ledger (src/scenarios/ledger.py) loads the accounts and job caps from this file and refuses a cap change for a
-# job that already has entries. Money is USD. An account's margin is never reservable, so the most the openai account
-# can ever settle or hold is cap_usd - margin_usd = $74.00, which is also the sum of its job caps. Jobs with
-# released: false (the retries O1b and O3b) take no reservation until `ledger release-job JOB --reason TEXT`.
+# job that already has entries, except by a dated raise under the account's `raises`, which the ledger applies once and
+# mirrors. Money is USD. An account's margin is never reservable. The openai account's first $76.43 was split so its
+# job caps summed to cap_usd - margin_usd = $74.00; the $60 raise of November 13, 2026 funds O4 ($8) and T1 ($20)
+# (docs/neural/preregistration-v2.md), and the job caps now sum to $102.00, so at least $10 of the account always
+# stays unspent. Jobs with released: false (the retries O1b and O3b) take no reservation until
+# `ledger release-job JOB --reason TEXT`.
 #
 # Every token count below is an estimate (source: assumed) until the O1 pilot measures it; prices live in
 # config/openai_prices.yaml.
@@ -18,7 +21,11 @@ api:
   default_batch_queue_limit_tokens: 2500000
 
 accounts:
-  openai: {cap_usd: 76.43, margin_usd: 2.43}
+  openai:
+    cap_usd: 136.43
+    margin_usd: 2.43
+    raises:
+      - {usd: 60.00, date: "2026-11-13", reason: "TracerNet v2: coverage fill (O4) and the fresh test set (T1) of docs/neural/preregistration-v2.md"}
   decide: {cap_usd: 8.00, margin_usd: 0.00}
 
 # Per-model limits at the Build usage tier, from the model pages (notes/neural/api-reference.md §A.5). Sol's batch queue
@@ -55,6 +62,14 @@ jobs:
         arms: {normal: [terra-low], stressed: [terra-low], disrupted: [terra-low], edge: [terra-low]}}
   O3b: {account: openai, cap_usd: 7.00, released: false, tier: flex, seed: 302, briefs: null, needs: weak_spot_plan,
         arms: {normal: [terra-low], stressed: [terra-low], disrupted: [terra-low], edge: [sol-medium]}}
+  # O4 fills the stratum-by-archetype cells the library left below target (train and validation families only);
+  # its briefs come from the coverage shortfall in config/scenario_planner.yaml.
+  O4:  {account: openai, cap_usd: 8.00, released: true, tier: flex, seed: 401, briefs: null,
+        arms: {normal: [terra-low], stressed: [terra-low], disrupted: [terra-low], edge: [terra-low]}}
+  # T1 is the fresh test set of docs/neural/preregistration-v2.md: O2's arm and tier, a new seed, in-distribution
+  # cells only. It runs only once the preregistration names the frozen model (needs: frozen_model).
+  T1:  {account: openai, cap_usd: 20.00, released: true, tier: flex, seed: 501, briefs: 950, needs: frozen_model,
+        arms: {normal: [terra-low], stressed: [terra-low], disrupted: [terra-low], edge: [terra-low]}}
   X1:  {account: decide, cap_usd: 1.00, released: true}
   X2:  {account: decide, cap_usd: 4.50, released: true}
   X3:  {account: decide, cap_usd: 0.75, released: true}

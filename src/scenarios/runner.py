@@ -174,6 +174,10 @@ class Paths:
     def weak_spot_plan(self) -> Path:
         return self.root / "results" / "neural" / "generation" / "round2-plan.json"
 
+    @property
+    def preregistration(self) -> Path:
+        return self.root / "docs" / "neural" / "preregistration-v2.md"
+
     def briefs(self, job: str) -> Path:
         return self.openai_dir / f"briefs-{job}.jsonl"
 
@@ -221,6 +225,23 @@ def real_seams() -> Seams:
 
 def load_jobs(path: Path) -> dict:
     return yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+
+
+UNFILLED = "to be filled"
+
+
+def model_named(prereg: Path) -> bool:
+    """True once the preregistration's section 6 names the frozen model: the section exists and none of its fields
+    still reads "to be filled". The fresh test set (T1) is generated only after that (preregistration-v2 §8)."""
+    if not prereg.exists():
+        return False
+    text = prereg.read_text(encoding="utf-8")
+    start = text.find("## 6. The model under test")
+    if start < 0:
+        return False
+    end = text.find("\n## ", start + 1)
+    section = text[start:end if end > 0 else len(text)]
+    return "| Commit that freezes the model |" in section and UNFILLED not in section.lower()
 
 
 def job_settings(cfg: dict, job: str) -> dict:
