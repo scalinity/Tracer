@@ -1989,6 +1989,8 @@ var TracerCore = (function () {
     $("game-go").hidden = true;
     $("game-status").innerHTML = "";
     renderGame();
+    var first = $("game-feed").querySelector(".bt-card:not(:disabled)");
+    if (first) first.focus();
     requestAnimationFrame(tick);
   }
 

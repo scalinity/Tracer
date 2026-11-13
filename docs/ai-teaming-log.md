@@ -539,12 +539,19 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** the deck's layout test was already failing on main. #78 inserted slide 11, and the test's list of slides that must show the synthetic-data caveat kept the old numbers, so it checked the limits slide. The list now names the slides that show the demo or its numbers.
 - **Assumed:** the score is minutes of warning added over the three rounds, not the median the evaluation reports, because a sum needs no explanation; on seed 18 Tracer leads a careful player in every round (100, 35 and 35 minutes against 69, 19 and 34), so the verdict does not depend on that choice. Tracer's alerts on specimens that arrived in time are shown beside its score (9 on seed 18), because the player gets one guess and Tracer does not.
 
-### Nov 13 · Rework · The explainer rebuilt as a five-minute read (this pull request)
+### Nov 13 · Rework · The explainer rebuilt as a five-minute read (#80)
 
 - **Agent:** rebuilt `docs/explained/index.html` around five short sections in plain words: what Tracer is and the problem, how it works (with package tracking as the one analogy and the 55, 45, 45 and 30 minute bars), TracerNet (what a network adds, four results each with one plain sentence, why the median-warning rule keeps it a challenger, and the November 13 follow-up: the leakage flag was a false alarm and the original-lab calibration gap is closed), the talk (run of show with owners, and what the 3D demo, the phone page and Beat Tracer each show), and what's left as a five-item checklist. The earlier page's verified material (the evidence, the four parts, the risk calculator, the one-specimen replay, the model's detail and Karissa's policy table) moved unchanged into "More detail" folds, so `tests/test_explained.py` still holds every figure to its file. Stale lines were corrected: the main model has no neural network but the project now has TracerNet, and the gradient-boosted challenger was cut. The glossary gained thirteen terms. The visible layer is about 1,230 words. Checked by screenshot at 1440 by 900 and 390 by 844.
 - **Daniel:** asked for the page to explain the project as it now stands to a smart friend outside medicine, in about five minutes, with a glossary and folds for anything long, and named the checklist's five items and owners.
 - **Went wrong:** on a phone the run-of-show table squeezed each part's name into three or four lines; below 560 px each row now stacks, time and owner over the part.
 - **Assumed:** `docs/explained/short/` now forwards to the rebuilt page, because one five-minute page with folds replaces the card version and two explainers would drift apart. The first four checklist items are due by December 6, the freeze, since no earlier dates were given.
+
+### Nov 13 · Fix · Beat Tracer hands keyboard focus to the cards (this pull request)
+
+- **Agent:** restored the focus move that #79 dropped: when a round starts, the first card still waiting for its scan takes focus, so a keyboard player's Tab moves through the six cards instead of skipping past them. The headless game test now starts the first round with the Enter key, checks that focus lands on the first waiting card in every round, and that Tab reaches the second; it fails without the fix.
+- **Daniel:** asked for the open Codex finding on #79 to be fixed with a test.
+- **Went wrong:** #79's rewrite of the round loop left out the old `focus()` call, and the game test only clicked with a mouse, so nothing caught it until Codex's review.
+- **Assumed:** focus goes to the first waiting card, as it did before #79.
 
 ## The Claude API jobs
 
