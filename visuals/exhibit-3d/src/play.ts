@@ -120,7 +120,7 @@ stage.registerSet('room', lab.group);
 const top = $('.pl-top');
 const bar = $('.pl-bar');
 const riskBox = $('.pl-risk');
-const COLUMN = 1000; // from this width up, the caption sits in a column under the risk card
+const COLUMN = 860; // from this width up, the caption sits in a column under the risk card
 const safeArea = (): SafeArea => {
   const w = root.clientWidth;
   const h = root.clientHeight;
