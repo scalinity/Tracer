@@ -875,6 +875,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--first-worker", type=int, default=0)
     p.add_argument("--run-id", default=None)
     p.add_argument("--resume", action="store_true")
+    p.add_argument("--set", action="append", default=[], metavar="KEY=VALUE",
+                   help="a training setting over config/neural.yaml, for example learning_rate=2.0e-3 or rho=1.0")
     p = sub.add_parser("select", help="choose the rung from the ladder's validation runs (spec §7.9)")
     p.add_argument("--store", default=None)
     p = sub.add_parser("calibrate", help="3-seed ensemble, calibration and the artifact (spec §7.10, §10.4)")
@@ -1030,7 +1032,8 @@ def main(argv: list[str] | None = None, *, paths: runner.Paths | None = None, se
             return train.train_command(rung=args.rung, seeds=tuple(int(x) for x in args.seeds.split(",") if x),
                                        store_dir=opt(args.store), time_box_min=args.time_box_min,
                                        max_samples=args.max_samples, device=args.device, run_id=args.run_id,
-                                       resume=args.resume, workers=args.workers, out=out)
+                                       resume=args.resume, workers=args.workers,
+                                       overrides=train.parse_overrides(args.set), out=out)
         if args.command == "select":
             from src.neural import ensemble
             return ensemble.select_command(store_dir=Path(args.store) if args.store else None, out=out)

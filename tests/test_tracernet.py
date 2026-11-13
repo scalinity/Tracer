@@ -242,3 +242,72 @@ def test_bce_and_the_ranking_term_on_a_hand_toy():
     assert float(bce[0]) == pytest.approx(-math.log(0.7), rel=1e-5)
     assert float(bce[1]) == pytest.approx(-math.log(0.5), rel=1e-5)
     assert losses.breach_weights(breach).tolist() == pytest.approx([1 / 3, 1, 1 / 3, 1])
+
+
+# --- The shift ranking (docs/neural/preregistration-v2.md §7) -----------------------------------------------------
+
+def _shift(logit, breach, run, tau, tick, window, tier=None, weight=None):
+    tier = torch.zeros(len(logit), dtype=torch.long) if tier is None else torch.tensor(tier)
+    log_w = torch.tensor(losses.TIER_LOG_WEIGHTS)[tier]
+    return losses.shift_ranking(torch.tensor(logit, dtype=torch.float32), torch.tensor(breach),
+                                torch.tensor(run), torch.tensor(tau, dtype=torch.float32),
+                                torch.tensor(tick, dtype=torch.float32), torch.tensor(window, dtype=torch.float32),
+                                log_w, weight)
+
+
+def test_the_shift_ranking_pairs_a_breach_only_with_on_time_specimens_of_its_run_and_shift():
+    # one pair counts: breach 0 against specimen 1 (same run, 60 minutes apart); specimen 2 is another run and
+    # specimen 3 is 300 minutes away
+    logit = [0.0, 1.0, 5.0, 5.0]
+    got = float(_shift(logit, [True, False, False, False], [7, 7, 8, 7], [100, 160, 100, 400], [5, 5, 5, 5],
+                       [60, 60, 60, 60]))
+    h = torch.nn.functional.logsigmoid(torch.tensor(logit))
+    assert got == pytest.approx(float(torch.nn.functional.softplus(-(h[0] - h[1]))), rel=1e-6)
+    # no pair at all: zero, with a gradient path
+    zero = _shift([0.0, 1.0], [False, False], [7, 7], [0, 0], [5, 5], [60, 60])
+    assert float(zero) == 0.0
+
+
+def test_the_shift_ranking_values_a_tick_by_the_capped_warning_it_would_buy():
+    # two breaches against one on-time specimen: the breach at tick 55 of a 60-minute window buys 5 minutes, the one
+    # at tick 5 buys 55, so their pairs weigh 5 and 55 (the cap of 120 is not reached)
+    logit = [-1.0, -1.0, 0.0]
+    early = float(_shift([logit[0], logit[2]], [True, False], [1, 1], [0, 0], [5, 5], [60, 60]))
+    both = float(_shift(logit, [True, True, False], [1, 1, 1], [0, 0, 0], [5, 55, 5], [60, 60, 60]))
+    assert both == pytest.approx(early, rel=1e-6)  # equal pair losses, so the weights cancel in the mean
+    at_close = _shift([-1.0, 0.0], [True, False], [1, 1], [0, 0], [60, 5], [60, 60])
+    assert float(at_close) == 0.0  # a tick at the window's close buys nothing
+
+
+def test_the_shift_ranking_averages_the_equal_and_the_3_2_1_weighting():
+    # a tier-1 breach against a tier-3 on-time specimen: the 3-2-1 half adds log 3 to the breach's harm
+    logit = [0.0, 0.5]
+    got = float(_shift(logit, [True, False], [1, 1], [0, 0], [5, 5], [120, 120], tier=[0, 2]))
+    h = torch.nn.functional.logsigmoid(torch.tensor(logit))
+    sp = torch.nn.functional.softplus
+    want = (sp(-(h[0] - h[1])) + sp(-(h[0] + math.log(3.0) - h[1]))) / 2
+    assert got == pytest.approx(float(want), rel=1e-6)
+
+
+def test_the_shift_ranking_pushes_a_breach_up_and_an_on_time_specimen_down():
+    logit = torch.tensor([0.0, 0.0], requires_grad=True)
+    loss = losses.shift_ranking(logit, torch.tensor([True, False]), torch.tensor([1, 1]), torch.tensor([0.0, 0.0]),
+                                torch.tensor([5.0, 5.0]), torch.tensor([60.0, 60.0]), torch.zeros(2))
+    loss.backward()
+    assert logit.grad[0] < 0 < logit.grad[1]
+
+
+def test_the_full_loss_adds_rho_times_the_shift_ranking_and_needs_its_tensors():
+    net, cfg = model("A")
+    batch = random_batch(cfg, n=16, seed=3)
+    out = net(batch)
+    target = torch.as_tensor(BINS.index(batch["tick"].numpy() + 3.0))
+    breach = torch.arange(16) % 3 == 0
+    base, parts0 = losses.loss(out, target, breach, batch["tick"], BINS, lam=1.0, eta=0.0)
+    shift = {"run": torch.zeros(16, dtype=torch.long), "tau": batch["tick"], "window": batch["window"],
+             "log_w": torch.zeros(16)}
+    total, parts = losses.loss(out, target, breach, batch["tick"], BINS, lam=1.0, eta=0.0, rho=2.0, shift=shift)
+    assert parts0["shift"] == 0.0
+    assert parts["total"] == pytest.approx(parts0["total"] + 2.0 * parts["shift"], rel=1e-6)
+    with pytest.raises(ValueError, match="rho"):
+        losses.loss(out, target, breach, batch["tick"], BINS, rho=1.0)

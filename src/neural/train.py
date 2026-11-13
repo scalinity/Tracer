@@ -781,6 +781,11 @@ def _loop(t, sampler, ncfg, tcfg, plan, dev, keys, val_batches, run_dir, run_id,
             fh.write(json.dumps(line, sort_keys=True) + "\n")
     params = list(model.parameters())
     bins = model.bins
+    rho = float(tcfg.get("rho", 0.0))
+    if rho:  # the shift ranking reads each sample's clock time and tier from the table, by its row
+        collected_s = np.asarray(t.a["collected"], dtype=np.float64)
+        tier_of = np.asarray(t.a["tier"], dtype=np.int64)
+        log_w = np.asarray(losses.TIER_LOG_WEIGHTS, dtype=np.float32)
     elapsed0 = state["elapsed_s"]
     loop_start = time.perf_counter()
     status, epochs_this_call, nonfinite = "running", 0, 0
@@ -792,7 +797,7 @@ def _loop(t, sampler, ncfg, tcfg, plan, dev, keys, val_batches, run_dir, run_id,
     while status == "running":
         epoch = state["epoch"] + 1
         model.train()
-        sums = {"total": 0.0, "nll": 0.0, "bce": 0.0, "ranking": 0.0}
+        sums = {"total": 0.0, "nll": 0.0, "bce": 0.0, "ranking": 0.0, "shift": 0.0}
         n_epoch, skipped, t_epoch = 0, 0, time.perf_counter()
         cut = None
         feed = Prefetch(epoch_chunks(sampler, epoch, lookahead))
@@ -802,8 +807,15 @@ def _loop(t, sampler, ncfg, tcfg, plan, dev, keys, val_batches, run_dir, run_id,
             for g in opt.param_groups:
                 g["lr"] = lr
             out = model(b)
+            shift = None
+            if rho:
+                rows = chunk["specimen_index"]
+                tau = (collected_s[rows] / 60.0 + np.asarray(chunk["tick"], dtype=np.float64)).astype(np.float32)
+                shift = {"run": torch.from_numpy(np.ascontiguousarray(chunk["run"])).to(dev),
+                         "tau": torch.from_numpy(tau).to(dev), "window": b["window"],
+                         "log_w": torch.from_numpy(log_w[tier_of[rows]]).to(dev)}
             loss, parts = losses.loss(out, b["target_bin"], b["breach"], b["tick"], bins, lam=float(tcfg["lam"]),
-                                      eta=float(tcfg["eta"]), weight=b["weight"])
+                                      eta=float(tcfg["eta"]), weight=b["weight"], rho=rho, shift=shift)
             opt.zero_grad(set_to_none=True)
             finite = math.isfinite(parts["total"])
             if finite:
@@ -949,11 +961,33 @@ def _save(run_dir, model, opt, sampler, state, plan, tcfg, status) -> None:
 
 # --- Command -------------------------------------------------------------------------------------------------------
 
+def parse_overrides(items) -> dict:
+    """`key=value` pairs into training overrides, each value read as YAML (so 2.0e-3 is a number, true a boolean).
+    Only keys the training section already has, or the shift ranking's `rho`, may be set."""
+    config = load_config(CONFIG_PATH)
+    current = training_config(config) | {"rho": 0.0}
+    out = {}
+    for item in items or ():
+        key, sep, value = str(item).partition("=")
+        key = key.strip()
+        if not sep or not key:
+            raise ValueError(f"--set takes key=value, got {item!r}")
+        if key not in current:
+            raise ValueError(f"--set {key}: not a training setting (known: {', '.join(sorted(current))})")
+        v = yaml.safe_load(value)
+        if isinstance(v, str) and isinstance(current[key], (int, float)) and not isinstance(current[key], bool):
+            v = float(v)  # YAML 1.1 reads 2e-3 (no dot) as text
+        out[key] = v
+    return out
+
+
 def train_command(*, rung: str, seeds=(0,), store_dir: Path | None = None, time_box_min: float | None = None,
                   max_samples: int | None = None, device: str = "auto", out_dir: Path = RUNS_DIR,
                   runs_csv: Path | None = None, run_id: str | None = None, resume: bool = False,
-                  workers: int | None = None, config_path: Path = CONFIG_PATH, out=print) -> int:
-    """`train --rung A|B|C|L [--seeds 0,1,2]`: one run per seed; prints each run's id, status and best val_sel."""
+                  workers: int | None = None, config_path: Path = CONFIG_PATH, overrides: dict | None = None,
+                  out=print) -> int:
+    """`train --rung A|B|C|L [--seeds 0,1,2] [--set key=value ...]`: one run per seed; prints each run's id, status
+    and best val_sel. `overrides` lie over the configuration's training section and its searched values."""
     config = load_config(config_path)
     store_dir = Path(store_dir) if store_dir is not None else Path(store.STORE_V2_DIR)
     table = load_train_table(store_dir)
@@ -962,7 +996,7 @@ def train_command(*, rung: str, seeds=(0,), store_dir: Path | None = None, time_
         r = train(config, rung=rung, seed=int(seed), store_dir=store_dir, out_dir=out_dir, max_samples=max_samples,
                   time_box_s=None if time_box_min is None else 60.0 * time_box_min, device=device,
                   run_id=run_id if len(seeds) == 1 else None, resume=resume, runs_csv=runs_csv, workers=workers,
-                  table=table, log=out)
+                  table=table, overrides=overrides, log=out)
         out(f"run {r.run_id}: {r.status}, best val_sel {r.best_val_sel} at epoch {r.best_epoch} of {r.epochs}, "
             f"{r.samples:,} samples on {r.device} in {r.wall_s:.0f} s ({r.run_dir})")
         code = code or (0 if r.status in ("finished", "stopped_early", "timed_out", "paused") else 1)
@@ -982,11 +1016,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--runs-csv", type=Path, default=None)
     ap.add_argument("--run-id", default=None)
     ap.add_argument("--resume", action="store_true")
+    ap.add_argument("--set", action="append", default=[], metavar="KEY=VALUE",
+                    help="a training setting over config/neural.yaml, for example learning_rate=2.0e-3 or rho=1.0")
     args = ap.parse_args(argv)
     return train_command(rung=args.rung, seeds=[int(s) for s in args.seeds.split(",")], store_dir=args.store,
                          time_box_min=args.time_box_min, max_samples=args.max_samples, device=args.device,
                          out_dir=args.out, runs_csv=args.runs_csv, run_id=args.run_id, resume=args.resume,
-                         workers=args.workers)
+                         workers=args.workers, overrides=parse_overrides(args.set))
 
 
 if __name__ == "__main__":
