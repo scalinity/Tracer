@@ -3,3 +3,4 @@ qa/
 *.app/
 .claude/
 .DS_Store
+dist-play/

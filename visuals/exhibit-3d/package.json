@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:single": "vite build --mode single",
+    "build:play": "vite build --mode play",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

@@ -1,54 +1,56 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tracer · Watch it play</title>
-<meta name="description" content="Three specimens, on time, stalled and lost, and when Tracer raises the alarm. Synthetic data, no clinical review.">
-<link rel="icon" href="../exhibit/favicon.svg">
-<link rel="stylesheet" href="play.css">
-<script type="importmap">
-{ "imports": { "three": "./vendor/three.module.js", "three/addons/": "./vendor/addons/" } }
-</script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0f1a" />
+  <meta name="description" content="Four specimens ride the same pneumatic tube bench, one after another. Watch where each one really goes, and where Tracer thinks it is." />
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <title>Tracer · Watch it play</title>
+  <script type="module" crossorigin src="./assets/index-BeA7cC9J.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-DYLzOGs3.css">
 </head>
 <body>
-<canvas id="scene" aria-label="A 3D lab: a ward, a pneumatic tube, the lab's tube station, the lab and a lost bin"></canvas>
+  <div id="app" class="play">
+    <main id="world" role="img" aria-label="A pneumatic tube bench in a lab: a ward, a glass tube, the lab's tube station, a lost bin and the lab's scanner"><div id="loading">Pressurizing the tube…</div></main>
+    <div id="veil"></div>
+    <div class="vignette"></div>
 
-<header class="top">
-  <div class="brand"><span class="mark"></span>Tracer</div>
-  <nav class="pills" id="pills" aria-label="Scenarios"></nav>
-</header>
+    <header class="pl-top">
+      <div class="pl-brand"><span class="pl-dot"></span>Tracer</div>
+      <nav class="pl-steps" aria-label="Specimens"></nav>
+    </header>
 
-<div class="caption" id="caption" aria-live="polite"><span id="caption-text"></span></div>
+    <aside class="pl-risk" aria-live="polite">
+      <div class="pl-risk-k">Chance it misses the deadline</div>
+      <div class="pl-risk-v">0%</div>
+      <div class="pl-risk-s"></div>
+    </aside>
 
-<div id="tags" aria-hidden="true"></div>
+    <div class="pl-caption" aria-live="polite"></div>
 
-<aside class="risk" id="risk">
-  <div class="risk-title">Chance it misses the deadline</div>
-  <div class="bar" data-k="tracer"><span class="name">Tracer</span><span class="track"><i></i></span><b>0%</b></div>
-  <div class="bar" data-k="tracernet"><span class="name">TracerNet</span><span class="track"><i></i></span><b>0%</b></div>
-</aside>
+    <footer class="pl-bar">
+      <div class="pl-clock"><span class="pl-clock-v">0</span><span class="pl-clock-k">min since it left the ward</span></div>
+      <div class="pl-rail">
+        <div class="pl-track"><div class="pl-fill"></div></div>
+        <div class="pl-mark pl-deadline"><span>Deadline</span></div>
+        <div class="pl-mark pl-alert"><span>Alert</span></div>
+        <div class="pl-mark pl-scan"><span>Scanned in</span></div>
+      </div>
+    </footer>
 
-<footer class="timeline">
-  <div class="clock"><span class="clock-label">Minutes since it left</span><b id="minute">0</b></div>
-  <div class="tl" id="tl">
-    <div class="tl-rail"><div class="tl-fill" id="tl-fill"></div></div>
-    <div class="tl-deadline" id="tl-deadline"><span>Deadline</span></div>
-    <div class="tl-scan" id="tl-scan"><span>Scanned in</span></div>
-    <div id="tl-flags"></div>
+    <div class="pl-legend">
+      <span><i class="pl-sw-truth"></i>White capsule: where it really is</span>
+      <span><i class="pl-sw-glow"></i>Glow: where Tracer thinks it is</span>
+    </div>
+
+    <div class="pl-card" hidden>
+      <div class="pl-card-n"></div>
+      <div class="pl-card-t"></div>
+      <div class="pl-card-s"></div>
+    </div>
+
+    <button class="pl-pause" type="button" aria-label="Pause">❚❚</button>
   </div>
-</footer>
-
-<div class="legend">
-  <span><i class="dot"></i>The sample, where it really is</span>
-  <span><i class="halo"></i>Glow: where Tracer thinks it is</span>
-  <span class="fine">Synthetic data, no clinical review</span>
-</div>
-
-<div class="card" id="card" hidden></div>
-<button class="pause" id="pause" aria-label="Pause">❚❚</button>
-
-<noscript><p class="nojs">This page needs JavaScript and WebGL.</p></noscript>
-<script type="module" src="main.js"></script>
 </body>
 </html>
