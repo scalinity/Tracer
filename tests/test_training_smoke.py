@@ -326,3 +326,24 @@ def test_a_fast_first_epoch_is_replanned_to_the_target_length_once():
     assert not T.replan_after_first_epoch(plan, sampler, tcfg | {"epoch_samples": 4096}, 31.0, 4096, None, None,
                                           lambda *_: None)
     assert not T.replan_after_first_epoch(fresh(), sampler, tcfg, 400.0, 2_486_298, None, None, lambda *_: None)
+
+
+def test_a_run_with_the_shift_ranking_trains_and_logs_the_term(tiny):
+    """preregistration-v2 §7: rho > 0 adds the shift ranking, read from each sample's run, clock time and tier."""
+    r = run(tiny, "shift", overrides={"rho": 1.0, "max_epochs": 1})
+    assert r.status == "finished" and r.epochs == 1
+    h = r.history[0]
+    assert np.isfinite(h["val_sel"]) and h["train_shift"] > 0
+    assert h["train_total"] > h["train_nll"]
+    plain_first = run(tiny, "no-shift", overrides={"max_epochs": 1}).history[0]
+    assert plain_first["train_shift"] == 0.0
+
+
+def test_set_overrides_read_yaml_values_and_refuse_unknown_keys():
+    got = T.parse_overrides(["learning_rate=2.0e-3", "rho=1", "max_epochs=40"])
+    assert got == {"learning_rate": 0.002, "rho": 1, "max_epochs": 40}
+    assert T.parse_overrides(["learning_rate=2e-3"]) == {"learning_rate": 0.002}
+    with pytest.raises(ValueError, match="not a training setting"):
+        T.parse_overrides(["learnig_rate=1e-3"])
+    with pytest.raises(ValueError, match="key=value"):
+        T.parse_overrides(["rho"])
