@@ -497,6 +497,13 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** the second revision's new bullet repeated "16 commits" beside the November 10 one without naming either range, so the same count read as the same commits.
 - **Assumed:** the November 10 range is read from `ac94969`, the commit the audit names, which still exists in this repository.
 
+### Nov 13 · Rework · A self-playing 3D demo of three specimens (this pull request)
+
+- **Agent:** built `docs/demo/play/`, a plain three.js page that plays on open and loops through three held-out specimens (on time, stalled at the lab's tube station, lost in the tube), with one caption at a time, a minutes-since-it-left clock, a timeline with the deadline and each method's alert, both models' chance of a miss, and halos for where Tracer thinks the specimen is. Its data file comes from the committed `bundle.json` and `neural.json` through `python -m src.api.autoplay`; nothing is recomputed. three.js 0.186.1 is vendored so the page makes no outside request. Tests tie the data file to its sources and check the captions under node.
+- **Daniel:** asked for the 3D demo to play by itself, be easy for a first-time viewer and look good, and not to use the exhibit-3d skill, after the November 8 session with Karissa; no review of this pull request yet.
+- **Went wrong:** no browser could run in the build session, so the page was not seen rendered before merging; it was checked by syntax, by loading every vendored module under node and by the story tests.
+- **Assumed:** the three specimens are picked to show the three situations, not to favor a method (in the stalled one TracerNet alerts last); the fixed window rule is called "Fixed timer" on screen; alerts are the headline budget of 6 per 8-hour shift at 3-2-1 weights.
+
 ## The Claude API jobs
 
 The dataset jobs (D4 to J2) call `claude-haiku-5-5` at low effort with thinking off. The demo's specimen stories (J3) and search briefs (J4) call `claude-sonnet-5-5`, the model for text a person reads. The reply must match a JSON schema, so replies parse and retries stay rare. Bulk jobs run through the Batch API at half price, and every call is logged to `data/claude/usage.jsonl` (kept local). The order for each job is a token count, a pilot, then the batch, and a job's estimate must be under the plan's gate before it starts.
