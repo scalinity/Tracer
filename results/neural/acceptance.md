@@ -152,7 +152,7 @@ A check that nobody ran is reported as not run. Every number comes from syntheti
 **Verdict: partly held.** A1, A2, A5 and A6 are done and the negative control is reported. Two parts do not hold as written: A3 and A4 are marked "not run (not buildable in time)", since the pipeline could not build their inputs, rather than dropped for the time box; and the arms used 73.7 hours of compute against §8.8's budget of 6 hours (`REPORT.md` sections 6 and 10). A7, A8 and A9 are marked "not run" with their reasons (A7 outside the core set, A8 cut under Anthropic's Usage Policy, A9 first on the cut list).
 
 - Record: `results/neural/ablations.json`: A1 (4 arms), A2 (2 arms), A5 (rungs L, A, B, C and the ensemble) and A6 (5 arms) are `done`, three seeds per arm except the A5 ensemble, all at 733 steps (`steps_equal: true`).
-- Record: `ablations.A6.negative_control`: on `control_v1world` at 6 alerts per shift, TracerNet's median warning leads the local analytic refit by 10 minutes (95% interval 5 to 20), flagged `leakage_suspected: true`; `REPORT.md` section 10 reports the flag with the evidence that the lead over the context-free global fit is 0 minutes. The flag stands: flagged, explained, not resolved.
+- Record: `ablations.A6.negative_control`: on `control_v1world` at 6 alerts per shift, TracerNet's median warning leads the local analytic refit by 10 minutes (95% interval 5 to 20), flagged `leakage_suspected: true`; `REPORT.md` section 10 reports the flag with the evidence that the lead over the context-free global fit is 0 minutes. A follow-up on November 13 traced the flag to the training population, not leakage (`followup-2026-11-13.md`).
 - Run now: `pytest tests/test_ablations.py` passed (in the 284-test run of item 11).
 
 ## 15. Explanations

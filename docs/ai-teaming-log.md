@@ -518,6 +518,13 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** nothing yet; the browser checks in the test suite skip here because Playwright isn't installed, so the page is checked in Daniel's Chrome after merging.
 - **Assumed:** Beat Tracer stays, as the class's hands-on activity; whether to cut it for time is Daniel's call with the deck.
 
+### Nov 13 · Neural · The open caveats revisited (#77)
+
+- **Agent:** traced the negative control's leakage flag to the training population with two placebo fits and an end-to-end future-invariance check (`src/pipeline/control_audit.py`, `src/neural/invariance_check.py`), corrected the earlier "small history" explanation, added a site map fit on history alone that closes `legacy_v1`'s calibration gap (`src/neural/sitecal.py`), and wrote up why R1 cannot be met on `test` (`results/neural/followup-2026-11-13.md`). No test look and no API spend.
+- **Daniel:** asked to close what was still open and improve TracerNet further, with HiPerGator only if needed; no review of this pull request yet.
+- **Went wrong:** the earlier explanation of the control's lead was accepted without a placebo check; one run of an independent fit showed it was wrong. Alerting on the mapped scores cost warning time on `legacy_v1`, found only on its scored weeks.
+- **Assumed:** `legacy_v1` and the control are development sets, so choosing to keep alerts on TracerNet's own ranking after seeing `legacy_v1`'s scored weeks is allowed if disclosed; a second test look is not worth taking when nothing changes the alert ranking.
+
 ## The Claude API jobs
 
 The dataset jobs (D4 to J2) call `claude-haiku-5-5` at low effort with thinking off. The demo's specimen stories (J3) and search briefs (J4) call `claude-sonnet-5-5`, the model for text a person reads. The reply must match a JSON schema, so replies parse and retries stay rare. Bulk jobs run through the Batch API at half price, and every call is logged to `data/claude/usage.jsonl` (kept local). The order for each job is a token count, a pilot, then the batch, and a job's estimate must be under the plan's gate before it starts.

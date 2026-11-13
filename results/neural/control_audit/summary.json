@@ -1,0 +1,193 @@
+{
+ "finding": {
+  "cause": "the training population: an analytic model fit on v1-world weeks matches the local refit, while the same context-free analytic model fit on v2 weeks (which cannot read context, so cannot leak it) leads the local refit by as much as TracerNet does; TracerNet also reads nothing after a tick (invariance). A6 compares a v2-trained model with a v1-world fit, so it measures the population gap, not leakage. Against the analytic model fit on the same v2 train weeks the committed control already shows no lead (results/neural/REPORT.md, negative control)",
+  "leakage": "not supported",
+  "proposed_rule": "for any later control, judge leakage against the analytic model fit on TracerNet's own training population (the global fit), with the local refit reported beside it"
+ },
+ "invariance": {
+  "artifact": "/home/claude/tracer/artifacts/tracernet/v1",
+  "cuts": [
+   {
+    "cut_share_of_week": 0.575,
+    "max_abs_diff": 0.0,
+    "run": 190006,
+    "ticks": 3219,
+    "ticks_changed": 0
+   },
+   {
+    "cut_share_of_week": 0.719,
+    "max_abs_diff": 0.0,
+    "run": 190006,
+    "ticks": 3732,
+    "ticks_changed": 0
+   },
+   {
+    "cut_share_of_week": 0.789,
+    "max_abs_diff": 0.0,
+    "run": 190006,
+    "ticks": 4065,
+    "ticks_changed": 0
+   },
+   {
+    "cut_share_of_week": 0.531,
+    "max_abs_diff": 0.0,
+    "run": 190010,
+    "ticks": 3030,
+    "ticks_changed": 0
+   },
+   {
+    "cut_share_of_week": 0.661,
+    "max_abs_diff": 0.0,
+    "run": 190010,
+    "ticks": 3625,
+    "ticks_changed": 0
+   },
+   {
+    "cut_share_of_week": 0.805,
+    "max_abs_diff": 0.0,
+    "run": 190010,
+    "ticks": 4165,
+    "ticks_changed": 0
+   },
+   {
+    "cut_share_of_week": 0.152,
+    "max_abs_diff": 0.0,
+    "run": 190011,
+    "ticks": 455,
+    "ticks_changed": 0
+   },
+   {
+    "cut_share_of_week": 0.721,
+    "max_abs_diff": 0.0,
+    "run": 190011,
+    "ticks": 4061,
+    "ticks_changed": 0
+   },
+   {
+    "cut_share_of_week": 0.75,
+    "max_abs_diff": 0.0,
+    "run": 190011,
+    "ticks": 4194,
+    "ticks_changed": 0
+   },
+   {
+    "cut_share_of_week": 0.174,
+    "max_abs_diff": 0.0,
+    "run": 190014,
+    "ticks": 758,
+    "ticks_changed": 0
+   },
+   {
+    "cut_share_of_week": 0.273,
+    "max_abs_diff": 0.0,
+    "run": 190014,
+    "ticks": 1411,
+    "ticks_changed": 0
+   },
+   {
+    "cut_share_of_week": 0.661,
+    "max_abs_diff": 0.0,
+    "run": 190014,
+    "ticks": 2784,
+    "ticks_changed": 0
+   }
+  ],
+  "max_abs_diff": 0.0,
+  "passed": true,
+  "rule": "every tick at least a minute before the cut scores the same p_miss (within 1e-6) with every later scan of its run deleted",
+  "runs": [
+   190006,
+   190010,
+   190011,
+   190014
+  ],
+  "store": "/home/claude/tracer/data/store-v2-control",
+  "ticks_compared": 35499
+ },
+ "notice": "Synthetic data: the v1-world scenario simulated by this project's code, no clinical review.",
+ "placebo": {
+  "against": "analytic_local",
+  "budget": "6/shift",
+  "capped_mean_warning_min": {
+   "high": -0.7233649235840615,
+   "large": false,
+   "low": -1.4937759336099534,
+   "point": -1.09375
+  },
+  "flagged": false,
+  "focus": "analytic_reference",
+  "margin_min": 5.0,
+  "median_warning_all_breaches_min": {
+   "high": 5.0,
+   "large": false,
+   "low": -5.0,
+   "point": 0.0
+  }
+ },
+ "placebo_v2": {
+  "against": "analytic_local",
+  "budget": "6/shift",
+  "capped_mean_warning_min": {
+   "high": 3.440718709256838,
+   "large": false,
+   "low": 2.081905073976997,
+   "point": 2.7777777777777857
+  },
+  "fitted_on": "the analytic model fit on a seeded 10% of the v2 train scenarios (trained like TracerNet, on v2 weeks, and reading no context)",
+  "flagged": true,
+  "focus": "analytic_global",
+  "margin_min": 5.0,
+  "median_warning_all_breaches_min": {
+   "high": 20.0,
+   "large": true,
+   "low": 10.0,
+   "point": 10.0
+  }
+ },
+ "pooled_auroc": {
+  "analytic_local": 0.9445,
+  "analytic_reference": 0.9472,
+  "tracernet": 0.9267,
+  "window_rule": 0.935
+ },
+ "reference": "the analytic model fit on v1-world replicates 20 to 59 (never scored by the control), which reads no context",
+ "rule": "spec \u00a78.8 A6: a lead over the local analytic refit of at least 5 minutes whose 95% interval's lower end is above zero is treated as leakage until shown otherwise",
+ "tracernet_vs_local": {
+  "against": "analytic_local",
+  "budget": "6/shift",
+  "capped_mean_warning_min": {
+   "high": 2.4610082653985508,
+   "large": false,
+   "low": 0.2666445182724246,
+   "point": 1.2673611111111143
+  },
+  "flagged": true,
+  "focus": "tracernet",
+  "margin_min": 5.0,
+  "median_warning_all_breaches_min": {
+   "high": 20.0,
+   "large": true,
+   "low": 5.0,
+   "point": 10.0
+  }
+ },
+ "tracernet_vs_reference": {
+  "against": "analytic_reference",
+  "budget": "6/shift",
+  "capped_mean_warning_min": {
+   "high": 3.666730038022811,
+   "large": false,
+   "low": 1.2292143259492625,
+   "point": 2.3611111111111143
+  },
+  "flagged": true,
+  "focus": "tracernet",
+  "margin_min": 5.0,
+  "median_warning_all_breaches_min": {
+   "high": 20.0,
+   "large": true,
+   "low": 5.0,
+   "point": 10.0
+  }
+ }
+}
