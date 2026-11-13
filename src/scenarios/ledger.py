@@ -275,46 +275,70 @@ class Ledger:
 
         An account's `raises` list ({usd, date, reason}) is the one way to lift a cap that has entries: each raise not
         yet recorded lifts the ledger's cap by exactly its amount, once, and is written to the meta table and the
-        mirror. The config's cap must equal the ledger's cap plus the new raises, and the margin cannot change."""
+        mirror. The config's cap must equal the ledger's cap plus the new raises, and the margin cannot change. While
+        an account has no entries its cap is taken from the config as it is, and the raises it lists are recorded as
+        part of that starting cap, so a later raise is counted alone. A raise listed twice is refused."""
         releases, raised = [], []
         with self._tx() as cur:
             recorded = self._recorded_raises(cur)
+            at = now_iso()
+
+            def record(account: str, r: dict, before: int, how: str) -> int:
+                after = before + to_micros(r["usd"])
+                rec = {"cap_raise": account, "usd": as_usd(to_micros(r["usd"])), "date": str(r["date"]),
+                       "reason": str(r["reason"]).strip(), "cap_before": as_usd(before), "cap_after": as_usd(after),
+                       "how": how, "at": at}
+                recorded[_raise_key(account, r)] = rec
+                raised.append(rec)
+                return after
+
             for account, a in cfg["accounts"].items():
                 cap, margin = to_micros(a["cap_usd"]), to_micros(a.get("margin_usd", 0))
                 if margin < 0 or margin > cap:
                     raise LedgerError(f"account {account}: margin must be between 0 and the cap")
-                for r in a.get("raises") or []:
+                listed = a.get("raises") or []
+                for r in listed:
                     if Decimal(str(r.get("usd", 0))) <= 0 or not str(r.get("date", "")).strip() \
                             or not str(r.get("reason", "")).strip():
                         raise LedgerError(f"account {account}: a cap raise needs a positive usd, a date and a reason")
+                keys = [_raise_key(account, r) for r in listed]
+                if len(set(keys)) != len(keys):
+                    raise LedgerError(f"account {account} lists the same raise (date and amount) more than once")
+                new = [r for r in listed if _raise_key(account, r) not in recorded]
+                lift = sum(to_micros(r["usd"]) for r in new)
                 row = cur.execute("SELECT cap_micros, margin_micros FROM accounts WHERE account=?",
                                   (account,)).fetchone()
-                if row is None:
-                    cur.execute("INSERT INTO accounts VALUES (?, ?, ?)", (account, cap, margin))
+                spent_any = row is not None and cur.execute("SELECT 1 FROM entries WHERE account=? LIMIT 1",
+                                                            (account,)).fetchone() is not None
+                if not spent_any:
+                    if lift > cap:
+                        raise LedgerError(f"account {account}: its raises add up to more than its cap")
+                    if row is None:
+                        cur.execute("INSERT INTO accounts VALUES (?, ?, ?)", (account, cap, margin))
+                    elif tuple(row) != (cap, margin):
+                        cur.execute("UPDATE accounts SET cap_micros=?, margin_micros=? WHERE account=?",
+                                    (cap, margin, account))
+                    before = cap - lift
+                    for r in new:
+                        before = record(account, r, before, "part of the starting cap")
                 elif tuple(row) != (cap, margin):
-                    if cur.execute("SELECT 1 FROM entries WHERE account=? LIMIT 1", (account,)).fetchone():
-                        new = [r for r in a.get("raises") or [] if _raise_key(account, r) not in recorded]
-                        lift = sum(to_micros(r["usd"]) for r in new)
-                        if not new or margin != row[1] or cap != row[0] + lift:
-                            raise LedgerError(f"account {account} has entries; its cap and margin cannot change "
-                                              f"except by a dated raise of exactly the difference (ledger "
-                                              f"${as_usd(row[0]):.2f}/${as_usd(row[1]):.2f}, config "
-                                              f"${as_usd(cap):.2f}/${as_usd(margin):.2f})")
-                        at = now_iso()
-                        before = row[0]
-                        for r in new:
-                            after = before + to_micros(r["usd"])
-                            rec = {"cap_raise": account, "usd": as_usd(to_micros(r["usd"])), "date": str(r["date"]),
-                                   "reason": str(r["reason"]).strip(), "cap_before": as_usd(before),
-                                   "cap_after": as_usd(after), "at": at}
-                            recorded[_raise_key(account, r)] = rec
-                            raised.append(rec)
-                            before = after
-                        cur.execute("INSERT INTO meta (key, value) VALUES ('cap_raises', ?) "
-                                    "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-                                    (json.dumps(recorded, sort_keys=True),))
+                    if not new or margin != row[1] or cap != row[0] + lift:
+                        raise LedgerError(f"account {account} has entries; its cap and margin cannot change "
+                                          f"except by a dated raise of exactly the difference (ledger "
+                                          f"${as_usd(row[0]):.2f}/${as_usd(row[1]):.2f}, config "
+                                          f"${as_usd(cap):.2f}/${as_usd(margin):.2f})")
+                    before = row[0]
+                    for r in new:
+                        before = record(account, r, before, "lifted the cap")
                     cur.execute("UPDATE accounts SET cap_micros=?, margin_micros=? WHERE account=?",
                                 (cap, margin, account))
+                elif new:
+                    raise LedgerError(f"account {account} lists a raise the ledger has not applied, but its cap "
+                                      f"already equals the config's (${as_usd(cap):.2f})")
+            if raised:
+                cur.execute("INSERT INTO meta (key, value) VALUES ('cap_raises', ?) "
+                            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                            (json.dumps(recorded, sort_keys=True),))
             for job, j in cfg["jobs"].items():
                 account, cap, released = j["account"], to_micros(j["cap_usd"]), bool(j.get("released", True))
                 if account not in cfg["accounts"]:
@@ -381,6 +405,10 @@ class Ledger:
             recorded = self._recorded_raises(self._con.cursor())
             if set(mirrored_raises) - set(recorded):
                 raise LedgerUnavailable(f"mirror {self.mirror.name} records a cap raise the database lacks")
+            for key in set(mirrored_raises) & set(recorded):
+                if mirrored_raises[key] != recorded[key]:
+                    raise LedgerUnavailable(f"mirror {self.mirror.name} disagrees with the database on the cap raise "
+                                            f"{key}")
             lost = [recorded[k] for k in sorted(recorded) if k not in mirrored_raises]
             if lost:
                 self._append_mirror([json.dumps(r, sort_keys=True) for r in lost])
