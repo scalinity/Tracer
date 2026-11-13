@@ -7,11 +7,12 @@
 #     docs/neural/hpg/train-v2.sbatch
 #
 # A run that hits the time limit resumes exactly from its last epoch: the same ARGS plus --run-id RUN --resume.
-# HPG is the project folder on /blue; CODE is a checkout of this repository at the commit being trained.
+# HPG is the project folder on /blue; CODE is a checkout of this repository at the commit being trained. A seed
+# peaked at 53 GB of memory in the first artifact's training; each job asks for 60 GB.
 #SBATCH --partition=hpg-b200
 #SBATCH --gpus=1
 #SBATCH --cpus-per-task=6
-#SBATCH --mem=100G
+#SBATCH --mem=60G
 #SBATCH --time=10:00:00
 #SBATCH --output=/blue/cai6734/daniel.escalante/tracer/v2/logs/%x-%j.out
 set -euo pipefail
