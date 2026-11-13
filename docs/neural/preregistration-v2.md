@@ -98,12 +98,12 @@ Filled in at the end of Phase 2, before the fresh set is generated.
 
 | Field | Value |
 |---|---|
-| Commit that freezes the model | to be filled |
-| Artifact | to be filled |
-| Artifact manifest SHA-256 | to be filled |
-| Member weights SHA-256 | to be filled |
-| Calibration and site map | to be filled |
-| Training store and splits | to be filled |
+| Commit that freezes the model | `cc4f76598cba0b59f8d13a883885e360e5505098` (pull request #88) |
+| Artifact | `artifacts/tracernet/v2`, version `tracernet-v2`: candidate C1 of `docs/neural/phase2-log.md`, rung C, seeds 0, 1 and 2 |
+| Artifact manifest SHA-256 | `ae7695c4613bfed4b7f8e0bbe984520776606a03e77e78b039781a70414a25e2` (`manifest.json`, which holds every other file's SHA-256) |
+| Member weights SHA-256 | `fe91ff7bc8a3d4c9d63417b712afea5f8d3f170778aa06b9093f1ceb639b5aaf` (`model.pt`, the three members in one file) |
+| Calibration and site map | Temperature 1.1254 on the log of the averaged distribution, no isotonic step (`calibration.json`, SHA-256 `1103ff7b70383328ae09a64410fecf94c13c8f95ecd4228b3c3e8bb5cca9ed55`). Site map on: fit on each scored laboratory's history replicate; on validation it changed the Brier score by +0.00014 at 30 minutes and +0.00015 at 60 |
+| Training store and splits | Store `bca1e1f97b1eb024`, built from `datasets/scenarios-v2.jsonl.gz` (SHA-256 `204c41299477305efec98b1d34a952799577628d9d4f8290039464f0127922ca`, 8,547 scenarios) with the split map of `datasets/scenarios-v2.splits.json` (SHA-256 of its sorted scenario map `ccc97addce40a248003a6f84ffa9afee42e034c986c6a0139c462034cc2f182d`): train fits, validation stops early, chooses and calibrates |
 
 ## 7. How Phase 2 chooses the model
 

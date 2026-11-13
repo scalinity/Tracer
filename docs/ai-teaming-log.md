@@ -595,12 +595,19 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** nothing.
 - **Assumed:** a command-line name is simpler than a second configuration file for one string.
 
-### Nov 13 · Neural · Phase 2: the model chosen on validation and frozen as tracernet-v2 (this pull request)
+### Nov 13 · Neural · Phase 2: the model chosen on validation and frozen as tracernet-v2 (#88)
 
 - **Agent:** trained three candidates on train and scored them beside the first artifact on validation only (`docs/neural/phase2-log.md`): C1, a lower peak learning rate on a fixed budget of 20 epochs with the coverage fill; C2, C1 plus the shift ranking term; C2x5, C2 with five seeds. Their average capped mean warning at 6 alerts per shift was 16.78, 16.83 and 16.85 minutes against the first artifact's 16.48, so the preregistered tie band of 0.2 minutes picks the simplest, C1, frozen as `artifacts/tracernet/v2`. The site map stays on (it moves C1's Brier score by +0.00014). The lower learning rate removed the first artifact's training spikes. On validation the explanation deletion check reads 70.0% for the first artifact and 68.9% for C1, both within sampling noise of the 70% line. `rule_v2 --markdown` renders the verdict as tables for the results page.
 - **Daniel:** asked for improvements on train and validation only, chosen by validation capped mean warning, with every candidate logged.
 - **Went wrong:** the frozen artifact's manifest said `development: true` and its card called it a smoke check, because the check judged a store by its path and Phase 2's store sits outside `data/store-v2`; the check now reads the store's manifest, and the flag and card were rewritten with a test, the weights and calibration unchanged. The first explanation job ran out of memory at 120 GB with 31 workers (rerun with 12 workers and 300 GB), the validation evaluation needed 400 GB rather than 160 GB, and with the class's GPU allocation full, C2 and C2x5 were calibrated on CPU in about 1.5 hours instead of 6 minutes.
 - **Assumed:** "fewer changes from the first artifact" counts the ranking term as a change, so C1 is simpler than C2; the corrected label needed no re-scoring, because predictions read only the unchanged files.
+
+### Nov 13 · Neural · The preregistration names the frozen model (this pull request)
+
+- **Agent:** filled the preregistration's section 6 with #88's merge commit, the artifact's manifest, weights and calibration checksums, the site map's validation effect, and the training store, library and split map. Until this merges, the fresh test set job (T1) refuses to run.
+- **Daniel:** asked for the model to be named before any fresh data exists.
+- **Went wrong:** the store's splits checksum differs from the splits file's, which looked like a mismatch; the store hashes the sorted scenario-to-split map inside the file, and that map gives the store's value exactly, so both are named.
+- **Assumed:** a second pull request is the simplest way to record the freezing commit, since a commit cannot name its own hash and the repository squash-merges.
 
 ## The Claude API jobs
 
