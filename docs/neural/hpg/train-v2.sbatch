@@ -7,6 +7,9 @@
 #     docs/neural/hpg/train-v2.sbatch
 #
 # A run that hits the time limit resumes exactly from its last epoch: the same ARGS plus --run-id RUN --resume.
+# CMD instead of ARGS runs any module on the GPU, for example a candidate's ensemble and calibration:
+#   --export=ALL,CMD="-m src.neural.ensemble calibrate --store $HPG/store-v2-o4 --run RUN0 --run RUN1 --run RUN2 \
+#     --out $HPG/v2/artifacts/C2"
 # HPG is the project folder on /blue; CODE is a checkout of this repository at the commit being trained. A seed
 # peaked at 53 GB of memory in the first artifact's training; each job asks for 60 GB.
 #SBATCH --partition=hpg-b200
@@ -24,5 +27,9 @@ echo "start $(TZ=America/New_York date) on $(hostname), gpu: $(nvidia-smi --quer
 echo "code $(git rev-parse HEAD)"
 export TRACER_PROGRESS=$HPG/v2/progress/${SLURM_JOB_NAME}-${SLURM_JOB_ID}.json
 export OMP_NUM_THREADS=${TORCH_THREADS:-4} PYTHONUNBUFFERED=1
-/usr/bin/time -v $PY -m src.neural.pipeline $ARGS 2>&1
+if [ -n "${CMD:-}" ]; then
+  /usr/bin/time -v $PY $CMD 2>&1
+else
+  /usr/bin/time -v $PY -m src.neural.pipeline $ARGS 2>&1
+fi
 echo "end $(TZ=America/New_York date)"
