@@ -121,11 +121,11 @@ const top = $('.pl-top');
 const bar = $('.pl-bar');
 const riskBox = $('.pl-risk');
 const COLUMN = 860; // from this width up, the caption sits in a column under the risk card
-const safeArea = (): SafeArea => {
+const safeArea = (columnAllowed = true): SafeArea => {
   const w = root.clientWidth;
   const h = root.clientHeight;
   const phone = w <= 820;
-  const column = w >= COLUMN;
+  const column = columnAllowed && w >= COLUMN;
   // Keep the whole bench clear of the top row, the caption and the clock: a part hidden behind a
   // panel is a part the audience can't follow. On a wide screen the caption and risk share a
   // right-hand column, so the bench moves left of it and nothing covers its dials.
@@ -145,7 +145,22 @@ const safeArea = (): SafeArea => {
 const views: Record<string, HeroShot> = {
   lab: { target: [0.9, 1.15, 0.3], yaw: -0.34, pitch: 0.18, fit: { width: 18.4, height: 10.9 }, bounds: lab.bounds },
 };
-const rig = new CameraRig(camera, world, views, { safeArea });
+// The column leaves the bench less room, and the room's back wall stops the camera backing away far
+// enough to fit it, so the bench would come out cropped. Widen the lens instead, just enough that the
+// camera stands where it would with the whole width free.
+const BASE_FOV = 30;
+const fitLens = (): void => {
+  const v = views.lab;
+  const w = root.clientWidth;
+  const h = root.clientHeight;
+  const need = (sa: SafeArea): number =>
+    Math.max(v.fit.height / Math.max(80, h - sa.top - sa.bottom), v.fit.width / Math.max(80, w - sa.left - sa.right));
+  const ratio = need(safeArea()) / need(safeArea(false));
+  const tanHalf = Math.tan(THREE.MathUtils.degToRad(BASE_FOV) / 2) * Math.max(1, ratio);
+  v.fov = Math.min(46, THREE.MathUtils.radToDeg(2 * Math.atan(tanHalf)));
+};
+fitLens();
+const rig = new CameraRig(camera, world, views, { safeArea: () => safeArea() });
 rig.enabled = false;
 rig.idleDrift = false;
 rig.focusPoint = new THREE.Vector3(RECEIVER.x, 1.4, RECEIVER.z);
@@ -409,11 +424,14 @@ stage.onFrame((dt, elapsed) => {
 });
 stage.onResize((w, h) => {
   labels.setSize(w, h);
+  fitLens();
   rig.refit();
   hero = rig.heroPose('lab');
 });
 
 await stage.start();
+fitLens();
+rig.refit();
 hero = rig.heroPose('lab');
 setPaused(paused);
 const startT = params.has('t') ? Math.max(0, Math.min(MAX_T, Number(params.get('t')) || 0)) : undefined;
