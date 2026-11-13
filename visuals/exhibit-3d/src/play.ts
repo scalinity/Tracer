@@ -146,32 +146,29 @@ const views: Record<string, HeroShot> = {
   lab: { target: [0.9, 1.15, 0.3], yaw: -0.34, pitch: 0.18, fit: { width: 18.4, height: 10.9 }, bounds: lab.bounds },
 };
 // In the column layout the bench has a narrower space beside the caption, and the hero shot's fit box
-// (sized for the full width) leaves the ward end off screen. There, frame the bench itself: its box,
-// seen along the hero's yaw and pitch, gives the target and the fit. The room's back wall stops the
+// (sized for the full width) leaves the ward end off screen. There, frame the bench's full width: its
+// box, seen along the hero's yaw, gives the horizontal aim and the fit width. The room's back wall stops the
 // camera backing away far enough, so the lens widens instead, just enough that the camera stands
 // no further back than it does with the whole width free.
 const BASE_FOV = 30;
 const HERO_LAB = { target: [...views.lab.target] as [number, number, number], fit: { ...views.lab.fit } };
 const BENCH = new THREE.Box3().setFromObject(app.group);
 const benchShot = (): { target: [number, number, number]; fit: { width: number; height: number } } => {
-  const { yaw, pitch } = views.lab;
-  const dir = new THREE.Vector3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
+  const { yaw } = views.lab;
   const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
-  const up = new THREE.Vector3().crossVectors(dir, right).normalize();
   const r = [Infinity, -Infinity];
-  const u = [Infinity, -Infinity];
   const p = new THREE.Vector3();
   for (let k = 0; k < 8; k++) {
     p.set(k & 1 ? BENCH.max.x : BENCH.min.x, k & 2 ? BENCH.max.y : BENCH.min.y, k & 4 ? BENCH.max.z : BENCH.min.z);
     const pr = p.dot(right);
-    const pu = p.dot(up);
     r[0] = Math.min(r[0], pr); r[1] = Math.max(r[1], pr);
-    u[0] = Math.min(u[0], pu); u[1] = Math.max(u[1], pu);
   }
-  const c = BENCH.getCenter(new THREE.Vector3());
-  c.addScaledVector(right, (r[0] + r[1]) / 2 - c.dot(right)).addScaledVector(up, (u[0] + u[1]) / 2 - c.dot(up));
+  // Keep the hero shot's height and vertical aim (the console's lower cabinet stays below the frame,
+  // as in the full-width shot) and take only the bench's width and its horizontal center.
+  const c = new THREE.Vector3(...HERO_LAB.target);
+  c.addScaledVector(right, (r[0] + r[1]) / 2 - c.dot(right));
   // A margin for perspective: the near end of the bench draws larger than its box says.
-  return { target: [c.x, c.y, c.z], fit: { width: (r[1] - r[0]) * 1.12, height: (u[1] - u[0]) * 1.1 } };
+  return { target: [c.x, c.y, c.z], fit: { width: (r[1] - r[0]) * 1.08, height: HERO_LAB.fit.height } };
 };
 const fitLens = (): void => {
   const v = views.lab;
