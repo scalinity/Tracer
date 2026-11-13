@@ -83,3 +83,14 @@ def test_a_later_freeze_keeps_out_what_an_earlier_freeze_of_the_same_job_left_ou
              {"item_id": "O4-0", "job": "O4"}]
     got = freeze.round2_items(items, known, 0, frozen_jobs={"O2", "O3"})
     assert [i["item_id"] for i in got] == ["O4-0"]
+
+
+def test_every_earlier_freezes_left_out_counts_are_kept():
+    """Codex on #84: a manifest that already has a history must also add its own freeze's counts to it."""
+    first = {"jobs": {"O1": {}, "O2": {}, "O3": {}}, "near_duplicates": {"left_out": 22},
+             "left_out_other": {"would bridge families of different splits": 253}}
+    second = {"jobs": {"O1": {}, "O4": {}}, "near_duplicates": {"left_out": 8},
+              "left_out_other": {"would join a val family": 8}, "earlier_freezes": freeze.earlier_freezes(first)}
+    history = freeze.earlier_freezes(second)
+    assert [h["near_duplicates_left_out"] for h in history] == [22, 8]
+    assert history[0]["jobs"] == ["O1", "O2", "O3"] and history[1]["left_out_other"] == {"would join a val family": 8}

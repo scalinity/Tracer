@@ -293,17 +293,21 @@ def freeze(jobs: tuple[str, ...], *, paths: runner.Paths | None = None, workers:
     manifest = build_manifest(records, sha, len(data), counts, jobs, paths, loaded, ref, x, kp, splits,
                               duplicates, left_out, random_n, workers,
                               first_round_left_out=first_left_out if round2 else len(duplicates) + len(left_out))
-    if round2:  # each freeze reports what it left out; keep what the earlier freezes reported beside it
-        before = json.loads(manifest_path.read_text(encoding="utf-8"))
-        earlier = before.get("earlier_freezes") or [{
-            "jobs": sorted(before.get("jobs") or {}), "near_duplicates_left_out": before["near_duplicates"]["left_out"],
-            "left_out_other": before.get("left_out_other")}]
-        manifest["earlier_freezes"] = earlier
+    if round2:  # each freeze reports what it left out; keep what every earlier freeze reported beside it
+        manifest["earlier_freezes"] = earlier_freezes(json.loads(manifest_path.read_text(encoding="utf-8")))
     manifest_path.write_text(json.dumps(manifest, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     out(f"froze {len(records)} scenarios ({len(duplicates)} near duplicates and {len(left_out)} others left out); "
         f"splits {splits['counts']}; {len(split_of_family)} families, largest "
         f"{max(Counter(r['meta']['family_id'] for r in records).values())}; delta {delta:.3f}")
     return manifest
+
+
+def earlier_freezes(before: dict) -> list[dict]:
+    """The left-out counts of every freeze before this one: the previous manifest's own history, then the previous
+    manifest's own counts appended, so a run of freezes never loses one."""
+    return list(before.get("earlier_freezes") or []) + [{
+        "jobs": sorted(before.get("jobs") or {}), "near_duplicates_left_out": before["near_duplicates"]["left_out"],
+        "left_out_other": before.get("left_out_other")}]
 
 
 def build_manifest(records, sha, size, counts, jobs, paths, loaded, ref, x, kp, splits, duplicates, left_out,
