@@ -11,6 +11,8 @@ Team: Daniel Escalante and Karissa Kocourek.
 The demo is a static page on GitHub Pages, <https://scalinity.github.io/Tracer/demo/> (the QR code is `docs/demo/qr.png`). It reads
 its data files in the browser and makes no other request, so it needs no key and no server.
 
+A self-playing 3D version for the projector, three specimens on time, stalled and lost, is at <https://scalinity.github.io/Tracer/demo/play/> (`docs/demo/play/`; `python -m src.api.autoplay` writes its data file).
+
 How Tracer works, who built which part and the likely questions are explained in one page at
 <https://scalinity.github.io/Tracer/explained/> (`docs/explained/index.html`, a single self-contained file that also opens from disk).
 

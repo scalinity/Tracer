@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tracer · Watch it play</title>
+<meta name="description" content="Three specimens, on time, stalled and lost, and when Tracer raises the alarm. Synthetic data, no clinical review.">
+<link rel="icon" href="../exhibit/favicon.svg">
+<link rel="stylesheet" href="play.css">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js", "three/addons/": "./vendor/addons/" } }
+</script>
+</head>
+<body>
+<canvas id="scene" aria-label="A 3D lab: a ward, a pneumatic tube, the lab's tube station, the lab and a lost bin"></canvas>
+
+<header class="top">
+  <div class="brand"><span class="mark"></span>Tracer</div>
+  <nav class="pills" id="pills" aria-label="Scenarios"></nav>
+</header>
+
+<div class="caption" id="caption" aria-live="polite"><span id="caption-text"></span></div>
+
+<div id="tags" aria-hidden="true"></div>
+
+<aside class="risk" id="risk">
+  <div class="risk-title">Chance it misses the deadline</div>
+  <div class="bar" data-k="tracer"><span class="name">Tracer</span><span class="track"><i></i></span><b>0%</b></div>
+  <div class="bar" data-k="tracernet"><span class="name">TracerNet</span><span class="track"><i></i></span><b>0%</b></div>
+</aside>
+
+<footer class="timeline">
+  <div class="clock"><span class="clock-label">Minutes since it left</span><b id="minute">0</b></div>
+  <div class="tl" id="tl">
+    <div class="tl-rail"><div class="tl-fill" id="tl-fill"></div></div>
+    <div class="tl-deadline" id="tl-deadline"><span>Deadline</span></div>
+    <div class="tl-scan" id="tl-scan"><span>Scanned in</span></div>
+    <div id="tl-flags"></div>
+  </div>
+</footer>
+
+<div class="legend">
+  <span><i class="dot"></i>The sample, where it really is</span>
+  <span><i class="halo"></i>Glow: where Tracer thinks it is</span>
+  <span class="fine">Synthetic data, no clinical review</span>
+</div>
+
+<div class="card" id="card" hidden></div>
+<button class="pause" id="pause" aria-label="Pause">❚❚</button>
+
+<noscript><p class="nojs">This page needs JavaScript and WebGL.</p></noscript>
+<script type="module" src="main.js"></script>
+</body>
+</html>
