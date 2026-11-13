@@ -512,6 +512,7 @@ Target: at most 2 seconds per simulated 1,000-specimen week on one core. Scenari
 - **`test_ood`** (pre-registered): every scenario of archetype `multi_site_system` and every scenario containing a `scanner_downtime` disruption. Neither appears in train or validation.
 - **Everything else** is split by `family_id`, stratified by archetype and stratum, train 70%, validation 15%, `test` 15%, with a seeded hash of the family id so assignments never change when later scenarios are added.
 - **O3 families** go 85% to train and 15% to validation. None go to a test set.
+- **Coverage-fill families** (O4 and O4b, `docs/neural/preregistration-v2.md` §7) go to train only, and a fill scenario that would join a validation family is left out, so validation stays the set the first artifact was judged on. A later freeze adds items only from jobs it freezes for the first time.
 - **History.** In every scenario, replicate 0 provides the fingerprint (§7.4), the local refit of the analytic baselines, and the label-free alert thresholds of every method (§8.3). Replicates 1 and up are scored.
 - **`legacy_v1`.** The v1 store, untouched. Its fit runs 0 to 23 play the history role; its test runs 24 to 29 are the cross-generator test.
 - `datasets/scenarios-v2.splits.json` (committed) records family to split, scenario to split, the OOD rule, the hash salt and the counts. Its hash goes into every artifact.

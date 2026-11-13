@@ -27,6 +27,11 @@ jobs:
             normal/critical_access_rural: 20, normal/safety_net_urban: 61, normal/surgical_specialty: 28,
             stressed/academic_medical_center: 18, stressed/cancer_center: 3, stressed/childrens_hospital: 20,
             stressed/community_hospital: 51, stressed/critical_access_rural: 4, stressed/safety_net_urban: 14}
+  # O4b tops up the three cells O4 left short once its freeze had left out the scenarios that would bridge or join
+  # validation or test families: 1.5 times each remaining shortfall plus two.
+  O4b:
+    ood: false
+    cells: {normal/academic_medical_center: 25, normal/community_hospital: 20, normal/safety_net_urban: 17}
   T1:  {total: 950, ood: false}   # the fresh test set: O2's grid, in-distribution cells only (preregistration-v2 §5)
 
 # Round 2 shares of the O3 briefs (spec §4.12 step 4).

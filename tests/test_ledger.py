@@ -58,31 +58,32 @@ def test_the_real_caps_match_the_spec():
     assert m(openai["cap_usd"]) - sum(m(r["usd"]) for r in openai["raises"]) == m("76.43")
     assert REAL_JOBS["accounts"]["decide"] == {"cap_usd": 8.00, "margin_usd": 0.00}
     caps = {j: v["cap_usd"] for j, v in jobs.items()}
-    assert caps == {"O1": 3.00, "O1b": 2.00, "O2": 44.00, "O3": 18.00, "O3b": 7.00, "O4": 8.00, "T1": 20.00,
+    assert caps == {"O1": 3.00, "O1b": 2.00, "O2": 44.00, "O3": 18.00, "O3b": 7.00, "O4": 8.00, "O4b": 2.00, "T1": 20.00,
                     "X1": 1.00, "X2": 4.50, "X3": 0.75, "X4": 1.75}
     assert {j for j, v in jobs.items() if not v["released"]} == {"O1b", "O3b"}
     openai_jobs = sum(m(v["cap_usd"]) for v in jobs.values() if v["account"] == "openai")
-    assert openai_jobs == m("102.00")
+    assert openai_jobs == m("104.00")
     # every job capped, so at least $10 of the account can never be spent, whatever is released
     assert m(openai["cap_usd"]) - openai_jobs >= m("10.00")
     assert sum(m(v["cap_usd"]) for v in jobs.values() if v["account"] == "decide") == m("8.00")
     assert jobs["T1"]["needs"] == "frozen_model" and jobs["T1"]["seed"] == 501 and jobs["T1"]["briefs"] == 950
-    used = {v["seed"] for j, v in jobs.items() if "seed" in v and j not in ("O4", "T1")}
-    assert {jobs["O4"]["seed"], jobs["T1"]["seed"]}.isdisjoint(used)
+    used = {v["seed"] for j, v in jobs.items() if "seed" in v and j not in ("O4", "O4b", "T1")}
+    assert {jobs["O4"]["seed"], jobs["O4b"]["seed"], jobs["T1"]["seed"]}.isdisjoint(used)
 
 
-def test_the_real_ledger_never_lets_more_than_102_dollars_be_held(tmp_path):
+def test_the_real_ledger_never_lets_more_than_104_dollars_be_held(tmp_path):
     lg = open_ledger(tmp_path, jobs=REAL_JOBS)
     lg.release_job("O1b", "test")
     lg.release_job("O3b", "test")
-    for job, cap in (("O1", "3"), ("O1b", "2"), ("O2", "44"), ("O3", "18"), ("O3b", "7"), ("O4", "8"), ("T1", "20")):
+    for job, cap in (("O1", "3"), ("O1b", "2"), ("O2", "44"), ("O3", "18"), ("O3b", "7"), ("O4", "8"), ("O4b", "2"),
+                     ("T1", "20")):
         lg.reserve(job, f"{job}-all", cap)
     for job in ("O2", "T1"):
         with pytest.raises(L.CapReached) as e:
             lg.reserve(job, "one-more", "0.000001")
         assert e.value.scope == "job"
     totals = lg.totals()["accounts"]["openai"]
-    assert totals["held"] == m("102.00") and totals["cap"] - totals["held"] >= m("10.00")
+    assert totals["held"] == m("104.00") and totals["cap"] - totals["held"] >= m("10.00")
     lg.reserve("X2", "decide-still-has-room", "4.50")  # the decision account is separate
 
 
