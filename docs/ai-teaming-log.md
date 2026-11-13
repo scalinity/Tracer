@@ -546,12 +546,19 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** on a phone the run-of-show table squeezed each part's name into three or four lines; below 560 px each row now stacks, time and owner over the part.
 - **Assumed:** `docs/explained/short/` now forwards to the rebuilt page, because one five-minute page with folds replaces the card version and two explainers would drift apart. The first four checklist items are due by December 6, the freeze, since no earlier dates were given.
 
-### Nov 13 · Fix · Beat Tracer hands keyboard focus to the cards (this pull request)
+### Nov 13 · Fix · Beat Tracer hands keyboard focus to the cards (#81)
 
 - **Agent:** restored the focus move that #79 dropped: when a round starts, the first card still waiting for its scan takes focus, so a keyboard player's Tab moves through the six cards instead of skipping past them. The headless game test now starts the first round with the Enter key, checks that focus lands on the first waiting card in every round, and that Tab reaches the second; it fails without the fix.
 - **Daniel:** asked for the open Codex finding on #79 to be fixed with a test.
 - **Went wrong:** #79's rewrite of the round loop left out the old `focus()` call, and the game test only clicked with a mouse, so nothing caught it until Codex's review.
 - **Assumed:** focus goes to the first waiting card, as it did before #79.
+
+### Nov 13 · Neural · A second rule for TracerNet, fixed before any new data (this pull request)
+
+- **Agent:** wrote `docs/neural/preregistration-v2.md` before generating any data or training anything. The primary endpoint is the capped mean warning at 6 alerts per shift (spec §8.4's 120-minute cap), won only if the lower end of the 95% scenario-bootstrap interval of TracerNet minus every baseline is above 0 at both the 3-2-1 and equal weights. Four guardrails: R3's calibration margin unchanged, AUROC at 30 minutes at least every baseline's, false alerts per alert sent no higher than every baseline's, and R2's losses margin unchanged. The fresh set is a new job (T1) with every setting of the main run that made `test`, a new planner seed and new simulator indices; about 800 scenarios, sized so every interval's projected half-width is at most 2 minutes. Section 6, the model's commit and checksums, is left to fill at the end of Phase 2.
+- **Daniel:** asked for the rule to be written and merged before any new data or training, with the capped mean, a bootstrap that resamples whole shifts, and guardrails for calibration, AUROC and false alerts, and for `test` never to be read again.
+- **Went wrong:** nothing yet.
+- **Assumed:** the bootstrap resamples whole scenarios (each a laboratory week of 63 scored shifts), not single shifts, because shifts in one week share a knob and its disruptions; false alerts are compared per alert sent, because on validation the window rule sends 3.66 alerts per shift against TracerNet's 5.84 and a per-shift count would reward sending fewer; R2 is kept as a guardrail since it is an existing rule; the baselines are all five of spec §8.2, not only R1's three.
 
 ## The Claude API jobs
 
