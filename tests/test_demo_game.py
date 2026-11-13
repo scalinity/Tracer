@@ -197,8 +197,19 @@ const { chromium } = require(PLAYWRIGHT);
     // Play as a person would, without reading the answer: tap the one card still waiting for its scan, or after
     // 40 minutes the first waiting one.
     const rounds = width === 390 ? 3 : 1;
+    run.focus = [];
     for (let round = 0; round < rounds; round++) {
-      await page.click("#game-go");
+      // The first round starts from the keyboard, as a player without a mouse would; the hidden Start button must
+      // hand focus to the first card still waiting, or Tab would skip all six cards that precede it.
+      if (round === 0) { await page.focus("#game-go"); await page.keyboard.press("Enter"); }
+      else await page.click("#game-go");
+      const focusNow = () => page.evaluate(() => {
+        const open = Array.from(document.querySelectorAll("#game-feed .bt-card:not(:disabled)"));
+        return open.indexOf(document.activeElement);
+      });
+      const at = { start: await focusNow() };
+      if (round === 0) { await page.keyboard.press("Tab"); at.tab = await focusNow(); }
+      run.focus.push(at);
       for (;;) {
         await page.waitForTimeout(200);
         const st = await page.evaluate(() => ({ phase: window.TracerDemo.game().phase, clock: +document.getElementById("game-clock").textContent,
@@ -266,6 +277,9 @@ def test_a_whole_game_with_seed_18_finishes_in_under_two_minutes_in_headless_chr
         assert all(o <= 0 for o in run["overflow"]), run["overflow"]
         assert all(s <= 0 for s in run["scroll"]), f"the game scrolls at {run['width']} px: {run['scroll']}"
         assert all(h >= 44 for h in run["targets"]), run["targets"]
+        # every round starts with focus on the first waiting card, and Tab moves on to the next one
+        assert [f["start"] for f in run["focus"]] == [0] * len(run["focus"]), run["focus"]
+        assert run["focus"][0]["tab"] == 1, run["focus"]
     phone = result["runs"][0]
     assert phone["width"] == 390 and phone["game"]["phase"] == "end" and len(phone["game"]["results"]) == 3
     assert phone["seconds"] < 120, phone["seconds"]
