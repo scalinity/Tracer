@@ -14,7 +14,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 LENGTH = "15:00"  # the run of show, the length of the slot
-SLIDES = 14
+SLIDES = 10
+HEADLINE_WORDS = 8  # a headline a first-time viewer reads at a glance
+SLIDE_WORDS = 23  # the headline and at most about 15 more words on screen
+RESULT = {"caption": "Minutes of warning per late specimen, at 6 alerts a shift.",
+          "source": "776 fresh synthetic lab weeks, scored once."}  # the shared wording every surface uses
 TALK = ROOT / "docs" / "talk"
 SCRIPT = (TALK / "README.md").read_text(encoding="utf-8")
 DECK = (TALK / "index.html").read_text(encoding="utf-8")
@@ -103,7 +107,7 @@ def test_the_run_of_show_runs_its_length_with_no_gap():
     for d in timed:
         assert f"{d['data-start']} to {d['data-end']}" in SCRIPT, d["data-beat"]
     hands_on = sum(secs(d["data-end"]) - secs(d["data-start"]) for d in timed
-                   if d["data-beat"] in ("Board and timeline", "Beat Tracer", "Why this design"))
+                   if d["data-beat"] in ("Try it on your phone", "Beat Tracer", "Does it work"))
     assert hands_on == 420  # 7 minutes, as the script says
 
 
@@ -125,7 +129,7 @@ def test_the_slides_that_show_the_demo_or_its_numbers_say_it_is_synthetic():
 
 
 def test_the_two_speakers_split_the_time_evenly_and_trade_often():
-    """The script says the speaking time is split about evenly and the talk changes speaker ten times.
+    """The script says the speaking time is split about evenly and the talk changes speaker six times.
 
     Daniel's lines are written out, so his words are counted. Karissa's sections are points she says in her own
     words, so each one's length is the word count its stage direction gives ("about 50 words"). Daniel's
@@ -153,8 +157,8 @@ def test_the_two_speakers_split_the_time_evenly_and_trade_often():
             else:
                 words[who] += stated
     assert 0.45 <= words["Daniel"] / sum(words.values()) <= 0.55, words
-    assert sum(a != b for a, b in zip(order, order[1:])) == 10, order
-    assert "changes speaker ten times" in SCRIPT
+    assert sum(a != b for a, b in zip(order, order[1:])) == 6, order
+    assert "changes speaker six times" in SCRIPT
 
 
 def test_karissa_has_an_outline_not_lines():
@@ -168,6 +172,47 @@ def test_karissa_has_an_outline_not_lines():
                 assert re.match(r"\d+\. ", line), f"slide {n}: Karissa has a written line, not a point: {line[:60]}"
     for answer in re.findall(r"^\d+\. \*\*.+?\*\* \[Karissa\] (.+)$", SCRIPT, flags=re.M):
         assert answer.startswith("Points: "), answer[:60]
+
+
+def words(text: str) -> int:
+    return sum(1 for w in text.split() if re.search(r"[A-Za-z0-9]", w))
+
+
+def on_screen(chunk: str) -> str:
+    """A slide's visible text, SVG labels included: no notes, no footer caveat, no alt or aria text."""
+    chunk = re.sub(r"<aside.*?</aside>", " ", chunk, flags=re.S)
+    chunk = re.sub(r'<div class="foot">.*?</div>', " ", chunk, flags=re.S)
+    return plain(re.sub(r"<[^>]+>", " ", chunk))
+
+
+def test_every_slide_reads_at_a_glance():
+    """A first-time viewer gets each slide in about five seconds: a short headline and little else to read.
+
+    The synthetic-data caveat in the footer is not counted, since it is the same line on every slide that needs
+    it. The result slide also carries the shared caption and source line every surface uses, word for word.
+    """
+    chunks = re.findall(r'<section class="slide".*?</section>', DECK, flags=re.S)
+    assert len(chunks) == SLIDES
+    for n, chunk in enumerate(chunks):
+        head = re.search(r"<h[12][^>]*>(.*?)</h[12]>", chunk, flags=re.S)
+        assert head, f"slide {n} has no headline"
+        assert words(plain(head.group(1))) <= HEADLINE_WORDS, (n, plain(head.group(1)))
+        text, allowed = on_screen(chunk), SLIDE_WORDS
+        if 'class="bars"' in chunk:
+            for line in RESULT.values():
+                assert line in text, (n, line)
+                allowed += words(line)
+        assert words(text) <= allowed, (n, words(text), text)
+        assert not re.search(r"<(ul|ol)[^>]*>(\s*<li[^>]*>[^<]{60,})", chunk), f"slide {n} has a list of sentences"
+
+
+def test_the_result_slide_shows_exactly_the_three_results():
+    chunk = next(c for c in re.findall(r'<section class="slide".*?</section>', DECK, flags=re.S) if 'class="bars"' in c)
+    text = on_screen(chunk)
+    assert re.findall(r"\d+(?:\.\d+)?", text) == ["6", "23.3", "13.6", "7.6", "776"], text
+    assert [plain(v) for v in re.findall(r'<span class="val">(.*?)</span>', chunk)] == ["23.3", "13.6", "7.6"]
+    assert [plain(v) for v in re.findall(r'<p class="lab">(.*?)</p>', chunk)] == ["TracerNet", "Our survival model", "Simple deadline rule"]
+    assert "capped" not in text.lower() and "Synthetic data, no clinical review." in chunk
 
 
 def test_the_talk_never_says_the_clock_stops_at_plating():
@@ -368,7 +413,7 @@ def test_karissas_outline_is_the_scripts_outline():
     """docs/talk/karissa-outline.md is Karissa's part of this script on its own, so a change here is copied there."""
     outline = (TALK / "karissa-outline.md").read_text(encoding="utf-8")
     mine = re.findall(r"^\*\*Karissa:\*\*\n\n(.+?)(?=\n\n\*\*|\n\n### |\n\n## |\Z)", SCRIPT, flags=re.M | re.S)
-    assert len(mine) == 8  # her eight sections across slides 1, 2, 5, 7, 8, 10, 12 and 13
+    assert len(mine) == 6  # her six sections across slides 1, 2, 5, 6, 8 and 9
     points = []
     for block in mine:
         for para in (p.strip() for p in block.split("\n\n")):

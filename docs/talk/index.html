@@ -7,11 +7,12 @@
 <meta name="description" content="The slides for the Tracer talk, CAI 5724, December 9. Synthetic data with no clinical review.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='5' fill='none' stroke='%2363C4D3' stroke-width='2'/%3E%3C/svg%3E">
 <style>
-/* The demo page's colour grammar: cyan is observed (scans, the clock), violet is inferred (risk, places, the
-   silent interval), amber is an alert, red is the window closing. The deck stays dark whatever the system
-   setting. Keys: arrows, space, F, P, N, S, 0 to 9.
-   Every size on a slide is a multiple of --u, and the type follows one scale (2, 2.33, 2.67, 3, 4, 6, 10 u),
-   so nothing projected is smaller than 2u: 26 px on a 1280 by 800 screen, 38 px at 1920 by 1080. */
+/* The demo's colour grammar: cyan is a scan, violet is what Tracer infers (risk, places, the silent interval),
+   amber is an alert, red is the deadline. The deck stays dark whatever the system setting.
+   Keys: arrows, space, F, P, N, S, 0 to 9.
+   Every size on a slide is a multiple of --u, and the type follows one scale (2, 2.33, 2.67, 3, 3.3, 4, 5.4, 11, 13 u), so nothing
+   projected is smaller than 2u: 26 px on a 1280 by 800 screen, 38 px at 1920 by 1080. A tall screen (a phone held
+   upright) gets a larger unit and the slides stack into one column, so nothing overlaps at 390 by 844. */
 :root{
   color-scheme: dark;
   --canvas:#0C1417; --panel:#111C20; --raised:#16242A;
@@ -26,7 +27,10 @@
   --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
   --ease-out:cubic-bezier(.22,1,.36,1); --ease-panel:cubic-bezier(.32,.72,0,1); --ease-in:cubic-bezier(.55,0,.9,.35);
   --u:min(1vw,1.78vh);
+  --side:calc(var(--u)*7);
 }
+/* Keep in step with natural() in the script below. */
+@media (max-aspect-ratio: 4/5){ :root{ --u:min(1.85vw,1.05vh); --side:max(16px,calc(var(--u)*2.4)); } }
 *{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0;background:var(--canvas);color:var(--ink);font:16px/1.4 var(--sans);-webkit-font-smoothing:antialiased;overflow:hidden}
@@ -41,26 +45,23 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 /* ── type: one scale, each style sets size, weight, leading and tracking together ── */
 .t-cap{font:400 calc(var(--u)*2)/1.38 var(--sans);color:var(--ink-dim)}
 .t-body{font:400 calc(var(--u)*2.33)/1.38 var(--sans)}
-.t-step{font:400 calc(var(--u)*2.67)/1.3 var(--sans)}
-.t-lead{font:400 calc(var(--u)*3)/1.32 var(--sans);color:var(--ink-dim)}
-.t-h3{font:400 calc(var(--u)*4)/1.08 var(--serif);letter-spacing:-.01em}
-.t-h2{font:400 calc(var(--u)*6)/1.04 var(--serif);letter-spacing:-.015em}
-.t-h2,.t-h3,.qs3 p{text-wrap:balance} .t-lead,.t-body,.t-cap,.t-step{text-wrap:pretty}
-.t-fig{font:400 calc(var(--u)*6)/1 var(--serif);font-variant-numeric:lining-nums;letter-spacing:-.01em}
-.t-url{font:500 calc(var(--u)*2.33)/1.3 var(--mono);color:var(--observed);overflow-wrap:normal;word-break:normal}
+.t-lead{font:400 calc(var(--u)*3)/1.3 var(--sans);color:var(--ink-dim)}
+.t-h2{font:400 calc(var(--u)*5.4)/1.06 var(--serif);letter-spacing:-.015em;text-wrap:balance;max-width:17em}
+.t-lead,.t-body,.t-cap{text-wrap:pretty}
+.t-fig{font:400 calc(var(--u)*11)/.9 var(--serif);font-variant-numeric:lining-nums;letter-spacing:-.02em}
+.t-url{font:500 calc(var(--u)*2.33)/1.3 var(--mono);color:var(--observed);overflow-wrap:normal;word-break:normal;text-decoration:none}
 .t-url span{white-space:nowrap}
-.wordmark{font:italic 400 calc(var(--u)*10)/.95 var(--serif);color:var(--observed);letter-spacing:-.01em}
+.wordmark{font:italic 400 calc(var(--u)*13)/.95 var(--serif);color:var(--observed);letter-spacing:-.01em}
 
-/* ── slides: one grid, headline anchored at the same height on every slide ── */
+/* ── slides: the headline sits at the same place on every slide, and one visual fills the space under it ── */
 .slide{position:fixed;inset:0;display:flex;flex-direction:column;align-items:flex-start;
-  padding:calc(var(--u)*5) calc(var(--u)*7) calc(var(--u)*7);gap:calc(var(--u)*2.1);
+  padding:calc(var(--u)*5) var(--side) calc(var(--u)*9);gap:calc(var(--u)*2.4);
   opacity:0;visibility:hidden;transform:scale(.985);filter:blur(2px);will-change:opacity,transform,filter;
   transition:opacity .18s var(--ease-in),transform .18s var(--ease-in),filter .18s var(--ease-in),visibility 0s linear .18s}
 .slide.on{opacity:1;visibility:visible;transform:none;filter:none;
   transition:opacity .3s var(--ease-panel) .08s,transform .3s var(--ease-panel) .08s,filter .3s var(--ease-panel) .08s,visibility 0s}
-.slide[data-layout="title"]{justify-content:center;gap:calc(var(--u)*3);padding-bottom:calc(var(--u)*11)}
-.measure{max-width:44ch}
-.foot{position:absolute;right:calc(var(--u)*7);bottom:calc(var(--u)*3)}
+.stage{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:calc(var(--u)*2.4);width:100%}
+.foot{position:absolute;right:var(--side);bottom:calc(var(--u)*3)}
 .caveat{display:flex;align-items:center;gap:.55em;font:600 calc(var(--u)*2)/1 var(--sans);color:var(--warn);white-space:nowrap}
 .caveat::before{content:"";width:.62em;height:.62em;border:2px solid currentColor;border-radius:50%;flex:none}
 
@@ -71,145 +72,87 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .btn:hover{border-color:var(--observed);color:var(--ink)}
 .btn:active{background:var(--raised)}
 
-/* title */
-.byline{display:grid;gap:calc(var(--u)*.6);margin-top:calc(var(--u)*1.5)}
-
-/* Why it matters: three facts on one baseline, citations in a shared bottom row */
-.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto auto auto;column-gap:calc(var(--u)*2.8);width:100%}
-.fact{display:grid;grid-row:span 3;grid-template-rows:subgrid;row-gap:calc(var(--u)*.8);border-top:1px solid var(--hair);padding-top:calc(var(--u)*1.3)}
-.fig-observed{color:var(--observed)} .fig-warn{color:var(--warn)} .fig-alarm{color:var(--alarm)}
-
 /* Drawn figures share one vocabulary: a scan is a cyan dot, silence a dotted violet line, inference violet,
-   an alert amber, the window closing red. */
-.diagram{width:100%;height:auto;overflow:visible}
+   an alert amber, the deadline red. */
+.diagram{width:100%;height:auto;overflow:visible;display:block}
 .diagram text{font-family:var(--sans)}
 .diagram .silent{stroke:var(--infer)} .diagram .stamp{fill:var(--observed)}
-.diagram .ghost{fill:var(--canvas);stroke:var(--ink-mute)}
-.diagram .lab-ink{fill:var(--ink)} .diagram .lab-dim{fill:var(--ink-dim)} .diagram .lab-infer{fill:var(--infer)}
-.diagram .axis{stroke:var(--hair);stroke-width:2}
-.diagram .mark line{stroke:var(--warn);stroke-width:3} .diagram .mark text{fill:var(--ink)}
+.diagram .ghost{fill:none;stroke:var(--ink-mute)}
+.diagram .lab-ink{fill:var(--ink)} .diagram .lab-dim{fill:var(--ink-dim)} .diagram .lab-alarm{fill:var(--alarm)}
+.diagram .mark line{stroke:var(--warn);stroke-width:4} .diagram .mark text{fill:var(--ink)}
 .diagram .usual{fill:var(--ink-mute);opacity:.35}
 .diagram .now,.diagram .place{fill:var(--infer)}
-.diagram .alert{fill:var(--warn)} .diagram .close{stroke:var(--alarm);stroke-width:3}
-.diagram .time-left{fill:var(--ok);opacity:.45}
+.diagram .halo{fill:var(--infer);opacity:.22}
+.diagram .path{stroke:var(--hair);stroke-width:4}
+.diagram .alert{stroke:var(--warn);fill:none;stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
 
-/* The silent tube: the hand vote, drawn */
-.vote{margin:calc(var(--u)*.6) 0 calc(var(--u)*.4)}
+/* Title: the wordmark, then the silence it watches, running off the edge */
+.slide[data-layout="title"]{justify-content:center;gap:calc(var(--u)*2.6);padding-bottom:calc(var(--u)*11)}
+.trail{width:min(100%,calc(var(--u)*86));margin:calc(var(--u)*-.6) 0 calc(var(--u)*.6)}
+.byline{display:grid;gap:calc(var(--u)*.6);margin-top:calc(var(--u)*1)}
+.pitch{color:var(--ink);max-width:30ch}
 
-/* The missing data: the record, with ghost markers where the missing scans would be */
-.gap{margin:calc(var(--u)*1) 0 0}
+/* A specimen goes silent: the hand vote, drawn */
+.vote{max-width:calc(var(--u)*120)}
 
-/* Meet Tracer: what it reads (observed, cyan) and what it gives the lab (inferred, violet; the alert, amber) */
-.flow{display:grid;grid-template-columns:max-content minmax(calc(var(--u)*11),1fr) max-content;column-gap:calc(var(--u)*2.4);align-items:start;width:100%;margin-top:calc(var(--u)*.6)}
-.flow-head{margin-bottom:calc(var(--u)*1.2)}
-.flow-list{display:grid;gap:calc(var(--u)*1.1)}
-.flow-list li{display:grid;grid-template-columns:calc(var(--u)*3.6) 1fr;align-items:center}
-.ico{width:1.05em;height:1.05em;fill:none;stroke:var(--observed);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.flow-list li.inferred .ico{stroke:var(--infer)}
-.flow-list li.alert .ico{stroke:var(--warn)}
-.flow-mid{display:grid;justify-items:center;row-gap:calc(var(--u)*.9);align-self:center;padding-top:calc(var(--u)*2.4)}
-.flow-name{font:italic 400 calc(var(--u)*4)/1 var(--serif);color:var(--observed)}
-.flow-arrow{position:relative;width:100%;height:2px;background:var(--ink-mute)}
-.flow-arrow::after{content:"";position:absolute;right:0;top:50%;width:calc(var(--u)*1.2);height:calc(var(--u)*1.2);
-  border-top:2px solid var(--ink-mute);border-right:2px solid var(--ink-mute);transform:translate(-1px,-50%) rotate(45deg)}
-.hw{color:var(--ink-dim);margin-top:calc(var(--u)*.8)}
+/* Why it matters: one window, drawn as a bar that runs out */
+.clock{display:grid;gap:calc(var(--u)*1.2)}
+.clockbar{max-width:calc(var(--u)*90)}
+.clockbar .fill{transform-origin:0 0}
+.slide.on .clockbar .fill{animation:bar-rise 1.4s var(--ease-out) .25s both}
+.fig-warn{color:var(--warn)}
 
-/* What Tracer is built to fix: today and with Tracer, row by row */
-.fix{display:grid;width:100%}
-.fix-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:calc(var(--u)*4);align-items:baseline;
-  padding:calc(var(--u)*1.1) 0;border-top:1px solid var(--hair)}
-.fix-row p{font:400 calc(var(--u)*2.67)/1.3 var(--sans);color:var(--ink)}
-.fix-row p:first-child{color:var(--ink-dim)}
-.fix-row.fix-head{border-top:0;padding-top:0}
-.fix-row.fix-head p{font:500 calc(var(--u)*2)/1.3 var(--sans);color:var(--ink-dim)}
-.fix-row.fix-head p:last-child{color:var(--observed)}
-.why{position:relative;padding-left:calc(var(--u)*3.4);margin-top:calc(var(--u)*.6)}
-.why::before{content:"";position:absolute;left:0;top:.42em;width:.5em;height:.5em;border-radius:50%;background:var(--ok)}
+/* What Tracer does: three questions, each with its picture */
+.asks{counter-reset:q;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:calc(var(--u)*4);width:100%}
+.asks li{display:grid;align-content:start;row-gap:calc(var(--u)*1.6)}
+.asks svg{max-width:calc(var(--u)*30)}
+.asks p{font:400 calc(var(--u)*3.3)/1.2 var(--serif);color:var(--ink)}
 
-/* How Tracer works: each question with its picture, then the alert */
-.qs3{counter-reset:q;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:calc(var(--u)*3.4);width:100%}
-.qs3 li{counter-increment:q;display:grid;align-content:start;row-gap:calc(var(--u)*1.2)}
-.qs3 p{font:400 calc(var(--u)*3)/1.25 var(--sans);color:var(--ink)}
-.qs3 p::before{content:counter(q);font-family:var(--serif);color:var(--infer);margin-right:.45em}
+/* Watch it work: the 3D demo itself, playing in the slide */
+.watch{flex-direction:row;align-items:flex-end;justify-content:flex-start}
+.watch .btn{flex:none;white-space:nowrap}
+.screen{position:relative;flex:0 1 auto;width:min(100%,calc(var(--u)*64));aspect-ratio:16/9;border:1px solid var(--hair);border-radius:calc(var(--u)*.8);
+  overflow:hidden;background:var(--panel)}
+.screen iframe{position:absolute;inset:0;width:100%;height:100%;border:0;pointer-events:none}
 
-/* How we built it: the data, then the model, and the truth kept apart from the model */
-.pipe .node rect{fill:var(--panel);stroke:var(--hair);stroke-width:1.5}
-.pipe .node .tick{stroke:none}
-.pipe .node.data .tick{fill:var(--observed)} .pipe .node.model .tick{fill:var(--infer)}
-.pipe .flow-line{stroke:var(--ink-mute);stroke-width:2}
-.pipe .head{fill:var(--ink-mute)}
-.pipe .step{fill:var(--ink-mute);font-family:var(--serif)}
-.pipe .truth{stroke:var(--ink-dim);stroke-width:2}
-.pipe{margin-top:0}
-.pipe-note{max-width:86ch}
-.qs{counter-reset:q;display:grid;gap:calc(var(--u)*1.2);max-width:calc(var(--u)*86)}
-.qs li{counter-increment:q;display:grid;grid-template-columns:calc(var(--u)*4.4) 1fr;align-items:baseline}
-.qs li::before{content:counter(q);font:400 calc(var(--u)*3.5)/1 var(--serif);color:var(--infer)}
-.then{color:var(--warn);border-left:calc(var(--u)*.3) solid var(--warn);padding-left:calc(var(--u)*1.6);margin-top:calc(var(--u)*.6)}
+/* Phones out, Beat Tracer and Questions: the QR on the left, what to do on the right */
+.hands{display:grid;grid-template-columns:calc(var(--u)*33) minmax(0,1fr);column-gap:calc(var(--u)*6);align-items:center;width:100%;flex:1 1 auto}
+.qr{background:var(--qr-paper);padding:calc(var(--u)*1.25);border-radius:calc(var(--u)*.6);line-height:0;width:calc(var(--u)*33)}
+.qr img{width:calc(var(--u)*30.5);height:calc(var(--u)*30.5);image-rendering:pixelated;display:block}
+.hands-text{display:flex;flex-direction:column;align-items:flex-start;gap:calc(var(--u)*2.4)}
+.rule{font:400 calc(var(--u)*4)/1.15 var(--serif);color:var(--ink);max-width:22ch;text-wrap:balance}
+.fates{display:flex;flex-wrap:wrap;gap:calc(var(--u)*1.2)}
+.fates li{display:flex;align-items:center;gap:.5em;font:500 calc(var(--u)*2.33)/1 var(--sans);padding:.55em .8em;border:1px solid var(--hair);border-radius:99px;background:var(--panel)}
+.fates li::before{content:"";width:.6em;height:.6em;border-radius:50%;background:var(--c)}
+.addrs{display:grid;grid-template-columns:max-content minmax(0,1fr);column-gap:calc(var(--u)*2);row-gap:calc(var(--u)*1.2);align-items:baseline}
+.addrs dt{font:400 calc(var(--u)*2.33)/1.3 var(--sans);color:var(--ink-dim)}
 
-/* Board, Beat Tracer and Questions: the QR on the left, what to do on the right */
-.hands{display:grid;grid-template-columns:calc(var(--u)*31.5) minmax(0,1fr);column-gap:calc(var(--u)*5);align-items:start;width:100%}
-.qr{background:var(--qr-paper);padding:calc(var(--u)*1.25);border-radius:calc(var(--u)*.6);line-height:0;width:calc(var(--u)*31.5)}
-.qr img{width:calc(var(--u)*29);height:calc(var(--u)*29);image-rendering:pixelated;display:block}
-.qr-note{margin-top:calc(var(--u)*1.4)}
-.hands-text{display:flex;flex-direction:column;align-items:flex-start;gap:calc(var(--u)*2)}
-.lead-in{font:500 calc(var(--u)*2.33)/1.3 var(--sans);color:var(--ink-dim)}
-.steps{counter-reset:s;display:grid;gap:calc(var(--u)*1.1)}
-.steps li{counter-increment:s;display:grid;grid-template-columns:calc(var(--u)*3) 1fr;align-items:baseline}
-.steps li::before{content:counter(s);font:500 calc(var(--u)*2.33)/1 var(--sans);font-variant-numeric:tabular-nums;color:var(--ink-mute)}
-.addr-alt{color:var(--ink-dim)}
-
-/* Why this design: minutes of warning, with where the minutes come from */
-.head-row{display:flex;align-items:flex-start;justify-content:space-between;gap:calc(var(--u)*4);width:100%}
-.head-row .t-h3{max-width:24ch}
-.head-row .btn{flex:none;margin-top:calc(var(--u)*.6)}
-.chart{display:grid;grid-template-columns:max-content minmax(0,1fr) max-content;column-gap:calc(var(--u)*2);row-gap:calc(var(--u)*.7);
-  width:100%;align-items:center}
-.chart .row{display:contents}
-.chart .lab{grid-column:1} .chart .plot{grid-column:2} .chart .val{grid-column:3}
-.chart .lab{font:400 calc(var(--u)*2.33)/1.2 var(--sans);color:var(--ink)}
-.chart .val{font:500 calc(var(--u)*2.33)/1 var(--sans);font-variant-numeric:tabular-nums;color:var(--ink);text-align:right}
-.chart .plot{position:relative;height:calc(var(--u)*2.4);display:flex;align-items:center;
-  background:linear-gradient(to right,var(--hair) 1px,transparent 1px) 0 0/25% 100%;border-right:1px solid var(--hair)}
-.chart .bar{height:calc(var(--u)*1.6);width:calc(var(--v) / 60 * 100%);border-radius:0 4px 4px 0;transform-origin:left center}
-.chart .bar.base{background:var(--bar-base)}
-.chart .bar.tracer{background:var(--infer)}
-.chart .bar.tracer-eq{background:var(--inf-wash);box-shadow:inset 0 0 0 2px var(--infer)}
-.chart .gains{grid-column:2;position:relative;height:calc(var(--u)*3.8)}
-.chart .row.result .lab,.chart .row.result .val{font-weight:600}
-.chart .gain{position:absolute;bottom:0;left:calc(var(--from) / 60 * 100%);width:calc((var(--to) - var(--from)) / 60 * 100%);
-  height:calc(var(--u)*1.1);border:2px solid var(--ink-dim);border-bottom:0}
-.chart .gain span{position:absolute;bottom:calc(100% + var(--u)*.5);left:50%;transform:translateX(-50%);white-space:nowrap;
-  font:600 calc(var(--u)*2.33)/1 var(--sans);font-variant-numeric:tabular-nums;color:var(--ink)}
-.chart .axis{grid-column:2;position:relative;height:calc(var(--u)*2.6)}
-.chart .axis span{position:absolute;top:calc(var(--u)*.4);left:calc(var(--t) / 60 * 100%);transform:translateX(-50%);
-  font:400 calc(var(--u)*2)/1 var(--sans);font-variant-numeric:tabular-nums;color:var(--ink-dim);white-space:nowrap}
-.chart .axis span:last-child{transform:translateX(-1.2ch)}
-.slide.on .chart .bar{animation:bar-rise .36s var(--ease-out) both}
-.slide.on .chart .row:nth-of-type(2) .bar{animation-delay:.32s}
-.slide.on .chart .row:nth-of-type(3) .bar{animation-delay:.38s}
-.slide.on .chart .row:nth-of-type(4) .bar{animation-delay:.44s}
-.slide.on .chart .row:nth-of-type(5) .bar{animation-delay:.5s}
-.slide.on .chart .gain{animation:fade-in .22s ease-out .9s both}
-/* the second gain sits past its bracket's end, so the two labels never meet at 45 */
-.chart .gain.after span{left:calc(100% + var(--u)*1);transform:none}
+/* Does it work: three bars, the label beside each (above it on a phone), the value at its end */
+.bars{display:grid;gap:calc(var(--u)*2);width:100%;max-width:calc(var(--u)*110)}
+.bar-row{display:grid;grid-template-columns:calc(var(--u)*27) minmax(0,1fr);align-items:center;column-gap:calc(var(--u)*2)}
+.bar-row .lab{font:400 calc(var(--u)*2.67)/1.2 var(--sans);color:var(--ink)}
+.bar-row.result .lab{font-weight:600}
+.plot{display:flex;align-items:center;gap:calc(var(--u)*1.4)}
+.bar{display:block;height:calc(var(--u)*2.8);width:calc(var(--v) / 25 * 82%);border-radius:0 calc(var(--u)*.5) calc(var(--u)*.5) 0;transform-origin:left center}
+.bar.base{background:var(--bar-base)}
+.bar.tracer{background:var(--infer)}
+.bar.tracer-eq{background:var(--inf-wash);box-shadow:inset 0 0 0 2px var(--infer)}
+.val{font:400 calc(var(--u)*4.2)/1 var(--serif);font-variant-numeric:lining-nums tabular-nums;color:var(--ink)}
+.bar-row.result .val{color:var(--infer)}
+.slide.on .bars .bar{animation:bar-rise .5s var(--ease-out) both}
+.slide.on .bars .bar-row:nth-child(2) .bar{animation-delay:.12s}
+.slide.on .bars .bar-row:nth-child(3) .bar{animation-delay:.24s}
 @keyframes bar-rise{from{transform:scaleX(0)}}
-@keyframes fade-in{from{opacity:0}}
 
-/* TracerNet wins: the same bars on a 30-minute scale */
-.chart.c30 .bar{width:calc(var(--v) / 30 * 100%)}
-.chart.c30 .axis span{left:calc(var(--t) / 30 * 100%)}
-.verdict{max-width:none}
-
-/* Limits */
-.limits{display:grid;gap:calc(var(--u)*1.5);max-width:calc(var(--u)*84)}
-.limits li{padding-left:calc(var(--u)*3.4);position:relative}
-.limits li::before{content:"";position:absolute;left:0;top:.42em;width:.5em;height:.5em;border:2px solid var(--warn);border-radius:50%}
-.limits li.next{margin-top:calc(var(--u)*1);color:var(--ink)}
-.limits li.next::before{border-color:var(--ok);background:var(--ok)}
+/* Limits: three things, side by side, each with its mark */
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:calc(var(--u)*4);width:100%}
+.tiles li{display:grid;align-content:start;row-gap:calc(var(--u)*1.6);border-top:2px solid var(--hair);padding-top:calc(var(--u)*2)}
+.tiles svg{width:calc(var(--u)*6);height:calc(var(--u)*6);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.tiles p{font:400 calc(var(--u)*3.3)/1.2 var(--serif)}
+.tiles .warn svg{stroke:var(--warn)} .tiles .blind svg{stroke:var(--ink-dim)} .tiles .next{border-top-color:var(--ok)} .tiles .next svg{stroke:var(--ok)}
 
 /* ── the run of show, drawn like a specimen's timeline: one segment per beat, length by minutes ── */
-.rail{position:fixed;left:calc(var(--u)*7);bottom:calc(var(--u)*3);display:flex;align-items:center;gap:calc(var(--u)*1.8);z-index:3;pointer-events:none}
+.rail{position:fixed;left:var(--side);bottom:calc(var(--u)*3);display:flex;align-items:center;gap:calc(var(--u)*1.8);z-index:3;pointer-events:none}
 .track{display:flex;align-items:center;gap:calc(var(--u)*.35);width:calc(var(--u)*30)}
 .track li{flex:1 1 0;height:calc(var(--u)*.45);border-radius:99px;background:var(--hair);transition:background-color .22s var(--ease-out),opacity .22s var(--ease-out)}
 .track li.phones{height:calc(var(--u)*1.1)}
@@ -260,13 +203,22 @@ body.presenter .pnav{display:flex}
 @media (prefers-reduced-motion: reduce){
   .slide{transform:none;filter:none;transition:opacity .15s linear,visibility 0s linear .15s}
   .slide.on{transition:opacity .15s linear,visibility 0s}
-  .slide.on .chart .bar,.slide.on .chart .gain{animation:none}
+  .slide.on .bars .bar,.slide.on .clockbar .fill{animation:none}
 }
-@media (max-width:700px){
-  .flow,.fix-row,.qs3{grid-template-columns:1fr}
-  .facts{grid-template-columns:1fr}
-  .fact{grid-row:auto}
-  .hands{grid-template-columns:1fr;row-gap:calc(var(--u)*3)}
+/* A phone held upright: one column, the QR above what to do, the rail's beat name dropped. */
+@media (max-aspect-ratio: 4/5){
+  .asks,.tiles{grid-template-columns:1fr;row-gap:calc(var(--u)*3)}
+  .asks li{grid-template-columns:calc(var(--u)*16) 1fr;align-items:center;column-gap:calc(var(--u)*2.4)}
+  .tiles li{grid-template-columns:calc(var(--u)*6) 1fr;align-items:center;column-gap:calc(var(--u)*2.4)}
+  .hands{grid-template-columns:1fr;row-gap:calc(var(--u)*3);align-content:center}
+  .qr{width:calc(var(--u)*28)} .qr img{width:calc(var(--u)*25.5);height:calc(var(--u)*25.5)}
+  .t-fig{font-size:calc(var(--u)*10)}
+  .foot{left:var(--side);right:auto;bottom:calc(var(--u)*6.5)}
+  .slide{padding-bottom:calc(var(--u)*11.5)}
+  .where{display:none}
+  .watch{flex-direction:column;align-items:flex-start;justify-content:center}
+  .bar-row{grid-template-columns:1fr;row-gap:calc(var(--u)*.6)}
+  .track{width:calc(var(--u)*24)}
 }
 @media print{
   :root,:root[data-theme]{color-scheme:light;--canvas:#FFFFFF;--panel:#FFFFFF;--raised:#ECF2F0;--hair:#CFDAD7;--hair-soft:#E2EAE8;
@@ -294,306 +246,184 @@ body.presenter .pnav{display:flex}
 <!-- 0 -->
 <section class="slide" data-beat="Title" data-who="" data-layout="title">
   <h1 class="wordmark">Tracer</h1>
-  <p class="t-lead measure">Predictive specimen tracking for the clinical microbiology laboratory: which specimens will miss their stability window, while there is still time to find them.</p>
+  <svg class="diagram trail" viewBox="0 0 1000 40" aria-hidden="true">
+    <defs><linearGradient id="trail-fade" gradientUnits="userSpaceOnUse" x1="40" y1="0" x2="1000" y2="0"><stop offset="0" stop-color="#9D8DF1"/><stop offset="1" stop-color="#9D8DF1" stop-opacity="0"/></linearGradient></defs>
+    <circle class="stamp" cx="14" cy="20" r="12"/>
+    <line x1="42" y1="20" x2="1000" y2="20" stroke="url(#trail-fade)" stroke-width="5" stroke-dasharray="1 14" stroke-linecap="round"/>
+  </svg>
+  <p class="t-lead pitch">Tracer warns the lab when a specimen goes quiet.</p>
   <div class="byline">
     <p class="t-body">Daniel Escalante and Karissa Kocourek</p>
-    <p class="t-cap">CAI 5724, AI in Health Design Studio I, University of Florida. December 9, 2026.</p>
+    <p class="t-cap">CAI 5724, December 9</p>
   </div>
-  <div class="foot"><p class="caveat">Synthetic data, no clinical review</p></div>
   <aside class="notes-src"><p>Nothing is said. Karissa starts when the instructor hands over.</p></aside>
 </section>
 
 <!-- 1 -->
-<section class="slide" data-beat="The silent tube" data-who="Karissa" data-start="0:00" data-end="0:30">
-  <h2 class="t-h2">A tube leaves the ward.</h2>
-  <p class="t-lead">Nothing beeps. Nothing is logged. How long until you would worry?</p>
-  <svg class="diagram vote" viewBox="0 0 860 120" role="img" aria-label="A timeline from the moment the tube leaves the ward, marked at 15 minutes, 30 minutes and 1 hour">
-    <line class="silent" x1="22" y1="70" x2="850" y2="70" stroke-width="4" stroke-dasharray="1 11" stroke-linecap="round"/>
-    <circle class="stamp" cx="22" cy="70" r="13"/>
-    <text class="lab-dim" x="4" y="114" font-size="21">The tube leaves the ward</text>
-    <g class="mark"><line x1="198" y1="52" x2="198" y2="88"/><text x="198" y="36" text-anchor="middle" font-size="30">15 min</text></g>
-    <g class="mark"><line x1="374" y1="52" x2="374" y2="88"/><text x="374" y="36" text-anchor="middle" font-size="30">30 min</text></g>
-    <g class="mark"><line x1="726" y1="52" x2="726" y2="88"/><text x="726" y="36" text-anchor="middle" font-size="30">1 hour</text></g>
-  </svg>
-  <aside class="notes-src"><p class="who">Karissa</p><p>1. A tube has left the ward: nothing beeps, nothing is logged, and nobody knows yet if it is late.</p><p>2. The hand vote: who would start to worry at 15 minutes, at 30, at an hour?</p><p>3. Their number is the guess Tracer has to make, for every specimen, all day.</p><p><em>[In her own words, about 50 words. Pause for each show of hands.]</em></p></aside>
+<section class="slide" data-beat="A specimen goes silent" data-who="Karissa" data-start="0:00" data-end="1:00">
+  <h2 class="t-h2">A specimen goes silent.</h2>
+  <div class="stage">
+    <p class="t-lead">When would you start to worry?</p>
+    <svg class="diagram vote" viewBox="0 0 1000 196" role="img" aria-label="A timeline from the collection scan to the receipt scan, with nothing in between, marked at 15 minutes, 30 minutes and 1 hour">
+      <line class="silent" x1="52" y1="100" x2="930" y2="100" stroke-width="5" stroke-dasharray="1 14" stroke-linecap="round"/>
+      <circle class="stamp" cx="30" cy="100" r="16"/>
+      <circle class="ghost" cx="968" cy="100" r="16" stroke-width="3" stroke-dasharray="5 5"/>
+      <g class="mark"><line x1="210" y1="76" x2="210" y2="124"/><text x="210" y="52" text-anchor="middle" font-size="46">15 min</text></g>
+      <g class="mark"><line x1="390" y1="76" x2="390" y2="124"/><text x="390" y="52" text-anchor="middle" font-size="46">30 min</text></g>
+      <g class="mark"><line x1="750" y1="76" x2="750" y2="124"/><text x="750" y="52" text-anchor="middle" font-size="46">1 hour</text></g>
+      <text class="lab-dim" x="4" y="180" font-size="40">Collected</text>
+      <text class="lab-dim" x="996" y="180" text-anchor="end" font-size="40">Received?</text>
+    </svg>
+  </div>
+  <aside class="notes-src"><p class="who">Karissa</p><p>1. A specimen is scanned when it is collected and again when the lab receives it; in between, nothing is recorded.</p><p>2. The hand vote: if it has not arrived, who would start to worry at 15 minutes, at 30, at an hour?</p><p>3. Their answer is the guess Tracer makes for every specimen, every 5 minutes, all day.</p><p><em>[In her own words, about 60 words. Pause for each show of hands.]</em></p></aside>
 </section>
 
 <!-- 2 -->
-<section class="slide" data-beat="Why it matters" data-who="Karissa" data-start="0:30" data-end="1:15">
-  <h2 class="t-h3">Most lab errors happen before the test, and the specimen is on a clock.</h2>
-  <div class="facts">
-    <div class="fact">
-      <p class="t-fig fig-observed">61.9%</p>
-      <p class="t-body">of errors in one stat laboratory's audit happened before analysis.</p>
-      <p class="t-cap">Carraro and Plebani, Clin Chem 2007. One center.</p>
-    </div>
-    <div class="fact">
+<section class="slide" data-beat="Why it matters" data-who="Karissa" data-start="1:00" data-end="1:45">
+  <h2 class="t-h2">Every specimen is on a clock.</h2>
+  <div class="stage">
+    <div class="clock">
       <p class="t-fig fig-warn">60 min</p>
-      <p class="t-body">for unpreserved urine at room temperature before the colony count stops meaning anything.</p>
-      <p class="t-cap">Our policy table, from the IDSA and ASM 2024 guide.</p>
+      <p class="t-lead">Unpreserved urine at room temperature</p>
     </div>
-    <div class="fact">
-      <p class="t-fig fig-alarm">Again</p>
-      <p class="t-body">A missed window often means a new specimen: another needle stick or lumbar puncture, and hours of delay.</p>
-      <p class="t-cap">Spinal fluid must not be refrigerated. IDSA and ASM 2018.</p>
-    </div>
+    <svg class="diagram clockbar" viewBox="0 0 1000 136" role="img" aria-label="A bar that runs from collection to 60 minutes, where the window closes. Missed, it often means collecting again.">
+      <defs><linearGradient id="clock-fill" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#63C4D3"/><stop offset=".7" stop-color="#E3A33C"/><stop offset="1" stop-color="#D05A4A"/></linearGradient></defs>
+      <rect x="0" y="24" width="900" height="26" rx="4" fill="#22343A"/>
+      <rect class="fill" x="0" y="24" width="900" height="26" rx="4" fill="url(#clock-fill)"/>
+      <line x1="900" y1="6" x2="900" y2="68" stroke="#D05A4A" stroke-width="5"/>
+      <text class="lab-alarm" x="1000" y="124" text-anchor="end" font-size="44">Missed often means collecting again.</text>
+    </svg>
+    <p class="t-cap">IDSA and ASM 2024 guide</p>
   </div>
-  <aside class="notes-src"><p class="who">Karissa</p><p>1. Most lab errors happen before testing: about 62% in one stat laboratory's audit.</p><p>2. A microbiology specimen is on a clock: unpreserved urine has about an hour at room temperature, and spinal fluid must come straight to the lab and never be refrigerated.</p><p>3. A missed window often means rejection and a new collection: another needle stick or lumbar puncture, and hours of delay.</p><p>4. Between collection and receipt the lab has no record, so a missing specimen is noticed only when someone calls for the result.</p><p><em>[In her own words, about 95 words.]</em></p></aside>
+  <aside class="notes-src"><p class="who">Karissa</p><p>1. A microbiology specimen is on a clock: unpreserved urine has about an hour at room temperature before the colony count stops meaning anything.</p><p>2. Spinal fluid must come straight to the lab and never be refrigerated.</p><p>3. A missed window often means rejection and a new collection: another needle stick or lumbar puncture, and hours of delay.</p><p>4. Most lab errors happen before testing: about 62% in one stat laboratory's audit.</p><p>5. Today a missing specimen is noticed only when someone calls for the result.</p><p><em>[In her own words, about 85 words.]</em></p></aside>
 </section>
 
 <!-- 3 -->
-<section class="slide" data-beat="The missing data" data-who="Daniel" data-start="1:15" data-end="1:45">
-  <h2 class="t-h3">Public records stamp a specimen twice, with nothing in between.</h2>
-  <svg class="diagram gap" viewBox="0 0 860 170" role="img" aria-label="A line from Collected to Result filed, median 80.1 hours apart. Where a transport record and a receipt scan would be, there is nothing.">
-    <line class="silent" x1="40" y1="96" x2="820" y2="96" stroke-width="4" stroke-dasharray="1 11" stroke-linecap="round"/>
-    <circle class="stamp" cx="40" cy="96" r="14"/>
-    <circle class="stamp" cx="820" cy="96" r="14"/>
-    <circle class="ghost" cx="300" cy="96" r="12" stroke-width="2" stroke-dasharray="4 4"/>
-    <circle class="ghost" cx="520" cy="96" r="12" stroke-width="2" stroke-dasharray="4 4"/>
-    <text class="lab-infer" x="430" y="44" text-anchor="middle" font-size="36">median 80.1 hours</text>
-    <text class="lab-ink" x="26" y="152" font-size="26">Collected</text>
-    <text class="lab-ink" x="834" y="152" text-anchor="end" font-size="26">Result filed</text>
-    <text class="lab-dim" x="300" y="150" text-anchor="middle" font-size="21">no transport record</text>
-    <text class="lab-dim" x="520" y="150" text-anchor="middle" font-size="21">no receipt scan</text>
-  </svg>
-  <p class="t-cap">1,291 specimens in the public MIMIC-IV demo extract (Johnson et al., PhysioNet 2023). So the data here is generated: every timing is drawn by seeded code from published assumptions, and a language model writes the scan trail around it.</p>
-  <aside class="notes-src"><p class="who">Daniel</p><p>So why not learn this from hospital data? The best-known public one, MIMIC-IV, stamps a microbiology specimen twice: when it's collected and when the result is filed. Those stamps are a median of eighty hours apart, with nothing in between. There's no field for the journey at all. So we generated our own data, and every number you'll see is an assumption we can change.</p><p><em>[About 65 words.]</em></p></aside>
+<section class="slide" data-beat="What Tracer does" data-who="Daniel" data-start="1:45" data-end="2:45">
+  <h2 class="t-h2">Every 5 minutes, Tracer asks three questions.</h2>
+  <div class="stage">
+    <ol class="asks">
+      <li>
+        <svg class="diagram" viewBox="0 0 300 130" aria-hidden="true">
+          <path class="usual" d="M40 100 C 60 100, 70 30, 96 30 C 124 30, 140 86, 200 99 L 200 100 Z"/>
+          <line class="silent" x1="34" y1="100" x2="258" y2="100" stroke-width="5" stroke-dasharray="1 11" stroke-linecap="round"/>
+          <circle class="stamp" cx="18" cy="100" r="11"/>
+          <circle class="now" cx="276" cy="100" r="13"/>
+        </svg>
+        <p>How late is it?</p>
+      </li>
+      <li>
+        <svg class="diagram" viewBox="0 0 300 130" aria-hidden="true">
+          <line class="path" x1="30" y1="86" x2="270" y2="86"/>
+          <circle class="place" cx="30" cy="86" r="10" opacity=".55"/>
+          <circle class="place" cx="150" cy="86" r="10" opacity=".55"/>
+          <circle class="halo" cx="262" cy="86" r="34"/>
+          <circle class="place" cx="262" cy="86" r="18"/>
+        </svg>
+        <p>Where is it likely?</p>
+      </li>
+      <li>
+        <svg class="diagram" viewBox="0 0 300 130" aria-hidden="true">
+          <path class="alert" d="M118 96v-34a32 32 0 0 1 64 0v34l10 12h-84zM138 118a12 12 0 0 0 24 0"/>
+          <path class="alert" d="M206 40a50 50 0 0 1 14 34M94 40a50 50 0 0 0-14 34"/>
+        </svg>
+        <p>Who should go look?</p>
+      </li>
+    </ol>
+  </div>
+  <aside class="notes-src"><p class="who">Daniel</p><p>Public hospital data stamps a specimen only twice, so we generated our own, and every number you'll see is synthetic. On that data we built Tracer. Every five minutes, for every specimen the lab is still waiting on, it asks three questions. How late is this one, compared with trips like it? Where is it most likely to be: still on the ward, in the tube system, or waiting at a tube station? And who should go and look? When the risk is high enough, Tracer alerts the person who can check that place, while there is still time. It needs no new hardware, only the scans the lab already records.</p><p><em>[About 110 words.]</em></p></aside>
 </section>
 
 <!-- 4 -->
-<section class="slide" data-beat="Meet Tracer" data-who="Daniel" data-start="1:45" data-end="2:30">
-  <h2 class="t-h3">An early warning for specimens in transit.</h2>
-  <p class="t-lead">Like package tracking with no scans along the way.</p>
-  <div class="flow">
-    <div>
-      <p class="t-cap flow-head">What it reads</p>
-      <ul class="flow-list t-step">
-        <li><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>When it was collected</li>
-        <li><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 3.5h5M10.5 3.5v13a1.5 1.5 0 0 0 3 0v-13M10.5 11h3"/></svg>What kind, and from where</li>
-        <li><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h10M7 20.5h10M8 3.5c0 4.5 8 5 8 8.5s-8 4-8 8.5M16 3.5c0 4.5-8 5-8 8.5s8 4 8 8.5"/></svg>How long it can wait</li>
-      </ul>
-    </div>
-    <div class="flow-mid" aria-hidden="true"><span class="flow-name">Tracer</span><span class="flow-arrow"></span></div>
-    <div>
-      <p class="t-cap flow-head">Every 5 minutes, it gives the lab</p>
-      <ul class="flow-list t-step">
-        <li class="inferred"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5h14M5 12h10M5 17.5h6"/></svg>Who is at risk, ranked</li>
-        <li class="inferred"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-6-5.6-6-10.2a6 6 0 0 1 12 0c0 4.6-6 10.2-6 10.2z"/><circle cx="12" cy="10.3" r="2.2"/></svg>Where each one likely is</li>
-        <li class="alert"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 16.5v-5a5.5 5.5 0 0 1 11 0v5l1.5 1.8h-14zM10 20.5a2 2 0 0 0 4 0"/></svg>Who should go and look</li>
-      </ul>
-    </div>
+<section class="slide" data-beat="Watch it work" data-who="Daniel" data-start="2:45" data-end="3:30">
+  <h2 class="t-h2">Watch Tracer catch a stalled tube.</h2>
+  <div class="stage watch">
+    <div class="screen"><iframe data-src="../demo/play/index.html?scene=2" title="The 3D demo, playing the stalled tube" tabindex="-1" allow="fullscreen"></iframe></div>
+    <a class="btn" href="../demo/play/index.html?scene=2" target="_blank" rel="noopener">Open the 3D demo <span aria-hidden="true">↗</span></a>
   </div>
-  <p class="t-body hw">No new hardware: only the scans the lab already records.</p>
-  <aside class="notes-src"><p class="who">Daniel</p><p>With that data, we built Tracer. Think of package tracking with no scans along the way. You know when it left, and how long trips like it usually take, so at first, silence means nothing. But the longer it stays quiet past normal, and the closer it gets to its own deadline, the more you should worry. Tracer does that for every specimen the lab is waiting on, every five minutes, using only the scans the lab already records. It ranks them by risk, says where each one most likely is, and alerts someone who can go look, while there's still time.</p><p><em>[About 100 words.]</em></p></aside>
+  <div class="foot"><p class="caveat">Synthetic data, no clinical review.</p></div>
+  <aside class="notes-src"><p class="who">Daniel</p><p>Here is one specimen, playing by itself. Its tube stalls on the way, and its deadline is two hours. Watch the risk bar: how likely it is to miss its deadline. <em>[Point at the bar as it climbs.]</em> At twenty-five minutes of silence, Tracer raises the alert. That is ninety-five minutes before the deadline, plenty of time to go and find it. Here it is scanned in at about sixty-seven minutes, well inside its window. Every alert you see is TracerNet's own, stored ahead of time, on synthetic data.</p><p><em>[About 80 words. If the slide's demo stays blank, click Open the 3D demo or switch to its tab.]</em></p></aside>
 </section>
 
 <!-- 5 -->
-<section class="slide" data-beat="What Tracer is built to fix" data-who="Karissa" data-start="2:30" data-end="3:00">
-  <h2 class="t-h3">What Tracer is built to fix.</h2>
-  <div class="fix" role="table" aria-label="What labs have today, and what Tracer is built to give them">
-    <div class="fix-row fix-head" role="row"><p role="columnheader">Today</p><p role="columnheader">With Tracer</p></div>
-    <div class="fix-row" role="row"><p role="cell">A missing specimen makes no noise</p><p role="cell">Each one is scored every 5 minutes</p></div>
-    <div class="fix-row" role="row"><p role="cell">Found when someone calls for it</p><p role="cell">An alert while there is still time</p></div>
-    <div class="fix-row" role="row"><p role="cell">One time limit for every specimen</p><p role="cell">Each judged by its own window</p></div>
-    <div class="fix-row" role="row"><p role="cell">Tags and readers in every hallway</p><p role="cell">Only the scans the lab records</p></div>
+<section class="slide" data-beat="Try it on your phone" data-who="Karissa" data-start="3:30" data-end="6:00" data-hands="1">
+  <div class="hands">
+    <div class="qr"><img src="../demo/qr.png" alt="QR code for the Tracer demo"></div>
+    <div class="hands-text">
+      <h2 class="t-h2">Your turn: phones out.</h2>
+      <p class="t-url"><span>scalinity.github.io/</span><wbr><span>Tracer/</span><wbr><span>demo</span></p>
+      <p class="t-lead">Watch four specimens:</p>
+      <ul class="fates">
+        <li style="--c:var(--ok)">On time</li>
+        <li style="--c:var(--warn)">Stalled</li>
+        <li style="--c:var(--alarm)">Lost</li>
+        <li style="--c:var(--ink-mute)">Never sent</li>
+      </ul>
+    </div>
   </div>
-  <p class="t-step why">The aim: fewer repeat collections and quicker results for patients, and less time chasing specimens for the lab.</p>
-  <aside class="notes-src"><p class="who">Karissa</p><p>1. Today a missing specimen stays silent until someone calls for the result.</p><p>2. One fixed time limit is too late for urine and too early for a swab.</p><p>3. Tracking tags would need a tag on every tube and a reader in every hallway.</p><p>4. Tracer closes those gaps with the scans the lab already records.</p><p>5. The aim: fewer repeat collections, quicker results for the patient, and less time chasing for the lab.</p><p><em>[In her own words, about 65 words.]</em></p></aside>
+  <div class="foot"><p class="caveat">Synthetic data, no clinical review.</p></div>
+  <aside class="notes-src"><p class="who">Karissa</p><p>1. Phones out: scan the code or type the address, and tap Watch one go quiet to open the 3D demo.</p><p>2. It plays four specimens in turn: on time, stalled, lost and never sent.</p><p>3. What each one is in a real lab: a stalled tube sits somewhere on its way, a lost one never turns up, and one never sent is still on the ward.</p><p>4. Ask the room: which of the four would the lab find in time today?</p><p>5. Tracer alerted on the three late ones, 90 to 95 minutes before the deadline, and sent no alert for the one on time.</p><p><em>[In her own words, about 70 words. Wait about 20 seconds after point 1. The rest of the time is the room's.]</em></p></aside>
 </section>
 
 <!-- 6 -->
-<section class="slide" data-beat="How Tracer works" data-who="Daniel" data-start="3:00" data-end="3:45">
-  <div class="head-row">
-    <h2 class="t-h2">Silence is evidence.</h2>
-    <a class="btn" href="../demo/play/index.html?scene=2" target="_blank" rel="noopener">The 3D demo <span aria-hidden="true">↗</span></a>
+<section class="slide" data-beat="Beat Tracer" data-who="Daniel, then Karissa" data-start="6:00" data-end="9:30" data-hands="1">
+  <div class="hands">
+    <div class="qr"><img src="qr-beat.png" alt="QR code for Beat Tracer with the room's shared rounds"></div>
+    <div class="hands-text">
+      <h2 class="t-h2">Beat Tracer.</h2>
+      <p class="rule">One will be late. Tap it before Tracer does.</p>
+      <p class="t-url"><span>scalinity.github.io/</span><wbr><span>Tracer/</span><wbr><span>demo/</span><wbr><span>?seed=18#beat</span></p>
+      <a class="btn" href="../demo/index.html?seed=18#beat" target="_blank" rel="noopener">Open the game <span aria-hidden="true">↗</span></a>
+    </div>
   </div>
-  <p class="t-lead">Every 5 minutes, for every specimen not yet received, Tracer asks:</p>
-  <ol class="qs3" aria-label="Every 5 minutes, for every specimen not yet received">
-    <li>
-      <svg class="diagram q-art" viewBox="0 0 260 112" aria-hidden="true">
-        <path class="usual" d="M30 80 C 46 80, 52 24, 72 24 C 96 24, 112 70, 164 79 L 164 80 Z"/>
-        <line class="silent" x1="22" y1="80" x2="212" y2="80" stroke-width="4" stroke-dasharray="1 9" stroke-linecap="round"/>
-        <circle class="stamp" cx="12" cy="80" r="8"/>
-        <circle class="now" cx="222" cy="80" r="9"/>
-        <text class="lab-dim" x="84" y="106" text-anchor="middle" font-size="20">usual arrival</text>
-        <text class="lab-infer" x="222" y="58" text-anchor="middle" font-size="20">now</text>
-      </svg>
-      <p>How unusual is this silence?</p>
-    </li>
-    <li>
-      <svg class="diagram q-art" viewBox="0 0 260 112" aria-hidden="true">
-        <line class="axis" x1="40" y1="54" x2="220" y2="54"/>
-        <circle class="place" cx="40" cy="54" r="11"/>
-        <circle class="place" cx="130" cy="54" r="8.6"/>
-        <circle class="place" cx="220" cy="54" r="16"/>
-        <text class="lab-dim" x="40" y="106" text-anchor="middle" font-size="20">unit</text>
-        <text class="lab-dim" x="130" y="106" text-anchor="middle" font-size="20">tube</text>
-        <text class="lab-dim" x="220" y="106" text-anchor="middle" font-size="20">station</text>
-      </svg>
-      <p>Where is it most likely?</p>
-    </li>
-    <li>
-      <svg class="diagram q-art" viewBox="0 0 260 112" aria-hidden="true">
-        <line class="axis" x1="10" y1="66" x2="242" y2="66"/>
-        <rect class="time-left" x="70" y="58" width="164" height="16" rx="3"/>
-        <circle class="alert" cx="62" cy="66" r="9"/>
-        <line class="close" x1="242" y1="46" x2="242" y2="86"/>
-        <text class="lab-dim" x="152" y="42" text-anchor="middle" font-size="20">time left to act</text>
-        <text class="lab-dim" x="62" y="106" text-anchor="middle" font-size="20">alert</text>
-        <text class="lab-dim" x="246" y="106" text-anchor="end" font-size="20">window closes</text>
-      </svg>
-      <p>Is there still time to act?</p>
-    </li>
-  </ol>
-  <p class="then t-lead">Then an alert, sent to the role that can check that place.</p>
-  <div class="foot"><p class="caveat">Synthetic data, no clinical review</p></div>
-  <aside class="notes-src"><p class="who">Daniel</p><p>So how does it know? Silence is evidence. Every five minutes, Tracer asks three questions. How unusual is this much silence, for this kind of specimen? Where is it most likely to be right now: on the unit, in the tube, or at the tube station? And if we alert now, is there still time to act? <em>[Switch to the 3D demo.]</em> This is that, playing by itself. The glow along the tube is where Tracer thinks the specimen is. The carrier is where it really is. It's a small model you can read, not a black box.</p><p><em>[About 95 words.]</em></p></aside>
+  <div class="foot"><p class="caveat">Synthetic data, no clinical review.</p></div>
+  <aside class="notes-src"><p class="who">Daniel</p><p>Now you get to compete with it. Scan this second code. Everyone in the room gets the same rounds. Each round, six specimens leave, and one will be late. Tap it before Tracer does. You get one tap a round. Tap too early and you may pick the wrong one. Wait too long and you have given no warning. Go.</p><p><em>[About 60 words. The rounds take about a minute and a half. Walk the room. If phones struggle, play one round on the projector and ask for a show of hands.]</em></p><p class="who">Karissa</p><p>1. The end screen puts their warning next to Tracer's, on the same rounds.</p><p>2. Hands up if you beat Tracer.</p><p>3. What made you call it? Take one or two answers.</p><p>4. The idea: the silence itself was telling them something.</p><p>5. Some early callers picked the wrong one, and that trade is what Daniel shows next.</p><p><em>[In her own words, about 65 words plus the answers. Start when most end screens are up. About a minute.]</em></p></aside>
 </section>
 
 <!-- 7 -->
-<section class="slide" data-beat="Board and timeline" data-who="Karissa" data-start="3:45" data-end="6:15" data-hands="1" data-layout="hands">
-  <div class="hands">
-    <div>
-      <div class="qr"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAlAAAAJQAQAAAABpmWfoAAAD4UlEQVR4nO2dgW6rMBRDidX//+VMhbYkBWY7agXvzUdaR8EcUZCuQghQ6vQp8DHTFJUOjCwhKh0YWUJUOjCyhKh0YGQJUenAyBKi0oGRJUSlAyNLiEoHRpYQlQ6MLCEqHRhZQlQ6MLKEqHTwv6tuz4nSza7z9+VznXeUvfIPRFQy0KOMqHRgZP+66nZUj54V6/7tfcm0W7uu+QMRlQz0KCMqHRjZv666tV+W2tPWoqU29fVrP3vVH4ioZKBHGVHpwMj+ddXtaMG9Vi01qTTfS1ehvrZViEoGepQRlQ6MLCGqD9Sr6XWm1/Zi1V9U2e06MLKEqHRgZAlRnd++qm8L75Vq+ZvmttXaf7VXuXIEdWBkCVHpwMgSojq7XpXDarX2Y9XuHPFrW4WoZKBHGVHpwMgSohqoV3WzaDvCoR5m72S368DIEqLSgZElRHXKvirP2vOsRmsbav2/N3fajHbIEdSBkSVEpQMjS4jq3PPBOn+2/VXr/L5C1df3vgWWI6gDI0uISgdGlhDV2ePba9PG2lal8pjzXLa2y76wVYhKBnqUEZUOjCwhqoHzwTvt+d86tfaz13nuWrv6udntOjCyhKh0YGQJUV1jPEPpequ2lLc7ctZ6lyOoAyNLiEoHRpYQ1XX621fe73qur7kraV/5YGCdA6LSgZElRHVuvZqa+5v3ntBQX/3wbc9V25OVI6gDI0uISgdGlhDVFfrbp+bq4Fqd9nre69uVwxxBB1jpX4lKB0aWENX54xnqPNW2q9oxWFPX2mrX+/hWISoZ6FFGVDowsoSoBvuvymO678E67r+quT44CEZX3BKVDowsIaorjBet8+f7CPZ+qmzGOXx8qxCVDPQoIyodGFlCVMPPkynz5/EY99K1qvpRD9ntOjCyhKh0YGQJUZ09nuFO32Zqe96ngye65/rgCBhaa5eodGBkCVGdPZ6h53jMaH0tb//nCDrASv9KVDowsoSozh7P0NI+k2FvXEPtWl4LOYI6MLKEqHRgZAlRXe/9OKW5x7k8Mv0TRtN/NQYG19shKh0YWUJU598/WDZPltne6Tx1raxcHxwDg+vtEJUOjCwhqmu9H6duntFXd97q9aWtQlQy0KOMqHRgZAlRfeT9OPU11Y5lmHaefLWQ3a4DI0uISgdGlhDV9d6PU7p3TkzN2yb23lefI6gDI0uISgdGlhDVtd6PUx69U30Nq5s3euX+wREwtNYuUenAyBKiutb4Kx8MrHNAVDowsoSodGBkCVHpwMgSotKBkSVEpQMjS4hKB0aWEJUOjCwhKh0YWUJUOjCyhKh0YGQJUenAyBKi0oGR/SdVP8gFtr8q5MJBAAAAAElFTkSuQmCC" alt="QR code for the Tracer demo"></div>
+<section class="slide" data-beat="Does it work" data-who="Daniel" data-start="9:30" data-end="10:30" data-hands="1">
+  <h2 class="t-h2">TracerNet gives the most warning.</h2>
+  <div class="stage">
+    <p class="t-lead">Minutes of warning per late specimen, at 6 alerts a shift.</p>
+    <div class="bars" role="img" aria-label="Minutes of warning per late specimen at 6 alerts a shift, on 776 fresh synthetic lab weeks: TracerNet 23.3, our survival model 13.6, a simple deadline rule 7.6.">
+      <div class="bar-row result" style="--v:23.3"><p class="lab">TracerNet</p><div class="plot"><span class="bar tracer"></span><span class="val">23.3</span></div></div>
+      <div class="bar-row" style="--v:13.6"><p class="lab">Our survival model</p><div class="plot"><span class="bar tracer-eq"></span><span class="val">13.6</span></div></div>
+      <div class="bar-row" style="--v:7.6"><p class="lab">Simple deadline rule</p><div class="plot"><span class="bar base"></span><span class="val">7.6</span></div></div>
     </div>
-    <div class="hands-text">
-      <p class="lead-in">Your turn, for about 2 and a half minutes</p>
-      <h2 class="t-h2">Phones out.</h2>
-      <p class="t-url"><span>scalinity.github.io/</span><wbr><span>Tracer/</span><wbr><span>demo</span></p>
-      <ol class="steps t-step">
-        <li>Tap any row on the board.</li>
-        <li>Drag the scrubber slowly to the right.</li>
-        <li>Tap Show the truth.</li>
-      </ol>
-      <p><a class="btn" href="../demo/index.html#SP-r27-000368" target="_blank" rel="noopener">The specimen on the projector <span aria-hidden="true">↗</span></a></p>
-    </div>
+    <p class="t-cap">776 fresh synthetic lab weeks, scored once.</p>
   </div>
-  <div class="foot"><p class="caveat">Synthetic data, no clinical review</p></div>
-  <aside class="notes-src"><p class="who">Karissa</p><p>1. Phones out: scan the code or type the address.</p><p>2. What the board is: every specimen collected and not yet received, ranked by expected harm.</p><p>3. What to do: tap a row, drag the scrubber slowly to the right, and watch the risk climb, where Tracer thinks it is, and when the alert fires and who gets it.</p><p>4. On the projector, one specimen: a stat tissue specimen from the emergency department that sat at the lab's tube station for almost an hour.</p><p>5. Tracer alerted at minute 20 with 100 minutes of its window left, put it most likely at the tube station, and it was received in time.</p><p>6. Their turn: tap Show the truth and see where their own specimen really was.</p><p><em>[In her own words, about 120 words. Wait about 20 seconds after point 1. After point 3, give the room about a minute on their own, then Daniel switches the projector to the specimen tab. The rest of the time is the room's.]</em></p></aside>
+  <div class="foot"><p class="caveat">Synthetic data, no clinical review.</p></div>
+  <aside class="notes-src"><p class="who">Daniel</p><p>So does it work? We measured what a lab would feel: minutes of warning per late specimen, at six alerts a shift. TracerNet, our neural network, gave twenty-three minutes. Our survival model gave about fourteen, and a simple deadline rule under eight. We wrote down the rule TracerNet had to pass before these test weeks existed, then scored them once. <em>[The room: on the phone page, tap How much warning?]</em> Tap one alert a shift, then six. At one, TracerNet gives about three minutes. At six, twenty-three. More alerts buy more warning, but about half of them, about three a shift, go to specimens that arrive in time. That is the trade.</p><p><em>[About 105 words, over the room tapping.]</em></p></aside>
 </section>
 
 <!-- 8 -->
-<section class="slide" data-beat="Beat Tracer" data-who="Daniel, then Karissa" data-start="6:15" data-end="9:45" data-hands="1" data-layout="hands">
-  <div class="hands">
-    <div>
-      <div class="qr"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAApAAAAKQAQAAAAAAznf9AAADSUlEQVR4nO3d0Y7jIAyFYbPq+78ye9Fx7AOkK6RBLM1vaTptk36CGwtiQkq1344/vy5CQkJCQkJCQkJCQkJCQkJCQkJCPpJ8+ZsiX9f0TbVy/eVvRr9Z1EpISEjI/eQr3kblp1yf33mxXv/fR8t1bvubRa2EhISE3E++8ofIk5H/fFyZx5iRSfU3y1oJCQkJuZ983R+qV06saURpg5m4xhkdh4SEhJyMD/my/PzV611+vV+3eUbHISEhISdD8qXmQB9Hxtgyaj715jdmp3QcEhIScjJSvuzn2HHNUmfkfmw8Lz+j45CQkJCTUe7m1ZEJva4Tq4g+30N5RschISEhJ6P0c22zXAH3+Xeui7frMamPQ0JCPoC85uNRCc8V8Jwt9XOswIy60LJWQkJCQu4nb8aXlio77aizPVpN6+VndBwSEhJyMqTeE+PGYqMVl8XqII+2NZ8zOg4JCQk5Gc183EzvhrSfDFktrl7GkX6+vqiVkJCQkPvJNB/3iKpOZNH72o9ZzrCLWgkJCQm5n5R8qTsQ9e/iPH2na4zO6DgkJCTkZAzm47nyPV5zWWT23q5lP6PjkJCQkJMh+1/q7Drv4fb+Pq5i6nhUM+oZHYeEhIScjGY+bjKebMeW9+uNKvkSEhLy28lm/WVtRpdtnad241Az1l9CQkI+gix6XTKPFHV0qftr6Aoi/25ZKyEhISH3k8P1RP2o0s9pr2b2u6uf0nFISEjIyZDn98T4UtcQ5ZXr7dlxpznjS0hIyK8mm/3V8+4Zea/g9p4erZyz/hISEvIBZPc8Cq3l6PVLv6t8tIZ9aSshISEh95NFr0228/D+bnI/d7RX5rJWQkJCQu4nu/0vPfo7yP1Vnz2en7W7rJWQkJCQ+0m5vyeiWq7n6FPO4vO4cn5GxyEhISEnQ+rjHrnmE5mzdGsuR1cvT+k4JCQk5GRIvadfTRl3kevqdc2erL+EhIR8ANnVx3P47sC1m4PnnYvY/xISEvIR5Id82T5v3K9m+hy93zd4WSshISEh95OSL/uZeP+sM5+J1/S6vJWQkJCQ+0l53lmOfKVydK+PVsipj0NCQn49Weq/z5mMMzoOCQkJCQkJCQkJCQkJCQkJCQkJ+d+TfwEyPQJB4jQ0BwAAAABJRU5ErkJggg==" alt="QR code for Beat Tracer with the room's shared rounds"></div>
-      <p class="t-cap qr-note">Three rounds. Everyone who scans this code plays the same ones, taken from held-out test runs.</p>
-    </div>
-    <div class="hands-text">
-      <h2 class="t-h3">Spot the late one before Tracer does.</h2>
-      <p class="t-url"><span>scalinity.github.io/</span><wbr><span>Tracer/</span><wbr><span>demo/</span><wbr><span>?seed=18#beat</span></p>
-      <ol class="steps t-step">
-        <li>Six specimens leave. One will be late.</li>
-        <li>Tap it as soon as you can tell.</li>
-        <li>One guess a round.</li>
-      </ol>
-      <p><a class="btn" href="../demo/index.html?seed=18#beat" target="_blank" rel="noopener">Open the game <span aria-hidden="true">↗</span></a></p>
-    </div>
+<section class="slide" data-beat="Limits" data-who="Karissa" data-start="10:30" data-end="11:30">
+  <h2 class="t-h2">What Tracer cannot tell you.</h2>
+  <div class="stage">
+    <ul class="tiles">
+      <li class="warn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 3.5h5M10.5 3.5v5.2L5.4 18a1.6 1.6 0 0 0 1.4 2.5h10.4a1.6 1.6 0 0 0 1.4-2.5l-5.1-9.3V3.5M8 14h8"/></svg><p>Synthetic data, no clinical review.</p></li>
+      <li class="blind"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="12" cy="12" r="2.6"/><path d="M4 20 20 4"/></svg><p>Blind to leaks and wrong labels.</p></li>
+      <li class="next"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13.5 6.5 19 12l-5.5 5.5"/></svg><p>Next: a real lab's scan log.</p></li>
+    </ul>
   </div>
-  <div class="foot"><p class="caveat">Synthetic data, no clinical review</p></div>
-  <aside class="notes-src"><p class="who">Daniel</p><p>Now you get to compete with it. Scan this second code. It gives everyone in the room the same three rounds. Six specimens leave, and one of them will be late. Watch the scans come in, and tap the late one as soon as you can tell. You get one guess. Tap too early and you might pick wrong. Wait too long, and you've given no warning. Press Start.</p><p><em>[About 70 words. The three rounds take about a minute and a half. Walk the room. If phones struggle, play one round on the projector and ask for a show of hands.]</em></p><p class="who">Karissa</p><p>1. The end screen puts their warning next to Tracer's, on the same rounds.</p><p>2. Hands up if you beat Tracer.</p><p>3. What made you call it? Take one or two answers.</p><p>4. The idea: the silence itself was telling them something.</p><p>5. Some early callers picked the wrong one, and that trade is what Daniel shows next.</p><p><em>[In her own words, about 65 words plus the answers. Start when most end screens are up. About a minute.]</em></p></aside>
+  <aside class="notes-src"><p class="who">Karissa</p><p>1. Every specimen is synthetic, with no clinical review of the data or the model.</p><p>2. Tracer watches only time and place, so it cannot see a mislabeled or leaking specimen.</p><p>3. About half of TracerNet's alerts at 6 a shift go to specimens that arrive in time, about three a shift.</p><p>4. The policy table behind the windows: 10 of its 44 rows still have no published source, so they are marked as assumptions.</p><p>5. The next step: test it on a real laboratory's log with receipt scans.</p><p><em>[In her own words, about 100 words.]</em></p></aside>
 </section>
 
 <!-- 9 -->
-<section class="slide" data-beat="Why this design" data-who="Daniel" data-start="9:45" data-end="10:45" data-hands="1">
-  <div class="head-row">
-    <h2 class="t-h3">Judged by minutes of warning, at alerts a shift can take.</h2>
-    <a class="btn" href="../demo/index.html#threshold" target="_blank" rel="noopener">The threshold slider <span aria-hidden="true">↗</span></a>
-  </div>
-  <div class="chart" role="img" aria-label="Median warning at 6 alerts per 8-hour shift: the time-limit rule 30 minutes, a rule that alerts at a share of the window 45, Tracer with equal tier weights 45, Tracer with weights 3, 2, 1 55. Using the window adds 15 minutes, and the tier weights add 10 more.">
-    <div class="gains" aria-hidden="true">
-      <span class="gain" style="--from:30;--to:45"><span>+15 min</span></span>
-      <span class="gain after" style="--from:45;--to:55"><span>+10 min</span></span>
-    </div>
-    <div class="row" style="--v:30"><span class="lab">Time-limit rule</span><span class="plot"><span class="bar base"></span></span><span class="val">30 min</span></div>
-    <div class="row" style="--v:45"><span class="lab">Alert at a share of the window</span><span class="plot"><span class="bar base"></span></span><span class="val">45 min</span></div>
-    <div class="row" style="--v:45"><span class="lab">Tracer, equal tier weights</span><span class="plot"><span class="bar tracer-eq"></span></span><span class="val">45 min</span></div>
-    <div class="row result" style="--v:55"><span class="lab">Tracer, weights 3, 2, 1</span><span class="plot"><span class="bar tracer"></span></span><span class="val">55 min</span></div>
-    <div class="axis" aria-hidden="true"><span style="--t:0">0</span><span style="--t:15">15</span><span style="--t:30">30</span><span style="--t:45">45</span><span style="--t:60">60 min</span></div>
-  </div>
-  <p class="t-cap" style="max-width:96ch">Using the window adds 15 minutes, and weighting the tiers 3, 2, 1 adds 10. Median warning over all 100 breaches, at 6 alerts per 8-hour shift, on 6 held-out runs (2,378 specimens). The data and the model share our assumptions, so these are best-case figures.</p>
-  <div class="foot"><p class="caveat">Synthetic data, no clinical review</p></div>
-  <aside class="notes-src"><p class="who">Daniel</p><p>That trade is the threshold. Scroll down to Set the threshold and drag it both ways. Lower, and Tracer warns earlier but alerts on specimens that would have arrived anyway. Higher, fewer alerts, less warning. So we judge Tracer by minutes of warning at a number of alerts a shift can handle, not by accuracy. <em>[Switch to the numbers.]</em> At six alerts a shift, Tracer gave fifty-five minutes of median warning, against thirty for a simple time limit. But a rule that alerts once a set share of the window has passed gets forty-five. With equal weights, Tracer only ties it. Most of the gain comes from using the window.</p><p><em>[About 105 words, over the room dragging the slider.]</em></p></aside>
-</section>
-
-<!-- 10 -->
-<section class="slide" data-beat="How we built it" data-who="Karissa, then Daniel" data-start="10:45" data-end="11:30">
-  <h2 class="t-h3">How we built and tested Tracer.</h2>
-  <svg class="diagram pipe" viewBox="0 0 860 296" role="img" aria-label="The data: code draws 12,000 specimen briefs with planted faults, Claude writes each scan trail and its hidden true path, and a validator with nine checks keeps 11,967 and freezes them, for 2.16 dollars. The model: a three-part survival model fit on 24 runs, tested on 6 runs it never saw, with 2,378 specimens and 100 missed windows, and its numbers go to the demo. The hidden truth goes only to the test.">
-    <defs><marker id="pipe-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0 0L10 5L0 10z"/></marker></defs>
-    <text class="lab-dim" x="0" y="18" font-size="20">The data</text>
-    <text class="lab-dim" x="0" y="164" font-size="20">The model</text>
-    <g class="node data"><rect x="0" y="30" width="260" height="100" rx="8"/><rect class="tick" x="0" y="30" width="260" height="5" rx="2"/><text class="step" x="244" y="120" text-anchor="end" font-size="20">1</text><text class="lab-ink" x="16" y="68" font-size="24">Briefs drawn by code</text><text class="lab-dim" x="16" y="96" font-size="20">12,000 specimens with</text><text class="lab-dim" x="16" y="120" font-size="20">planted faults</text></g>
-    <g class="node data"><rect x="300" y="30" width="260" height="100" rx="8"/><rect class="tick" x="300" y="30" width="260" height="5" rx="2"/><text class="step" x="544" y="120" text-anchor="end" font-size="20">2</text><text class="lab-ink" x="316" y="68" font-size="24">Claude writes scans</text><text class="lab-dim" x="316" y="96" font-size="20">each trail, plus its</text><text class="lab-dim" x="316" y="120" font-size="20">hidden true path</text></g>
-    <g class="node data"><rect x="600" y="30" width="260" height="100" rx="8"/><rect class="tick" x="600" y="30" width="260" height="5" rx="2"/><text class="step" x="844" y="120" text-anchor="end" font-size="20">3</text><text class="lab-ink" x="616" y="68" font-size="24">A validator checks</text><text class="lab-dim" x="616" y="96" font-size="20">nine checks: 11,967 kept</text><text class="lab-dim" x="616" y="120" font-size="20">frozen; $2.16 in all</text></g>
-    <g class="node model"><rect x="600" y="176" width="260" height="100" rx="8"/><rect class="tick" x="600" y="176" width="260" height="5" rx="2"/><text class="step" x="844" y="266" text-anchor="end" font-size="20">4</text><text class="lab-ink" x="616" y="214" font-size="24">The model learns</text><text class="lab-dim" x="616" y="242" font-size="20">a three-part survival</text><text class="lab-dim" x="616" y="266" font-size="20">model, fit on 24 runs</text></g>
-    <g class="node model"><rect x="300" y="176" width="260" height="100" rx="8"/><rect class="tick" x="300" y="176" width="260" height="5" rx="2"/><text class="step" x="544" y="266" text-anchor="end" font-size="20">5</text><text class="lab-ink" x="316" y="214" font-size="24">Tested on 6 new runs</text><text class="lab-dim" x="316" y="242" font-size="20">2,378 specimens, 100</text><text class="lab-dim" x="316" y="266" font-size="20">missed their window</text></g>
-    <g class="node model"><rect x="0" y="176" width="260" height="100" rx="8"/><rect class="tick" x="0" y="176" width="260" height="5" rx="2"/><text class="step" x="244" y="266" text-anchor="end" font-size="20">6</text><text class="lab-ink" x="16" y="214" font-size="24">The demo you used</text><text class="lab-dim" x="16" y="242" font-size="20">every number in two</text><text class="lab-dim" x="16" y="266" font-size="20">files, no server</text></g>
-    <line class="flow-line" x1="262" y1="80" x2="296" y2="80" marker-end="url(#pipe-head)"/>
-    <line class="flow-line" x1="562" y1="80" x2="596" y2="80" marker-end="url(#pipe-head)"/>
-    <line class="flow-line" x1="730" y1="132" x2="730" y2="172" marker-end="url(#pipe-head)"/>
-    <line class="flow-line" x1="598" y1="226" x2="564" y2="226" marker-end="url(#pipe-head)"/>
-    <line class="flow-line" x1="298" y1="226" x2="264" y2="226" marker-end="url(#pipe-head)"/>
-    <line class="truth" x1="430" y1="132" x2="430" y2="172" stroke-dasharray="5 6"/>
-    <text class="lab-dim" x="742" y="150" font-size="20">frozen data</text>
-    <text class="lab-dim" x="442" y="150" font-size="20">hidden truth, test only</text>
-  </svg>
-  <p class="t-cap pipe-note">Three parts: normal trip times by type, hour and priority; trips that run far longer but still arrive; and specimens that never arrive.</p>
-  <div class="foot"><p class="caveat">Synthetic data, no clinical review</p></div>
-  <aside class="notes-src"><p class="who">Karissa</p><p>1. No public data has these scans, so we made our own.</p><p>2. Code draws 12,000 specimens from assumed timings and the policy table.</p><p>3. Claude writes each one's scans and its hidden true path, and a validator keeps the ones that pass nine checks.</p><p><em>[In her own words, about 45 words.]</em></p><p class="who">Daniel</p><p>Then a small survival model learns from twenty-four of the thirty runs: how long a normal trip takes, how often one runs far longer and still arrives, and how often one never does. We test it on the other six, and only that test sees the hidden truth.</p><p><em>[About 50 words.]</em></p></aside>
-</section>
-
-<!-- 11 -->
-<section class="slide" data-beat="TracerNet wins" data-who="Daniel" data-start="11:30" data-end="12:00">
-  <h2 class="t-h3">TracerNet now runs Tracer.</h2>
-  <p class="t-lead">23 minutes of warning, on 776 lab weeks it had never seen.</p>
-  <div class="chart c30" role="img" aria-label="Average warning at 6 alerts per 8-hour shift on 776 fresh simulated lab weeks, a miss counting as zero: the window rule 7.6 minutes, our survival model 13.6 minutes, TracerNet 23.3 minutes.">
-    <div class="row" style="--v:7.6"><span class="lab">Window rule</span><span class="plot"><span class="bar base"></span></span><span class="val">7.6 min</span></div>
-    <div class="row" style="--v:13.6"><span class="lab">Our survival model</span><span class="plot"><span class="bar tracer-eq"></span></span><span class="val">13.6 min</span></div>
-    <div class="row result" style="--v:23.3"><span class="lab">TracerNet</span><span class="plot"><span class="bar tracer"></span></span><span class="val">23.3 min</span></div>
-    <div class="axis" aria-hidden="true"><span style="--t:0">0</span><span style="--t:10">10</span><span style="--t:20">20</span><span style="--t:30">30 min</span></div>
-  </div>
-  <ul class="limits verdict t-step">
-    <li>We set the rule before testing on fresh data.</li>
-    <li class="next">It passed. Our survival model is now a baseline.</li>
-  </ul>
-  <p class="t-cap">Average warning at 6 alerts per 8-hour shift, a miss counting as zero, each warning capped at 2 hours. Ahead of all five baselines, every 95% interval above zero.</p>
-  <div class="foot"><p class="caveat">Synthetic data, no clinical review</p></div>
-  <aside class="notes-src"><p class="who">Daniel</p><p>We also trained a neural network, TracerNet. We wrote down the rule it had to pass, then tested it once, on 776 simulated lab weeks it had never seen. It warned twenty-three minutes ahead on average, against fourteen for our survival model. It passed. So TracerNet now runs Tracer, and the survival model is a baseline.</p><p><em>[About 55 words.]</em></p></aside>
-</section>
-
-<!-- 12 -->
-<section class="slide" data-beat="Limits and next steps" data-who="Karissa" data-start="12:00" data-end="12:45">
-  <h2 class="t-h2">What Tracer cannot tell you.</h2>
-  <ul class="limits t-lead" style="color:var(--ink)">
-    <li>A mislabeled or leaking specimen is invisible to it.</li>
-    <li>Every specimen is synthetic, with no clinical review.</li>
-    <li>10 of the 44 policy rows have no published source yet.</li>
-    <li>At twice the volume, the window-share rule matches it.</li>
-    <li class="next">Next: test it on a real laboratory log with receipt scans.</li>
-  </ul>
-  <aside class="notes-src"><p class="who">Karissa</p><p>1. Tracer watches only time and place, so it cannot see a mislabeled or leaking specimen.</p><p>2. Every specimen is synthetic, with no clinical review of the data or the model.</p><p>3. The policy table behind the stability windows: 10 of its 44 rows still have no published source, so they are marked as assumptions.</p><p>4. Tracer's lead depends on the setting: at twice the volume, the simple window rule matches it.</p><p>5. The next step: test it on a real laboratory log with receipt scans.</p><p><em>[In her own words, about 90 words.]</em></p></aside>
-</section>
-
-<!-- 13 -->
-<section class="slide" data-beat="Questions" data-who="Both" data-start="12:45" data-end="15:00" data-layout="hands">
+<section class="slide" data-beat="Questions" data-who="Both" data-start="11:30" data-end="15:00">
   <div class="hands">
-    <div>
-      <div class="qr"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAlAAAAJQAQAAAABpmWfoAAAD4UlEQVR4nO2dgW6rMBRDidX//+VMhbYkBWY7agXvzUdaR8EcUZCuQghQ6vQp8DHTFJUOjCwhKh0YWUJUOjCyhKh0YGQJUenAyBKi0oGRJUSlAyNLiEoHRpYQlQ6MLCEqHRhZQlQ6MLKEqHTwv6tuz4nSza7z9+VznXeUvfIPRFQy0KOMqHRgZP+66nZUj54V6/7tfcm0W7uu+QMRlQz0KCMqHRjZv666tV+W2tPWoqU29fVrP3vVH4ioZKBHGVHpwMj+ddXtaMG9Vi01qTTfS1ehvrZViEoGepQRlQ6MLCGqD9Sr6XWm1/Zi1V9U2e06MLKEqHRgZAlRnd++qm8L75Vq+ZvmttXaf7VXuXIEdWBkCVHpwMgSojq7XpXDarX2Y9XuHPFrW4WoZKBHGVHpwMgSohqoV3WzaDvCoR5m72S368DIEqLSgZElRHXKvirP2vOsRmsbav2/N3fajHbIEdSBkSVEpQMjS4jq3PPBOn+2/VXr/L5C1df3vgWWI6gDI0uISgdGlhDV2ePba9PG2lal8pjzXLa2y76wVYhKBnqUEZUOjCwhqoHzwTvt+d86tfaz13nuWrv6udntOjCyhKh0YGQJUV1jPEPpequ2lLc7ctZ6lyOoAyNLiEoHRpYQ1XX621fe73qur7kraV/5YGCdA6LSgZElRHVuvZqa+5v3ntBQX/3wbc9V25OVI6gDI0uISgdGlhDVFfrbp+bq4Fqd9nre69uVwxxBB1jpX4lKB0aWENX54xnqPNW2q9oxWFPX2mrX+/hWISoZ6FFGVDowsoSoBvuvymO678E67r+quT44CEZX3BKVDowsIaorjBet8+f7CPZ+qmzGOXx8qxCVDPQoIyodGFlCVMPPkynz5/EY99K1qvpRD9ntOjCyhKh0YGQJUZ09nuFO32Zqe96ngye65/rgCBhaa5eodGBkCVGdPZ6h53jMaH0tb//nCDrASv9KVDowsoSozh7P0NI+k2FvXEPtWl4LOYI6MLKEqHRgZAlRXe/9OKW5x7k8Mv0TRtN/NQYG19shKh0YWUJU598/WDZPltne6Tx1raxcHxwDg+vtEJUOjCwhqmu9H6duntFXd97q9aWtQlQy0KOMqHRgZAlRfeT9OPU11Y5lmHaefLWQ3a4DI0uISgdGlhDV9d6PU7p3TkzN2yb23lefI6gDI0uISgdGlhDVtd6PUx69U30Nq5s3euX+wREwtNYuUenAyBKiutb4Kx8MrHNAVDowsoSodGBkCVHpwMgSotKBkSVEpQMjS4hKB0aWEJUOjCwhKh0YWUJUOjCyhKh0YGQJUenAyBKi0oGR/SdVP8gFtr8q5MJBAAAAAElFTkSuQmCC" alt="QR code for the Tracer demo"></div>
-    </div>
+    <div class="qr"><img src="../demo/qr.png" alt="QR code for the Tracer demo"></div>
     <div class="hands-text">
-      <p class="lead-in">Thank you</p>
       <h2 class="t-h2">Questions?</h2>
-      <div>
-        <p class="t-url"><span>scalinity.github.io/</span><wbr><span>Tracer/</span><wbr><span>demo</span></p>
-        <p class="t-url addr-alt"><span>github.com/</span><wbr><span>scalinity/</span><wbr><span>Tracer</span></p>
-      </div>
-      <p class="t-body measure" style="color:var(--ink-dim)">The code, the data and how we made it, including how AI helped, are all in the repository.</p>
-      <p class="t-cap">Daniel Escalante and Karissa Kocourek, CAI 5724, University of Florida</p>
+      <dl class="addrs">
+        <dt>Try it</dt><dd><a class="t-url" href="../demo/index.html" target="_blank" rel="noopener"><span>scalinity.github.io/</span><wbr><span>Tracer/</span><wbr><span>demo</span></a></dd>
+        <dt>Read it</dt><dd><a class="t-url" href="../explained/short/index.html" target="_blank" rel="noopener"><span>scalinity.github.io/</span><wbr><span>Tracer/</span><wbr><span>explained/</span><wbr><span>short</span></a></dd>
+        <dt>Code</dt><dd><a class="t-url" href="https://github.com/scalinity/Tracer" target="_blank" rel="noopener"><span>github.com/</span><wbr><span>scalinity/</span><wbr><span>Tracer</span></a></dd>
+      </dl>
     </div>
   </div>
-  <div class="foot"><p class="caveat">Synthetic data, no clinical review</p></div>
-  <aside class="notes-src"><p class="who">Karissa</p><p>1. That's Tracer.</p><p>2. The demo stays up at this address, and the code, the data and how we made it are on GitHub.</p><p>3. Invite their questions.</p><p><em>[In her own words, about 30 words. Then the questions below. Stop at 15:00.]</em></p></aside>
+  <div class="foot"><p class="caveat">Synthetic data, no clinical review.</p></div>
+  <aside class="notes-src"><p class="who">Karissa</p><p>1. That's Tracer: it warns the lab when a specimen goes quiet.</p><p>2. The demo stays up at this address, and the short explainer and the code are linked here too.</p><p>3. Invite their questions.</p><p><em>[In her own words, about 30 words. Then the questions below. Stop at 15:00.]</em></p></aside>
 </section>
 
 </main>
@@ -672,15 +502,33 @@ body.presenter .pnav{display:flex}
     document.getElementById("count").textContent = "Slide " + state.i + " of " + (slides.length - 1) + ": " + slides[state.i].dataset.beat;
     updateRail();
     fit(slides[state.i]);
+    frames();
     renderNotes();
     if (!quiet) share();
+  }
+
+  /* A slide's embedded demo loads only while that slide is on screen, and never in the presenter window, so the
+     3D view is not drawing behind the other slides. */
+  function frames() {
+    slides.forEach(function (s, k) {
+      Array.prototype.forEach.call(s.querySelectorAll("iframe[data-src]"), function (f) {
+        var want = k === state.i && !PRESENTER ? f.getAttribute("data-src") : "about:blank";
+        if (f.getAttribute("src") !== want && (want !== "about:blank" || f.hasAttribute("src"))) f.setAttribute("src", want);
+      });
+    });
+  }
+
+  /* The unit the stylesheet starts from: the same formulas as --u in :root and its tall-screen media query. */
+  function natural() {
+    if (window.matchMedia("(max-aspect-ratio: 4/5)").matches) return Math.min(window.innerWidth * 0.0185, window.innerHeight * 0.0105);
+    return Math.min(window.innerWidth / 100, window.innerHeight * 1.78 / 100);
   }
 
   /* Shrink a slide's type until it fits the screen; every size on a slide is a multiple of --u. */
   function fit(s) {
     s.style.removeProperty("--u");
     if (PRESENTER || !s.clientHeight) return;
-    var u = Math.min(window.innerWidth / 100, window.innerHeight * 1.78 / 100);
+    var u = natural();
     for (var k = 0; k < 10 && overflows(s); k++) {
       u *= 0.94;
       s.style.setProperty("--u", u + "px");
@@ -690,7 +538,8 @@ body.presenter .pnav{display:flex}
   function overflows(s) {
     var limit = s.clientHeight - parseFloat(getComputedStyle(s).paddingBottom) + 1;
     return Array.prototype.some.call(s.children, function (c) {
-      return !c.classList.contains("foot") && !c.classList.contains("notes-src") && c.offsetTop + c.offsetHeight > limit;
+      return !c.classList.contains("foot") && !c.classList.contains("notes-src") && c.offsetTop + c.offsetHeight > limit
+        || c.scrollWidth > c.clientWidth + 1;
     });
   }
 
