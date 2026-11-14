@@ -4,54 +4,50 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b0f1a" />
-  <meta name="description" content="Four specimens ride the same pneumatic tube bench, one after another. Watch where each one really goes, and where Tracer thinks it is." />
+  <meta name="description" content="Four specimens ride the same tube, one after another. Watch Tracer warn the lab when one goes quiet." />
   <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
   <title>Tracer · Watch it play</title>
-  <script type="module" crossorigin src="./assets/index-D5tiEY7x.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-Pu3f5tyj.css">
+  <script type="module" crossorigin src="./assets/index-DXNj04sz.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-CLqPuFXQ.css">
 </head>
 <body>
   <div id="app" class="autoplay">
-    <main id="world" role="img" aria-label="A pneumatic tube bench in a lab: a ward, a glass tube, the lab's tube station, a lost bin and the lab's scanner"><div id="loading">Pressurizing the tube…</div></main>
+    <main id="world" role="img" aria-label="A pneumatic tube bench in a lab. A white capsule is the specimen; a glow shows where Tracer thinks it is."><div id="loading">Pressurizing the tube…</div></main>
     <div id="veil"></div>
     <div class="vignette"></div>
+    <div class="pl-alarm" aria-hidden="true"></div>
 
     <header class="pl-top">
-      <div class="pl-brand"><span class="pl-dot"></span>Tracer</div>
-      <nav class="pl-steps" aria-label="Specimens"></nav>
-      <p class="pl-source">Risk and alerts: TracerNet, on a held-out specimen like this one. Synthetic data.</p>
+      <div class="pl-brand"><span class="pl-dot"></span>Tracer<span class="pl-tag"></span></div>
+      <p class="pl-source">Synthetic data, no clinical review.</p>
     </header>
-
-    <aside class="pl-risk" aria-live="polite">
-      <div class="pl-risk-k">Chance it misses the deadline</div>
-      <div class="pl-risk-v">0%</div>
-      <div class="pl-risk-s"></div>
-    </aside>
 
     <div class="pl-caption" aria-live="polite"></div>
 
-    <footer class="pl-bar">
-      <div class="pl-clock"><span class="pl-clock-v">0</span><span class="pl-clock-k">min since it left the ward</span></div>
-      <div class="pl-rail">
-        <div class="pl-track"><div class="pl-fill"></div></div>
-        <div class="pl-mark pl-deadline"><span>Deadline</span></div>
-        <div class="pl-mark pl-alert"><span>Alert</span></div>
-        <div class="pl-mark pl-scan"><span>Scanned in</span></div>
+    <footer class="pl-hud">
+      <div class="pl-clock">
+        <svg class="pl-ring" viewBox="0 0 64 64" aria-hidden="true">
+          <circle class="pl-ring-bg" cx="32" cy="32" r="28" />
+          <circle class="pl-ring-fg" cx="32" cy="32" r="28" pathLength="100" />
+        </svg>
+        <span class="pl-clock-v">0</span>
+        <span class="pl-clock-k">minutes since it left the ward</span>
+      </div>
+      <div class="pl-meter">
+        <span class="pl-meter-k">Risk</span>
+        <div class="pl-meter-track">
+          <div class="pl-meter-fill"></div>
+          <div class="pl-meter-mark"><span>Alert</span></div>
+        </div>
       </div>
     </footer>
 
-    <div class="pl-legend">
-      <span><i class="pl-sw-truth"></i>White capsule: where it really is</span>
-      <span><i class="pl-sw-glow"></i>Glow: where Tracer thinks it is</span>
-    </div>
-
     <div class="pl-card" hidden>
+      <div class="pl-card-k"></div>
       <div class="pl-card-n"></div>
-      <div class="pl-card-t"></div>
+      <div class="pl-card-u"></div>
       <div class="pl-card-s"></div>
     </div>
-
-    <button class="pl-pause" type="button" aria-label="Pause">❚❚</button>
   </div>
 </body>
 </html>
