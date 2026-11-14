@@ -286,6 +286,17 @@ def test_a_whole_game_with_seed_18_finishes_in_under_two_minutes_in_headless_chr
     assert "You vs Tracer" in phone["end"] and "Also flagged" in phone["end"]
     you = sum(r["you"]["warning"] for r in phone["game"]["results"])
     tracer = sum(r["tracer"]["warning"] for r in phone["game"]["results"])
-    assert phone["scores"] == [f"{you:g} min", f"{tracer:g} min"]
+    def mins(m):  # the page's own format: hours from 180 minutes up
+        m = round(m)
+        return f"{m} min" if abs(m) < 180 else f"{m // 60} h" + (f" {m % 60} min" if m % 60 else "")
+    assert phone["scores"] == [mins(you), mins(tracer)]
+    # Tracer plays TracerNet's stored alerts at the headline budget (docs/demo/neural.json), round by round: on the
+    # seed-18 rounds at 5, 15 and 15 minutes, 205 minutes early in all, and 13 others flagged that arrived in time
+    neural = {s["id"]: s["headline"]["alert_min"]
+              for s in json.loads((ROOT / "docs" / "demo" / "neural.json").read_text(encoding="utf-8"))["specimens"]}
+    assert [neural[r["miss"]] for r in SEED_18] == [5, 15, 15]
+    assert [r["tracer"]["warning"] for r in phone["game"]["results"]] == [115, 45, 45] and tracer == 205
+    assert [r["tracer"]["falseAlerts"] for r in phone["game"]["results"]] == [
+        sum(neural[i] is not None for i in r["ids"] if i != r["miss"]) for r in SEED_18] == [5, 5, 3]
     point = ("Tracer spoke up sooner" if tracer > you else "with a hint it never gets")
     assert point in phone["end"]

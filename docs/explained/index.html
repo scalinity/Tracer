@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <title>Tracer explained</title>
-<meta name="description" content="Tracer in about five minutes: the problem, how it works, the TracerNet challenger, the talk and what is left. Synthetic data with no clinical review.">
+<meta name="description" content="Tracer in about five minutes: the problem, how it works, TracerNet as the main model, the talk and what is left. Synthetic data with no clinical review.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='5' fill='none' stroke='%2363C4D3' stroke-width='2'/%3E%3C/svg%3E">
 <style>
 :root {
@@ -422,7 +422,7 @@ ol.todo .due { color: var(--alert); font-size: .9rem; white-space: nowrap; }
     </li>
     <li id="stage-model">
       <h3>Prediction logic <span class="who">Daniel</span></h3>
-      <p>Every 5 minutes, for every specimen collected and not yet received, Tracer asks three questions. How unusual is this silence? Where is the specimen most likely to be? Is there still time to act? A survival model answers the first: from the training runs it learned how long a normal trip takes for each kind of specimen, time of day and priority, how often a trip runs far longer but still arrives, and how often a specimen never arrives. A location filter answers the second. An alert fires when risk times urgency crosses a threshold set so the lab gets about 6 alerts per 8-hour shift.</p>
+      <p>Every 5 minutes, for every specimen collected and not yet received, Tracer asks three questions. How unusual is this silence? Where is the specimen most likely to be? Is there still time to act? A survival model answers the first: from the training runs it learned how long a normal trip takes for each kind of specimen, time of day and priority, how often a trip runs far longer but still arrives, and how often a specimen never arrives. A location filter answers the second. An alert fires when risk times urgency crosses a threshold set so the lab gets about 6 alerts per 8-hour shift. That survival model runs live on the phone page. Tracer's main risk model is now TracerNet, a neural network that also reads the whole lab (<a href="#tracernet">below</a>).</p>
       <p class="like"><b>Like</b> package tracking with no scans along the way. You know when it shipped and how long deliveries like it usually take, so early silence means nothing. The longer it stays quiet past normal, and the closer the deadline, the more you worry.</p>
       <p class="say"><b>On stage</b>"Silence is evidence. The longer a specimen stays quiet past a normal trip, the more likely it's stuck, and Tracer turns that into a ranked list."</p>
     </li>
@@ -521,9 +521,9 @@ ol.todo .due { color: var(--alert); font-size: .9rem; white-space: nowrap; }
   <p>Daniel built everything technical: the data generator, the model, the evaluation and the demo. Claude Code, a coding agent, wrote code and tests under rules Daniel set, and Daniel made the calls the repo could not settle.</p>
 
   <div class="panel plain">
-    <h3>Plainly: this is a statistical model, not a trained black box</h3>
-    <p>Tracer's main model has no neural network and no AI model making live predictions. Its shape is written by hand: a three-part survival model, a location filter and a threshold rule. What it learns from data is a short list of numbers, fit by maximum likelihood on 24 training runs. Claude wrote the synthetic data and predicts nothing.</p>
-    <p style="margin:0">It learns its numbers from data and gives a probability, not a yes or no. A neural challenger, TracerNet, came later and is described below; the gradient-boosted challenger was cut.</p>
+    <h3>Plainly: the survival model is statistics, not a trained black box</h3>
+    <p>The survival model has no neural network and no AI model making live predictions. Its shape is written by hand: a three-part survival model, a location filter and a threshold rule. What it learns from data is a short list of numbers, fit by maximum likelihood on 24 training runs. Claude wrote the synthetic data and predicts nothing.</p>
+    <p style="margin:0">It learns its numbers from data and gives a probability, not a yes or no. A neural network, TracerNet, came later, passed a rule set before testing on fresh data, and is now Tracer's main model (below); the gradient-boosted challenger was cut.</p>
   </div>
 
   <h3>The synthetic dataset, and why</h3>
@@ -601,25 +601,36 @@ ol.todo .due { color: var(--alert); font-size: .9rem; white-space: nowrap; }
 </section>
 
 <section id="tracernet" aria-labelledby="tn-h">
-  <h2 id="tn-h">TracerNet: the neural challenger</h2>
+  <h2 id="tn-h">TracerNet: Tracer's main model</h2>
   <ul class="lines">
-    <li>Tracer's main model looks at one sample at a time.</li>
-    <li>TracerNet, a neural network, also reads the whole lab: how busy it is, what's waiting, and which samples traveled together.</li>
-    <li>It was trained and tested on a second, bigger dataset: simulated lab weeks, busier and more varied than the first.</li>
+    <li>TracerNet is a neural network. It became Tracer's main risk model on November 13.</li>
+    <li>It reads the whole lab, not just one sample: how busy it is, what's waiting, and which samples traveled together.</li>
+    <li>It learned from a second, bigger dataset: simulated lab weeks, busier and more varied than the first.</li>
   </ul>
-  <p><strong>What it achieved,</strong> on the test weeks at 6 alerts per shift:</p>
-  <dl class="stats">
-    <div><dt>Average warning</dt><dd class="nums"><b>23.9 min</b> TracerNet, against 13.7 for Tracer's model refit to these weeks and 7.4 for the window rule</dd><dd class="mean">It spoke up about 10 minutes sooner than Tracer's own model.</dd></div>
-    <div><dt>Late samples caught</dt><dd class="nums"><b>39.2%</b> TracerNet, against 35.3% for Tracer's model and 22.9% for the window rule</dd><dd class="mean">With only 6 alerts a shift, it still caught the most.</dd></div>
-    <div><dt>Ranking (AUROC, at 30 minutes of silence)</dt><dd class="nums"><b>0.957</b> TracerNet, against 0.917 for Tracer's model</dd><dd class="mean">It was better at putting a late sample above an on-time one.</dd></div>
-    <div><dt>Honest chances (Brier score, at 30 minutes)</dt><dd class="nums"><b>0.047</b> TracerNet, against 0.077 for Tracer's model; lower is better</dd><dd class="mean">Its percentages were closer to what actually happened.</dd></div>
-  </dl>
-  <p><strong>Why it's a challenger, not the main model:</strong></p>
+  <p><strong>How it earned the job,</strong> in three steps:</p>
   <ul class="lines">
-    <li>Before testing, we wrote down the rule it had to pass: beat every other method's <em>median</em> warning by at least 5 minutes.</li>
-    <li>The test weeks had more late samples per shift (6.4) than alerts (6), so no method caught even half of them.</li>
-    <li>A miss counts as zero warning, so every method's median was zero: a tie.</li>
-    <li>A tie fails the rule. Tracer's simpler model stays in charge, and we kept the rule as written.</li>
+    <li>We wrote the rule first: more average warning than every other method, sure enough that the 95% interval sits above zero, plus four safety checks.</li>
+    <li>We improved it on training and validation data only, then froze it.</li>
+    <li>We tested it once, on 776 new lab weeks no one had seen. It passed every part.</li>
+  </ul>
+  <p><strong>What it achieved</strong> on those fresh weeks, at 6 alerts per shift:</p>
+  <dl class="stats">
+    <div><dt>Average warning</dt><dd class="nums"><b>23.3 min</b> TracerNet, against 13.6 for the survival model refit to these weeks and 7.6 for the window rule</dd><dd class="mean">It spoke up about 10 minutes sooner than the next best method.</dd></div>
+    <div><dt>Ranking (AUROC, at 30 minutes of silence)</dt><dd class="nums"><b>0.955</b> TracerNet, against 0.914 for the survival model</dd><dd class="mean">It was better at putting a late sample above an on-time one.</dd></div>
+    <div><dt>Honest chances (Brier score, at 30 minutes)</dt><dd class="nums"><b>0.046</b> TracerNet, against 0.076 for the survival model; lower is better</dd><dd class="mean">Its percentages were closer to what actually happened.</dd></div>
+    <div><dt>False alerts</dt><dd class="nums"><b>0.50</b> of its alerts, against 0.59 to 0.86 for the other methods</dd><dd class="mean">About half its alerts were for samples that arrived in time. That's still the fewest per alert.</dd></div>
+  </dl>
+  <p><strong>Why it took a second rule:</strong></p>
+  <ul class="lines">
+    <li>The first rule asked for a longer <em>median</em> warning. With more late samples per shift than alerts, no method caught half of them.</li>
+    <li>A miss counts as zero warning, so every median was zero: a tie, and TracerNet stayed a challenger.</li>
+    <li>We kept that verdict, wrote the second rule before any new data existed, and tested once.</li>
+  </ul>
+  <p><strong>What it still gets wrong:</strong></p>
+  <ul class="lines">
+    <li>At 1 alert per shift, a simple rule warns earlier.</li>
+    <li>It sends more alerts per shift than the other methods at the same budget.</li>
+    <li>Every number comes from simulated weeks, with no clinical review.</li>
   </ul>
   <div class="panel checked">
     <h3>Today's check, November 13</h3>
@@ -628,17 +639,17 @@ ol.todo .due { color: var(--alert); font-size: .9rem; white-space: nowrap; }
       <li><strong>The original-lab calibration gap is fixed.</strong> On the first dataset its chances ran high. A small adjustment fit only on that lab's history brought its Brier score from 0.216 to 0.181, level with Tracer's 0.182 (at 60 minutes of silence).</li>
     </ul>
   </div>
-  <details class="more"><summary><span>More detail: <b>the four rules, and what stays open</b></span></summary><div class="more-body">
-    <p>The rule had four parts, all judged on the test weeks at 6 alerts per shift. TracerNet would take over only if the first three held.</p>
+  <details class="more"><summary><span>More detail: <b>the rule's five parts, and what stays open</b></span></summary><div class="more-body">
+    <p>All five were judged on the 776 fresh weeks at 6 alerts per shift, at both the 3-2-1 and the equal urgency weights. TracerNet would take over only if all five held.</p>
     <ul>
-      <li><strong>R1, warning: failed.</strong> Every method's median warning was 0 minutes, at both weightings, because no method caught half the late samples. The average warning, set beforehand as a non-binding companion, does separate them: 23.9 minutes against 13.7, 12.0 and 7.4.</li>
-      <li><strong>R2, lost samples: held.</strong> It alerted on 48.2% of samples that never arrived, against 44.7% for Tracer's local refit.</li>
-      <li><strong>R3, calibration: held.</strong> Brier 0.0473 against 0.0771 at 30 minutes, and 0.0312 against 0.0427 at 60.</li>
-      <li><strong>R4, equal alerts: failed.</strong> The window rule alerts only about 3.7 times a shift and cannot fill a budget of 6, so the comparison is reported as unequal.</li>
+      <li><strong>Warning: held.</strong> Average warning with a miss counted as 0 and each warning capped at 2 hours: 23.3 and 12.8 minutes at the two weightings, against at most 13.6 and 8.3. The smallest lower end of a 95% interval on the lead was 3.8 minutes.</li>
+      <li><strong>Calibration: held.</strong> Brier 0.046 against 0.076 at 30 minutes, and 0.031 against 0.043 at 60.</li>
+      <li><strong>Ranking: held.</strong> AUROC 0.955 at 30 minutes, against 0.914 for the best other method.</li>
+      <li><strong>False alerts: held.</strong> 0.50 false alerts per alert sent, against 0.59 to 0.86. Per shift it sends more than the window rule, which sends fewer alerts of every kind; the per-alert form was chosen after seeing validation.</li>
+      <li><strong>Lost samples: held.</strong> It alerted on 47.4% of samples that never arrived at 3-2-1 weights, against 37.2% to 43.9%.</li>
     </ul>
-    <p>The calibration fix is for the chances a lab would see; alerts keep TracerNet's own ranking, because alerting on the adjusted scores cut the median warning there from 55 to 47.5 minutes. That split was chosen after seeing the first dataset's scored weeks, which are development data.</p>
-    <p>Still open, and fixed only by a new library, a retrain or a new test look: the scenario library misses its coverage targets in 20 of 32 cells, training had unstable spikes, and the explanations pass their deletion check in 68.2% of alerts against the 70% required. The decision layer that would choose where to look and whom to call failed its own rule, so alerts are routed by a fixed rule.</p>
-    <p class="small"><span class="from">results/neural/REPORT.md, results/neural/followup-2026-11-13.md, results/neural/caveats.md</span></p>
+    <p>Still open: the explanations pass their deletion check in 68.9% of validation alerts against the 70% required, within noise of the line; the decision layer that would choose where to look and whom to call failed its own rule, so alerts are routed by a fixed rule.</p>
+    <p class="small"><span class="from">docs/neural/results-v2.md, docs/neural/preregistration-v2.md, docs/neural/phase2-log.md, results/neural/REPORT.md</span></p>
   </div></details>
 </section>
 
@@ -657,7 +668,7 @@ ol.todo .due { color: var(--alert); font-size: .9rem; white-space: nowrap; }
       <tr><td class="t">6:15</td><td>Beat Tracer: Daniel starts it, Karissa leads the debrief</td><td class="w">Both</td></tr>
       <tr><td class="t">9:45</td><td>Why this design: the threshold slider</td><td class="w">Daniel</td></tr>
       <tr><td class="t">10:45</td><td>How we built it: Karissa on the data, Daniel on the model</td><td class="w">Both</td></tr>
-      <tr><td class="t">11:30</td><td>TracerNet, the neural challenger</td><td class="w">Daniel</td></tr>
+      <tr><td class="t">11:30</td><td>TracerNet wins</td><td class="w">Daniel</td></tr>
       <tr class="k"><td class="t">12:00</td><td>Limits and next steps</td><td class="w">Karissa</td></tr>
       <tr class="k"><td class="t">12:45</td><td>Close, then questions until 15:00</td><td class="w">Karissa, then both</td></tr>
     </tbody>
@@ -665,9 +676,9 @@ ol.todo .due { color: var(--alert); font-size: .9rem; white-space: nowrap; }
   <p>Karissa owns the opening, what Tracer fixes, hosting the phone activity, and the data, limits and close. She writes her own words from <a href="https://scalinity.github.io/Tracer/talk/script.html?who=karissa">her outline</a>.</p>
   <h3>What each demo shows</h3>
   <div class="cards3">
-    <div><b>3D demo</b><p>It plays by itself: four samples on a tube bench, on time, stalled, lost and never sent. The glow is where Tracer thinks each one is. The carrier is where it really is.</p></div>
-    <div><b>Phone page</b><p>Every sample not yet received, riskiest first. Tap one, drag through time, then show the truth. A slider trades warning against alerts.</p></div>
-    <div><b>Beat Tracer</b><p>One of six samples will be late. Tap it before Tracer flags it. Your minutes of warning against Tracer's, over three rounds.</p></div>
+    <div><b>3D demo</b><p>It plays by itself: four samples on a tube bench, on time, stalled, lost and never sent. Risk and alerts are TracerNet's. The glow is where Tracer thinks each one is. The carrier is where it really is.</p></div>
+    <div><b>Phone page</b><p>Every sample not yet received, riskiest first, ranked live by the survival model. Tap one, drag through time, then show the truth. A slider trades warning against alerts.</p></div>
+    <div><b>Beat Tracer</b><p>One of six samples will be late. Tap it before Tracer flags it. Your minutes of warning against TracerNet's, over three rounds.</p></div>
   </div>
 </section>
 
@@ -676,7 +687,8 @@ ol.todo .due { color: var(--alert); font-size: .9rem; white-space: nowrap; }
   <ol class="todo">
     <li><span><span class="owner">Daniel</span>Decide whether Beat Tracer stays in the talk, now that it's simplified.</span><span class="due">By Dec 6</span></li>
     <li><span><span class="owner">Karissa</span>Write her own lines for her four sections, from <a href="https://scalinity.github.io/Tracer/talk/script.html?who=karissa">the outline</a>.</span><span class="due">By Dec 6</span></li>
-    <li><span><span class="owner">Both</span>Check the 3D demo for one full loop on the laptop we present from (it works the GPU hard), and the phone page at phone width.</span><span class="due">By Dec 6</span></li>
+    <li><span><span class="owner">Daniel</span>Practice slide 11, now "TracerNet wins", inside its 30 seconds.</span><span class="due">By Dec 6</span></li>
+    <li><span><span class="owner">Both</span>Check the 3D demo, now on TracerNet's alerts, for one full loop on the laptop we present from (it works the GPU hard), and the phone page at phone width.</span><span class="due">By Dec 6</span></li>
     <li><span><span class="owner">Both</span>Rehearse the full 15-minute talk at least once.</span><span class="due">By Dec 6</span></li>
     <li><span><span class="owner">Both</span>Freeze everything, then present.</span><span class="due">Freeze Dec 6, present Dec 9</span></li>
   </ol>
@@ -738,13 +750,13 @@ ol.todo .due { color: var(--alert); font-size: .9rem; white-space: nowrap; }
   <details><summary>Why not just alert on everything after 30 minutes?<span class="by">Daniel</span></summary><div class="ans">That's close to the simple rule we compared against. It ignores the window, and the windows in our table run from 60 minutes for unpreserved urine to days for a swab in transport medium, so one time limit is too late for some and far too early for others.</div></details>
   <details><summary>What would someone actually do with an alert?<span class="by">Karissa</span></summary><div class="ans">Go to the place Tracer names, like the tube station or the collecting unit, and look for it. Who gets which alert is an assumption we made, and a real lab would set it.</div></details>
   <details><summary>Isn't it circular to test on data you generated?<span class="by">Daniel</span></summary><div class="ans">Partly, yes. The data and the model share our assumptions, so a good result shows the method behaves as designed, not that it works in a real lab. That's why the next step is a real log with receipt scans.</div></details>
-  <details><summary>Why a simple model and not deep learning?<span class="by">Daniel</span></summary><div class="ans">We trained one too, TracerNet, and it gave more warning on a second set of simulated weeks, but it didn't pass the rule we set before testing. A lab scientist can read the survival model's numbers: how long a normal trip takes, how often one runs far longer and still arrives, how often it never does. So the survival model stays in charge.</div></details>
+  <details><summary>Why a simple model and not deep learning?<span class="by">Daniel</span></summary><div class="ans">We have both. TracerNet, a neural network, now runs Tracer: it passed a rule we wrote down before testing it once on fresh simulated weeks. The survival model stays as a baseline a lab scientist can read: how long a normal trip takes, how often one runs far longer and still arrives, how often it never does. It is also the model that runs live on your phone.</div></details>
   <details><summary>How often is it right about where the specimen is?<span class="by">Daniel</span></summary><div class="ans">At 30 minutes of silence, the true place is in its top three about 88% of the time and its first guess about 55%, on synthetic data. So an alert says something is off more reliably than it says where.</div></details>
   <details><summary>How many false alarms?<span class="by">Daniel</span></summary><div class="ans">Plenty, by design. At 6 alerts a shift about a third of all specimens get an alert, and most of them arrive in time. Its risk scores are only slightly sharper than guessing the average rate, so the gain is in timing, not in sorting.</div></details>
   <details><summary>Why does the clock stop at receipt?<span class="by">Karissa</span></summary><div class="ans">Where a window ends is a clinical judgement, and receipt in the lab is the standard measure. That's what the policy table uses, so a delay at the bench after receipt is outside what Tracer watches.</div></details>
   <details><summary>Is any real patient or hospital data in this?<span class="by">Karissa</span></summary><div class="ans">No. We checked a public 100-patient MIMIC-IV extract and set it aside because it describes intensive care, not a general lab. No workplace data is used anywhere.</div></details>
   <details><summary>How did you use AI to build it?<span class="by">Daniel</span></summary><div class="ans">Claude Code, a coding agent, wrote the code and tests under rules I set, and I made the calls the repo couldn't. A small Claude model wrote the scan trails: 12,000 requested, 11,967 passed a nine-check validator, for about two dollars. It's all in the AI teaming log in the repo.</div></details>
-  <details><summary>So is Tracer machine learning, or a set of rules?<span class="by">Daniel</span></summary><div class="ans">Both, in a specific way. The model's shape is chosen by hand and its numbers are learned from data by maximum likelihood: a typical trip time for each of 96 groups, plus how often a trip runs far longer and how often a specimen never arrives. The alert itself is a threshold rule on top. The main model has no neural network, and no AI model runs when it scores a specimen. TracerNet, the neural challenger, is a separate model.</div></details>
+  <details><summary>So is Tracer machine learning, or a set of rules?<span class="by">Daniel</span></summary><div class="ans">Both, in a specific way. The model's shape is chosen by hand and its numbers are learned from data by maximum likelihood: a typical trip time for each of 96 groups, plus how often a trip runs far longer and how often a specimen never arrives. The alert itself is a threshold rule on top. That is the survival model. TracerNet, now Tracer's main model, is a neural network that learns from simulated lab weeks, with the same kind of threshold on top. Neither calls an AI model when it scores a specimen.</div></details>
   <details><summary>What does Claude do inside Tracer?<span class="by">Daniel</span></summary><div class="ans">Nothing at run time. A small Claude model wrote the synthetic scan trails before any model was fit, and a larger one wrote the demo's specimen stories and search briefs ahead of time, stored as files. The predictions are plain arithmetic on fitted numbers.</div></details>
   <details><summary>Why did it alert on a tissue specimen at only 5.5% risk?<span class="by">Daniel</span></summary><div class="ans">Because tissue can't be collected again, so its weight is 3, and 3 × 5.5% passes the 0.137 harm threshold. A urine specimen, weight 1, would wait until its risk reached about 14%.</div></details>
   <details><summary>Why six alerts a shift?<span class="by">Karissa</span></summary><div class="ans">It's an assumption, about a third of all specimens, and a real lab would choose its own number. The demo's threshold slider shows the trade: fewer alerts, less warning.</div></details>
@@ -767,7 +779,7 @@ ol.todo .due { color: var(--alert); font-size: .9rem; white-space: nowrap; }
     <li><strong>It is better at timing than at sorting.</strong> About a third of specimens get an alert, 706 of 806 test alerts were on specimens that arrived in time, and its Brier score is only slightly better than the base rate.</li>
     <li><strong>Location is a hint.</strong> The first guess is right about 55% of the time at 30 minutes of silence.</li>
     <li><strong>The lead depends on the setting.</strong> At every other volume tested, from half to twice, the window-aware rule ties it, and its 10-minute lead over that rule at the original volume comes from the urgency weights. The generator does not model congestion.</li>
-    <li><strong>The neural challenger did not take over.</strong> TracerNet gave more warning on a second set of simulated weeks but did not pass the rule set before testing, and the gradient-boosted challenger was cut.</li>
+    <li><strong>The main model rests on one fresh test of simulated weeks.</strong> TracerNet passed it, but about half its alerts go to samples that arrive in time, and at 1 alert per shift a simple rule warns earlier. The gradient-boosted challenger was cut.</li>
   </ul>
   <h3>What a real deployment would need</h3>
   <ul>

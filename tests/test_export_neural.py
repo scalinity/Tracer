@@ -158,3 +158,19 @@ def test_a_locked_scenario_is_refused_before_any_specimen_label_or_feature_is_re
     with pytest.raises(ValueError, match="not in the store"):
         E.build(tiny["pred"], "v2", scenarios=["no-such-scenario"], store_dir=tiny["store"])
     assert read == []
+
+
+def test_the_committed_demo_file_is_tracernet_v2_and_its_knob_gives_every_headline_alert():
+    """docs/demo/neural.json comes from the primary model, and each headline alert is the first 5-minute tick where
+    p_miss (whose first value is at minute 5) times the tier's 3-2-1 weight reaches the file's headline knob."""
+    doc = json.loads(E.DEFAULT_OUT.read_text(encoding="utf-8"))
+    jsonschema.validate(doc, json.loads(E.SCHEMA_PATH.read_text(encoding="utf-8")))
+    assert doc["model"]["version"] == "tracernet-v2" and doc["store"]["path"] == "data/store"
+    (knob,) = doc["headline_knobs"].values()
+    weight = {1: 3, 2: 2, 3: 1}
+    alerts = 0
+    for s in doc["specimens"]:
+        first = next((5 * (i + 1) for i, p in enumerate(s["p_miss"]) if p * weight[s["tier"]] >= knob), None)
+        assert first == s["headline"]["alert_min"] == s["alerts"]["tracernet"]["3-2-1"][doc["headline_index"]], s["id"]
+        alerts += first is not None
+    assert alerts == 817

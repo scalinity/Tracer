@@ -1,7 +1,10 @@
 // Tracer, self-playing: the Silent Specimen's bench with nothing to press. Four specimens take turns,
 // each with a scripted true fate the model never sees; the clock runs by itself, slows near each
-// moment that matters, and holds there under a one-line caption. Every number shown comes from
-// TracerModel.read() at that minute, the same model the interactive bench uses.
+// moment that matters, and holds there under a one-line caption. The risk and the alerts are
+// TracerNet's, Tracer's primary risk model: its precomputed p_miss for one held-out specimen per story
+// (model/tracernet-stories.json, picked from docs/demo/neural.json by a fixed rule). Where the specimen
+// is (the glow, the place labels, the bars) is the forward filter of TracerModel, as on the
+// interactive bench, which keeps the analytic model.
 // ?scene=N (1 to 4) starts on a specimen, ?t=M at a minute, ?paused holds it there.
 
 import '@fontsource-variable/outfit';
@@ -13,14 +16,16 @@ import './play.css';
 import * as THREE from 'three/webgpu';
 import { buildLabSet, CameraRig, cloneLooks, createStage, HOUSE_LOOKS, WorldLabels, type CameraPose, type HeroShot, type SafeArea } from './kit';
 import { describeSpot, FATES, placeOfSpot, type FateId, type Place } from './model/fates';
-import { TracerModel, type ExhibitState, type Reading } from './model/state';
+import { TracerModel, type Reading } from './model/state';
 import { ASSUMED, MAX_T } from './model/tracer';
+import { riskText, scoreAt, type NetStories } from './model/tracernet';
+import netStories from './model/tracernet-stories.json';
 import { buildApparatus } from './scene/apparatus';
 import { buildCarrier } from './scene/carrier';
 import { buildEcho } from './scene/echo';
 import { Glow } from './scene/glow';
 import { RECEIVER } from './scene/layout';
-import { drawBars, drawChart, drawLog } from './scene/screen-draw';
+import { drawBars, drawLog, drawNetChart, netAxis } from './scene/screen-draw';
 
 const root = document.getElementById('app')!;
 const world = document.getElementById('world')!;
@@ -28,8 +33,28 @@ const $ = <T extends HTMLElement>(s: string) => root.querySelector<T>(s)!;
 
 const P = ASSUMED;
 const model = new TracerModel(P);
-const LINE = P.operatingPoint;
 const W = P.windowMin;
+const NET = netStories as NetStories;
+const TICK = NET.tick_min;
+
+// ---------- the reading: TracerNet's risk and alert, the forward filter's places ----------
+type Shown = Reading & { score: number | null };
+/**
+ * The bench's reading at minute m with TracerNet's p_miss, alert line and alert for this story's
+ * held-out specimen in place of the analytic model's. Where the specimen is (places, likely) stays the
+ * forward filter's, and after the receipt scan the outcome is known, as on the bench. `score` is null
+ * before TracerNet's first tick; the alert's `projected` minute is only known once it has fired.
+ */
+const read = (fate: FateId, m: number): Shown => {
+  const r = model.read({ fate, silence: m, alertLine: P.operatingPoint, windowMin: W, truth: true });
+  const s = NET.stories[fate];
+  const score = r.phase === 'silent' ? scoreAt(s, r.minute, TICK) : r.risk;
+  const fired = s.alert_min !== null && s.alert_min <= r.minute;
+  return {
+    ...r, risk: score ?? 0, score, alertLine: s.line, lead: null, components: null, scan: null,
+    alert: { projected: fired ? s.alert_min : null, minute: s.alert_min, fired, clearedAt: fired ? r.received : null },
+  };
+};
 
 // ---------- the four stories ----------
 type Tone = 'info' | 'good' | 'warn' | 'alert' | 'bad';
@@ -38,8 +63,7 @@ interface Story { fate: FateId; title: string; intro: string; end: number; beats
 
 const pct = (p: number) => `${Math.round(p * 100)}%`;
 const PLACE_NAME: Record<Place, string> = { ward: 'the ward', tube: 'the tube', station: 'the tube station', lost: 'the lost bin', lab: 'the lab' };
-const at = (fate: FateId, m: number) => model.read({ fate, silence: m, alertLine: LINE, windowMin: W, truth: true });
-const alertMin = (fate: FateId) => at(fate, MAX_T).alert.minute;
+const alertMin = (fate: FateId) => NET.stories[fate].alert_min;
 
 const alertBeat = (fate: FateId, extra: (r: Reading) => string = () => ''): Beat => ({
   at: alertMin(fate) ?? MAX_T, hold: 3.4, tone: 'alert',
@@ -64,7 +88,7 @@ const STORIES: Story[] = [
     beats: [
       { at: 0, hold: 1.2, tone: 'info', text: () => 'Scanned at the ward. The clock starts.' },
       { at: 26, hold: 2.6, tone: 'warn', text: () => 'It\'s stuck at the tube station. The lab can\'t see that. It only sees silence.' },
-      { at: 45, hold: 1.8, tone: 'info', text: (r) => `The longer the silence, the higher the risk: {cyan:${pct(r.risk)}} now.` },
+      { at: 45, hold: 1.8, tone: 'info', text: (r) => `Still no scan, and the risk keeps climbing: {cyan:${riskText(r.risk)}} now.` },
       alertBeat('stalls', (r) => ` Check {cyan:${PLACE_NAME[r.likely.place]}} first.`),
       { at: FATES.stalls.received!, hold: 3, tone: 'good', text: (r) => `Found and scanned at {green:${r.received} min}, well inside the deadline.` },
     ],
@@ -93,6 +117,9 @@ const STORIES: Story[] = [
     verdict: () => 'Never sent. The alert still came in time, but silence alone can\'t say where it is.',
   },
 ];
+// TracerNet's alert can come before a scripted beat (the stalled one alerts at 25 min, before it is
+// shown stuck at 26), and the director plays beats in time order.
+for (const s of STORIES) s.beats.sort((a, b) => a.at - b.at);
 
 // ---------- stage and scene ----------
 const looks = cloneLooks(HOUSE_LOOKS);
@@ -195,7 +222,7 @@ const FOCUS_BAND = stage.uniforms.focusBand.value;
 
 // ---------- in-world labels: Tracer's belief above the parts, the truth below on a leader ----------
 const labels = new WorldLabels(scene, camera, root);
-let shown: Reading = at('arrives', 0);
+let shown: Shown = read('arrives', 0);
 let fate: FateId = 'arrives';
 let minute = 0;
 const placeValue = (k: 'ward' | 'tube' | 'station' | 'lost') => () => (shown.phase === 'silent' ? pct(shown.places[k]) : '0%');
@@ -266,17 +293,18 @@ const hideCard = () => {
 };
 
 let lastHud = '';
-function drawHud(r: Reading, m: number): void {
+function drawHud(r: Shown, m: number): void {
   const missed = r.missed;
-  const risk = r.phase === 'received' ? 0 : r.risk;
+  const value = r.score === null ? '—' : riskText(r.risk);
+  const line = riskText(r.alertLine);
   const tone = r.phase === 'received' ? (missed ? 'bad' : 'good') : missed ? 'bad' : r.alert.fired ? 'alert' : 'info';
   const sub = r.phase === 'received'
     ? (missed ? 'Arrived too late' : 'Arrived in time')
-    : missed ? 'Deadline passed' : r.alert.fired ? `Over the ${Math.round(LINE * 100)}% alert line` : `Alert at ${Math.round(LINE * 100)}%`;
-  const key = `${Math.round(risk * 100)}|${tone}|${sub}|${Math.floor(m)}|${r.alert.fired}|${r.received}`;
+    : missed ? 'Deadline passed' : r.alert.fired ? `Over the ${line} alert line` : r.score === null ? `First score at ${TICK} min` : `Alert at ${line}`;
+  const key = `${value}|${tone}|${sub}|${Math.floor(m)}|${r.alert.fired}|${r.received}`;
   if (key === lastHud) return;
   lastHud = key;
-  riskV.textContent = pct(risk);
+  riskV.textContent = value;
   riskBox.className = `pl-risk t-${tone}`;
   riskS.textContent = sub;
   clockV.textContent = String(Math.floor(m));
@@ -336,7 +364,7 @@ async function goTo(i: number, o: { first?: boolean; t?: number } = {}): Promise
   if (o.t !== undefined && o.t > 0) {
     // A linked moment: show the caption that moment would show.
     const prev = s.beats.filter((b) => b.at <= o.t!).pop();
-    if (prev) setCaption(prev.text(at(fate, prev.at)), prev.tone);
+    if (prev) setCaption(prev.text(read(fate, prev.at)), prev.tone);
     phase = 'run';
   } else {
     showCard(`${i + 1} of ${STORIES.length}`, s.title, s.intro, 'info');
@@ -381,7 +409,7 @@ function tick(dt: number): void {
   const b = s.beats[beat];
   if (b && minute >= b.at - 1e-6) {
     minute = b.at;
-    setCaption(b.text(at(fate, b.at)), b.tone);
+    setCaption(b.text(read(fate, b.at)), b.tone);
     beat++;
     phase = 'hold';
     phaseLeft = b.hold;
@@ -389,7 +417,7 @@ function tick(dt: number): void {
   }
   const stop = b ? b.at : s.end;
   if (minute >= s.end) {
-    const r = at(fate, s.end);
+    const r = read(fate, s.end);
     showCard(`${story + 1} of ${STORIES.length}`, s.title, s.verdict(r), s.tone);
     phase = 'outro';
     phaseLeft = OUTRO_SEC;
@@ -402,19 +430,17 @@ function tick(dt: number): void {
 // ---------- frame ----------
 let sway = 0;
 let beaconOn = 0;
-const history: number[] = [];
 stage.onFrame((dt, elapsed) => {
   tick(dt);
   const f = FATES[fate];
-  const ds: ExhibitState = { fate, silence: minute, alertLine: LINE, windowMin: W, truth: true };
-  shown = model.read(ds);
+  shown = read(fate, minute);
   if (!paused && phase !== 'hold') stage.invalidateShadows(0.25);
 
   app.stopwatch.update(minute, W, shown.alert.projected);
-  app.alertKnob.set((LINE - 0.1) / 0.8);
+  // The knob has no scale of its own: its arc stands at the alert line's height on the chart beside it.
+  app.alertKnob.set(netAxis(shown.alertLine));
   app.windowKnob.set((W - 60) / 180);
   app.truthSwitch.set(1);
-  app.placeLineHandle(LINE);
   const alarm = shown.alert.fired && shown.alert.clearedAt === null;
   beaconOn += ((alarm ? 1 : 0) - beaconOn) * (1 - Math.exp(-dt * 5));
   app.beaconLevel.value = beaconOn * (3.0 + 0.45 * Math.sin(elapsed * 2.2));
@@ -426,12 +452,8 @@ stage.onFrame((dt, elapsed) => {
   carrier.setReveal(1);
   glow.update(dt, { fate, silence: minute, explode: 0 });
 
-  const curve = model.curve(W);
-  app.chart.draw([shown.minute, W, Math.round(LINE * 100), fate, shown.phase], (ctx, size) => {
-    history.length = 0;
-    for (let t = 0; t <= shown.minute; t++) history.push(model.riskAt(f, t, W));
-    drawChart(ctx, size, { reading: shown, history, curve });
-  });
+  app.chart.draw([shown.minute, fate, shown.phase], (ctx, size) =>
+    drawNetChart(ctx, size, { reading: shown, score: shown.score, story: NET.stories[fate], tick: TICK }));
   const truthPlace = placeOfSpot(tr.spot);
   app.bars.draw([shown.minute, fate, truthPlace, shown.phase], (ctx, size) => drawBars(ctx, size, { reading: shown, truth: truthPlace }));
   app.log.draw([shown.phase === 'silent' ? shown.minute : -1, shown.received, shown.alert.fired], (ctx, size) => drawLog(ctx, size, { reading: shown }));

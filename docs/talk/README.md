@@ -36,7 +36,7 @@ The beats come from the run of show in `visuals/plan.html`, cut to fit the 15-mi
 | 6:15 to 9:45 | 8 | Beat Tracer | Daniel, then Karissa | Seeded QR code, then the game on the projector | playing |
 | 9:45 to 10:45 | 9 | Why this design | Daniel | The threshold slider, then the numbers slide | dragging the slider |
 | 10:45 to 11:30 | 10 | How we built it | Karissa, then Daniel | The data and the model, from briefs to the demo | listening |
-| 11:30 to 12:00 | 11 | A neural challenger | Daniel | TracerNet's warning beside the baselines, and the verdict | listening |
+| 11:30 to 12:00 | 11 | TracerNet wins | Daniel | TracerNet's warning beside the baselines on fresh data, and the verdict | listening |
 | 12:00 to 12:45 | 12 | Limits and next steps | Karissa | Limits slide | listening |
 | 12:45 to 15:00 | 13 | Questions | Both | Closing slide with the QR code and the repo | asking |
 
@@ -55,12 +55,12 @@ Minute by minute, for whoever keeps time:
 | 8 | Rounds 2 and 3. Score screens up by about 8:45. |
 | 9 | Karissa: who beat Tracer, and what made you call it. Daniel on the threshold slider at 9:45. |
 | 10 | Daniel on the numbers. At 10:45 Karissa on how we built the data, then Daniel on the model. |
-| 11 | Daniel on the neural challenger at 11:30. |
+| 11 | Daniel on TracerNet winning at 11:30. |
 | 12 | Karissa on the limits at 12:00. Her close at about 12:45, then questions. |
 | 13 | Questions. |
 | 14 | Questions. Stop at 15:00 even mid-question, and offer to talk after. |
 
-If the hands-on part runs long, cut in this order: Karissa's projector walkthrough on slide 7 (the room keeps exploring alone), then the numbers slide in beat 9 (say the one headline sentence and stay on the slider), then the neural challenger on slide 11 (prepared answer 5 covers it). The game shows its end screen only after round 3, so if the room is still on round 2 at 8:45, Karissa asks for hands from the round result screens instead: who called it before Tracer did. Never cut the board or the limits.
+If the hands-on part runs long, cut in this order: Karissa's projector walkthrough on slide 7 (the room keeps exploring alone), then the numbers slide in beat 9 (say the one headline sentence and stay on the slider), then TracerNet winning on slide 11 (prepared answer 5 covers it). The game shows its end screen only after round 3, so if the room is still on round 2 at 8:45, Karissa asks for hands from the round result screens instead: who called it before Tracer did. Never cut the board or the limits.
 
 Beat Tracer is the longest beat, 3:30 of the 15 minutes, and with it the questions get 2:15. Without it the questions get 5:45 and the hands-on time is the board and the slider, 3:30. It stays in until we decide at rehearsal.
 
@@ -244,13 +244,13 @@ Then a small survival model learns from twenty-four of the thirty runs: how long
 
 [About 50 words.]
 
-### Slide 11 · A neural challenger · 11:30 to 12:00 · Daniel
+### Slide 11 · TracerNet wins · 11:30 to 12:00 · Daniel
 
-**Screen:** "We also trained a neural network." Average warning at 6 alerts per 8-hour shift, on a second, busier set of simulated lab weeks, with a miss counting as zero: the window rule 7.4 minutes, our survival model refit to those weeks 13.7, TracerNet 23.9. By the rule we set before testing, it did not win, so the survival model stays in charge.
+**Screen:** "TracerNet now runs Tracer." 23 minutes of warning, on 776 lab weeks it had never seen. Average warning at 6 alerts per 8-hour shift, a miss counting as zero: the window rule 7.6 minutes, our survival model refit to those weeks 13.6, TracerNet 23.3. The rule was set before testing on fresh data; it passed, so the survival model is now a baseline.
 
 **Daniel:**
 
-We also trained a neural network, TracerNet, on a second, busier set of simulated lab weeks. It warned about twenty-four minutes ahead on average, against fourteen for our survival model. But by the rule we wrote down before testing, it didn't win. So the survival model stays in charge, and TracerNet stays a challenger.
+We also trained a neural network, TracerNet. We wrote down the rule it had to pass, then tested it once, on 776 simulated lab weeks it had never seen. It warned twenty-three minutes ahead on average, against fourteen for our survival model. It passed. So TracerNet now runs Tracer, and the survival model is a baseline.
 
 [About 55 words.]
 
@@ -294,9 +294,9 @@ The suggested speaker is in brackets. Either of us can take any of them. Daniel'
 2. **Why not just alert on everything after 30 minutes?** [Daniel] That's close to the simple rule we compared against. It ignores the window, and the windows in our table run from 60 minutes for unpreserved urine to days for a swab in transport medium, so one time limit is too late for some and far too early for others.
 3. **What would someone actually do with an alert?** [Karissa] Points: go to the place Tracer names, like the tube station or the collecting unit, and look for it; who gets which alert is our assumption, and a real lab would set it.
 4. **Isn't it circular to test on data you generated?** [Daniel] Partly, yes. The data and the model share our assumptions, so a good result shows the method behaves as designed, not that it works in a real lab. That's why the next step is a real log with receipt scans.
-5. **Why a simple model and not deep learning?** [Daniel] We trained one too, TracerNet, and it gave more warning on a second set of simulated weeks, but it didn't pass the rule we set before testing. A lab scientist can read the survival model's numbers: how long a normal trip takes, how often one runs far longer and still arrives, how often it never does. So the survival model stays in charge.
+5. **Why a simple model and not deep learning?** [Daniel] We have both. TracerNet, a neural network, now runs Tracer: it passed a rule we wrote down before testing it once on fresh simulated weeks. The survival model stays as a baseline a lab scientist can read: how long a normal trip takes, how often one runs far longer and still arrives, how often it never does. It is also the model that runs live on your phone.
 6. **How often is it right about where the specimen is?** [Daniel] At 30 minutes of silence, the true place is in its top three about 88% of the time and its first guess about 55%, on synthetic data. So an alert says something is off more reliably than it says where.
-7. **How many false alarms?** [Daniel] Plenty, by design. At 6 alerts a shift about a third of all specimens get an alert, and most of them arrive in time. Its risk scores are only slightly sharper than guessing the average rate, so the gain is in timing, not in sorting.
+7. **How many false alarms?** [Daniel] Plenty, by design. At 6 alerts a shift, about half of TracerNet's alerts go to specimens that arrive in time, about three a shift. That's still the fewest per alert of any method we tested.
 8. **Why does the clock stop at receipt?** [Karissa] Points: where a window ends is a clinical judgement; receipt in the lab is the standard measure, and it is what the policy table uses; a delay at the bench after receipt is outside what Tracer watches.
 9. **Is any real patient or hospital data in this?** [Karissa] Points: no; a public 100-patient MIMIC-IV extract was checked and set aside, because it describes intensive care, not a general lab; no workplace data is used anywhere.
 10. **How did you use AI to build it?** [Daniel] Claude Code, a coding agent, wrote the code and tests under rules I set, and I made the calls the repo couldn't. A small Claude model wrote the scan trails: 12,000 requested, 11,967 passed a nine-check validator, for about two dollars. It's all in the AI teaming log in the repo.
@@ -317,10 +317,10 @@ Questions to ask the room if it goes quiet:
 | 55, 45 and 30 minutes at 6 alerts per shift; ties at equal weights | `results/README.md`, `results/mvp-nov8.json` |
 | Twice the volume: the window rule ties | `results/README.md`, Sensitivity |
 | Top-3 88% and top-1 55% at 30 minutes | `results/location-accuracy.json` |
-| About a third of specimens alerted; Brier 0.109 against 0.119 | `results/README.md` |
+| About half of TracerNet's alerts false, about three a shift, the fewest per alert | `docs/neural/results-v2.md`, G3 |
 | 12,000 requested, 11,967 accepted, $2.16; 30 runs; nine checks | `datasets/manifest.json`, `src/generator/` |
 | Fit on runs 0 to 23 (9,514 specimens); 6 held-out runs, 2,378 specimens, 100 breaches | `docs/demo/bundle.json` (model), `results/README.md` |
-| TracerNet 23.9 minutes against 7.4 (window rule) and 13.7 (survival model refit locally), capped mean warning at 6 alerts per shift and 3-2-1 weights; the rule it failed | `results/neural/REPORT.md`, the verdict and section 1; `results/neural/followup-2026-11-13.md` |
+| TracerNet 23.3 minutes against 7.6 (window rule) and 13.6 (survival model refit locally) on 776 fresh lab weeks, capped mean warning at 6 alerts per shift and 3-2-1 weights; the rule it passed | `docs/neural/results-v2.md`; the rule in `docs/neural/preregistration-v2.md` |
 | The specimen on slide 7 | `docs/demo/heroes.json`, `SP-r27-000368` |
 
 ## Keeping the slides and this file together

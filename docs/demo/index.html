@@ -611,10 +611,11 @@ details.about section{margin-bottom:32px}
       against the time left, so a specimen with a short window is flagged sooner. Most of the gain comes from using
       the window: a simple rule that alerts once a set share of the window has passed comes close, and Tracer's lead
       over that rule holds only at the original arrival volume.</li>
-    <li><b>A small model that can be read.</b> The risk is a short formula with a few fitted numbers per group of
-      specimens: how long a normal trip takes, how often a trip runs far longer and still arrives, and how often it never
-      arrives. A laboratory scientist can check those numbers by eye. A more flexible gradient-boosted model is
-      planned as a challenger and has not been run.</li>
+    <li><b>A small model you can read, and a bigger one that warns sooner.</b> The board runs Tracer's survival model
+      live on your phone: a few fitted numbers per group of specimens that a laboratory scientist can check by eye.
+      Tracer's main model is now TracerNet, a neural network that also reads the whole lab and warned about 10 minutes
+      sooner on fresh simulated weeks. It is too big to run in a browser, so Beat Tracer plays against its stored
+      alerts.</li>
     <li><b>Where to look, and who looks.</b> An alert that only says something is wrong is hard to act on. Tracer
       estimates where the specimen probably is from the workflow map and sends the alert to the role that can check
       there. An early version had no stalled state, so it could only explain a long silence as loss, and it sent
@@ -1106,6 +1107,7 @@ var TracerCore = (function () {
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   var B = null, byId = {}, byRun = {}, days = [], mixes = {};
+  var tnAlert = null;   // Beat Tracer's opponent: TracerNet's alert minute for each specimen at the headline budget
   // window: null while every specimen keeps its own stability window, else the minutes the window control sets
   var state = { day: 0, minute: DEFAULT_MINUTE, point: 0, open: null, positions: [], scrub: 0, truth: false, window: null };
   var briefs = { data: null, error: null, loading: false };
@@ -1217,8 +1219,27 @@ var TracerCore = (function () {
     wire();
     renderBoard();
     renderThreshold();
-    initGame();
+    loadNeural().then(initGame, function (err) {
+      $("game-go").textContent = "The game could not load";
+      $("game-status").textContent = "Reading TracerNet's alerts (neural.json) failed: " +
+        (err && err.message ? err.message : String(err)) + ".";
+    });
     fromHash(true);
+  }
+
+  /* TracerNet's stored alerts (neural.json, from src/api/export_neural.py) at the board's headline budget and
+     3-2-1 weights: the game's opponent, since TracerNet is too big to run in the page. */
+  function loadNeural() {
+    return fetch("neural.json").then(function (r) {
+      if (!r.ok) throw new Error("the server answered " + r.status + " " + r.statusText);
+      return r.json();
+    }).then(function (N) {
+      if (N.grid_budgets[N.headline_index] !== B.grid[B.headline_index].budget_per_shift) {
+        throw new Error("TracerNet's headline budget is not the board's");
+      }
+      tnAlert = {};
+      N.specimens.forEach(function (s) { tnAlert[s.id] = s.headline.alert_min; });
+    });
   }
 
   function fillStatic() {
@@ -1238,7 +1259,7 @@ var TracerCore = (function () {
     var headline = $("headline");
     headline.innerHTML = "On the held-out runs, at " + n(g.budget_per_shift) + " alerts per " + n(shiftH) +
       "-hour shift, the median warning before a missed window is " + n(g.model.median_warning_all_breaches_min + " min") +
-      " for Tracer, " + n(g.plan_baseline.median_warning_all_breaches_min + " min") + " for the plan's rule and " +
+      " for Tracer's survival model, " + n(g.plan_baseline.median_warning_all_breaches_min + " min") + " for the plan's rule and " +
       n(g.window_baseline.median_warning_all_breaches_min + " min") + " for a rule that alerts once a fixed share of " +
       "the window has passed. Each method's median counts all " + n(g.model.breaches) + " missed windows, a miss as zero.";
     headline.hidden = false;
@@ -1261,7 +1282,8 @@ var TracerCore = (function () {
   /* How to read the two verdicts at the current grid point. */
   function renderKey() {
     var g = B.grid[state.point], w = B.triage.weights;
-    $("key-tracer").innerHTML = "<b>Tracer</b> is the risk model. It alerts once expected harm reaches " +
+    $("key-tracer").innerHTML = "<b>Tracer</b> on this board is its survival model, which runs live on your phone. " +
+      "It alerts once expected harm reaches " +
       n(threshold().toFixed(3)) + ". The tier weights are " + n(w["1"]) + ", " + n(w["2"]) + " and " + n(w["3"]) +
       " for tiers 1, 2 and 3 (" + esc(B.triage.source) + ").";
     $("key-plan").innerHTML = "<b>The plan's rule</b> is the baseline the project set out to beat. It alerts once a " +
@@ -2011,7 +2033,7 @@ var TracerCore = (function () {
 
   function endRound() {
     var r = game.rounds[game.i], you = C.scoreRound(r, game.calls, GAME_GUESSES);
-    var tr = C.tracerRound(r, function (id) { return byId[id].alerts.model; }), late = LETTERS[r.ids.indexOf(r.miss)];
+    var tr = C.tracerRound(r, function (id) { return tnAlert[id] == null ? null : tnAlert[id]; }), late = LETTERS[r.ids.indexOf(r.miss)];
     game.phase = "result";
     game.results.push({ miss: r.miss, you: you, tracer: tr });
     renderGame();
@@ -2035,7 +2057,7 @@ var TracerCore = (function () {
     function sum(f) { return game.results.reduce(function (a, x) { return a + f(x); }, 0); }
     var you = sum(function (x) { return x.you.warning; }), tracer = sum(function (x) { return x.tracer.warning; });
     var wrong = sum(function (x) { return x.you.wrong; }), flagged = sum(function (x) { return x.tracer.falseAlerts; });
-    var point = tracer > you ? "Tracer spoke up sooner because it knows how long each kind of trip usually takes."
+    var point = tracer > you ? "Tracer spoke up sooner because it learned what a late trip looks like from thousands of simulated lab weeks."
       : (you > tracer ? "You beat Tracer" : "You kept pace with Tracer") + ", with a hint it never gets: you knew one of the six would be late.";
     game.phase = "end";
     $("game-play").hidden = true;

@@ -319,7 +319,7 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
 <li class="seg-item hands-on" style="--secs:210"><a class="seg" href="#beat-8" data-beat="8"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">6:15 to 9:45</span><span class="seg-dots" aria-hidden="true"><span class="dot" data-chip="Daniel"></span><span class="dot" data-chip="Karissa"></span></span><span class="seg-name">Beat Tracer<span class="vh">, Daniel, then Karissa</span> <span class="seg-tag">Hands-on</span></span></a></li>
 <li class="seg-item hands-on" style="--secs:60"><a class="seg" href="#beat-9" data-beat="9"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">9:45 to 10:45</span><span class="seg-dots" aria-hidden="true"><span class="dot" data-chip="Daniel"></span></span><span class="seg-name">Why this design<span class="vh">, Daniel</span> <span class="seg-tag">Hands-on</span></span></a></li>
 <li class="seg-item" style="--secs:45"><a class="seg" href="#beat-10" data-beat="10"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">10:45 to 11:30</span><span class="seg-dots" aria-hidden="true"><span class="dot" data-chip="Karissa"></span><span class="dot" data-chip="Daniel"></span></span><span class="seg-name">How we built it<span class="vh">, Karissa, then Daniel</span></span></a></li>
-<li class="seg-item" style="--secs:30"><a class="seg" href="#beat-11" data-beat="11"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">11:30 to 12:00</span><span class="seg-dots" aria-hidden="true"><span class="dot" data-chip="Daniel"></span></span><span class="seg-name">A neural challenger<span class="vh">, Daniel</span></span></a></li>
+<li class="seg-item" style="--secs:30"><a class="seg" href="#beat-11" data-beat="11"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">11:30 to 12:00</span><span class="seg-dots" aria-hidden="true"><span class="dot" data-chip="Daniel"></span></span><span class="seg-name">TracerNet wins<span class="vh">, Daniel</span></span></a></li>
 <li class="seg-item" style="--secs:45"><a class="seg" href="#beat-12" data-beat="12"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">12:00 to 12:45</span><span class="seg-dots" aria-hidden="true"><span class="dot" data-chip="Karissa"></span></span><span class="seg-name">Limits and next steps<span class="vh">, Karissa</span></span></a></li>
 <li class="seg-item" style="--secs:135"><a class="seg" href="#beat-13" data-beat="13"><span class="seg-track" aria-hidden="true"></span><span class="seg-time t-num">12:45 to 15:00</span><span class="seg-dots" aria-hidden="true"><span class="dot" data-chip="Daniel"></span><span class="dot" data-chip="Karissa"></span></span><span class="seg-name">Questions<span class="vh">, Both</span></span></a></li>
   <li class="playhead" id="playhead" aria-hidden="true"></li>
@@ -537,13 +537,13 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
 <div class="gutter" aria-hidden="true"><span class="fill"></span></div>
 <header class="beat-head">
 <p class="beat-meta t-meta"><span class="window">11:30 to 12:00</span> <span class="slide-no">Slide 11</span></p>
-<h2 class="beat-name t-beat" id="beat-11-name">A neural challenger</h2>
+<h2 class="beat-name t-beat" id="beat-11-name">TracerNet wins</h2>
 <p class="beat-who t-meta"><span class="who-list"><span class="chip" data-chip="Daniel">Daniel</span></span><span class="room">The room is: listening</span></p>
-<p class="screen t-small"><span class="screen-label">On screen</span> &quot;We also trained a neural network.&quot; Average warning at 6 alerts per 8-hour shift, on a second, busier set of simulated lab weeks, with a miss counting as zero: the window rule 7.4 minutes, our survival model refit to those weeks 13.7, TracerNet 23.9. By the rule we set before testing, it did not win, so the survival model stays in charge.</p>
+<p class="screen t-small"><span class="screen-label">On screen</span> &quot;TracerNet now runs Tracer.&quot; 23 minutes of warning, on 776 lab weeks it had never seen. Average warning at 6 alerts per 8-hour shift, a miss counting as zero: the window rule 7.6 minutes, our survival model refit to those weeks 13.6, TracerNet 23.3. The rule was set before testing on fresh data; it passed, so the survival model is now a baseline.</p>
 </header>
 <div class="block" data-who="Daniel">
 <p class="who t-label">Daniel</p>
-<p class="line">We also trained a neural network, TracerNet, on a second, busier set of simulated lab weeks. It warned about twenty-four minutes ahead on average, against fourteen for our survival model. But by the rule we wrote down before testing, it didn't win. So the survival model stays in charge, and TracerNet stays a challenger.</p>
+<p class="line">We also trained a neural network, TracerNet. We wrote down the rule it had to pass, then tested it once, on 776 simulated lab weeks it had never seen. It warned twenty-three minutes ahead on average, against fourteen for our survival model. It passed. So TracerNet now runs Tracer, and the survival model is a baseline.</p>
 <p class="line sd">[About 55 words.]</p>
 </div>
 </section>
@@ -607,7 +607,7 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
 </li>
 <li class="answer" data-who="Daniel" id="answer-5">
 <div class="q-row"><p class="q t-question"><span class="q-num t-num">5</span> Why a simple model and not deep learning?</p><span class="chip" data-chip="Daniel">Daniel</span></div>
-<p class="a t-answer">We trained one too, TracerNet, and it gave more warning on a second set of simulated weeks, but it didn't pass the rule we set before testing. A lab scientist can read the survival model's numbers: how long a normal trip takes, how often one runs far longer and still arrives, how often it never does. So the survival model stays in charge.</p>
+<p class="a t-answer">We have both. TracerNet, a neural network, now runs Tracer: it passed a rule we wrote down before testing it once on fresh simulated weeks. The survival model stays as a baseline a lab scientist can read: how long a normal trip takes, how often one runs far longer and still arrives, how often it never does. It is also the model that runs live on your phone.</p>
 </li>
 <li class="answer" data-who="Daniel" id="answer-6">
 <div class="q-row"><p class="q t-question"><span class="q-num t-num">6</span> How often is it right about where the specimen is?</p><span class="chip" data-chip="Daniel">Daniel</span></div>
@@ -615,7 +615,7 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
 </li>
 <li class="answer" data-who="Daniel" id="answer-7">
 <div class="q-row"><p class="q t-question"><span class="q-num t-num">7</span> How many false alarms?</p><span class="chip" data-chip="Daniel">Daniel</span></div>
-<p class="a t-answer">Plenty, by design. At 6 alerts a shift about a third of all specimens get an alert, and most of them arrive in time. Its risk scores are only slightly sharper than guessing the average rate, so the gain is in timing, not in sorting.</p>
+<p class="a t-answer">Plenty, by design. At 6 alerts a shift, about half of TracerNet's alerts go to specimens that arrive in time, about three a shift. That's still the fewest per alert of any method we tested.</p>
 </li>
 <li class="answer" data-who="Karissa" id="answer-8">
 <div class="q-row"><p class="q t-question"><span class="q-num t-num">8</span> Why does the clock stop at receipt?</p><span class="chip" data-chip="Karissa">Karissa</span></div>
@@ -654,7 +654,7 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
 <tr><td>6:15 to 9:45</td><td>8</td><td>Beat Tracer</td><td>Daniel, then Karissa</td><td>Seeded QR code, then the game on the projector</td><td>playing</td></tr>
 <tr><td>9:45 to 10:45</td><td>9</td><td>Why this design</td><td>Daniel</td><td>The threshold slider, then the numbers slide</td><td>dragging the slider</td></tr>
 <tr><td>10:45 to 11:30</td><td>10</td><td>How we built it</td><td>Karissa, then Daniel</td><td>The data and the model, from briefs to the demo</td><td>listening</td></tr>
-<tr><td>11:30 to 12:00</td><td>11</td><td>A neural challenger</td><td>Daniel</td><td>TracerNet's warning beside the baselines, and the verdict</td><td>listening</td></tr>
+<tr><td>11:30 to 12:00</td><td>11</td><td>TracerNet wins</td><td>Daniel</td><td>TracerNet's warning beside the baselines on fresh data, and the verdict</td><td>listening</td></tr>
 <tr><td>12:00 to 12:45</td><td>12</td><td>Limits and next steps</td><td>Karissa</td><td>Limits slide</td><td>listening</td></tr>
 <tr><td>12:45 to 15:00</td><td>13</td><td>Questions</td><td>Both</td><td>Closing slide with the QR code and the repo</td><td>asking</td></tr>
 </tbody>
@@ -674,13 +674,13 @@ td:first-child{font-variant-numeric:tabular-nums;color:var(--ink-mute);width:4.5
 <tr><td>8</td><td>Rounds 2 and 3. Score screens up by about 8:45.</td></tr>
 <tr><td>9</td><td>Karissa: who beat Tracer, and what made you call it. Daniel on the threshold slider at 9:45.</td></tr>
 <tr><td>10</td><td>Daniel on the numbers. At 10:45 Karissa on how we built the data, then Daniel on the model.</td></tr>
-<tr><td>11</td><td>Daniel on the neural challenger at 11:30.</td></tr>
+<tr><td>11</td><td>Daniel on TracerNet winning at 11:30.</td></tr>
 <tr><td>12</td><td>Karissa on the limits at 12:00. Her close at about 12:45, then questions.</td></tr>
 <tr><td>13</td><td>Questions.</td></tr>
 <tr><td>14</td><td>Questions. Stop at 15:00 even mid-question, and offer to talk after.</td></tr>
 </tbody>
 </table></div>
-<p class="prose">If the hands-on part runs long, cut in this order: Karissa's projector walkthrough on slide 7 (the room keeps exploring alone), then the numbers slide in beat 9 (say the one headline sentence and stay on the slider), then the neural challenger on slide 11 (prepared answer 5 covers it). The game shows its end screen only after round 3, so if the room is still on round 2 at 8:45, Karissa asks for hands from the round result screens instead: who called it before Tracer did. Never cut the board or the limits.</p>
+<p class="prose">If the hands-on part runs long, cut in this order: Karissa's projector walkthrough on slide 7 (the room keeps exploring alone), then the numbers slide in beat 9 (say the one headline sentence and stay on the slider), then TracerNet winning on slide 11 (prepared answer 5 covers it). The game shows its end screen only after round 3, so if the room is still on round 2 at 8:45, Karissa asks for hands from the round result screens instead: who called it before Tracer did. Never cut the board or the limits.</p>
 <p class="prose">Beat Tracer is the longest beat, 3:30 of the 15 minutes, and with it the questions get 2:15. Without it the questions get 5:45 and the hands-on time is the board and the slider, 3:30. It stays in until we decide at rehearsal.</p>
 </section>
 

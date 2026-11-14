@@ -4,6 +4,7 @@
 import { Chart, SCREEN_COLORS } from '../kit/screens';
 import type { Place } from '../model/fates';
 import type { Reading } from '../model/state';
+import { CHART_FLOOR, riskText, scoreAt, type NetStory } from '../model/tracernet';
 
 const MONO = '"DM Mono", ui-monospace, monospace';
 const CREAM = '#f1e2c0';
@@ -128,6 +129,134 @@ export function drawChart(g: CanvasRenderingContext2D, size: { w: number; h: num
     g.restore();
   }
   plot.marker(r.minute, r.risk, { drop: true });
+}
+
+/** Where a risk sits on TracerNet's chart, as a fraction of its height: a log axis from CHART_FLOOR to 100%. */
+export const netAxis = (p: number): number => Math.log10(Math.max(CHART_FLOOR, p) / CHART_FLOOR) / Math.log10(1 / CHART_FLOOR);
+
+export interface NetChartData {
+  /** The page's reading, with TracerNet's alert line and alert in it. */
+  reading: Reading;
+  /** TracerNet's p_miss now; null before its first tick. */
+  score: number | null;
+  story: NetStory;
+  tick: number;
+}
+
+/**
+ * The self-playing page's chart: TracerNet's p_miss so far, a step at each 5-minute tick, against its
+ * alert line. The line sits near 2% and the curve climbs to 100%, so the axis is logarithmic (1%, 10%,
+ * 100%) to keep both readable; no value is rescaled. TracerNet scores only the silence so far, so
+ * nothing is projected ahead, and the curve ends at the receipt scan, where the outcome is known.
+ */
+export function drawNetChart(g: CanvasRenderingContext2D, size: { w: number; h: number }, d: NetChartData): void {
+  const r = d.reading;
+  const rect = { x: size.w * PLOT.x0, y: size.h * PLOT.y0, w: size.w * (PLOT.x1 - PLOT.x0), h: size.h * (PLOT.y1 - PLOT.y0) };
+  const plot = new Chart(g, rect, [0, CHART_T], [0, 1]);
+  const k = plot.k;
+  plot.grid({ xStep: 30 }).xLabels([0, 30, 60, 90, 120], (v) => `${v}`);
+  g.save();
+  g.strokeStyle = SCREEN_COLORS.grid;
+  g.lineWidth = 1 * k;
+  g.fillStyle = SCREEN_COLORS.text;
+  g.font = `500 ${Math.round(8.5 * k)}px ${MONO}`;
+  g.textAlign = 'right';
+  g.textBaseline = 'middle';
+  for (const [p, label] of [[0.01, '1%'], [0.1, '10%'], [1, '100%']] as const) {
+    const y = plot.py(netAxis(p));
+    g.beginPath();
+    g.moveTo(rect.x, y);
+    g.lineTo(rect.x + rect.w, y);
+    g.stroke();
+    g.fillText(label, rect.x - 5 * k, y);
+  }
+  g.textAlign = 'left';
+  g.textBaseline = 'top';
+  g.fillText('MIN OF SILENCE', rect.x + rect.w - 74 * k, rect.y + rect.h + 15 * k);
+  g.restore();
+  if (r.windowMin < CHART_T) plot.region(r.windowMin, CHART_T, { label: 'window closed' });
+  plot.caption('TracerNet: risk of missing the window');
+  g.save();
+  g.font = `500 ${Math.round(13 * k)}px ${MONO}`;
+  g.fillStyle = SCREEN_COLORS.cyan;
+  g.shadowColor = SCREEN_COLORS.cyan;
+  g.shadowBlur = 5 * k;
+  g.textAlign = 'right';
+  g.textBaseline = 'bottom';
+  g.fillText(d.score === null ? '—' : riskText(r.risk), rect.x + rect.w, rect.y - 5 * k);
+  g.restore();
+
+  // The alert line: amber, dashed.
+  const ly = plot.py(netAxis(r.alertLine));
+  g.save();
+  g.strokeStyle = SCREEN_COLORS.amber;
+  g.globalAlpha = 0.9;
+  g.lineWidth = 1.6 * k;
+  g.setLineDash([5 * k, 4 * k]);
+  g.beginPath();
+  g.moveTo(rect.x, ly);
+  g.lineTo(rect.x + rect.w, ly);
+  g.stroke();
+  g.setLineDash([]);
+  g.fillStyle = SCREEN_COLORS.amber;
+  g.font = `500 ${Math.round(8.5 * k)}px ${MONO}`;
+  g.textAlign = 'right';
+  g.textBaseline = 'bottom';
+  g.fillText(`ALERT LINE ${riskText(r.alertLine)}`, rect.x + rect.w - 8 * k, ly - 4 * k);
+  g.restore();
+
+  // What TracerNet has said so far: each tick's score held until the next, up to now or the receipt scan.
+  const end = r.received ?? r.minute;
+  const pts: [number, number][] = [];
+  for (let t = d.tick; t <= end; t += d.tick) {
+    if (pts.length) pts.push([t, pts[pts.length - 1][1]]);
+    pts.push([t, netAxis(scoreAt(d.story, t, d.tick)!)]);
+  }
+  if (pts.length) pts.push([end, pts[pts.length - 1][1]]);
+  plot.curve(pts, { width: 2.4, glow: 9 });
+  if (r.phase === 'silent' && d.score !== null) plot.marker(r.minute, netAxis(d.score), { drop: true });
+
+  // The alert, once it has fired: on the line at its minute, where the curve first reaches it. Drawn
+  // over the marker, which stands just above it at the alert's own minute.
+  if (r.alert.fired) {
+    const ax = plot.px(r.alert.minute!);
+    g.save();
+    g.fillStyle = SCREEN_COLORS.amber;
+    g.shadowColor = SCREEN_COLORS.amber;
+    g.shadowBlur = 8 * k;
+    g.beginPath();
+    g.moveTo(ax, ly - 6 * k);
+    g.lineTo(ax + 4.5 * k, ly);
+    g.lineTo(ax, ly + 6 * k);
+    g.lineTo(ax - 4.5 * k, ly);
+    g.closePath();
+    g.fill();
+    g.shadowBlur = 0;
+    g.font = `500 ${Math.round(9 * k)}px ${MONO}`;
+    g.textBaseline = 'top';
+    // Left of the crossing the curve runs under the line, so the label sits above the line there, clear
+    // of the marker's halo.
+    const text = `ALERT AT ${r.alert.minute} MIN`;
+    g.textAlign = 'right';
+    g.fillText(text, Math.max(ax - 12 * k, rect.x + g.measureText(text).width), ly - 20 * k);
+    g.restore();
+  }
+  if (r.received !== null) {
+    const t = r.received;
+    g.save();
+    g.strokeStyle = CREAM;
+    g.fillStyle = CREAM;
+    g.lineWidth = 1.4 * k;
+    g.beginPath();
+    g.moveTo(plot.px(t), rect.y + rect.h);
+    g.lineTo(plot.px(t), rect.y + rect.h - 9 * k);
+    g.stroke();
+    g.font = `500 ${Math.round(7.5 * k)}px ${MONO}`;
+    g.textAlign = 'center';
+    g.textBaseline = 'bottom';
+    g.fillText('RECEIVED', plot.px(t), rect.y + rect.h - 10 * k);
+    g.restore();
+  }
 }
 
 export interface BarsData {

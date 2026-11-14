@@ -323,7 +323,7 @@ def test_the_page_loads_nothing_from_another_origin():
         assert not re.match(r"(?i)\s*(?:https?:)?//", value), value
     assert set(re.findall(r"(?i)https?://[^\s\"'`)<>]+", html)) <= {SVG_NAMESPACE}  # a namespace, never fetched
     scripts = "".join(re.findall(r"<script\b[^>]*>(.*?)</script>", html, re.S))
-    assert sorted(re.findall(r"""\bfetch\(\s*["']([^"']+)["']""", scripts)) == ["briefs.json", "bundle.json"]
+    assert sorted(re.findall(r"""\bfetch\(\s*["']([^"']+)["']""", scripts)) == ["briefs.json", "bundle.json", "neural.json"]
     assert not re.search(r"<script\b[^>]*\bsrc=|<link\b[^>]*\bstylesheet|@import|\bimport\s*\(|\bimportScripts\b", html)
 
 
