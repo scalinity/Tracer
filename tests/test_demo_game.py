@@ -1,15 +1,19 @@
-"""Beat Tracer, the class activity on the demo page (plan task P5).
+"""Beat Tracer, the game on the phone page (plan task P5).
 
 The game's pure parts live in the page's <script id="core"> block and run here under node, as in
 tests/test_demo_page.py: the seeded generator against an independent Python mulberry32, the rounds for seed 18
 pinned once, round selection held to the fields it may read and to its rules for every seed tried, and the
-scoring of a player and of Tracer. A headless Chrome run opens the QR code's address, ?seed=18#beat, and plays a
-whole game in real time: the game alone on the screen, nothing to scroll at a phone's visible height, and both
+scoring of a player and of Tracer. The game reads the slim docs/demo/game.json (scripts/build_demo_game.py),
+which must draw the same rounds as the bundle for every seed and carry TracerNet's alerts unchanged. A headless
+Chrome run opens the QR code's address, ?seed=18#beat, and plays a whole game in real time: the game alone on
+the screen, one tap to start and then one tap per round, nothing to scroll at a phone's visible height, and both
 totals added up from the rounds.
 """
 
+import importlib.util
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -156,15 +160,60 @@ def test_a_seed_in_the_address_is_whole_digits_within_32_bits():
     assert got == [18, 0, 4294967295, None, None, None, None, None, 18, None, None]
 
 
-def test_the_activity_card_lists_three_things_to_try_and_two_questions():
+def test_the_rule_is_one_short_line():
     html = page_html()
-    card = html[html.index('<section id="activity"'):html.index("</section>", html.index('<section id="activity"'))]
-    assert card.count("<li>") == 5
-    steps = card[card.index('class="act-steps"'):card.index("</ol>")]
-    assert [h for h in ("#board", "#threshold", "#beat") if f'href="{h}"' in steps] == ["#board", "#threshold", "#beat"]
-    questions = card[card.index('class="act-qs"'):]
-    assert questions.count("<li>") == 2 and questions.count("?") == 2
-    assert html.index('id="activity"') < html.index('id="problem"')  # at the top of the page
+    rules = re.findall(r'<p class="bt-rules"[^>]*>(.*?)</p>', html)
+    assert rules == ["One will be late. Tap it before Tracer does."]
+
+
+# ---- the slim game file, docs/demo/game.json ----
+
+GAME = ROOT / "docs" / "demo" / "game.json"
+
+
+def load_builder():
+    spec = importlib.util.spec_from_file_location("build_demo_game", ROOT / "scripts" / "build_demo_game.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_game_json_is_what_the_script_writes_from_the_bundle_and_neural_json():
+    same = load_builder().build() == GAME.read_text(encoding="utf-8")
+    assert same, "docs/demo/game.json differs from bundle.json and neural.json: run python scripts/build_demo_game.py"
+    assert GAME.stat().st_size < 250_000  # against 5.7 MB for bundle.json and neural.json together
+
+
+def test_game_json_names_every_kind_of_specimen_in_plain_words(bundle):
+    name = load_builder().plain_name
+    assert {t: name(t) for t in sorted({s["type"] for s in bundle["specimens"]})} == {
+        "BAL, refrigerated": "Lung wash", "BAL, room temp": "Lung wash",
+        "body fluid, blood culture bottle (peritoneal, pleural)": "Body fluid",
+        "body fluid, sterile container, refrigerated": "Body fluid",
+        "body fluid, sterile container, room temp (pleural, peritoneal, synovial, pericardial)": "Body fluid",
+        "culture swab (BBL, Stuart's)": "Swab", "eSwab": "Swab", "pleural fluid, anaerobic transport vial": "Body fluid",
+        "tissue": "Tissue", "urine, boric acid": "Urine", "urine, unpreserved, refrigerated": "Urine",
+        "urine, unpreserved, room temp": "Urine"}
+
+
+@needs_node
+def test_game_json_draws_the_same_rounds_as_the_bundle_for_every_seed_and_keeps_tracernets_alerts(bundle):
+    seeds = list(range(300)) + [18, 99999, 4294967295]
+    got = run_core("""
+      var G = JSON.parse(fs.readFileSync(DATA.game, "utf8")), f = G.fields;
+      var slim = G.rows.map(function (row) { var s = {}; f.forEach(function (k, i) { s[k] = row[i]; }); return s; });
+      var differ = DATA.seeds.filter(function (seed) {
+        return JSON.stringify(C.gameRounds(slim, seed)) !== JSON.stringify(C.gameRounds(B.specimens, seed));
+      });
+      out({differ: differ, eighteen: C.gameRounds(slim, 18), n: slim.length,
+           alerts: slim.map(function (s) { return [s.id, s.tracer_alert_min]; })});
+    """, {"seeds": seeds, "game": str(GAME)})
+    assert got["differ"] == [] and got["eighteen"] == SEED_18
+    assert got["n"] == len(bundle["specimens"]) == 2378
+    neural = {s["id"]: s["headline"]["alert_min"]
+              for s in json.loads((ROOT / "docs" / "demo" / "neural.json").read_text(encoding="utf-8"))["specimens"]}
+    assert dict(got["alerts"]) == {s["id"]: neural[s["id"]] for s in bundle["specimens"]}
+    assert sum(a is not None for _, a in got["alerts"]) > 100
 
 
 GAME_CHECK = """
@@ -174,39 +223,41 @@ const { chromium } = require(PLAYWRIGHT);
   try { browser = await chromium.launch({ channel: "chrome", headless: true }); }
   catch (e) { console.log(JSON.stringify({ skip: "Google Chrome did not start: " + String(e.message).split("\\n")[0] })); return; }
   const out = { runs: [] };
-  // 390 by 664 is what Safari on an iPhone shows with its bars; the laptop plays one round.
+  // 390 by 664 is what Safari on an iPhone shows with its bars; the laptop plays one round and sees the next begin.
   for (const [width, height, scheme] of [[390, 664, "dark"], [1440, 900, "light"]]) {
     const context = await browser.newContext({ viewport: { width, height }, colorScheme: scheme });
     const page = await context.newPage();
-    const run = { width, messages: [], errors: [], foreign: [], overflow: [], scroll: [] };
+    const run = { width, messages: [], errors: [], foreign: [], asked: [], overflow: [], scroll: [], taps: 0, goShown: [] };
     page.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") run.messages.push(m.type() + ": " + m.text()); });
     page.on("pageerror", (e) => run.errors.push(String(e)));
-    page.on("request", (r) => { const u = r.url(); if (!u.startsWith(BASE + "/") && !u.startsWith("data:")) run.foreign.push(u); });
+    page.on("request", (r) => { const u = r.url(); if (u.startsWith(BASE + "/")) run.asked.push(u.slice(BASE.length)); else if (!u.startsWith("data:")) run.foreign.push(u); });
     const fit = async () => {
       run.overflow.push(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth));
       run.scroll.push(await page.evaluate(() => document.documentElement.scrollHeight - document.documentElement.clientHeight));
     };
+    const game = () => page.evaluate(() => window.TracerDemo.game());
     // the address on the slides' QR code
     await page.goto(BASE + "/demo/index.html?seed=18#beat", { waitUntil: "load" });
     await page.waitForSelector("#game-go:not([disabled])");
-    run.alone = await page.evaluate(() => ["activity", "board", "threshold", "about"].every((id) => document.getElementById(id).offsetParent === null)
-      && document.querySelector(".mast").offsetParent === null && document.getElementById("beat").offsetParent !== null);
+    run.alone = await page.evaluate(() => ["top", "watch", "warning", "limits"].every((id) => document.getElementById(id).offsetParent === null)
+      && document.getElementById("beat").offsetParent !== null);
     run.targets = await page.$$eval("#game-go, #game-feed .bt-card", (els) => els.map((e) => e.getBoundingClientRect().height));
+    run.ready = await page.textContent("#beat");
     await fit();
     const started = Date.now();
-    // Play as a person would, without reading the answer: tap the one card still waiting for its scan, or after
-    // 40 minutes the first waiting one.
+    // One tap starts the game, from the keyboard as a player without a mouse would. After it the player only
+    // guesses: every round starts by itself. Play as a person would, without reading the answer: tap the one card
+    // still waiting for its scan, or after 40 minutes the first waiting one.
+    await page.focus("#game-go");
+    await page.keyboard.press("Enter");
+    run.taps++;
     const rounds = width === 390 ? 3 : 1;
     run.focus = [];
     for (let round = 0; round < rounds; round++) {
-      // The first round starts from the keyboard, as a player without a mouse would; the hidden Start button must
-      // hand focus to the first card still waiting, or Tab would skip all six cards that precede it.
-      if (round === 0) { await page.focus("#game-go"); await page.keyboard.press("Enter"); }
-      else await page.click("#game-go");
-      const focusNow = () => page.evaluate(() => {
-        const open = Array.from(document.querySelectorAll("#game-feed .bt-card:not(:disabled)"));
-        return open.indexOf(document.activeElement);
-      });
+      await page.waitForFunction((r) => { const g = window.TracerDemo.game(); return g.round === r && g.phase === "running"; }, round, { timeout: 15000 });
+      run.goShown.push(await page.isVisible("#game-go"));
+      // focus is on the first card still waiting, and Tab moves on to the next one
+      const focusNow = () => page.evaluate(() => Array.from(document.querySelectorAll("#game-feed .bt-card:not(:disabled)")).indexOf(document.activeElement));
       const at = { start: await focusNow() };
       if (round === 0) { await page.keyboard.press("Tab"); at.tab = await focusNow(); }
       run.focus.push(at);
@@ -216,22 +267,26 @@ const { chromium } = require(PLAYWRIGHT);
           open: Array.from(document.querySelectorAll("#game-feed .bt-card:not(:disabled)")).map((b) => b.getAttribute("data-id")) }));
         if (st.phase !== "running") break;
         if (round === 0 && st.clock >= 6 && run.scroll.length === 1) await fit();
-        if (st.open.length === 1 || (st.clock >= 40 && st.open.length)) await page.click('#game-feed .bt-card[data-id="' + st.open[0] + '"]');
+        if (st.open.length === 1 || (st.clock >= 40 && st.open.length)) { await page.click('#game-feed .bt-card[data-id="' + st.open[0] + '"]'); run.taps++; }
       }
+      await page.waitForTimeout(150);
+      run.result = await page.textContent("#game-status");
       await fit();
     }
-    run.result = await page.textContent("#game-status");
     await page.locator("#beat").screenshot({ path: SHOTS + "/game-round-" + width + ".png" });
     if (rounds === 3) {
-      await page.click("#game-go");
-      await page.waitForSelector("#game-end:not([hidden])");
+      await page.waitForSelector("#game-end:not([hidden])", { timeout: 15000 });
       run.seconds = (Date.now() - started) / 1000;
       run.end = await page.textContent("#game-end");
-      run.scores = await page.$$eval("#game-end .bt-score dd .num", (els) => els.map((e) => e.textContent));
+      run.scores = await page.$$eval("#game-end .bt-score dd", (els) => els.map((e) => e.firstChild.textContent));
       await fit();
       await page.locator("#beat").screenshot({ path: SHOTS + "/game-end-" + width + ".png" });
+    } else {
+      // with no tap, the next round counts down and starts by itself
+      await page.waitForFunction(() => { const g = window.TracerDemo.game(); return g.round === 1 && g.phase === "running"; }, null, { timeout: 15000 });
+      run.nextStarted = true;
     }
-    run.game = await page.evaluate(() => window.TracerDemo.game());
+    run.game = await game();
     out.runs.push(run);
     await context.close();
   }
@@ -242,7 +297,7 @@ const { chromium } = require(PLAYWRIGHT);
 
 
 @needs_node
-def test_a_whole_game_with_seed_18_finishes_in_under_two_minutes_in_headless_chrome(tmp_path):
+def test_a_whole_game_with_seed_18_takes_one_tap_a_round_and_finishes_in_under_two_minutes_in_headless_chrome(tmp_path):
     playwright = playwright_dir()
     if playwright is None:
         pytest.skip("Playwright is not installed in visuals/exhibit-3d/node_modules")
@@ -270,26 +325,29 @@ def test_a_whole_game_with_seed_18_finishes_in_under_two_minutes_in_headless_chr
         pytest.skip(result["skip"])
     for run in result["runs"]:
         assert run["messages"] == [] and run["errors"] == [] and run["foreign"] == [], run
+        # the game reads the slim game.json alone: not the 3.2 MB bundle or the 2.5 MB neural file
+        assert sorted(set(run["asked"])) == ["/demo/game.json", "/demo/index.html?seed=18", "/demo/results.json"], run["asked"]
         assert run["alone"], "the address #beat shows the game alone"
+        assert "One will be late. Tap it before Tracer does." in run["ready"]
         assert run["game"]["seed"] == 18 and run["game"]["rounds"] == SEED_18
-        last = run["game"]["results"][-1]
-        assert "Tracer" in run["result"] and last["miss"] == SEED_18[len(run["game"]["results"]) - 1]["miss"]
+        played = [r for r in run["game"]["results"]]
+        assert "Tracer" in run["result"] and played[-1]["miss"] == SEED_18[len(played) - 1]["miss"]
         assert all(o <= 0 for o in run["overflow"]), run["overflow"]
         assert all(s <= 0 for s in run["scroll"]), f"the game scrolls at {run['width']} px: {run['scroll']}"
         assert all(h >= 44 for h in run["targets"]), run["targets"]
-        # every round starts with focus on the first waiting card, and Tab moves on to the next one
+        # one tap on Play, then one tap per round at most: no Start or Next button ever shows while playing
+        assert run["taps"] <= 1 + len(played) and run["goShown"] == [False] * len(run["goShown"]), run
         assert [f["start"] for f in run["focus"]] == [0] * len(run["focus"]), run["focus"]
         assert run["focus"][0]["tab"] == 1, run["focus"]
+    assert result["runs"][1]["nextStarted"]
     phone = result["runs"][0]
     assert phone["width"] == 390 and phone["game"]["phase"] == "end" and len(phone["game"]["results"]) == 3
     assert phone["seconds"] < 120, phone["seconds"]
-    assert "You vs Tracer" in phone["end"] and "Also flagged" in phone["end"]
     you = sum(r["you"]["warning"] for r in phone["game"]["results"])
     tracer = sum(r["tracer"]["warning"] for r in phone["game"]["results"])
-    def mins(m):  # the page's own format: hours from 180 minutes up
-        m = round(m)
-        return f"{m} min" if abs(m) < 180 else f"{m // 60} h" + (f" {m % 60} min" if m % 60 else "")
-    assert phone["scores"] == [mins(you), mins(tracer)]
+    # two big numbers in minutes of warning over the three rounds
+    assert phone["scores"] == [str(round(you)), str(round(tracer))]
+    assert "Minutes of warning over 3 rounds." in phone["end"] and "Play again" in phone["end"]
     # Tracer plays TracerNet's stored alerts at the headline budget (docs/demo/neural.json), round by round: on the
     # seed-18 rounds at 5, 15 and 15 minutes, 205 minutes early in all, and 13 others flagged that arrived in time
     neural = {s["id"]: s["headline"]["alert_min"]
@@ -298,5 +356,7 @@ def test_a_whole_game_with_seed_18_finishes_in_under_two_minutes_in_headless_chr
     assert [r["tracer"]["warning"] for r in phone["game"]["results"]] == [115, 45, 45] and tracer == 205
     assert [r["tracer"]["falseAlerts"] for r in phone["game"]["results"]] == [
         sum(neural[i] is not None for i in r["ids"] if i != r["miss"]) for r in SEED_18] == [5, 5, 3]
-    point = ("Tracer spoke up sooner" if tracer > you else "with a hint it never gets")
-    assert point in phone["end"]
+    # the honest line: Tracer had no one-guess limit, and it flagged specimens that arrived fine
+    assert "Tracer also flagged 13 specimens that arrived fine." in phone["end"]
+    verdict = "Tracer warned sooner." if tracer > you else "You beat Tracer!" if you > tracer else "A tie."
+    assert verdict in phone["end"]

@@ -1,14 +1,16 @@
-"""The public demo page, docs/demo/index.html (plan tasks P2 to P4 and P6).
+"""The public phone page, docs/demo/index.html, and the survival model's browser code, docs/demo/survival.js.
 
-The page keeps its arithmetic in one <script id="core"> block that never touches the page. These tests slice
-that block out and run it under node, as tests/test_risk.py does with visuals/architecture.html, and hold it to
-the Python: the normal CDF to scipy, the risk to the bundle's arrays, the expected arrival to
-src/models/risk.arrival_quantile, both alert rules to the bundle's alert minutes for every specimen, and the
-threshold control's recomputation to the bundle's grid of 20 operating points. The 3D bench is checked as a
-byte-identical copy that loads nothing from elsewhere, and its link for leaking a truth not yet shown.
-Static checks keep the page self-contained and honest, and a headless Chrome check loads it at phone and laptop
-widths. The browser check needs node, Playwright (from visuals/exhibit-3d/node_modules) and Google Chrome, and
-is skipped without them. Set TRACER_DEMO_SHOTS to a folder outside the repository to keep its screenshots.
+The page shows TracerNet's committed results only and runs no model. The survival model's browser code that the
+page once ran live is kept, unchanged and not loaded by the page, in docs/demo/survival.js. These tests run it
+under node, as tests/test_risk.py does with visuals/architecture.html, and hold it to the Python: the normal CDF
+to scipy, the risk to the bundle's arrays, the expected arrival to src/models/risk.arrival_quantile, both alert
+rules to the bundle's alert minutes for every specimen, and the threshold recomputation to the bundle's grid of 20
+operating points. Beat Tracer's pure functions stay in the page's <script id="core"> block (tests/test_demo_game.py).
+The 3D bench folder is checked as a byte-identical copy that loads nothing from elsewhere. Static checks keep the
+page self-contained, in the contract's section order and honest, and a headless Chrome check loads it at phone
+and laptop widths. The browser check needs node, Playwright (from visuals/exhibit-3d/node_modules) and Google
+Chrome, and is skipped without them. Set TRACER_DEMO_SHOTS to a folder outside the repository to keep its
+screenshots.
 """
 
 import hashlib
@@ -32,15 +34,16 @@ from src.models import risk
 ROOT = Path(__file__).resolve().parents[1]
 DEMO = ROOT / "docs" / "demo"
 PAGE = DEMO / "index.html"
+SURVIVAL = DEMO / "survival.js"
 BUNDLE = DEMO / "bundle.json"
 BRIEFS = DEMO / "briefs.json"
 NODE = shutil.which("node")
 needs_node = pytest.mark.skipif(NODE is None, reason="node is not installed")
 SVG_NAMESPACE = "http://www.w3.org/2000/svg"
 
-# The page's core with the bundle loaded and every specimen prepared the way the page prepares it.
+# The survival model with the bundle loaded and every specimen prepared the way the page once prepared it.
 PRELUDE = """
-var C = TracerCore, fs = require("fs");
+var fs = require("fs");
 var B = JSON.parse(fs.readFileSync(DATA.bundle, "utf8"));
 var H = B.headline_index, THETA = B.grid[H].model.harm_threshold, mixes = {};
 function mixOf(s) { return mixes[s.group] || (mixes[s.group] = C.mixture(B.model, s.group)); }
@@ -67,13 +70,16 @@ def core_js() -> str:
 
 
 def run_core(harness: str, data: dict | None = None, prelude: bool = True):
-    """Run the page's core under node with `harness` after it. `data` arrives as the global DATA, with the
-    bundle's path in DATA.bundle; the harness prints one JSON value."""
+    """Run docs/demo/survival.js and the page's core under node with `harness` after them. C holds both
+    (TracerSurvival and the page's TracerCore; the two functions they share are the same code). `data` arrives
+    as the global DATA, with the bundle's path in DATA.bundle; the harness prints one JSON value."""
     payload = {"bundle": str(BUNDLE), **(data or {})}
     with tempfile.TemporaryDirectory() as tmp:
         data_path, script = Path(tmp) / "data.json", Path(tmp) / "run.js"
         data_path.write_text(json.dumps(payload), encoding="utf-8")
-        script.write_text(core_js() + f"\nvar DATA = JSON.parse(require('fs').readFileSync({json.dumps(str(data_path))}, 'utf8'));\n"
+        script.write_text(SURVIVAL.read_text(encoding="utf-8") + "\n" + core_js()
+                          + "\nvar C = Object.assign({}, TracerSurvival, TracerCore);"
+                          + f"\nvar DATA = JSON.parse(require('fs').readFileSync({json.dumps(str(data_path))}, 'utf8'));\n"
                           + "function out(x) { console.log(JSON.stringify(x)); }\n"
                           + (PRELUDE if prelude else "") + harness, encoding="utf-8")
         done = subprocess.run([NODE, str(script)], capture_output=True, text=True, timeout=120)
@@ -86,13 +92,13 @@ def bundle():
     return json.loads(BUNDLE.read_text(encoding="utf-8"))
 
 
-# ---- the core against the Python ----
+# ---- the survival model (docs/demo/survival.js) against the Python ----
 
 @needs_node
 def test_the_normal_cdf_matches_scipy_to_1e_12_from_minus_8_to_8():
     rng = random.Random(7)
     zs = [-8 + i / 1000 for i in range(16001)] + [rng.uniform(-8, 8) for _ in range(2000)]
-    got = run_core("console.log(JSON.stringify(DATA.z.map(TracerCore.Phi)));", {"z": zs}, prelude=False)
+    got = run_core("console.log(JSON.stringify(DATA.z.map(C.Phi)));", {"z": zs}, prelude=False)
     want = ndtr(zs)
     assert max(abs(g - w) for g, w in zip(got, want)) < 1e-12
     # the lower tail is the survival of a long silence: it holds to 1e-12 relative too, not only absolute
@@ -190,43 +196,9 @@ def test_the_ranking_puts_the_highest_harm_first_and_breaks_ties_by_id():
     rows = [{"id": "SP-b", "harm": 0.5}, {"id": "SP-a", "harm": 0.5}, {"id": "SP-c", "harm": 0.9},
             {"id": "SP-d", "harm": None}, {"id": "SP-e", "harm": 0.1}, {"id": "SP-0", "harm": None}]
     orders = [rows[i:] + rows[:i] for i in range(len(rows))] + [rows[::-1]]
-    got = run_core("out(DATA.orders.map(function (rows) { return TracerCore.rankByHarm(rows).map(function (r) { return r.id; }); }));",
+    got = run_core("out(DATA.orders.map(function (rows) { return C.rankByHarm(rows).map(function (r) { return r.id; }); }));",
                    {"orders": orders}, prelude=False)
     assert all(order == ["SP-c", "SP-a", "SP-b", "SP-e", "SP-0", "SP-d"] for order in got)
-
-
-@needs_node
-def test_the_default_moment_is_the_first_that_meets_the_rule_stated_beside_it():
-    html = page_html()
-    day = re.search(r'DEFAULT_DAY = "(\d{4}-\d{2}-\d{2})"', html).group(1)
-    hours, minutes = map(int, re.search(r"DEFAULT_MINUTE = (\d+) \* 60 \+ (\d+)", html).groups())
-    got = run_core("""
-      var days = {};
-      B.specimens.forEach(function (s) { days[s.collected_at.slice(0, 10)] = s.run; });
-      var ctx = {tickMin: B.tick_min, threshold: THETA, seriesOf: seriesOf, weightOf: weightOf, planThresholdOf: planThresholdOf};
-      var byRun = {};
-      B.specimens.forEach(function (s) { (byRun[s.run] = byRun[s.run] || []).push(s); });
-      function board(date, minute) {
-        return C.boardRows(C.outstanding(byRun[days[date]], C.civilMinutes(date) + minute, B.shift_min).live, ctx);
-      }
-      function meets(rows) {
-        if (rows.length < 4) return false;
-        if (rows.some(function (r) { return r.closed || r.t > B.horizon_min; })) return false;
-        var top = rows[0];
-        return top.spec.tier === 1 && top.model != null && top.plan == null && top.spec.truth.breach;
-      }
-      var first = null;
-      Object.keys(days).sort().some(function (date) {
-        for (var m = 8 * 60; m < 18 * 60; m += B.tick_min) if (meets(board(date, m))) { first = [date, m]; return true; }
-        return false;
-      });
-      var rows = board(DATA.day, DATA.minute);
-      out({first: first, rows: rows.length,
-           tracerAlerted: rows.filter(function (r) { return r.model != null; }).length,
-           planQuiet: rows.filter(function (r) { return r.tick != null && r.plan == null; }).length});
-    """, {"day": day, "minute": hours * 60 + minutes})
-    assert got["first"] == [day, hours * 60 + minutes]
-    assert got["rows"] >= 3 and got["tracerAlerted"] >= 1 and got["planQuiet"] >= 1
 
 
 # ---- the threshold control (P4) ----
@@ -256,7 +228,7 @@ def test_the_page_recomputes_both_methods_at_all_20_grid_points_as_the_evaluatio
 def test_a_miss_is_read_from_the_receipt_scan_as_the_evaluation_derives_it(bundle):
     got = run_core("out(B.specimens.map(function (s) { return C.isMiss(s.received_min, s.window_min); }));")
     assert got == [s["truth"]["breach"] for s in bundle["specimens"]]
-    assert run_core("var C = TracerCore; out([C.median([]), C.median([3]), C.median([4, 1, 3]), C.median([4, 1, 3, 2]), C.median([0, 0, 5, 7])]);",
+    assert run_core("out([C.median([]), C.median([3]), C.median([4, 1, 3]), C.median([4, 1, 3, 2]), C.median([0, 0, 5, 7])]);",
                     prelude=False) == [None, 3, 3, 2.5, 2.5]
 
 
@@ -278,7 +250,7 @@ def test_the_threshold_sentence_states_the_grid_numbers_at_every_point(bundle):
     assert len(set(got)) >= 15  # the sentence moves with the threshold
     g = bundle["grid"][bundle["headline_index"]]
     assert f"Tracer warns {g['model']['median_warning_all_breaches_min']:g} min ahead" in got[bundle["headline_index"]]
-    over = run_core("out(TracerCore.thresholdSentence({median_warning_all_breaches_min: 12.5, alerts_per_shift: 5.21},"
+    over = run_core("out(C.thresholdSentence({median_warning_all_breaches_min: 12.5, alerts_per_shift: 5.21},"
                     " {median_warning_all_breaches_min: 0, alerts_per_shift: 1.04}, 90));", prelude=False)
     assert over == ("At this setting, with every window set to 90 min, Tracer warns 12.5 min ahead and alerts 5.2 times a shift; "
                     "the plan's rule warns 0 min ahead and alerts 1.0 times a shift.")
@@ -317,42 +289,75 @@ def test_one_window_for_every_specimen_recomputes_ticks_and_risk_and_drops_the_c
 
 # ---- the page itself ----
 
+SECTIONS = ["top", "watch", "beat", "warning", "limits"]
+REPO = "https://github.com/scalinity/Tracer"
+
+
 def test_the_page_loads_nothing_from_another_origin():
     html = page_html()
-    for value in re.findall(r"""\b(?:src|href|action|poster|srcset)\s*=\s*["']([^"']*)""", html):
+    for value in re.findall(r"""\b(?:src|action|poster|srcset)\s*=\s*["']([^"']*)""", html):
         assert not re.match(r"(?i)\s*(?:https?:)?//", value), value
-    assert set(re.findall(r"(?i)https?://[^\s\"'`)<>]+", html)) <= {SVG_NAMESPACE}  # a namespace, never fetched
+    # the one address on another origin is the repository, a link a visitor may follow, never fetched
+    hrefs = re.findall(r"""\bhref\s*=\s*["']([^"']*)""", html)
+    assert [h for h in hrefs if re.match(r"(?i)\s*(?:https?:)?//", h)] == [REPO]
+    assert set(re.findall(r"(?i)https?://[^\s\"'`)<>]+", html)) <= {REPO, SVG_NAMESPACE}  # a namespace, never fetched
+    # relative addresses only, so the page works under /Tracer/ on GitHub Pages
+    assert not [h for h in hrefs if h.startswith("/")]
     scripts = "".join(re.findall(r"<script\b[^>]*>(.*?)</script>", html, re.S))
-    assert sorted(re.findall(r"""\bfetch\(\s*["']([^"']+)["']""", scripts)) == ["briefs.json", "bundle.json", "neural.json"]
+    assert sorted(re.findall(r"""\bgetJson\(\s*["']([^"']+)["']""", scripts)) == ["game.json", "results.json"]
+    assert scripts.count("fetch(") == 1  # inside getJson
     assert not re.search(r"<script\b[^>]*\bsrc=|<link\b[^>]*\bstylesheet|@import|\bimport\s*\(|\bimportScripts\b", html)
 
 
-def test_the_page_never_draws_a_clock_that_stops_at_plating():
-    text = page_html().lower()
-    assert "plated" not in text and "plating" not in text and "set-up" not in text and "setup" not in text
-    assert "receipt scan stops the clock" in text and "clock stops" in text
+def test_the_page_runs_no_model_and_shows_no_survival_model_output():
+    html = re.sub(r"/\*.*?\*/", "", page_html(), flags=re.S)  # its comments may name the file the model moved to
+    for gone in ("bundle.json", "neural.json", "briefs.json", "survival.js", "TracerSurvival", "riskSeries", "harm_threshold"):
+        assert gone not in html, gone
+    for gone in ('id="board"', 'id="timeline"', 'id="threshold"', 'id="activity"', 'id="why"', 'type="range"'):
+        assert gone not in html, gone
 
 
-def test_the_page_says_the_data_is_synthetic_and_unreviewed():
+def test_the_page_never_says_the_clock_stops_at_plating():
+    for text in (page_html().lower(), SURVIVAL.read_text(encoding="utf-8").lower()):
+        assert "plated" not in text and "plating" not in text and "set-up" not in text
+
+
+def test_the_sections_come_in_the_contract_order_with_one_synthetic_line_on_the_page():
     html = page_html()
-    assert re.search(r"(?i)\bsynthetic\b", html) and "no clinical review" in html
-    assert "Placeholder." in html  # the problem paragraph waits for Karissa's text
-    assert all(f'id="{section}"' in html for section in ("problem", "board", "timeline", "threshold", "beat", "why", "limits"))
+    at = [html.index(f'id="{s}"') for s in SECTIONS]
+    assert at == sorted(at)
+    # once on the page; Beat Tracer alone (#beat) carries its own copy, shown only there
+    body = html[html.index("<body>"):]
+    assert body.count("Synthetic data, no clinical review.") == 2 and body.count('class="bt-note"') == 1
+    assert "body:not(.play) .bt-back,body:not(.play) .bt-note{display:none}" in html
+    assert "Tracer warns the lab when a specimen goes quiet." in html
+    assert "One will be late. Tap it before Tracer does." in html
+    assert "From one offline run on 776 synthetic lab weeks." in html
+    jumps = html[html.index('class="jumps"'):html.index("</nav>")]
+    assert re.findall(r'href="([^"]+)"', jumps) == ["#watch", "#beat", "#warning", "#limits"]
+    watch = html[html.index('id="watch"'):html.index("</section>", html.index('id="watch"'))]
+    assert re.findall(r'<a [^>]*href="([^"]+)"', watch) == ["./play/"]
+    limits = html[html.index('id="limits"'):html.index("</section>", html.index('id="limits"'))]
+    assert re.findall(r'href="([^"]+)"', limits) == ["../explained/short/", REPO]
+    for word in ("capped mean", "operating point", "tier", "Brier", "p_miss", "held-out", "harm threshold"):
+        assert word.lower() not in re.sub(r"<script\b.*?</script>|<style>.*?</style>|<!--.*?-->", "", html, flags=re.S).lower(), word
 
 
-def test_the_core_is_one_block_that_never_touches_the_page():
+def test_the_core_never_touches_the_page():
     html = page_html()
     assert html.count('<script id="core">') == 1
-    assert not re.search(r"\b(?:window|document|navigator|localStorage|sessionStorage|location)\.[A-Za-z_$]|\bfetch\(", core_js())
+    pattern = r"\b(?:window|document|navigator|localStorage|sessionStorage|location)\.[A-Za-z_$]|\bfetch\("
+    assert not re.search(pattern, core_js())
+    assert not re.search(pattern, SURVIVAL.read_text(encoding="utf-8"))
 
 
 def test_the_page_holds_no_key_and_stays_small():
     html = page_html()
     assert not re.search(r"sk-ant-|ANTHROPIC_API_KEY|(?i:x-api-key)|(?i:api[_-]?key)\s*[:=]", html)
-    assert PAGE.stat().st_size < 200_000
+    assert PAGE.stat().st_size < 60_000
 
 
-# ---- the 3D view (P6) ----
+# ---- the 3D bench folder (P6) and its link's pure functions, kept in survival.js ----
 
 EXHIBIT = DEMO / "exhibit"
 EXHIBIT_SOURCE = ROOT / "visuals" / "exhibit-3d" / "dist"
@@ -406,9 +411,9 @@ def test_the_exhibit_never_says_the_clock_stops_at_plating():
 @needs_node
 def test_the_3d_link_takes_its_fate_from_the_scans_until_the_truth_is_shown():
     got = run_core("""
-      var obs = DATA.obs.map(function (o) { return TracerCore.observedFate(o[0], o[1]); });
-      var tru = DATA.tru.map(function (o) { return TracerCore.trueFate(o[0], o[1], o[2]); });
-      var q = DATA.q.map(TracerCore.exhibitQuery);
+      var obs = DATA.obs.map(function (o) { return C.observedFate(o[0], o[1]); });
+      var tru = DATA.tru.map(function (o) { return C.trueFate(o[0], o[1], o[2]); });
+      var q = DATA.q.map(C.exhibitQuery);
       out({obs: obs, tru: tru, q: q});
     """, {"obs": [[20, None], [67, None], [68, None], [90, 120], [30, 27], [80, 70], [70, 70]],
           "tru": [["lost_in_tube", None, 60], ["not_dispatched", None, 60], ["stalled_at_station", 90, 120], ["misrouted", 50, 60],
@@ -421,10 +426,6 @@ def test_the_3d_link_takes_its_fate_from_the_scans_until_the_truth_is_shown():
     assert got["tru"] == ["lost", "unsent", "stalls", "stalls", "arrives", "stalls", "arrives"]
     assert got["q"] == ["?fate=stalls&silence=62&window=120&alert=0.45&truth=0", "?fate=lost&truth=1",
                         "?fate=arrives&silence=0&window=60&alert=0.9&truth=0", "?fate=stalls&silence=62&window=240&alert=0.33&truth=0"]
-    # the page reads a specimen's truth for the link only behind the truth toggle
-    html = page_html()
-    body = html[html.index("function renderLink3d"):html.index("/* ---------- the chart")]
-    assert "state.truth ? C.trueFate(s.truth.fault" in body and body.count("s.truth") == 1
 
 
 # ---- in a browser ----
@@ -456,124 +457,64 @@ const { chromium } = require(PLAYWRIGHT);
   try { browser = await chromium.launch({ channel: "chrome", headless: true }); }
   catch (e) { console.log(JSON.stringify({ skip: "Google Chrome did not start: " + String(e.message).split("\\n")[0] })); return; }
   const result = { runs: [] };
-  for (const [width, height, scheme] of [[375, 812, "dark"], [1280, 800, "light"]]) {
+  for (const [width, height, scheme] of [[390, 844, "dark"], [1440, 900, "light"]]) {
     const context = await browser.newContext({ viewport: { width, height }, colorScheme: scheme });
     const page = await context.newPage();
-    const run = { width, messages: [], errors: [], foreign: [] };
+    const run = { width, height, messages: [], errors: [], foreign: [], asked: [] };
     page.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") run.messages.push(m.type() + ": " + m.text()); });
     page.on("pageerror", (e) => run.errors.push(String(e)));
-    page.on("request", (r) => { const u = r.url(); if (!u.startsWith(BASE + "/") && !u.startsWith("data:")) run.foreign.push(u); });
+    page.on("request", (r) => {
+      const u = r.url();
+      if (u.startsWith(BASE + "/")) run.asked.push(u.slice(BASE.length));
+      else if (!u.startsWith("data:")) run.foreign.push(u);
+    });
     await page.goto(BASE + "/demo/index.html", { waitUntil: "load" });
-    await page.waitForSelector("#board-body tr[data-id]", { timeout: 15000 });
-    run.rows = await page.$$eval("#board-body tr[data-id]", (rows) => rows.length);
+    await page.waitForSelector("#w-bars .bar", { timeout: 15000 });
+    await page.waitForSelector("#game-go:not([disabled])", { timeout: 15000 });
     run.overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    await page.screenshot({ path: SHOTS + "/board-" + width + ".png", fullPage: true });
-    run.firstId = await page.$eval("#board-body tr[data-id]", (tr) => tr.getAttribute("data-id"));
-    await page.click("#board-body tr[data-id] .sid");
-    await page.waitForSelector("#timeline:not([hidden])");
-    run.hash = await page.evaluate(() => location.hash);
-    run.riskBefore = await page.textContent("#ro-risk");
-    await page.focus("#tl-scrub");
-    await page.keyboard.press("ArrowRight");
-    run.riskAfterKey = await page.textContent("#ro-risk");
-    await page.click("#tl-fwd");
-    run.riskAfterButton = await page.textContent("#ro-risk");
-    await page.waitForFunction(() => document.getElementById("brief-template").textContent.length > 0, null, { timeout: 15000 });
-    // the 3D link before and after the truth, with the minute the scrubber stands at
-    const link3d = () => page.evaluate(() => ({ href: document.getElementById("tl-3d").getAttribute("href"),
-      shown: !document.getElementById("tl-3d").hidden, target: document.getElementById("tl-3d").target,
-      minute: window.TracerDemo.state.positions[window.TracerDemo.state.scrub] }));
-    run.link0 = await link3d();
-    await page.click("#tl-truth");
-    run.truthShown = await page.isVisible("#tl-truth-line");
-    run.link1 = await link3d();
-    if (width === 375) {
-      // follow it: the bench opens in a new tab from the copied exhibit folder
-      const [tab] = await Promise.all([context.waitForEvent("page"), page.click("#tl-3d")]);
-      const bench = { messages: [], errors: [], foreign: [] };
-      tab.on("request", (r) => { const u = r.url(); if (!u.startsWith(BASE + "/") && !u.startsWith("data:") && !u.startsWith("blob:")) bench.foreign.push(u); });
-      tab.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") bench.messages.push(m.type() + ": " + m.text()); });
-      tab.on("pageerror", (e) => bench.errors.push(String(e)));
-      await tab.waitForLoadState("load");
-      await tab.waitForFunction(() => !document.getElementById("loading"), null, { timeout: 20000 }).catch(() => {});
-      await tab.waitForTimeout(1500);
-      bench.url = tab.url();
-      bench.canvas = await tab.$$eval("canvas", (c) => c.length);
-      bench.stillLoading = await tab.evaluate(() => !!document.getElementById("loading"));
-      bench.gpu = await tab.evaluate(() => !!navigator.gpu);
-      await tab.screenshot({ path: SHOTS + "/bench-" + width + ".png" });
-      await tab.close();
-      run.bench = bench;
+    // every section: its id, its height, the height its content takes, and its visible words
+    run.sections = await page.evaluate(() => Array.from(document.querySelectorAll("#top, main > section")).map((e) => {
+      const kids = Array.from(e.children).filter((c) => c.getClientRects().length);
+      const top = Math.min(...kids.map((c) => c.getBoundingClientRect().top)), bottom = Math.max(...kids.map((c) => c.getBoundingClientRect().bottom));
+      return { id: e.id, height: e.getBoundingClientRect().height, content: bottom - top,
+               words: e.innerText.split(/\\s+/).filter((w) => /[A-Za-z0-9]/.test(w)).length };
+    }));
+    await page.screenshot({ path: SHOTS + "/page-" + width + ".png", fullPage: true });
+    // the #warning picker: each of 1, 2, 4 and 6 alerts a shift
+    run.picks = {};
+    for (const n of [1, 2, 4, 6]) {
+      await page.click('#w-bars .bar[data-n="' + n + '"]');
+      run.picks[n] = { minutes: await page.textContent("#w-min"), falseAlarms: await page.textContent("#w-fa"),
+        caption: await page.textContent("#w-cap"),
+        pressed: await page.$$eval("#w-bars .bar", (b) => b.filter((x) => x.getAttribute("aria-pressed") === "true").map((x) => x.dataset.n)) };
     }
-    run.overflowOpen = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    await page.screenshot({ path: SHOTS + "/timeline-" + width + ".png", fullPage: true });
-    // the threshold control: one step of the threshold, then one step of the window, then back to the own windows
-    const th = async () => ({ sentence: await page.textContent("#th-sentence"), note: await page.textContent("#th-note"),
-      numbers: await page.$$eval("#th-m-warn, #th-m-rate, #th-p-warn, #th-p-rate", (els) => els.map((e) => e.textContent)),
-      boardRisk: await page.textContent("#ro-risk") });
-    run.th0 = await th();
-    await page.focus("#th-point");
-    await page.keyboard.press("ArrowLeft");
-    run.th1 = await th();
-    await page.focus("#th-win");
-    await page.keyboard.press("ArrowRight");
-    await page.waitForFunction(() => document.getElementById("th-sentence").textContent.includes("every window set to 125 min"));
-    run.th2 = await th();
-    run.overflowThreshold = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    await page.locator("#threshold").screenshot({ path: SHOTS + "/threshold-" + width + ".png" });
-    await page.click("#th-own");
-    run.th3 = await th();
+    run.targets = await page.$$eval("#w-bars .bar, .jumps a, #watch .cta, #game-go", (els) => els.map((e) => e.getBoundingClientRect().height));
     result.runs.push(run);
     await context.close();
   }
-  const context = await browser.newContext({ viewport: { width: 375, height: 812 } });
-  const page = await context.newPage();
-  await page.route("**/bundle.json", (route) => route.abort());
-  await page.goto(BASE + "/demo/index.html", { waitUntil: "load" });
-  await page.waitForSelector("#load-status.failed", { timeout: 15000 });
-  result.blocked = await page.textContent("#load-status");
-  await page.screenshot({ path: SHOTS + "/blocked-375.png" });
-  await context.close();
-  // ?lite=1 keeps the 2D timeline as the only view
-  const lite = await browser.newContext({ viewport: { width: 375, height: 812 } });
-  const litePage = await lite.newPage();
-  await litePage.goto(BASE + "/demo/index.html?lite=1", { waitUntil: "load" });
-  await litePage.waitForSelector("#board-body tr[data-id]", { timeout: 15000 });
-  await litePage.click("#board-body tr[data-id] .sid");
-  await litePage.waitForSelector("#timeline:not([hidden])");
-  result.lite = { shown: await litePage.isVisible("#tl-3d"), href: await litePage.getAttribute("#tl-3d", "href"),
-    note: await litePage.textContent("#tl-3d-note") };
-  await lite.close();
+  // the default is 6 alerts a shift, before anything is tapped
+  {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const page = await context.newPage();
+    await page.goto(BASE + "/demo/index.html", { waitUntil: "load" });
+    await page.waitForSelector("#w-bars .bar");
+    result.first = { minutes: await page.textContent("#w-min"), budget: await page.evaluate(() => window.TracerDemo.warningBudget()) };
+    await context.close();
+  }
+  // a data file that does not load says so
+  for (const name of ["results.json", "game.json"]) {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const page = await context.newPage();
+    await page.route("**/" + name, (route) => route.abort());
+    await page.goto(BASE + "/demo/index.html", { waitUntil: "load" });
+    await page.waitForTimeout(1500);
+    result["blocked_" + name] = { warning: await page.textContent("#w-fa"), go: await page.textContent("#game-go"), status: await page.textContent("#game-status") };
+    await context.close();
+  }
   await browser.close();
   console.log(JSON.stringify(result));
 })().catch((e) => { console.error(e); process.exit(1); });
 """
-
-
-def observed_fate(minute, received):
-    """The bench's fate from the scans seen by `minute` alone (the page's TracerCore.observedFate)."""
-    if received is None or minute < received:
-        return "stalls" if minute < 68 else "lost"
-    return "arrives" if received < 68 else "stalls"
-
-
-def true_fate(fault, received, window):
-    """The bench's fate nearest the true path (the page's TracerCore.trueFate)."""
-    if fault == "lost_in_tube":
-        return "lost"
-    if fault == "not_dispatched":
-        return "unsent"
-    if fault in ("stalled_at_station", "misrouted"):
-        return "stalls"
-    if received is None:
-        return "lost"
-    return "arrives" if received <= window else "stalls"
-
-
-def link_query(href: str) -> dict:
-    path, _, query = href.partition("?")
-    assert path == "exhibit/index.html"
-    return dict(part.split("=") for part in query.split("&"))
 
 
 @needs_node
@@ -595,7 +536,7 @@ def test_the_page_works_in_headless_chrome_at_phone_and_laptop_widths(tmp_path):
         script = tmp_path / "check.js"
         script.write_text(f"const PLAYWRIGHT = {json.dumps(str(playwright))}, BASE = {json.dumps(f'http://127.0.0.1:{port}')}, "
                           f"SHOTS = {json.dumps(str(shots))};\n" + BROWSER_CHECK, encoding="utf-8")
-        done = subprocess.run([NODE, str(script)], capture_output=True, text=True, timeout=60)
+        done = subprocess.run([NODE, str(script)], capture_output=True, text=True, timeout=120)
     finally:
         server.terminate()
         server.wait(timeout=10)
@@ -603,45 +544,22 @@ def test_the_page_works_in_headless_chrome_at_phone_and_laptop_widths(tmp_path):
     result = json.loads(done.stdout)
     if "skip" in result:
         pytest.skip(result["skip"])
+    want = {1: ("3.1", "0.2"), 2: ("8.2", "0.6"), 4: ("16.4", "1.6"), 6: ("23.3", "2.9")}
     for run in result["runs"]:
         assert run["messages"] == [] and run["errors"] == [] and run["foreign"] == [], run
-        assert run["rows"] >= 3, run
-        assert run["hash"] == "#" + run["firstId"]
-        assert run["riskBefore"] != run["riskAfterKey"] != run["riskAfterButton"], run
-        assert run["truthShown"]
-        th0, th1, th2, th3 = run["th0"], run["th1"], run["th2"], run["th3"]
-        assert th0["sentence"].startswith("At this setting Tracer warns") and "Synthetic data, no clinical review." in th0["note"]
-        assert th1["sentence"] != th0["sentence"] and th1["numbers"] != th0["numbers"], run  # the threshold moved them
-        assert th2["sentence"] != th1["sentence"] and th2["numbers"] != th1["numbers"], run  # and so did the window
-        assert "Recomputed in this page for a 125-minute window" in th2["note"] and th2["boardRisk"] != th1["boardRisk"]
-        assert th3["sentence"] == th1["sentence"] and th3["numbers"] == th1["numbers"]  # own windows give the grid back
-        # the 3D link: a new tab, the scrubber's minute and the window; the fate from the scans until the truth is shown
-        spec = next(s for s in json.loads(BUNDLE.read_text(encoding="utf-8"))["specimens"] if s["id"] == run["firstId"])
-        before, after = run["link0"], run["link1"]
-        assert before["shown"] and after["shown"] and before["target"] == "_blank"
-        q0, q1 = link_query(before["href"]), link_query(after["href"])
-        minute = before["minute"]
-        want = {"fate": observed_fate(minute, spec["received_min"]), "truth": "0"}
-        if minute <= 130:
-            want["silence"] = str(round(minute))
-        if 60 <= spec["window_min"] <= 240:
-            want["window"] = str(spec["window_min"])
-        if "alert" in q0:
-            want["alert"] = q0["alert"]
-            assert 0.1 <= float(q0["alert"]) <= 0.9
-        assert q0 == want
-        assert q1["fate"] == true_fate(spec["truth"]["fault"], spec["received_min"], spec["window_min"]) and q1["truth"] == "1"
-        assert {k: v for k, v in q1.items() if k not in ("fate", "truth")} == {k: v for k, v in q0.items() if k not in ("fate", "truth")}
-    # the default moment's top specimen was never sent: hidden, the link says stalls; shown, unsent
-    assert link_query(result["runs"][0]["link0"]["href"])["fate"] == "stalls"
-    assert link_query(result["runs"][0]["link1"]["href"])["fate"] == "unsent"
-    bench = result["runs"][0]["bench"]
-    assert bench["url"].endswith("/demo/" + result["runs"][0]["link1"]["href"]), bench
-    assert bench["messages"] == [] and bench["errors"] == [] and bench["foreign"] == [], bench
-    assert not bench["stillLoading"] and bench["canvas"] >= 1, bench
-    assert result["lite"]["shown"] is False and result["lite"]["href"] is None and "lite=1" in result["lite"]["note"]
-    phone = result["runs"][0]
-    assert phone["width"] == 375 and phone["overflow"] <= 0 and phone["overflowOpen"] <= 0, phone
-    assert phone["overflowThreshold"] <= 0, phone
-    assert "did not load" in result["blocked"] and "bundle.json" in result["blocked"]
-    assert "python3 -m http.server" in result["blocked"]
+        # the page reads its two small files and nothing else: no bundle, no neural file, no model
+        assert sorted(set(run["asked"])) == ["/demo/game.json", "/demo/index.html", "/demo/results.json"], run["asked"]
+        assert run["overflow"] <= 0, run
+        assert [s["id"] for s in run["sections"]] == SECTIONS
+        for s in run["sections"]:
+            # one phone screen each: the content fits the viewport, and no section is taller than it
+            assert s["content"] <= run["height"] and s["height"] <= run["height"] + 1, (run["width"], s)
+            assert s["words"] <= 42, (run["width"], s)
+        for n, (minutes, false_alarms) in want.items():
+            pick = run["picks"][str(n)]
+            assert pick["minutes"] == minutes and pick["falseAlarms"] == f"{false_alarms} false alarms a shift", pick
+            assert pick["pressed"] == [str(n)] and f"at {n} alert" in pick["caption"], pick
+        assert all(h >= 44 for h in run["targets"]), run["targets"]
+    assert result["first"] == {"minutes": "23.3", "budget": 6}
+    assert "did not load" in result["blocked_results.json"]["warning"] and "results.json" in result["blocked_results.json"]["warning"]
+    assert result["blocked_game.json"]["go"] == "The game could not load" and "game.json" in result["blocked_game.json"]["status"]
