@@ -2,17 +2,380 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tracer explained</title>
-<meta http-equiv="refresh" content="0; url=../">
-<link rel="canonical" href="../">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Tracer, in short</title>
+<meta name="description" content="Tracer warns the lab when a specimen goes quiet. Eight screens: the problem, what Tracer does, the demos and the result. Synthetic data, no clinical review.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='5' fill='none' stroke='%2363C4D3' stroke-width='2'/%3E%3C/svg%3E">
+<!--
+  The audience version of docs/explained/index.html: one screen per idea, in the deck's order.
+  Every figure names its source in a comment beside it. tests/test_explained_short.py checks the screens,
+  the word budgets, the result chart against results/neural/test_fresh/evaluation.json and every relative link.
+-->
 <style>
-:root { color-scheme: dark; }
-body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #141d27; color: #e9eef4; font: 17px/1.6 "Avenir Next", Avenir, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-a { color: #63C4D3; text-underline-offset: 3px; }
+:root {
+  --bg-full: #141d27;
+  --bg-primary: #1b2632;
+  --bg-secondary: #223040;
+  --border-button: #33465b;
+  --separator: #26364a;
+  --text-primary: #e9eef4;
+  --text-secondary: #b5c2d1;
+  --text-tertiary: #8496aa;
+  --known: #63C4D3;
+  --known-soft: rgba(99, 196, 211, .14);
+  --silence: #9D8DF1;
+  --silence-soft: rgba(157, 141, 241, .16);
+  --alert: #E3A33C;
+  --alert-soft: rgba(227, 163, 60, .14);
+  --alarm: #D05A4A;
+  --muted-bar: #3a4d63;
+  --focus-ring: #8fb8ff;
+  --serif: ui-serif, "New York", "Iowan Old Style", Charter, Georgia, serif;
+  --sans: "Avenir Next", Avenir, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-snap-type: y proximity; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0; background: var(--bg-full); color: var(--text-primary);
+  font: 17px/1.5 var(--sans); font-variant-numeric: tabular-nums;
+}
+a { color: var(--known); text-underline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; border-radius: 8px; }
+h1, h2 { font-family: var(--serif); font-weight: 600; line-height: 1.08; margin: 0; letter-spacing: -.01em;
+  font-size: clamp(2.05rem, 4.2vw + 1rem, 3.5rem); max-width: 13ch; text-wrap: balance; }
+p { margin: 0; }
+
+/* ---------- one screen per idea ---------- */
+.screen {
+  min-height: 100vh; min-height: 100svh; scroll-snap-align: start;
+  display: grid; align-content: center; gap: 28px;
+  grid-template-areas: "words" "visual" "act";
+  padding: max(28px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) 40px max(20px, env(safe-area-inset-left));
+  max-width: 1180px; margin: 0 auto;
+}
+.screen { position: relative; }
+.words { grid-area: words; display: grid; gap: 14px; }
+.line { font-size: 1.15rem; color: var(--text-secondary); max-width: 30ch; }
+.visual { grid-area: visual; margin: 0; }
+.act { grid-area: act; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.quiet { color: var(--text-tertiary); font-size: .95rem; }
+@media (min-width: 900px) {
+  .screen { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); grid-template-areas: "words visual" "act visual";
+    align-content: center; align-items: center; column-gap: 72px; row-gap: 28px; padding: 48px 96px 48px 56px; }
+  .words { align-self: end; }
+  .act { align-self: start; }
+  .line { font-size: 1.25rem; }
+}
+
+.button {
+  display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 12px 22px; border-radius: 999px;
+  font: 600 1.05rem var(--sans); text-decoration: none; color: var(--bg-full); background: var(--known);
+}
+.button:hover { background: #8ad5e0; color: var(--bg-full); }
+.button.ghost { color: var(--text-primary); background: transparent; border: 1.5px solid var(--border-button); }
+.button.ghost:hover { border-color: var(--known); color: var(--text-primary); }
+.button svg { width: 18px; height: 18px; flex: none; }
+
+/* ---------- the brand line on screen 1 ---------- */
+.brand { display: flex; align-items: center; gap: 10px; font: 600 1.05rem var(--sans); color: var(--known); }
+.brand svg { width: 22px; height: 22px; }
+.pitch { font-size: 1.15rem; color: var(--text-secondary); max-width: 30ch; }
+
+/* ---------- the silence line: a scan, silence, a scan ---------- */
+.trip { --dot: 22px; padding: 8px 0; }
+.trip .gap-label { text-align: center; color: var(--silence); font-size: 1.05rem; font-weight: 500; margin-bottom: 14px; }
+.trip .rail { display: flex; align-items: center; }
+.trip .dot { width: var(--dot); height: var(--dot); border-radius: 50%; background: var(--known); flex: none; }
+.trip .dot.open { background: transparent; border: 3px solid var(--known); position: relative; }
+.trip .dot.open::after { content: ""; position: absolute; inset: -9px; border-radius: 50%; border: 2px solid var(--known); opacity: 0; }
+.trip .silence { flex: 1; height: 4px; margin: 0 6px; border-radius: 2px;
+  background: repeating-linear-gradient(90deg, var(--silence) 0 14px, transparent 14px 24px); transform-origin: left center; }
+.trip .ends { display: flex; justify-content: space-between; margin-top: 14px; font-weight: 600; font-size: 1.05rem; }
+.trip .ends span:last-child { color: var(--text-secondary); }
+.trip .where { display: flex; justify-content: space-around; margin-top: 30px; }
+.trip .where span { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center;
+  font: 600 1.5rem var(--serif); color: var(--silence); background: var(--silence-soft); }
+@media (prefers-reduced-motion: no-preference) {
+  .trip .silence { animation: draw 2.6s var(--ease) .3s both; }
+  .trip .where span { animation: appear .6s var(--ease) both; }
+  .trip .where span:nth-child(1) { animation-delay: 2.1s; }
+  .trip .where span:nth-child(2) { animation-delay: 2.4s; }
+  .trip .where span:nth-child(3) { animation-delay: 2.7s; }
+  .trip .dot.open::after { animation: wait 2.4s ease-out 3s infinite; }
+}
+@keyframes draw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes appear { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes wait { 0% { opacity: .8; transform: scale(.7); } 100% { opacity: 0; transform: scale(1.5); } }
+.down { position: absolute; left: 50%; bottom: 22px; width: 30px; height: 30px; margin-left: -15px; color: var(--text-tertiary); }
+@media (min-width: 900px) { .trip { --dot: 28px; } .trip .silence { height: 6px; } .trip .gap-label, .trip .ends { font-size: 1.2rem; } .trip .where span { width: 64px; height: 64px; font-size: 1.8rem; } }
+
+/* ---------- screen 2: the clock ---------- */
+.clock { display: flex; align-items: center; gap: 18px; padding-bottom: 40px; }
+.ring { position: relative; width: min(200px, 48vw); aspect-ratio: 1; flex: none; }
+.ring .for { position: absolute; top: 100%; left: -12px; right: -12px; margin-top: 12px; text-align: center; color: var(--text-secondary); font-size: 1rem; }
+.clock .to { width: 40px; height: 24px; flex: none; }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring .mid { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.ring .big { font: 600 clamp(3.4rem, 9vw, 4.6rem)/1 var(--serif); }
+.ring .unit { color: var(--text-secondary); font-size: 1.05rem; }
+.clock .then { display: grid; gap: 10px; justify-items: center; text-align: center; color: var(--alarm); font-weight: 600; font-size: 1.1rem; }
+@media (min-width: 900px) { .clock { gap: 30px; } .ring { width: 240px; } .clock .then svg { width: 72px; height: 72px; } }
+.clock .then svg { width: 54px; height: 54px; }
+
+/* ---------- screen 3: three questions ---------- */
+.ticks { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
+.ticks i { width: 9px; height: 9px; border-radius: 50%; background: var(--muted-bar); }
+.ticks i.on { background: var(--known); box-shadow: 0 0 0 6px var(--known-soft); }
+.asks { display: grid; gap: 14px; }
+.ask { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: 16px;
+  padding: 14px 18px; border-radius: 18px; background: var(--bg-primary); font-size: 1.15rem; font-weight: 500; }
+.ask svg { width: 64px; height: 64px; }
+.ask.alert { background: var(--alert-soft); }
+
+/* ---------- screen 4: one stalled specimen ---------- */
+.story { position: relative; padding-top: 58px; --at: 20.833%; }
+.story .tag { font-size: 1rem; color: var(--text-secondary); white-space: nowrap; margin: 0; }
+.story .tag b { color: var(--text-primary); font-weight: 600; }
+.story .tag.alert { position: absolute; top: 0; left: calc(var(--at) - 12px); color: var(--alert); }
+.story .tag.alert b { color: var(--alert); display: block; }
+.story .track { position: relative; display: flex; align-items: center; height: 28px; }
+.story .quietly { width: var(--at); height: 4px; background: var(--silence); border-radius: 2px 0 0 2px; }
+.story .warned { flex: 1; height: 12px; background: var(--alert); border-radius: 0 6px 6px 0; }
+.story .mark { position: absolute; top: 50%; border-radius: 50%; transform: translateY(-50%); }
+.story .mark.start { left: 0; width: 22px; height: 22px; background: var(--known); }
+.story .mark.alert { left: calc(var(--at) - 13px); width: 26px; height: 26px; background: var(--alert); box-shadow: 0 0 0 8px var(--alert-soft); }
+.story .mark.end { right: 0; width: 6px; height: 40px; border-radius: 3px; background: var(--alarm); }
+.story .ends { display: flex; justify-content: space-between; margin-top: 12px; }
+.story .ends .tag:last-child { text-align: right; }
+.story .spare { margin: 22px 0 0 var(--at); text-align: center; color: var(--alert); font: 600 clamp(1.6rem, 2.4vw + .8rem, 2.4rem)/1.1 var(--serif); }
+
+/* ---------- screen 5: a phone with tubes ---------- */
+.phone { width: min(230px, 58vw); aspect-ratio: 9 / 16; margin: 0 auto; border: 3px solid var(--border-button); border-radius: 34px;
+  padding: 30px 22px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; align-content: center; background: var(--bg-primary); }
+.phone span { aspect-ratio: 1; border-radius: 16px; background: var(--bg-secondary); display: grid; place-items: center; }
+.phone span svg { width: 70%; height: 70%; }
+.phone span.late { background: var(--alert-soft); outline: 2px solid var(--alert); }
+.rule { font-family: var(--serif); font-size: 1.3rem; color: var(--text-primary); text-wrap: balance; max-width: 24ch; }
+@media (max-width: 899px) {
+  #try .visual { order: 0; }
+  .phone { width: min(150px, 40vw); padding: 18px 14px; gap: 10px; border-radius: 26px; }
+}
+
+/* ---------- screen 6: the result ---------- */
+.chart { display: grid; gap: 18px; }
+.bar { display: grid; gap: 6px; }
+.bar .name { font-weight: 600; font-size: 1.05rem; }
+.bar .row { display: flex; align-items: center; gap: 14px; }
+.bar .fill { height: 30px; border-radius: 0 8px 8px 0; background: var(--muted-bar); flex: none; }
+.bar.lead .fill { background: var(--alert); }
+.bar .v { font: 600 1.5rem/1 var(--serif); }
+.bar.lead .v { font-size: 2.2rem; color: var(--alert); }
+.chart .caption { color: var(--text-secondary); font-size: 1.05rem; margin-top: 4px; }
+.chart .from { color: var(--text-tertiary); font-size: .95rem; }
+
+/* ---------- screen 7: limits ---------- */
+.limits { display: grid; gap: 14px; }
+.limit { display: grid; grid-template-columns: 56px 1fr; gap: 16px; align-items: center; padding: 16px 18px; border-radius: 18px;
+  background: var(--bg-primary); font-size: 1.12rem; }
+.limit svg { width: 56px; height: 56px; }
+.limit.next { background: var(--known-soft); }
+
+/* ---------- screen 8: more ---------- */
+.more { display: grid; gap: 14px; }
+.more a { display: grid; grid-template-columns: 52px 1fr 22px; gap: 16px; align-items: center; padding: 16px 20px; border-radius: 18px;
+  background: var(--bg-primary); border: 1.5px solid var(--separator); color: var(--text-primary); text-decoration: none;
+  font: 600 1.2rem var(--serif); }
+.more a:hover { border-color: var(--known); }
+.more a svg { width: 52px; height: 52px; }
+.more a svg.go { width: 22px; height: 22px; color: var(--text-tertiary); }
+.credit { color: var(--text-tertiary); font-size: .95rem; max-width: 34ch; }
+
+/* ---------- where am I ---------- */
+.dots { position: fixed; right: 22px; top: 50%; transform: translateY(-50%); display: none; gap: 14px; flex-direction: column; z-index: 2; }
+.dots a { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--text-tertiary); }
+.dots a.here { background: var(--known); border-color: var(--known); }
+@media (min-width: 900px) { .dots { display: flex; } }
+
+/* short laptop screens and landscape phones: keep each idea on one screen */
+@media (max-height: 760px) and (min-width: 900px) {
+  .screen { row-gap: 18px; padding-top: 32px; padding-bottom: 32px; }
+  h1, h2 { font-size: 2.6rem; }
+}
 </style>
 </head>
 <body>
-<p>The short explainer is now the main one: <a href="../">Tracer explained</a>.</p>
+
+<nav class="dots" aria-label="Screens">
+  <a href="#problem" aria-label="The problem"></a>
+  <a href="#matters" aria-label="Why it matters"></a>
+  <a href="#does" aria-label="What Tracer does"></a>
+  <a href="#watch" aria-label="Watch it work"></a>
+  <a href="#try" aria-label="Try it"></a>
+  <a href="#result" aria-label="Does it work"></a>
+  <a href="#limits" aria-label="Limits"></a>
+  <a href="#more" aria-label="More"></a>
+</nav>
+
+<main>
+
+<!-- 1. The problem -->
+<section class="screen" id="problem" aria-labelledby="problem-h">
+  <div class="words">
+    <p class="brand"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="3"/></svg>Tracer</p>
+    <h1 id="problem-h">A specimen goes silent between two scans.</h1>
+    <p class="pitch">Tracer warns the lab when a specimen goes quiet.</p>
+  </div>
+  <figure class="visual trip" aria-label="Collected, then no scan, then received. In between, nobody knows where it is.">
+    <p class="gap-label">No scan</p>
+    <div class="rail" aria-hidden="true"><span class="dot"></span><span class="silence"></span><span class="dot open"></span></div>
+    <p class="ends"><span>Collected</span><span>Received</span></p>
+    <div class="where" aria-hidden="true"><span>?</span><span>?</span><span>?</span></div>
+  </figure>
+  <svg class="down" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</section>
+
+<!-- 2. Why it matters.
+     60 min: config/breach_policy.yaml, urine_unpreserved_room_temp__culture, window_min 60 (source: IDSA/ASM 2024, assumed: false).
+     "Usually thrown out and collected again": docs/explained/index.html, the evidence under "What Tracer is". -->
+<section class="screen" id="matters" aria-labelledby="matters-h">
+  <div class="words">
+    <h2 id="matters-h">Late often means collecting it again.</h2>
+    <p class="line">Miss the deadline and it is usually thrown out. The patient waits hours for a new one.</p>
+  </div>
+  <figure class="visual clock" aria-label="Urine at room temperature has about 60 minutes.">
+    <div class="ring">
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <circle cx="60" cy="60" r="52" fill="none" stroke="var(--bg-secondary)" stroke-width="10"/>
+        <circle cx="60" cy="60" r="52" fill="none" stroke="var(--silence)" stroke-width="10" stroke-linecap="round" stroke-dasharray="245 327"/>
+        <circle cx="112" cy="60" r="7" fill="var(--alarm)"/>
+      </svg>
+      <div class="mid"><span class="big">60</span><span class="unit">minutes</span></div>
+      <p class="for">Urine at room temperature</p>
+    </div>
+    <svg class="to" viewBox="0 0 40 24" aria-hidden="true"><path d="M2 12h32M26 4l8 8-8 8" fill="none" stroke="var(--text-tertiary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="then">
+      <svg viewBox="0 0 54 54" aria-hidden="true"><path d="M40 14a19 19 0 1 0 5 15" fill="none" stroke="var(--alarm)" stroke-width="3.5" stroke-linecap="round"/><path d="M44 6v10H34" fill="none" stroke="var(--alarm)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Collect again</span>
+    </div>
+  </figure>
+</section>
+
+<!-- 3. What Tracer does. Re-scored every 5 minutes (AGENTS.md; config tick). -->
+<section class="screen" id="does" aria-labelledby="does-h">
+  <div class="words">
+    <h2 id="does-h">Every 5 minutes, Tracer rechecks specimens in transit.</h2>
+  </div>
+  <figure class="visual" aria-label="Three steps, repeated every 5 minutes.">
+    <div class="ticks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="asks">
+      <p class="ask"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="34" r="22" fill="none" stroke="var(--silence)" stroke-width="4"/><path d="M32 34V20M32 34l9 6" stroke="var(--text-primary)" stroke-width="4" stroke-linecap="round"/><path d="M26 7h12" stroke="var(--silence)" stroke-width="4" stroke-linecap="round"/></svg>Will it miss its deadline?</p>
+      <p class="ask"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 58s18-18 18-32a18 18 0 0 0-36 0c0 14 18 32 18 32z" fill="none" stroke="var(--known)" stroke-width="4" stroke-linejoin="round"/><circle cx="32" cy="26" r="7" fill="var(--known)"/></svg>Where is it most likely?</p>
+      <p class="ask alert"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 44V30a14 14 0 0 1 28 0v14l5 6H13z" fill="none" stroke="var(--alert)" stroke-width="4" stroke-linejoin="round"/><path d="M27 55a5 5 0 0 0 10 0" fill="none" stroke="var(--alert)" stroke-width="4" stroke-linecap="round"/></svg>Alert who can find it.</p>
+    </div>
+  </figure>
+</section>
+
+<!-- 4. Watch it work. The stalled story: TracerNet's stored alert at 25 min, deadline 120 min, so 95 minutes
+     of warning (visuals/exhibit-3d/src/model/tracernet-stories.json, stories.stalls). Bar positions: 25/120 = 20.83%. -->
+<section class="screen" id="watch" aria-labelledby="watch-h">
+  <div class="words">
+    <h2 id="watch-h">Watch Tracer catch a stalled specimen.</h2>
+    <p class="line">The 3D demo plays by itself.</p>
+  </div>
+  <figure class="visual story" aria-label="Collected at 0 minutes. Tracer alerts at 25 minutes. The deadline is 120 minutes: 95 minutes to spare.">
+    <p class="tag alert"><b>Alert</b>25 min</p>
+    <div class="track" aria-hidden="true"><span class="quietly"></span><span class="warned"></span><span class="mark start"></span><span class="mark alert"></span><span class="mark end"></span></div>
+    <div class="ends"><p class="tag"><b>Collected</b></p><p class="tag"><b>Deadline</b> 120 min</p></div>
+    <p class="spare">95 minutes to spare</p>
+  </figure>
+  <div class="act">
+    <a class="button" href="../../demo/play/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z" fill="currentColor"/></svg>Play the 3D demo</a>
+  </div>
+</section>
+
+<!-- 5. Try it. Beat Tracer's rule is the shared wording of the redo. -->
+<section class="screen" id="try" aria-labelledby="try-h">
+  <div class="words">
+    <h2 id="try-h">Now try it on your phone.</h2>
+    <p class="rule">One will be late. Tap it before Tracer does.</p>
+  </div>
+  <figure class="visual" aria-label="A phone with specimens; one is late.">
+    <div class="phone" aria-hidden="true">
+      <span><svg viewBox="0 0 24 24"><path d="M8 3h8M9.5 3v13a2.5 2.5 0 0 0 5 0V3" fill="none" stroke="var(--known)" stroke-width="1.8" stroke-linecap="round"/><path d="M9.5 11h5v5a2.5 2.5 0 0 1-5 0z" fill="var(--known)"/></svg></span>
+      <span><svg viewBox="0 0 24 24"><path d="M8 3h8M9.5 3v13a2.5 2.5 0 0 0 5 0V3" fill="none" stroke="var(--known)" stroke-width="1.8" stroke-linecap="round"/><path d="M9.5 11h5v5a2.5 2.5 0 0 1-5 0z" fill="var(--known)"/></svg></span>
+      <span><svg viewBox="0 0 24 24"><path d="M8 3h8M9.5 3v13a2.5 2.5 0 0 0 5 0V3" fill="none" stroke="var(--known)" stroke-width="1.8" stroke-linecap="round"/><path d="M9.5 11h5v5a2.5 2.5 0 0 1-5 0z" fill="var(--known)"/></svg></span>
+      <span class="late"><svg viewBox="0 0 24 24"><path d="M8 3h8M9.5 3v13a2.5 2.5 0 0 0 5 0V3" fill="none" stroke="var(--alert)" stroke-width="1.8" stroke-linecap="round"/><path d="M9.5 11h5v5a2.5 2.5 0 0 1-5 0z" fill="var(--alert)"/></svg></span>
+      <span><svg viewBox="0 0 24 24"><path d="M8 3h8M9.5 3v13a2.5 2.5 0 0 0 5 0V3" fill="none" stroke="var(--known)" stroke-width="1.8" stroke-linecap="round"/><path d="M9.5 11h5v5a2.5 2.5 0 0 1-5 0z" fill="var(--known)"/></svg></span>
+      <span><svg viewBox="0 0 24 24"><path d="M8 3h8M9.5 3v13a2.5 2.5 0 0 0 5 0V3" fill="none" stroke="var(--known)" stroke-width="1.8" stroke-linecap="round"/><path d="M9.5 11h5v5a2.5 2.5 0 0 1-5 0z" fill="var(--known)"/></svg></span>
+    </div>
+  </figure>
+  <div class="act">
+    <a class="button" href="../../demo/?seed=18#beat">Play Beat Tracer</a>
+    <a class="button ghost" href="../../demo/">Open the phone page</a>
+  </div>
+</section>
+
+<!-- 6. Does it work. results/neural/test_fresh/evaluation.json, operating_points["6/shift"], capped_mean_warning_min
+     point: tracernet 3-2-1 23.3, analytic_local 3-2-1 13.6, window_rule none 7.6; counts.tuning_groups 776.
+     Same table in docs/neural/results-v2.md. Bar widths are value / 23.3 of the track. -->
+<section class="screen" id="result" aria-labelledby="result-h">
+  <div class="words">
+    <h2 id="result-h">TracerNet gives the most warning.</h2>
+  </div>
+  <figure class="visual chart" aria-label="Minutes of warning per late specimen: TracerNet 23.3, our survival model 13.6, simple deadline rule 7.6.">
+    <div class="bar lead"><span class="name">TracerNet</span><span class="row"><span class="fill" style="width:calc((100% - 5rem) * 1)"></span><span class="v">23.3</span></span></div>
+    <div class="bar"><span class="name">Our survival model</span><span class="row"><span class="fill" style="width:calc((100% - 5rem) * 0.5837)"></span><span class="v">13.6</span></span></div>
+    <div class="bar"><span class="name">Simple deadline rule</span><span class="row"><span class="fill" style="width:calc((100% - 5rem) * 0.3262)"></span><span class="v">7.6</span></span></div>
+    <figcaption class="caption">Minutes of warning per late specimen, at 6 alerts a shift.</figcaption>
+    <p class="from">776 fresh synthetic lab weeks, scored once.</p>
+  </figure>
+</section>
+
+<!-- 7. Limits. docs/explained/index.html, Limits; AGENTS.md (no clinical review). -->
+<section class="screen" id="limits" aria-labelledby="limits-h">
+  <div class="words">
+    <h2 id="limits-h">What Tracer cannot do yet.</h2>
+  </div>
+  <figure class="visual limits" aria-label="Three limits">
+    <p class="limit"><svg viewBox="0 0 56 56" aria-hidden="true"><path d="M22 8h12M24 8v14L12 44a4 4 0 0 0 3.5 6h25a4 4 0 0 0 3.5-6L32 22V8" fill="none" stroke="var(--silence)" stroke-width="3.5" stroke-linejoin="round"/><path d="M17 36h22" stroke="var(--silence)" stroke-width="3.5"/></svg>Synthetic data, no clinical review.</p>
+    <p class="limit"><svg viewBox="0 0 56 56" aria-hidden="true"><path d="M6 28s8-14 22-14 22 14 22 14-8 14-22 14S6 28 6 28z" fill="none" stroke="var(--text-tertiary)" stroke-width="3.5" stroke-linejoin="round"/><circle cx="28" cy="28" r="6" fill="var(--text-tertiary)"/><path d="M10 46L46 10" stroke="var(--alarm)" stroke-width="3.5" stroke-linecap="round"/></svg>It cannot see a mislabeled or leaking specimen.</p>
+    <p class="limit next"><svg viewBox="0 0 56 56" aria-hidden="true"><path d="M8 28h36M32 16l12 12-12 12" fill="none" stroke="var(--known)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Next: test it on a real lab's scan log.</p>
+  </figure>
+</section>
+
+<!-- 8. More -->
+<section class="screen" id="more" aria-labelledby="more-h">
+  <div class="words">
+    <h2 id="more-h">Want more?</h2>
+    <p class="credit">Daniel Escalante and Karissa Kocourek, CAI&nbsp;5724, University of Florida.</p>
+  </div>
+  <nav class="visual more" aria-label="More about Tracer">
+    <a href="../../talk/"><svg viewBox="0 0 52 52" aria-hidden="true"><rect x="6" y="10" width="40" height="27" rx="4" fill="none" stroke="var(--known)" stroke-width="3"/><path d="M26 37v8M18 45h16" stroke="var(--known)" stroke-width="3" stroke-linecap="round"/></svg>The slides<svg class="go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    <a href="../"><svg viewBox="0 0 52 52" aria-hidden="true"><path d="M14 6h17l9 9v31H14z" fill="none" stroke="var(--silence)" stroke-width="3" stroke-linejoin="round"/><path d="M20 24h14M20 31h14M20 38h9" stroke="var(--silence)" stroke-width="3" stroke-linecap="round"/></svg>The long version<svg class="go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    <a href="https://github.com/scalinity/Tracer"><svg viewBox="0 0 52 52" aria-hidden="true"><path d="M18 16L8 26l10 10M34 16l10 10-10 10M29 12l-6 28" fill="none" stroke="var(--alert)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>The code and data<svg class="go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+  </nav>
+</section>
+
+</main>
+
+<script>
+(function () {
+  "use strict";
+  // Light the dot for the screen in view.
+  var dots = Array.prototype.slice.call(document.querySelectorAll(".dots a"));
+  if (!("IntersectionObserver" in window) || !dots.length) return;
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      dots.forEach(function (d) { d.classList.toggle("here", d.getAttribute("href") === "#" + e.target.id); });
+    });
+  }, { threshold: 0.55 });
+  Array.prototype.forEach.call(document.querySelectorAll(".screen"), function (s) { io.observe(s); });
+})();
+</script>
 </body>
 </html>
