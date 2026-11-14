@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "build:single": "vite build --mode single",
-    "build:play": "vite build --mode play",
+    "build:play": "npm run stories && vite build --mode play",
+    "stories": "node scripts/tracernet-stories.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

@@ -12,6 +12,9 @@ every knob set on each scenario's history replicate. For each specimen with a cl
                         and the local analytic model at both weightings (3-2-1 and equal), the window rule (unweighted)
     headline            TracerNet's alert at the headline budget (config/triage.yaml, 6 per shift) and 3-2-1 weights,
                         its factors (spec §9.3) and its frozen dispatch decision (null without one)
+
+and, once for the file, `headline_knobs`: TracerNet's harm threshold at the headline budget and 3-2-1 weights in each
+tuning group, the first tick where p_miss times the tier's weight reaches it being the headline alert.
     truth               the breach label and the planted fault (v2: also the outcome class and cause), read only through
                         src/pipeline/evaluate.py's accessors, as export.py reads them
 
@@ -196,6 +199,7 @@ def build(pred: Predictor, source: str, *, scenarios=None, store_dir: Path | Non
         "grid_budgets": list(export.GRID_BUDGETS), "headline_index": export.GRID_BUDGETS.index(headline_budget),
         "weightings": [w for w, _ in WEIGHTINGS], "methods": METHODS,
         "knob_notes": [f"{n['method']} in {n['group']}: {n['note']}" for n in notes],
+        "headline_knobs": {str(g.key): float(res["knobs"][head]["tracernet|3-2-1"][0]) for g, res in zip(groups, results)},
         "specimens": records,
     }
 

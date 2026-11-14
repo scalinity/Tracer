@@ -11,7 +11,7 @@ Team: Daniel Escalante and Karissa Kocourek.
 The demo is a static page on GitHub Pages, <https://scalinity.github.io/Tracer/demo/> (the QR code is `docs/demo/qr.png`). It reads
 its data files in the browser and makes no other request, so it needs no key and no server.
 
-A self-playing version of the 3D bench for the projector, four specimens on time, stalled, lost and never sent, is at <https://scalinity.github.io/Tracer/demo/play/> (`docs/demo/play/`, built from `visuals/exhibit-3d` with `npm run build:play`).
+A self-playing version of the 3D bench for the projector, four specimens on time, stalled, lost and never sent, with TracerNet's risk and alerts on held-out specimens like them, is at <https://scalinity.github.io/Tracer/demo/play/> (`docs/demo/play/`, built from `visuals/exhibit-3d` with `npm run build:play`).
 
 How Tracer works, who built which part and the likely questions are explained in one page at
 <https://scalinity.github.io/Tracer/explained/> (`docs/explained/index.html`, a single self-contained file that also opens from disk).
@@ -39,7 +39,7 @@ pytest                                    # the unit and integration tests, all 
 
 python -m src.pipeline.intervals          # fit the transit-time distributions -> results/interval_params.json
 python -m src.pipeline.recovery           # does the fit recover what the generator planted?
-python -m src.pipeline.evaluate           # baselines against the risk model on the held-out runs, and the alert list
+python -m src.pipeline.evaluate           # baselines against the analytic model on the held-out runs, and the alert list
 python -m src.pipeline.location_eval      # score the location filter against the hidden truth
 python -m src.api.export --run test       # write docs/demo/bundle.json for the demo
 python -m src.pipeline.sensitivity      # reweight the held-out runs for other volumes, hours and mixes
@@ -65,30 +65,41 @@ if you want to re-run it.
 
 The system map opens directly from disk and needs no server: `open visuals/architecture.html`.
 
-## Neural model (v2)
+## TracerNet, the primary risk model
 
-TracerNet is a neural risk model, an ensemble of three networks in `artifacts/tracernet/v1/`, and it is a
-challenger to the analytic model, not its replacement. It learns from a second dataset: OpenAI models wrote
-laboratory-week configurations, frozen in `datasets/scenarios-v2.jsonl.gz`, and seeded code in `src/sim/` plays
-each week out into scan events and labels under the same policy table. Every 5 minutes while a specimen is
-unreceived, it estimates the probability that the specimen misses its window. It replaces the analytic model only
-if it passes rules fixed before any test set was scored (`docs/neural/spec.md` §8.6). On the test set at 6 alerts
-per 8-hour shift, a chosen budget, R1 (warning) failed, R2 (losses) and R3 (calibration) held, and R4 (equal alerts)
-failed. The analytic model stays primary because R1 failed. R4 also failed, mostly because the baselines leave part of
-the 6-alert budget unused (the window rule alerts on nothing in 268 of 782 scenarios). R1 cannot separate the methods
-here: a missed breach counts as 0 minutes and no method catches half the breaches, so every median warning is 0, while
-the capped mean warning is 23.9 minutes for TracerNet against 7.4 to 13.7 for R1's three baselines at 3-2-1
-weights. TracerNet is reported as a challenger result. The full report, with intervals, slices, ablations and the
-explanation checks, is `results/neural/REPORT.md`. This data is synthetic too: laboratory weeks designed by language
-models and simulated by this project's code, with no clinical review.
+TracerNet is Tracer's primary risk model: an ensemble of three neural networks in `artifacts/tracernet/v2/`
+(`tracernet-v2`). Every 5 minutes while a specimen is unreceived, it estimates the probability that the specimen
+misses its window, reading the whole laboratory as well as the specimen: how busy it is, what is waiting and what
+traveled together. Alerts go to the specimens with the highest expected harm (that probability times the urgency
+tier's weight) within a budget of alerts per shift. The analytic mixture-survival model it replaced is now a
+baseline, and it is the model the demo's board runs live in the browser; the location filter is unchanged.
+
+It learns from a second dataset: OpenAI models wrote laboratory-week configurations, frozen in
+`datasets/scenarios-v2.jsonl.gz`, and seeded code in `src/sim/` plays each week out into scan events and labels under
+the same policy table.
+
+**How it became primary.** The first rule (`docs/neural/spec.md` §8.6) asked for a longer median warning. No method
+can pass that here: a missed breach counts as 0 minutes and no method catches half the breaches at 6 alerts per
+8-hour shift, so every median is 0, and after the first test look TracerNet stayed a challenger
+(`results/neural/REPORT.md`). A second rule, fixed in `docs/neural/preregistration-v2.md` before any new data existed,
+measures the capped mean warning at 6 alerts per shift and adds four guardrails: calibration, ranking, false alerts
+per alert sent, and never-received specimens alerted. The model was improved on training and validation data only
+(`docs/neural/phase2-log.md`), frozen, and scored once on 776 fresh laboratory weeks. It passed every condition. Its
+capped mean warning was 23.3 minutes at 3-2-1 weights against 6.3 to 13.6 for the five baselines, and 12.8 at equal
+weights against 6.3 to 8.3, with every 95% interval of the difference above 0. The numbers, intervals and surprises
+are in `docs/neural/results-v2.md`. It still misses most late specimens at this budget, about half its alerts go to
+specimens that arrive in time, and at 1 alert per shift a simple quantile rule warns earlier. This data is synthetic
+too: laboratory weeks designed by language models and simulated by this project's code, with no clinical review.
 
 These run offline with the committed artifact. The v2 store in `data/store-v2/` comes from the frozen library
 through the pipeline's `simulate` and `store` commands; `export --source legacy_v1` reads the v1 store instead.
 
 ```sh
-python -m src.neural.pipeline evaluate --split val --artifact artifacts/tracernet/v1   # every baseline and TracerNet on a set -> results/neural/val/
+python -m src.neural.pipeline evaluate --split val --artifact artifacts/tracernet/v2   # every baseline and TracerNet on a set -> results/neural/val/
 python -m src.neural.pipeline explain --split test --matched   # the explanation checks on the test alerts at 6 alerts per 8-hour shift, from the locked look's risk table -> results/neural/explanations.json
-python -m src.neural.pipeline export --source legacy_v1    # TracerNet's demo file, docs/demo/neural.json, beside the unchanged bundle
+python -m src.neural.pipeline export --source legacy_v1 --artifact artifacts/tracernet/v2   # TracerNet's demo file, docs/demo/neural.json, beside the unchanged bundle
+python -m src.pipeline.rule_v2 results/neural/test_fresh/evaluation.json --site-map   # the second rule's verdict on the fresh set's one look
+python -m src.pipeline.beside_v2 results/neural/test_fresh/evaluation.json            # the tables reported beside it
 python -m src.models.tracernet.predict --split val --budget 6 --explain --out results/neural/predictions/val   # predictions, and alerts with their factors
 python -m src.neural.pipeline report                  # results/neural/REPORT.md
 ```
@@ -96,7 +107,8 @@ python -m src.neural.pipeline report                  # results/neural/REPORT.md
 The test sets are scored under a hash lock; every rerun is listed in `results/neural/test_runs.jsonl`.
 `results/neural/test_lock.json` holds the hashes of the look, which ran with `--matched`. A later `evaluate` or
 `explain` of `test` or `test_ood` runs only when every hash matches, so it takes `--matched` too. `explain` never
-starts a look of its own.
+starts a look of its own. The fresh set's one look keeps its lock, run log and evaluation in
+`results/neural/test_fresh/`, where `looked.json` refuses a second look.
 
 ## Where things live
 

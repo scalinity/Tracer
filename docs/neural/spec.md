@@ -3,6 +3,7 @@
 Technical spec for designing, building, training and evaluating a neural network that replaces the analytic risk model, plus the data pipeline that feeds it and an optional decision layer built on Nace.AI's Drex Max v1.1, a non-generative decision model reached through OpenRouter.
 
 - **Status:** proposed, November 8, 2026. Written for an autonomous Claude Code build; Daniel reviews after the fact.
+- **Outcome:** TracerNet is Tracer's primary risk model (`tracernet-v2`, November 13, 2026). §8.6's rule failed on `test` (R1: every median warning is 0), so it stayed a challenger; a second rule, `docs/neural/preregistration-v2.md`, fixed before a fresh test set existed and applied once to it, passed (`docs/neural/results-v2.md`). The analytic model is a baseline.
 - **Owner:** Daniel Escalante. **Policy table:** Karissa Kocourek (an input here, never edited).
 - **Deadline:** TracerNet trained, evaluated and merged by **Friday, November 13 (Gate C)**. Decision layer and close-out by November 14. November 15 is buffer. Demo freeze is November 16 at 6 PM ET; the talk is November 18.
 - **Hard spend caps:** OpenAI **$76.43** in total, every call included. The decision model (Drex Max through OpenRouter) **$8.00**, separate (an assumption Daniel can change; see Appendix D).
@@ -37,7 +38,7 @@ This work builds a world where the laboratory does carry information, then tests
 | D6 | Flex tier by default, Batch as fallback, worst-case reservations in a ledger | Flex costs the same as Batch without the 24-hour window; the ledger makes overspending impossible rather than unlikely. |
 | D7 | Integrated gradients over ten named factor groups | Faithful, cheap for about six alerts per shift, and readable. Attention weights are shown as related specimens, never as the explanation. |
 | D8 | Truth isolation preserved and extended | Model code passes the existing scanner; training reads only the observed store; evaluation reads truth only through `src/pipeline/evaluate.py`. |
-| D9 | The analytic model stays primary unless TracerNet meets the pre-registered rule | A network that does not clear the bar is reported as a challenger result, as §5.2.1 already commits. |
+| D9 | The analytic model stays primary unless TracerNet meets the pre-registered rule | A network that does not clear the bar is reported as a challenger result, as §5.2.1 already commits. §8.6's rule failed on `test`; the second rule of `docs/neural/preregistration-v2.md` passed on the fresh set, so TracerNet is primary. |
 | D10 | The decision layer is Drex Max v1.1 through OpenRouter, optional and off the critical path | It ranks first of 17 on Artificial Analysis's Decision Index (73 against a median of 64). Its 275 ms latency does not matter because decisions are precomputed for the static demo. The network, its evaluation and its report never wait on the decision model, its key or its availability. |
 
 ---

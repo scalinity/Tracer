@@ -44,4 +44,4 @@ Median warning over all breaches in minutes with the alerts per shift in bracket
 | `sensitivity.json` | The headline reweighted for other arrival volumes, hours and specimen mixes, with the knobs fixed and retuned | `python -m src.pipeline.sensitivity` |
 | `interval_params.json` | The fitted transit-time distributions, with the policy hash and the dataset's SHA-256 | `python -m src.pipeline.intervals` |
 
-TracerNet, the v2 neural model, and its comparison with the analytic model on the v2 data are reported in [`neural/REPORT.md`](neural/REPORT.md).
+TracerNet, the v2 neural model, is Tracer's primary risk model since it passed the second rule on a fresh test set, scored once ([`../docs/neural/results-v2.md`](../docs/neural/results-v2.md), with the look's record in [`neural/test_fresh/`](neural/test_fresh/)). Its first test look, where it stayed a challenger, is reported in [`neural/REPORT.md`](neural/REPORT.md).

@@ -196,7 +196,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 @keyframes bar-rise{from{transform:scaleX(0)}}
 @keyframes fade-in{from{opacity:0}}
 
-/* A neural challenger: the same bars on a 30-minute scale */
+/* TracerNet wins: the same bars on a 30-minute scale */
 .chart.c30 .bar{width:calc(var(--v) / 30 * 100%)}
 .chart.c30 .axis span{left:calc(var(--t) / 30 * 100%)}
 .verdict{max-width:none}
@@ -544,22 +544,22 @@ body.presenter .pnav{display:flex}
 </section>
 
 <!-- 11 -->
-<section class="slide" data-beat="A neural challenger" data-who="Daniel" data-start="11:30" data-end="12:00">
-  <h2 class="t-h3">We also trained a neural network.</h2>
-  <p class="t-lead">TracerNet warned earlier, on a second, busier set of simulated lab weeks.</p>
-  <div class="chart c30" role="img" aria-label="Average warning at 6 alerts per 8-hour shift, a miss counting as zero: the window rule 7.4 minutes, our survival model 13.7 minutes, TracerNet 23.9 minutes.">
-    <div class="row" style="--v:7.4"><span class="lab">Window rule</span><span class="plot"><span class="bar base"></span></span><span class="val">7.4 min</span></div>
-    <div class="row" style="--v:13.7"><span class="lab">Our survival model</span><span class="plot"><span class="bar tracer-eq"></span></span><span class="val">13.7 min</span></div>
-    <div class="row result" style="--v:23.9"><span class="lab">TracerNet</span><span class="plot"><span class="bar tracer"></span></span><span class="val">23.9 min</span></div>
+<section class="slide" data-beat="TracerNet wins" data-who="Daniel" data-start="11:30" data-end="12:00">
+  <h2 class="t-h3">TracerNet now runs Tracer.</h2>
+  <p class="t-lead">23 minutes of warning, on 776 lab weeks it had never seen.</p>
+  <div class="chart c30" role="img" aria-label="Average warning at 6 alerts per 8-hour shift on 776 fresh simulated lab weeks, a miss counting as zero: the window rule 7.6 minutes, our survival model 13.6 minutes, TracerNet 23.3 minutes.">
+    <div class="row" style="--v:7.6"><span class="lab">Window rule</span><span class="plot"><span class="bar base"></span></span><span class="val">7.6 min</span></div>
+    <div class="row" style="--v:13.6"><span class="lab">Our survival model</span><span class="plot"><span class="bar tracer-eq"></span></span><span class="val">13.6 min</span></div>
+    <div class="row result" style="--v:23.3"><span class="lab">TracerNet</span><span class="plot"><span class="bar tracer"></span></span><span class="val">23.3 min</span></div>
     <div class="axis" aria-hidden="true"><span style="--t:0">0</span><span style="--t:10">10</span><span style="--t:20">20</span><span style="--t:30">30 min</span></div>
   </div>
   <ul class="limits verdict t-step">
-    <li>It did not win by the rule we set before testing.</li>
-    <li class="next">The survival model stays in charge. TracerNet is a challenger.</li>
+    <li>We set the rule before testing on fresh data.</li>
+    <li class="next">It passed. Our survival model is now a baseline.</li>
   </ul>
-  <p class="t-cap">Average warning at 6 alerts per 8-hour shift, a miss counting as zero, each warning capped at 2 hours. The survival model is refit to these weeks.</p>
+  <p class="t-cap">Average warning at 6 alerts per 8-hour shift, a miss counting as zero, each warning capped at 2 hours. Ahead of all five baselines, every 95% interval above zero.</p>
   <div class="foot"><p class="caveat">Synthetic data, no clinical review</p></div>
-  <aside class="notes-src"><p class="who">Daniel</p><p>We also trained a neural network, TracerNet, on a second, busier set of simulated lab weeks. It warned about twenty-four minutes ahead on average, against fourteen for our survival model. But by the rule we wrote down before testing, it didn't win. So the survival model stays in charge, and TracerNet stays a challenger.</p><p><em>[About 55 words.]</em></p></aside>
+  <aside class="notes-src"><p class="who">Daniel</p><p>We also trained a neural network, TracerNet. We wrote down the rule it had to pass, then tested it once, on 776 simulated lab weeks it had never seen. It warned twenty-three minutes ahead on average, against fourteen for our survival model. It passed. So TracerNet now runs Tracer, and the survival model is a baseline.</p><p><em>[About 55 words.]</em></p></aside>
 </section>
 
 <!-- 12 -->
