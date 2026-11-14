@@ -82,6 +82,7 @@ section { padding: 3.2rem 0 1rem; border-top: 1px solid var(--separator); scroll
 /* hero */
 header.hero { padding: 3.5rem 0 2.5rem; }
 .hero h1 { font-size: clamp(2.6rem, 7vw, 4.6rem); letter-spacing: -.01em; max-width: 14ch; }
+.hero .start { font-size: 1.05rem; margin-top: 1rem; color: var(--text-secondary); }
 .hero .lede { font-size: 1.2rem; color: var(--text-secondary); max-width: 40rem; margin-top: 1.1rem; }
 .hero figure { margin: 2.4rem 0 0; max-width: 46rem; }
 .hero svg { width: 100%; height: auto; display: block; }
@@ -271,9 +272,6 @@ dl.stats .nums b { color: var(--known); font-size: 1.25rem; }
 dl.stats .mean { color: var(--text-secondary); font-size: .95rem; }
 .checked { border-color: var(--known-deep); background: linear-gradient(var(--known-soft), var(--known-soft)), var(--bg-primary); }
 .checked h3 { color: var(--known); }
-.talk td.t { white-space: nowrap; color: var(--text-tertiary); }
-.talk td.w { white-space: nowrap; }
-.talk tr.k td.w { color: var(--known); }
 .cards3 { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); margin: 1rem 0 1.4rem; }
 .cards3 > div { background: var(--bg-primary); border: 1px solid var(--border-button); border-radius: 20px; padding: 16px 18px; }
 .cards3 b { display: block; font-family: var(--serif); font-size: 1.15rem; margin-bottom: 4px; }
@@ -288,14 +286,6 @@ ol.todo .due { color: var(--alert); font-size: .9rem; white-space: nowrap; }
 @media (max-width: 560px) {
   ol.todo li { grid-template-columns: 1.6rem 1fr; }
   ol.todo .due { grid-column: 2; }
-  /* the run of show stacks: time and owner on one line, the part under it */
-  .talk thead { display: none; }
-  .talk tr { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; padding: 10px 14px; border-bottom: 1px solid var(--separator); }
-  .talk tr:last-child { border-bottom: 0; }
-  .talk td { padding: 0; border: 0; }
-  .talk td.t, .talk td.w { grid-row: 1; }
-  .talk td.w { grid-column: 2; }
-  .talk td:nth-child(2) { grid-column: 1 / -1; }
 }
 </style>
 </head>
@@ -304,6 +294,7 @@ ol.todo .due { color: var(--alert); font-size: .9rem; white-space: nowrap; }
 
 <header class="hero">
   <h1>Silence is evidence.</h1>
+  <p class="start"><a href="short/">Start with the short version</a>: one screen per idea. This is the long one.</p>
   <p class="lede">Tracer is an early warning for lab samples that go quiet on their way to the lab. This page explains the project in about five minutes, for the talk on December 9. Open <b>More detail</b> wherever you want to go deeper.</p>
   <figure aria-label="One specimen: collected at 7:15 AM, received at 8:57 AM, with 102 minutes and no scan in between">
     <div class="hero-mid" aria-hidden="true">102 minutes with no scan</div>
@@ -402,7 +393,7 @@ ol.todo .due { color: var(--alert); font-size: .9rem; white-space: nowrap; }
       <a class="node" href="#stage-data"><rect x="24" y="104" width="376" height="88" rx="16"/><text class="t" x="44" y="132">Data generation</text><text class="s" x="44" y="154">Code draws 12,000 briefs, Claude writes the scans,</text><text class="s" x="44" y="174">a nine-check validator keeps 11,967</text></a>
       <a class="node" href="#stage-model"><rect x="24" y="216" width="226" height="98" rx="16"/><text class="t" x="44" y="244">Prediction logic</text><text class="s" x="44" y="266">Survival model fit on 24 runs,</text><text class="s" x="44" y="286">location filter, alert rule</text></a>
       <a class="node test" href="#checked"><rect x="266" y="216" width="134" height="98" rx="16"/><text class="t" x="282" y="244">The test</text><text class="s" x="282" y="266">6 held-out runs;</text><text class="s" x="282" y="286">only it sees the truth</text></a>
-      <a class="node" href="#stage-demo"><rect x="24" y="340" width="376" height="74" rx="16"/><text class="t" x="44" y="368">Demo</text><text class="s" x="44" y="392">Static page: board, timeline, Beat Tracer, threshold</text></a>
+      <a class="node" href="#stage-demo"><rect x="24" y="340" width="376" height="74" rx="16"/><text class="t" x="44" y="368">Demo</text><text class="s" x="44" y="392">Static pages: TracerNet's results, Beat Tracer, 3D demo</text></a>
     </svg>
     <figcaption>The policy table feeds both the data (it decides which specimens missed their window) and the model (each specimen's window and urgency). The dashed path is the hidden truth, which only the test reads.</figcaption>
   </figure>
@@ -422,15 +413,14 @@ ol.todo .due { color: var(--alert); font-size: .9rem; white-space: nowrap; }
     </li>
     <li id="stage-model">
       <h3>Prediction logic <span class="who">Daniel</span></h3>
-      <p>Every 5 minutes, for every specimen collected and not yet received, Tracer asks three questions. How unusual is this silence? Where is the specimen most likely to be? Is there still time to act? A survival model answers the first: from the training runs it learned how long a normal trip takes for each kind of specimen, time of day and priority, how often a trip runs far longer but still arrives, and how often a specimen never arrives. A location filter answers the second. An alert fires when risk times urgency crosses a threshold set so the lab gets about 6 alerts per 8-hour shift. That survival model runs live on the phone page. Tracer's main risk model is now TracerNet, a neural network that also reads the whole lab (<a href="#tracernet">below</a>).</p>
+      <p>Every 5 minutes, for every specimen collected and not yet received, Tracer asks three questions. How unusual is this silence? Where is the specimen most likely to be? Is there still time to act? A survival model answers the first: from the training runs it learned how long a normal trip takes for each kind of specimen, time of day and priority, how often a trip runs far longer but still arrives, and how often a specimen never arrives. A location filter answers the second. An alert fires when risk times urgency crosses a threshold set so the lab gets about 6 alerts per 8-hour shift. Tracer's main risk model is now TracerNet, a neural network that also reads the whole lab (<a href="#tracernet">below</a>).</p>
       <p class="like"><b>Like</b> package tracking with no scans along the way. You know when it shipped and how long deliveries like it usually take, so early silence means nothing. The longer it stays quiet past normal, and the closer the deadline, the more you worry.</p>
       <p class="say"><b>On stage</b>"Silence is evidence. The longer a specimen stays quiet past a normal trip, the more likely it's stuck, and Tracer turns that into a ranked list."</p>
     </li>
     <li id="stage-demo">
       <h3>Demo <span class="who">Daniel</span></h3>
-      <p>A static page on GitHub Pages, with no server, no key and no live AI calls. It reads files made ahead of time: the fitted numbers, the 2,378 held-out test specimens with their scans, risk and likely place every 5 minutes, each method's alert moment and the hidden truth, and short stories and search briefs written in advance. The board ranks specimens by expected harm, the timeline lets you scrub through one, Show the truth reveals where it really was, Set the threshold trades warning against alert count, and Beat Tracer has you race the model. A self-playing 3D tube bench draws the same model.</p>
-      <p class="like"><b>Like</b> a flight recorder you can replay: everything already happened, and you scrub back and forth to see what Tracer knew at each minute.</p>
-      <p class="say"><b>On stage</b>"Everything on your phone already happened. You're replaying what Tracer knew minute by minute, and then checking it against the truth."</p>
+      <p>Static pages on GitHub Pages, with no server, no key and no live AI calls. The phone page runs no model: it reads TracerNet's results, made ahead of time. It shows how much warning TracerNet gives at 1, 2, 4 or 6 alerts a shift, lets you race TracerNet's stored alerts in Beat Tracer, and links to the 3D demo, a self-playing tube bench that replays four specimens with TracerNet's alerts.</p>
+      <p class="like"><b>Like</b> a flight recorder: everything already happened, and the page plays back what Tracer knew.</p>
     </li>
   </ol>
 
@@ -655,30 +645,12 @@ ol.todo .due { color: var(--alert); font-size: .9rem; white-space: nowrap; }
 
 <section id="talk" aria-labelledby="talk-h">
   <h2 id="talk-h">The talk, December 9</h2>
-  <p>15 minutes. Seven of them are the class's hands on the demo.</p>
-  <div class="tablewrap"><table class="talk">
-    <thead><tr><th>Starts</th><th>Part</th><th>Who</th></tr></thead>
-    <tbody>
-      <tr class="k"><td class="t">0:00</td><td>Opening: the silent tube, and why it matters</td><td class="w">Karissa</td></tr>
-      <tr><td class="t">1:15</td><td>The missing data</td><td class="w">Daniel</td></tr>
-      <tr><td class="t">1:45</td><td>Meet Tracer</td><td class="w">Daniel</td></tr>
-      <tr class="k"><td class="t">2:30</td><td>What Tracer is built to fix</td><td class="w">Karissa</td></tr>
-      <tr><td class="t">3:00</td><td>How Tracer works, then the 3D demo</td><td class="w">Daniel</td></tr>
-      <tr class="k"><td class="t">3:45</td><td>Phones out: the board, one specimen on the projector</td><td class="w">Karissa</td></tr>
-      <tr><td class="t">6:15</td><td>Beat Tracer: Daniel starts it, Karissa leads the debrief</td><td class="w">Both</td></tr>
-      <tr><td class="t">9:45</td><td>Why this design: the threshold slider</td><td class="w">Daniel</td></tr>
-      <tr><td class="t">10:45</td><td>How we built it: Karissa on the data, Daniel on the model</td><td class="w">Both</td></tr>
-      <tr><td class="t">11:30</td><td>TracerNet wins</td><td class="w">Daniel</td></tr>
-      <tr class="k"><td class="t">12:00</td><td>Limits and next steps</td><td class="w">Karissa</td></tr>
-      <tr class="k"><td class="t">12:45</td><td>Close, then questions until 15:00</td><td class="w">Karissa, then both</td></tr>
-    </tbody>
-  </table></div>
-  <p>Karissa owns the opening, what Tracer fixes, hosting the phone activity, and the data, limits and close. She writes her own words from <a href="https://scalinity.github.io/Tracer/talk/script.html?who=karissa">her outline</a>.</p>
+  <p>The run of show lives with <a href="../talk/">the slides</a> and <a href="../talk/script.html">the script</a>.</p>
   <h3>What each demo shows</h3>
   <div class="cards3">
-    <div><b>3D demo</b><p>It plays by itself: four samples on a tube bench, on time, stalled, lost and never sent. Risk and alerts are TracerNet's. The glow is where Tracer thinks each one is. The carrier is where it really is.</p></div>
-    <div><b>Phone page</b><p>Every sample not yet received, riskiest first, ranked live by the survival model. Tap one, drag through time, then show the truth. A slider trades warning against alerts.</p></div>
-    <div><b>Beat Tracer</b><p>One of six samples will be late. Tap it before Tracer flags it. Your minutes of warning against TracerNet's, over three rounds.</p></div>
+    <div><b>3D demo</b><p>It plays by itself: four samples on a tube bench, on time, stalled, lost and never sent, with TracerNet's alerts.</p></div>
+    <div><b>Phone page</b><p>TracerNet's results, made ahead of time: how much warning it gives at 1, 2, 4 or 6 alerts a shift. Beat Tracer, and a link to the 3D demo.</p></div>
+    <div><b>Beat Tracer</b><p>One will be late. Tap it before Tracer does. Your minutes of warning against TracerNet's.</p></div>
   </div>
 </section>
 
@@ -687,7 +659,7 @@ ol.todo .due { color: var(--alert); font-size: .9rem; white-space: nowrap; }
   <ol class="todo">
     <li><span><span class="owner">Daniel</span>Decide whether Beat Tracer stays in the talk, now that it's simplified.</span><span class="due">By Dec 6</span></li>
     <li><span><span class="owner">Karissa</span>Write her own lines for her four sections, from <a href="https://scalinity.github.io/Tracer/talk/script.html?who=karissa">the outline</a>.</span><span class="due">By Dec 6</span></li>
-    <li><span><span class="owner">Daniel</span>Practice slide 11, now "TracerNet wins", inside its 30 seconds.</span><span class="due">By Dec 6</span></li>
+    <li><span><span class="owner">Daniel</span>Practice the result slide, "TracerNet wins".</span><span class="due">By Dec 6</span></li>
     <li><span><span class="owner">Both</span>Check the 3D demo, now on TracerNet's alerts, for one full loop on the laptop we present from (it works the GPU hard), and the phone page at phone width.</span><span class="due">By Dec 6</span></li>
     <li><span><span class="owner">Both</span>Rehearse the full 15-minute talk at least once.</span><span class="due">By Dec 6</span></li>
     <li><span><span class="owner">Both</span>Freeze everything, then present.</span><span class="due">Freeze Dec 6, present Dec 9</span></li>
@@ -724,7 +696,7 @@ ol.todo .due { color: var(--alert); font-size: .9rem; white-space: nowrap; }
     <div><dt>Assumed row</dt><dd>A policy row with no published source for its window yet. 10 of the 44.</dd></div>
     <div><dt>Urgency tier</dt><dd>1 to 3, from the policy table. Tier 1 (tissue, lavage) is the most urgent. It becomes the alert weight 3, 2 or 1.</dd></div>
     <div><dt>Risk</dt><dd>The chance a still-silent specimen misses its window, given how long it has been silent.</dd></div>
-    <div><dt>Expected harm</dt><dd>Risk times the urgency weight. The board is ranked by it, and alerts fire on it.</dd></div>
+    <div><dt>Expected harm</dt><dd>Risk times the urgency weight. Alerts fire on it.</dd></div>
     <div><dt>Alert budget</dt><dd>How many alerts a shift can handle. Set at 6 per 8-hour shift, an assumption.</dd></div>
     <div><dt>Warning time</dt><dd>Minutes from an alert to the window closing. The headline measure.</dd></div>
     <div><dt>Survival model</dt><dd>A model of how long until something happens, here until a specimen arrives, allowing that some never do.</dd></div>
@@ -750,7 +722,7 @@ ol.todo .due { color: var(--alert); font-size: .9rem; white-space: nowrap; }
   <details><summary>Why not just alert on everything after 30 minutes?<span class="by">Daniel</span></summary><div class="ans">That's close to the simple rule we compared against. It ignores the window, and the windows in our table run from 60 minutes for unpreserved urine to days for a swab in transport medium, so one time limit is too late for some and far too early for others.</div></details>
   <details><summary>What would someone actually do with an alert?<span class="by">Karissa</span></summary><div class="ans">Go to the place Tracer names, like the tube station or the collecting unit, and look for it. Who gets which alert is an assumption we made, and a real lab would set it.</div></details>
   <details><summary>Isn't it circular to test on data you generated?<span class="by">Daniel</span></summary><div class="ans">Partly, yes. The data and the model share our assumptions, so a good result shows the method behaves as designed, not that it works in a real lab. That's why the next step is a real log with receipt scans.</div></details>
-  <details><summary>Why a simple model and not deep learning?<span class="by">Daniel</span></summary><div class="ans">We have both. TracerNet, a neural network, now runs Tracer: it passed a rule we wrote down before testing it once on fresh simulated weeks. The survival model stays as a baseline a lab scientist can read: how long a normal trip takes, how often one runs far longer and still arrives, how often it never does. It is also the model that runs live on your phone.</div></details>
+  <details><summary>Why a simple model and not deep learning?<span class="by">Daniel</span></summary><div class="ans">We have both. TracerNet, a neural network, now runs Tracer: it passed a rule we wrote down before testing it once on fresh simulated weeks. The survival model stays as a baseline a lab scientist can read: how long a normal trip takes, how often one runs far longer and still arrives, how often it never does.</div></details>
   <details><summary>How often is it right about where the specimen is?<span class="by">Daniel</span></summary><div class="ans">At 30 minutes of silence, the true place is in its top three about 88% of the time and its first guess about 55%, on synthetic data. So an alert says something is off more reliably than it says where.</div></details>
   <details><summary>How many false alarms?<span class="by">Daniel</span></summary><div class="ans">Plenty, by design. At 6 alerts a shift about a third of all specimens get an alert, and most of them arrive in time. Its risk scores are only slightly sharper than guessing the average rate, so the gain is in timing, not in sorting.</div></details>
   <details><summary>Why does the clock stop at receipt?<span class="by">Karissa</span></summary><div class="ans">Where a window ends is a clinical judgement, and receipt in the lab is the standard measure. That's what the policy table uses, so a delay at the bench after receipt is outside what Tracer watches.</div></details>
@@ -759,7 +731,7 @@ ol.todo .due { color: var(--alert); font-size: .9rem; white-space: nowrap; }
   <details><summary>So is Tracer machine learning, or a set of rules?<span class="by">Daniel</span></summary><div class="ans">Both, in a specific way. The model's shape is chosen by hand and its numbers are learned from data by maximum likelihood: a typical trip time for each of 96 groups, plus how often a trip runs far longer and how often a specimen never arrives. The alert itself is a threshold rule on top. That is the survival model. TracerNet, now Tracer's main model, is a neural network that learns from simulated lab weeks, with the same kind of threshold on top. Neither calls an AI model when it scores a specimen.</div></details>
   <details><summary>What does Claude do inside Tracer?<span class="by">Daniel</span></summary><div class="ans">Nothing at run time. A small Claude model wrote the synthetic scan trails before any model was fit, and a larger one wrote the demo's specimen stories and search briefs ahead of time, stored as files. The predictions are plain arithmetic on fitted numbers.</div></details>
   <details><summary>Why did it alert on a tissue specimen at only 5.5% risk?<span class="by">Daniel</span></summary><div class="ans">Because tissue can't be collected again, so its weight is 3, and 3 × 5.5% passes the 0.137 harm threshold. A urine specimen, weight 1, would wait until its risk reached about 14%.</div></details>
-  <details><summary>Why six alerts a shift?<span class="by">Karissa</span></summary><div class="ans">It's an assumption, about a third of all specimens, and a real lab would choose its own number. The demo's threshold slider shows the trade: fewer alerts, less warning.</div></details>
+  <details><summary>Why six alerts a shift?<span class="by">Karissa</span></summary><div class="ans">It's an assumption, about a third of all specimens, and a real lab would choose its own number. The phone page shows the trade: fewer alerts, less warning.</div></details>
 </section>
 
 <section id="limits" aria-labelledby="lim-h">
@@ -794,6 +766,7 @@ ol.todo .due { color: var(--alert); font-size: .9rem; white-space: nowrap; }
 <section id="links" aria-labelledby="links-h">
   <h2 id="links-h">Links</h2>
   <div class="links">
+    <a href="short/"><b>The short version</b><span>One screen per idea</span></a>
     <a href="https://scalinity.github.io/Tracer/demo/"><b>Phone page</b><span>scalinity.github.io/Tracer/demo/</span></a>
     <a href="https://scalinity.github.io/Tracer/demo/?seed=18#beat"><b>Beat Tracer, seed 18</b><span>The room's three rounds</span></a>
     <a href="https://scalinity.github.io/Tracer/demo/play/"><b>3D demo</b><span>Plays by itself</span></a>
@@ -806,7 +779,7 @@ ol.todo .due { color: var(--alert); font-size: .9rem; white-space: nowrap; }
 </main>
 </div>
 
-<footer>Updated November 13, 2026 from the Tracer repository. Each figure names the file it comes from, and tests/test_explained.py fails if one drifts from it. Daniel Escalante and Karissa Kocourek, CAI 5724, University of Florida.</footer>
+<footer>Updated November 14, 2026 from the Tracer repository. Each figure names the file it comes from, and tests/test_explained.py fails if one drifts from it. Daniel Escalante and Karissa Kocourek, CAI 5724, University of Florida.</footer>
 </div>
 
 <script>
