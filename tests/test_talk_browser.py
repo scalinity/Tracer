@@ -1,8 +1,9 @@
 """The talk's slides on a real screen (docs/talk/).
 
-Loads the deck in headless Chrome at a 1920 by 1080 projector and a 1280 by 800 laptop. On every slide nothing
-runs into the footer, the type is not shrunk to fit, nothing projected is too small to read from the back of a
-room, and the slides that show the demo or its numbers say on screen that the data is synthetic. Then it presses
+Loads the deck in headless Chrome at a 1920 by 1080 projector, a 1280 by 800 laptop and a 390 by 844 phone. On
+every slide nothing runs into the footer or off the screen, the caveat and the progress rail do not overlap, the
+projected type is not shrunk to fit, nothing projected is too small to read from the back of a room, and the
+slides that show the demo or its numbers say on screen that the data is synthetic. Then it presses
 the keys the presenter uses (N, S, P and the arrows), opens the script page from the presenter window and checks
 that the three share one talk clock, and opens the script page on one speaker's lines at phone width.
 Needs node, Playwright (from visuals/exhibit-3d/node_modules) and Google Chrome, and is skipped without them.
@@ -24,9 +25,10 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 DECK = (ROOT / "docs" / "talk" / "index.html").read_text(encoding="utf-8")
 NODE = shutil.which("node")
-SYNTHETIC = {0, 6, 7, 8, 9, 10, 11, 13}  # the slides that show the demo or its numbers
+SYNTHETIC = {4, 5, 6, 7, 9}  # the slides that show the demo or its numbers
 LENGTH = "15:00"  # the talk's length, where its last beat ends
-SLIDES = 14
+SLIDES = 10
+PROJECTED = {1920, 1280}  # the widths where the type must not shrink
 SMALLEST_PX = 24  # the shortest line of text allowed on the 1280 by 800 screen
 
 
@@ -62,7 +64,7 @@ const { chromium } = require(PLAYWRIGHT);
     page.on("console", (m) => { if (m.type() === "error") list.push(m.text()); });
   };
 
-  for (const [width, height] of [[1920, 1080], [1280, 800]]) {
+  for (const [width, height] of [[1920, 1080], [1280, 800], [390, 844]]) {
     const ctx = await browser.newContext({ viewport: { width, height }, reducedMotion: "reduce" });
     const page = await ctx.newPage();
     const errors = [];
@@ -89,13 +91,16 @@ const { chromium } = require(PLAYWRIGHT);
           range.selectNodeContents(node);
           for (const r of range.getClientRects()) if (r.height > 0) smallest = Math.min(smallest, r.height);
         }
-        const caveat = [...s.querySelectorAll(".caveat")].find((c) => c.textContent.trim() === "Synthetic data, no clinical review");
+        const caveat = [...s.querySelectorAll(".caveat")].find((c) => c.textContent.trim() === "Synthetic data, no clinical review.");
         const cr = caveat ? caveat.getBoundingClientRect() : null;
+        const rr = document.querySelector(".rail").getBoundingClientRect();
+        const fr = foot ? foot.getBoundingClientRect() : null;
         return {
           shrink: set ? parseFloat(set) / natural : 1,
           contentBottom: Math.max(...content.map((c) => c.getBoundingClientRect().bottom)),
           contentRight: Math.max(...content.map((c) => c.getBoundingClientRect().right)),
-          railTop: document.querySelector(".rail").getBoundingClientRect().top,
+          railTop: rr.top,
+          footMeetsRail: !!fr && fr.left < rr.right && rr.left < fr.right && fr.top < rr.bottom && rr.top < fr.bottom,
           footTop: foot ? foot.getBoundingClientRect().top : null,
           smallest,
           caveatOnScreen: !!cr && cr.width > 0 && cr.top >= 0 && cr.bottom <= innerHeight && cr.right <= innerWidth
@@ -275,7 +280,9 @@ def test_every_slide_fits_and_reads_from_the_back_of_the_room(browser_result):
         assert len(size["slides"]) == SLIDES, "every slide is measured"
         for i, s in enumerate(size["slides"]):
             where = f"slide {i} at {size['width']} by {size['height']}"
-            assert s["shrink"] >= 0.9, (where, "the type was shrunk to fit", s)
+            if size["width"] in PROJECTED:
+                assert s["shrink"] >= 0.9, (where, "the type was shrunk to fit", s)
+            assert not s["footMeetsRail"], (where, "the caveat and the progress rail overlap", s)
             assert s["contentBottom"] <= s["railTop"] - 4, (where, "the content runs into the footer", s)
             if s["footTop"] is not None:
                 assert s["contentBottom"] <= s["footTop"] - 4, (where, "the content runs into the caveat", s)
@@ -298,7 +305,7 @@ def test_the_presenter_keys_work(browser_result):
     first_note = re.search(r'<aside class="notes-src"><p>(.*?)</p>', DECK).group(1)
     assert k["popupFirstLine"] == first_note
     assert f"of {LENGTH}" in k["popupClock"], "the presenter window takes the clock from the slides"
-    assert k["popupBeat"] == "1. The silent tube", "the presenter window follows the slides"
+    assert k["popupBeat"] == "1. A specimen goes silent", "the presenter window follows the slides"
     assert k["popupSpeakerBlocks"] == ["Karissa"]
     assert k["scriptLink"] == {"target": "_blank", "shown": True}
     assert k["scriptTitle"] == "Tracer talk script" and k["mainStillOnDeck"]
