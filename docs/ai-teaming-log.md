@@ -609,12 +609,19 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** the store's splits checksum differs from the splits file's, which looked like a mismatch; the store hashes the sorted scenario-to-split map inside the file, and that map gives the store's value exactly, so both are named.
 - **Assumed:** a second pull request is the simplest way to record the freezing commit, since a commit cannot name its own hash and the repository squash-merges.
 
-### Nov 13 · Neural · The fresh test set, generated and frozen (this pull request)
+### Nov 13 · Neural · The fresh test set, generated and frozen (#90)
 
 - **Agent:** re-checked the OpenAI prices on the pricing page and the Flex guide (unchanged), dry-ran T1, then generated it through the ledger with O2's model, tier, prompt and validation: 950 briefs, 1,112 requests with repairs, 940 accepted and 10 dropped, $6.81 against the $6.83 the preregistration projected from O2's cost per brief. `freeze-fresh` left out 162 scenarios within 1.5 δ of the library and 2 near duplicates, freezing 776 (`datasets/scenarios-v2-fresh.*`). `docs/neural/hpg/fresh-v2.sh` simulates and stores them and runs the one look on the default partition. The OpenAI account stands at $73.22 spent of its $136.43 cap.
 - **Daniel:** asked for the fresh set's cost to be estimated before generating it, every spend logged, and at least $10 kept unspent.
 - **Went wrong:** the dry run's expected cost ($22.17) estimates input from characters and roughly doubled the measured input; the measured cost per brief of O4 ($0.0076) gave the right figure.
 - **Assumed:** none beyond the preregistration.
+
+### Nov 13 · Neural · The fresh test set's one look: TracerNet becomes primary (this pull request)
+
+- **Agent:** ran the one look on HiPerGator (jobs 51208205 to 51208207, 4 hours 45 minutes for the evaluation, one attempt, nothing resumed), copied its lock, run log, evaluation and `looked.json` with matching checksums, and applied the second rule once with `rule_v2 --site-map`. P and all four guardrails held, so TracerNet becomes Tracer's primary risk model: a capped mean warning of 23.3 minutes at 3-2-1 weights and 12.8 at equal weights, against at most 13.6 and 8.3 for the baselines, with the narrowest lower bound 3.8 minutes. `docs/neural/results-v2.md` gives the verdict, the reported-beside tables (`src/pipeline/beside_v2.py`), the surprises (more alerts per shift than the baselines, about half of them false, and losses at 1 and 2 alerts per shift) and the look's record. The OpenAI table above gains O4, O4b and T1.
+- **Daniel:** asked for the fresh set to be scored exactly once after the model and rule were frozen, with no re-runs and no change to the rule afterward.
+- **Went wrong:** nothing in the look. The preregistration names the lock's directory `results/neural/fresh/`, while the code names it after the split, `test_fresh/`; results-v2 says so. A runner test had failed on `main` since #89: it copied the live preregistration as the Phase 1 state, whose section 6 was then unfilled; it now builds that unfilled section itself.
+- **Assumed:** the explanation deletion check, listed to report beside the decision, is reported from validation, since `explain` does not read the fresh split and any later run on it would be exploratory.
 
 ## The Claude API jobs
 
@@ -644,13 +651,18 @@ Total about $3.36 of the $50 soft limit ($2.37 for the dataset, $0.98 for the de
 
 ## The OpenAI API jobs
 
-The v2 scenario jobs (docs/neural/spec.md §4) call OpenAI's Responses API with Structured Outputs on the Flex tier, through a ledger (`data/openai/ledger.sqlite`, kept local) that reserves every request's worst case before it is sent: $76.43 in all, of which $2.43 is never reserved, with a cap per job. Prices are checked on OpenAI's pricing page into `config/openai_prices.yaml` before each spending stage.
+The v2 scenario jobs (docs/neural/spec.md §4) call OpenAI's Responses API with Structured Outputs on the Flex tier, through a ledger (`data/openai/ledger.sqlite`, kept local) that reserves every request's worst case before it is sent: $136.43 in all after the $60 raise of November 13, of which $2.43 is never reserved and at least $10 is never spent, with a cap per job. Prices are checked on OpenAI's pricing page into `config/openai_prices.yaml` before each spending stage.
 
 | Job | What it wrote | Requests | Cost | Result |
 |---|---|---|---|---|
 | O1 pilot | One laboratory week for each of 24 briefs, on each of three models | 79 (72 plus 7 repairs) | $0.6003 of $3.00 | 69 accepted, 3 dropped; gate passed, Terra chosen for every stratum |
 | O2 main run | One laboratory week for each of 6,101 briefs, `gpt-6.1-terra` at low effort | 7,038 (6,100 plus 938 repairs) | $43.8659 of $44.00 | 6,023 accepted (98.7% of briefs), 52 dropped, 26 left unsent at the cap |
 | O3 round two | One laboratory week for each of 2,378 briefs aimed at validation's weak spots, `gpt-6.1-terra` at low effort | 2,733 (2,378 plus 355 repairs) | $17.7077 of $18.00 | 2,367 accepted (99.5% of briefs), 11 dropped; the library froze at 8,142 scenarios |
+| O4 coverage fill | One laboratory week for each of 487 briefs pinned to the in-distribution cells below target | 602 | $3.6878 of $8.00 | 478 accepted; train only |
+| O4b top-up | One laboratory week for each of 62 briefs for the three cells still short | 84 | $0.5526 of $2.00 | 61 accepted; the library froze at 8,547 scenarios |
+| T1 fresh test set | One laboratory week for each of 950 briefs with O2's settings and planner seed 501 | 1,112 (950 plus 162 repairs) | $6.8104 of $20.00 | 940 accepted, 10 dropped; 776 frozen after the exclusions |
+
+Spent in all: $73.22 of $136.43, so $63.21 is left and the $10 reserve is untouched.
 
 
 ## The decision-model jobs

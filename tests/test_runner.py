@@ -354,9 +354,14 @@ def test_t1_spends_nothing_until_the_preregistration_names_the_frozen_model(tmp_
     prereg = env.paths.preregistration
     prereg.parent.mkdir(parents=True)
     merged = (ROOT / "docs" / "neural" / "preregistration-v2.md").read_text(encoding="utf-8")
+    start, end = merged.index("## 6. The model under test"), merged.index("## 7.")
+    fields = ("Commit that freezes the model", "Artifact", "Artifact manifest SHA-256", "Member weights SHA-256",
+              "Calibration and site map", "Training store and splits")
+    merged = (merged[:start] + "## 6. The model under test\n\n| Field | Value |\n|---|---|\n"
+              + "".join(f"| {f} | to be filled |\n" for f in fields) + "\n" + merged[end:])
     prereg.write_text(merged, encoding="utf-8")  # as merged in Phase 1: section 6 still reads "to be filled"
     assert env.cli("generate", "--job", "T1", "--budget-usd", "20")[0] == 1
-    prereg.write_text(merged.replace("to be filled", "filled", 3), encoding="utf-8")  # one field left
+    prereg.write_text(merged.replace("to be filled", "filled", 5), encoding="utf-8")  # one field left
     assert env.cli("generate", "--job", "T1", "--budget-usd", "20")[0] == 1
     assert env.client.calls == [] and env.ledger().entries() == []
     prereg.write_text(merged.replace("to be filled", "filled"), encoding="utf-8")
