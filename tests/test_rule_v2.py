@@ -84,3 +84,17 @@ def test_the_markdown_tables_read_every_number_from_the_verdict():
     assert "| TracerNet | 21.5 | 20.2 to 22.8 | 11.5 | 10.3 to 12.7 |" in md
     assert "| 3-2-1 | Analytic, local refit | 9.0 | 8.4 to 9.6 | held |" in md
     assert md.count("| held |") == 10 + 2 + 5 + 10 + 6
+
+
+FRESH = Path(__file__).resolve().parents[1] / "results" / "neural" / "test_fresh"
+
+
+def test_the_committed_fresh_verdict_follows_from_the_committed_evaluation():
+    from src.pipeline import beside_v2
+    ev = json.loads((FRESH / "evaluation.json").read_text())
+    v = R.verdict(ev, site_map=True)
+    assert json.dumps(v, indent=1, sort_keys=True) + "\n" == (FRESH / "verdict.json").read_text()
+    assert v["passed"] and v["probability_scored"] == "reported (site map)"
+    beside = beside_v2.tables(ev)
+    assert "| 6/shift | 3-2-1 | 23.3 | Analytic, local refit | 13.6 | 9.7 | 8.9 to 10.5 |" in beside
+    assert "| 1/shift | equal | 0.7 | Quantile rule, local | 4.6 | -3.9 | -4.2 to -3.7 |" in beside
