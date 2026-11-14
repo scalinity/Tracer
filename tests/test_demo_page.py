@@ -489,6 +489,7 @@ const { chromium } = require(PLAYWRIGHT);
         pressed: await page.$$eval("#w-bars .bar", (b) => b.filter((x) => x.getAttribute("aria-pressed") === "true").map((x) => x.dataset.n)) };
     }
     run.targets = await page.$$eval("#w-bars .bar, .jumps a, #watch .cta, #game-go", (els) => els.map((e) => e.getBoundingClientRect().height));
+    run.barHeights = await page.$$eval("#w-bars .bar i", (els) => els.map((e) => e.getBoundingClientRect().height));
     result.runs.push(run);
     await context.close();
   }
@@ -560,6 +561,10 @@ def test_the_page_works_in_headless_chrome_at_phone_and_laptop_widths(tmp_path):
             assert pick["minutes"] == minutes and pick["falseAlarms"] == f"{false_alarms} false alarms a shift", pick
             assert pick["pressed"] == [str(n)] and f"at {n} alert" in pick["caption"], pick
         assert all(h >= 44 for h in run["targets"]), run["targets"]
+        # each bar's height is in proportion to its minutes of warning (none squeezed to the same height)
+        tallest = max(run["barHeights"])
+        for h, b in zip(run["barHeights"], json.loads((ROOT / "docs" / "demo" / "results.json").read_text(encoding="utf-8"))["budgets"]):
+            assert h == pytest.approx(tallest * b["warning_min"] / max(x["warning_min"] for x in json.loads((ROOT / "docs" / "demo" / "results.json").read_text(encoding="utf-8"))["budgets"]), abs=2), run["barHeights"]
     assert result["first"] == {"minutes": "23.3", "budget": 6}
     assert "did not load" in result["blocked_results.json"]["warning"] and "results.json" in result["blocked_results.json"]["warning"]
     assert result["blocked_game.json"]["go"] == "The game could not load" and "game.json" in result["blocked_game.json"]["status"]
