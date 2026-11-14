@@ -1,11 +1,15 @@
-// Tracer, self-playing: the Silent Specimen's bench with nothing to press. Four specimens take turns,
-// each with a scripted true fate the model never sees; the clock runs by itself, slows near each
-// moment that matters, and holds there under a one-line caption. The risk and the alerts are
-// TracerNet's, Tracer's primary risk model: its precomputed p_miss for one held-out specimen per story
-// (model/tracernet-stories.json, picked from docs/demo/neural.json by a fixed rule). Where the specimen
-// is (the glow, the place labels, the bars) is the forward filter of TracerModel, as on the
-// interactive bench, which keeps the analytic model.
-// ?scene=N (1 to 4) starts on a specimen, ?t=M at a minute, ?paused holds it there.
+// Tracer, self-playing: the Silent Specimen's bench with nothing to press. Four specimens take turns
+// (model/play-script.ts holds the script); the clock runs by itself, stands still on each caption, and
+// loops forever. The white capsule is the truth, the glow is Tracer's guess, and one short caption at
+// a time names what matters.
+//
+// The risk bar and the alerts are TracerNet's, Tracer's primary risk model (tracernet-v2): its
+// precomputed p_miss for one held-out synthetic specimen per scene (model/tracernet-stories.json,
+// picked from docs/demo/neural.json by a fixed rule). The bar uses the bench chart's log axis, so it
+// crosses the alert mark on the tick the stored alert fires. Where the specimen is (the glow, the place
+// an alert names) is the forward filter of TracerModel, as on the interactive bench.
+// Address parameters, not controls: ?scene=N (1 to 4) starts on a scene, ?t=M at a minute, ?paused
+// holds it there.
 
 import '@fontsource-variable/outfit';
 import '@fontsource/dm-mono/400.css';
@@ -14,12 +18,12 @@ import './kit/tokens.css';
 import './kit/hud.css';
 import './play.css';
 import * as THREE from 'three/webgpu';
-import { buildLabSet, CameraRig, cloneLooks, createStage, HOUSE_LOOKS, WorldLabels, type CameraPose, type HeroShot, type SafeArea } from './kit';
-import { describeSpot, FATES, placeOfSpot, type FateId, type Place } from './model/fates';
+import { buildLabSet, CameraRig, cloneLooks, createStage, HOUSE_LOOKS, type CameraPose, type HeroShot, type SafeArea } from './kit';
+import { FATES, placeOfSpot, type FateId } from './model/fates';
+import { DEADLINE, FADE_SEC, INTRO_SEC, NET, OUTRO_SEC, riskFill, SCENES, stepClock, type Card, type Tone } from './model/play-script';
 import { TracerModel, type Reading } from './model/state';
 import { ASSUMED, MAX_T } from './model/tracer';
-import { riskText, scoreAt, type NetStories } from './model/tracernet';
-import netStories from './model/tracernet-stories.json';
+import { scoreAt } from './model/tracernet';
 import { buildApparatus } from './scene/apparatus';
 import { buildCarrier } from './scene/carrier';
 import { buildEcho } from './scene/echo';
@@ -33,17 +37,16 @@ const $ = <T extends HTMLElement>(s: string) => root.querySelector<T>(s)!;
 
 const P = ASSUMED;
 const model = new TracerModel(P);
-const W = P.windowMin;
-const NET = netStories as NetStories;
+const W = DEADLINE;
 const TICK = NET.tick_min;
 
 // ---------- the reading: TracerNet's risk and alert, the forward filter's places ----------
 type Shown = Reading & { score: number | null };
 /**
- * The bench's reading at minute m with TracerNet's p_miss, alert line and alert for this story's
- * held-out specimen in place of the analytic model's. Where the specimen is (places, likely) stays the
- * forward filter's, and after the receipt scan the outcome is known, as on the bench. `score` is null
- * before TracerNet's first tick; the alert's `projected` minute is only known once it has fired.
+ * The bench's reading at minute m with TracerNet's p_miss, alert line and alert for this scene's
+ * held-out specimen in place of the analytic model's. Where the specimen is stays the forward
+ * filter's, and after the receipt scan the outcome is known. `score` is null before TracerNet's
+ * first tick.
  */
 const read = (fate: FateId, m: number): Shown => {
   const r = model.read({ fate, silence: m, alertLine: P.operatingPoint, windowMin: W, truth: true });
@@ -55,71 +58,6 @@ const read = (fate: FateId, m: number): Shown => {
     alert: { projected: fired ? s.alert_min : null, minute: s.alert_min, fired, clearedAt: fired ? r.received : null },
   };
 };
-
-// ---------- the four stories ----------
-type Tone = 'info' | 'good' | 'warn' | 'alert' | 'bad';
-interface Beat { at: number; hold: number; tone: Tone; text: (r: Reading) => string }
-interface Story { fate: FateId; title: string; intro: string; end: number; beats: Beat[]; verdict: (r: Reading) => string; tone: Tone }
-
-const pct = (p: number) => `${Math.round(p * 100)}%`;
-const PLACE_NAME: Record<Place, string> = { ward: 'the ward', tube: 'the tube', station: 'the tube station', lost: 'the lost bin', lab: 'the lab' };
-const alertMin = (fate: FateId) => NET.stories[fate].alert_min;
-
-const alertBeat = (fate: FateId, extra: (r: Reading) => string = () => ''): Beat => ({
-  at: alertMin(fate) ?? MAX_T, hold: 3.4, tone: 'alert',
-  text: (r) => `{amber:${r.alert.minute} min} of silence. Tracer raises the alert with {amber:${W - r.alert.minute!} min} to spare.${extra(r)}`,
-});
-
-const STORIES: Story[] = [
-  {
-    fate: 'arrives', title: 'On time', tone: 'good', end: 30,
-    intro: 'A specimen leaves the ward. Will it reach the lab before its 2-hour deadline?',
-    beats: [
-      { at: 0, hold: 1.8, tone: 'info', text: () => 'Scanned at the ward. The clock starts.' },
-      { at: 7, hold: 1.2, tone: 'info', text: () => 'Into the pneumatic tube.' },
-      { at: 12, hold: 1.2, tone: 'info', text: () => 'It reaches the lab\'s tube station.' },
-      { at: FATES.arrives.received!, hold: 2.8, tone: 'good', text: (r) => `Scanned in the lab at {green:${r.received} min}. Safe, and no alert was needed.` },
-    ],
-    verdict: () => 'Arrived in time. Tracer stayed quiet, as it should.',
-  },
-  {
-    fate: 'stalls', title: 'Stalled', tone: 'warn', end: 73,
-    intro: 'The next specimen makes the same trip.',
-    beats: [
-      { at: 0, hold: 1.2, tone: 'info', text: () => 'Scanned at the ward. The clock starts.' },
-      { at: 26, hold: 2.6, tone: 'warn', text: () => 'It\'s stuck at the tube station. The lab can\'t see that. It only sees silence.' },
-      { at: 45, hold: 1.8, tone: 'info', text: (r) => `Still no scan, and the risk keeps climbing: {cyan:${riskText(r.risk)}} now.` },
-      alertBeat('stalls', (r) => ` Check {cyan:${PLACE_NAME[r.likely.place]}} first.`),
-      { at: FATES.stalls.received!, hold: 3, tone: 'good', text: (r) => `Found and scanned at {green:${r.received} min}, well inside the deadline.` },
-    ],
-    verdict: () => `Stalled. Tracer's alert gave the lab ${W - (alertMin('stalls') ?? 0)} minutes to find it.`,
-  },
-  {
-    fate: 'lost', title: 'Lost', tone: 'bad', end: 124,
-    intro: 'A third specimen. This one goes the wrong way.',
-    beats: [
-      { at: 0, hold: 1.2, tone: 'info', text: () => 'Scanned at the ward. The clock starts.' },
-      { at: 13, hold: 2.6, tone: 'bad', text: () => 'Misrouted into the lost bin. No scan will ever come.' },
-      alertBeat('lost'),
-      { at: 82, hold: 2.6, tone: 'bad', text: (r) => `Still nothing. Tracer now thinks {coral:the lost bin} is most likely (${pct(r.places.lost)}).` },
-      { at: W, hold: 3, tone: 'bad', text: () => 'The deadline passes. Without an alert, nobody would have started looking until now.' },
-    ],
-    verdict: () => `Lost. Tracer flagged it ${W - (alertMin('lost') ?? 0)} minutes before the deadline.`,
-  },
-  {
-    fate: 'unsent', title: 'Never sent', tone: 'warn', end: 64,
-    intro: 'The last one is scanned at the ward, but never goes into the tube.',
-    beats: [
-      { at: 0, hold: 1.2, tone: 'info', text: () => 'Scanned at the ward. The clock starts.' },
-      { at: 9, hold: 2.6, tone: 'warn', text: () => 'It\'s still sitting at the ward. To the lab, this is the same silence.' },
-      alertBeat('unsent', () => ' Same minute as the stalled one.'),
-    ],
-    verdict: () => 'Never sent. The alert still came in time, but silence alone can\'t say where it is.',
-  },
-];
-// TracerNet's alert can come before a scripted beat (the stalled one alerts at 25 min, before it is
-// shown stuck at 26), and the director plays beats in time order.
-for (const s of STORIES) s.beats.sort((a, b) => a.at - b.at);
 
 // ---------- stage and scene ----------
 const looks = cloneLooks(HOUSE_LOOKS);
@@ -145,129 +83,37 @@ stage.registerSet('room', lab.group);
 
 // ---------- camera: the bench's hero framing, swaying slowly, never steered by the viewer ----------
 const top = $('.pl-top');
-const bar = $('.pl-bar');
-const riskBox = $('.pl-risk');
-const COLUMN = 860; // from this width up, the caption sits in a column under the risk card
-const safeArea = (columnAllowed = true): SafeArea => {
+const hud = $('.pl-hud');
+// Keep the whole bench clear of the top row, the caption and the clock: a part hidden behind a panel
+// is a part the audience can't follow.
+const safeArea = (): SafeArea => {
   const w = root.clientWidth;
   const h = root.clientHeight;
   const phone = w <= 820;
-  const column = columnAllowed && w >= COLUMN;
-  // Keep the whole bench clear of the top row, the caption and the clock: a part hidden behind a
-  // panel is a part the audience can't follow. On a wide screen the caption and risk share a
-  // right-hand column, so the bench moves left of it and nothing covers its dials.
-  const barRoom = h - bar.getBoundingClientRect().top;
-  if (column) {
-    return { top: top.getBoundingClientRect().bottom + 30, bottom: barRoom + 24, left: 16, right: riskBox.offsetWidth + 48, phone };
-  }
-  const captionRoom = phone ? 96 : 104;
-  return {
-    top: top.getBoundingClientRect().bottom + (phone ? riskBox.offsetHeight + 12 : 40),
-    bottom: barRoom + captionRoom,
-    left: 16,
-    right: 16,
-    phone,
-  };
+  const captionRoom = phone ? 84 : 112;
+  return { top: top.getBoundingClientRect().bottom + 8, bottom: h - hud.getBoundingClientRect().top + captionRoom, left: 12, right: 12, phone };
 };
 const views: Record<string, HeroShot> = {
-  lab: { target: [0.9, 1.15, 0.3], yaw: -0.34, pitch: 0.18, fit: { width: 18.4, height: 10.9 }, bounds: lab.bounds },
+  lab: { target: [0.9, 1.15, 0.3], yaw: -0.34, pitch: 0.18, fit: { width: 18.4, height: 10.9 }, fov: 30, bounds: lab.bounds },
 };
-// In the column layout the bench has a narrower space beside the caption, and the hero shot's fit box
-// (sized for the full width) leaves the ward end off screen. There, frame the bench's full width: its
-// box, seen along the hero's yaw, gives the horizontal aim and the fit width. The room's back wall stops the
-// camera backing away far enough, so the lens widens instead, just enough that the camera stands
-// no further back than it does with the whole width free.
-const BASE_FOV = 30;
-const HERO_LAB = { target: [...views.lab.target] as [number, number, number], fit: { ...views.lab.fit } };
-const BENCH = new THREE.Box3().setFromObject(app.group);
-const benchShot = (): { target: [number, number, number]; fit: { width: number; height: number } } => {
-  const { yaw } = views.lab;
-  const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
-  const r = [Infinity, -Infinity];
-  const p = new THREE.Vector3();
-  for (let k = 0; k < 8; k++) {
-    p.set(k & 1 ? BENCH.max.x : BENCH.min.x, k & 2 ? BENCH.max.y : BENCH.min.y, k & 4 ? BENCH.max.z : BENCH.min.z);
-    const pr = p.dot(right);
-    r[0] = Math.min(r[0], pr); r[1] = Math.max(r[1], pr);
-  }
-  // Keep the hero shot's height and vertical aim (the console's lower cabinet stays below the frame,
-  // as in the full-width shot) and take only the bench's width and its horizontal center.
-  const c = new THREE.Vector3(...HERO_LAB.target);
-  c.addScaledVector(right, (r[0] + r[1]) / 2 - c.dot(right));
-  // A margin for perspective: the near end of the bench draws larger than its box says.
-  return { target: [c.x, c.y, c.z], fit: { width: (r[1] - r[0]) * 1.08, height: HERO_LAB.fit.height } };
-};
-const fitLens = (): void => {
-  const v = views.lab;
-  const w = root.clientWidth;
-  const h = root.clientHeight;
-  const need = (sa: SafeArea, fit: { width: number; height: number }): number =>
-    Math.max(fit.height / Math.max(80, h - sa.top - sa.bottom), fit.width / Math.max(80, w - sa.left - sa.right));
-  const sa = safeArea();
-  const column = !sa.phone && w >= COLUMN;
-  const shot = column ? benchShot() : HERO_LAB;
-  v.target = [...shot.target] as [number, number, number];
-  v.fit = { ...shot.fit };
-  const ratio = column ? need(sa, shot.fit) / need(safeArea(false), HERO_LAB.fit) : 1;
-  const tanHalf = Math.tan(THREE.MathUtils.degToRad(BASE_FOV) / 2) * Math.max(1, ratio);
-  v.fov = Math.min(46, THREE.MathUtils.radToDeg(2 * Math.atan(tanHalf)));
-};
-fitLens();
-const rig = new CameraRig(camera, world, views, { safeArea: () => safeArea() });
+const rig = new CameraRig(camera, world, views, { safeArea });
 rig.enabled = false;
 rig.idleDrift = false;
 rig.focusPoint = new THREE.Vector3(RECEIVER.x, 1.4, RECEIVER.z);
 let hero: CameraPose = rig.heroPose('lab');
 const FOCUS_BAND = stage.uniforms.focusBand.value;
 
-// ---------- in-world labels: Tracer's belief above the parts, the truth below on a leader ----------
-const labels = new WorldLabels(scene, camera, root);
-let shown: Shown = read('arrives', 0);
-let fate: FateId = 'arrives';
-let minute = 0;
-const placeValue = (k: 'ward' | 'tube' | 'station' | 'lost') => () => (shown.phase === 'silent' ? pct(shown.places[k]) : '0%');
-const o = { x: 0, y: 0, z: 0 };
-labels.add(glow.anchors.ward, { name: 'Ward', value: placeValue('ward'), color: 'cyan', priority: 2, offset: o });
-labels.add(glow.anchors.tube, { name: 'Tube', value: placeValue('tube'), color: 'cyan', priority: 1, offset: o });
-labels.add(glow.anchors.station, { name: 'Tube station', value: placeValue('station'), color: 'cyan', priority: 6, offset: o });
-labels.add(glow.anchors.lost, { name: 'Lost bin', value: placeValue('lost'), color: 'coral', priority: 5, offset: o });
-labels.add(glow.anchors.lab, { name: 'Lab scanner', color: 'cyan', priority: 3, offset: o, value: () => (shown.received !== null ? `scanned at ${shown.received} min` : 'no scan yet') });
-labels.add(app.anchors.beacon, {
-  name: 'Alert', color: 'amber', priority: 6,
-  value: () => (shown.alert.fired ? (shown.alert.clearedAt !== null ? 'found' : `on at ${shown.alert.minute} min`) : 'off'),
-});
-labels.add(carrier.anchor, {
-  name: 'Really', color: 'truth', priority: 7, leader: true, offset: { x: -0.35, y: -1.05, z: 1.35 },
-  value: () => describeSpot(model.truth(fate, minute).spot, minute),
-});
-
 // ---------- overlay ----------
-const steps = $('.pl-steps');
-const pills = STORIES.map((s, i) => {
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.className = 'pl-step';
-  b.innerHTML = `<span class="pl-step-n">${i + 1}</span>${s.title}`;
-  b.addEventListener('click', () => void goTo(i));
-  steps.appendChild(b);
-  return b;
-});
+const tagEl = $('.pl-tag');
 const captionEl = $('.pl-caption');
-const riskV = $('.pl-risk-v');
-const riskS = $('.pl-risk-s');
 const clockV = $('.pl-clock-v');
-const fill = $('.pl-fill');
-const markDeadline = $('.pl-deadline');
-const markAlert = $('.pl-alert');
-const markScan = $('.pl-scan');
+const ring = root.querySelector<SVGCircleElement>('.pl-ring-fg')!;
+const meter = $('.pl-meter');
+const meterFill = $('.pl-meter-fill');
+const meterMark = $('.pl-meter-mark');
 const card = $('.pl-card');
-const pauseBtn = $<HTMLButtonElement>('.pl-pause');
-const RAIL_MAX = MAX_T;
-const railX = (m: number) => `${(Math.min(RAIL_MAX, Math.max(0, m)) / RAIL_MAX) * 100}%`;
-markDeadline.style.left = railX(W);
-
-const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!);
-const markup = (s: string) => esc(s).replace(/\{(\w+):([^}]*)\}/g, (_, c, t) => `<b class="c-${c}">${t}</b>`);
+const alarmEl = $('.pl-alarm');
+const pctOf = (f: number) => `${(Math.min(1, Math.max(0, f)) * 100).toFixed(2)}%`;
 
 let lastCaption = '';
 function setCaption(text: string, tone: Tone): void {
@@ -277,79 +123,80 @@ function setCaption(text: string, tone: Tone): void {
   captionEl.classList.remove('show');
   void captionEl.offsetWidth;
   captionEl.className = `pl-caption show t-${tone}`;
-  captionEl.innerHTML = markup(text);
+  captionEl.textContent = text;
 }
+const hideCaption = () => {
+  lastCaption = '';
+  captionEl.classList.remove('show');
+};
 
-function showCard(n: string, title: string, sub: string, tone: Tone): void {
-  card.className = `pl-card t-${tone}`;
+function showCard(c: { k?: string; n: string; unit?: string; line?: string; tone: Tone; intro?: boolean }): void {
+  card.className = `pl-card t-${c.tone}${c.intro ? ' intro' : ''}`;
   card.hidden = false;
-  $('.pl-card-n').textContent = n;
-  $('.pl-card-t').textContent = title;
-  $('.pl-card-s').innerHTML = markup(sub);
+  const set = (sel: string, t = '') => {
+    const e = $(`.${sel}`);
+    e.textContent = t;
+    e.hidden = t === '';
+  };
+  set('pl-card-k', c.k);
+  set('pl-card-n', c.n);
+  set('pl-card-u', c.unit);
+  set('pl-card-s', c.line);
   requestAnimationFrame(() => card.classList.add('show'));
 }
-const hideCard = () => {
-  card.classList.remove('show');
-};
+const endCard = (c: Card) => showCard({ n: c.n, unit: c.unit, line: c.line, tone: c.tone });
+const hideCard = () => card.classList.remove('show');
+
+/** The alert moment: an amber pulse round the frame edge, replayed from the start. */
+function sound(on: boolean): void {
+  root.classList.toggle('alarming', on);
+  if (on) {
+    alarmEl.classList.remove('go');
+    void alarmEl.offsetWidth;
+    alarmEl.classList.add('go');
+  } else {
+    alarmEl.classList.remove('go');
+  }
+}
 
 let lastHud = '';
 function drawHud(r: Shown, m: number): void {
-  const missed = r.missed;
-  const value = r.score === null ? '—' : riskText(r.risk);
-  const line = riskText(r.alertLine);
-  const tone = r.phase === 'received' ? (missed ? 'bad' : 'good') : missed ? 'bad' : r.alert.fired ? 'alert' : 'info';
-  const sub = r.phase === 'received'
-    ? (missed ? 'Arrived too late' : 'Arrived in time')
-    : missed ? 'Deadline passed' : r.alert.fired ? `Over the ${line} alert line` : r.score === null ? `First score at ${TICK} min` : `Alert at ${line}`;
-  const key = `${value}|${tone}|${sub}|${Math.floor(m)}|${r.alert.fired}|${r.received}`;
+  const tone: Tone = r.phase === 'received' ? (r.missed ? 'bad' : 'good') : r.missed ? 'bad' : r.alert.fired ? 'alert' : 'info';
+  const fill = riskFill(r.score);
+  const key = `${Math.floor(m)}|${tone}|${fill}`;
   if (key === lastHud) return;
   lastHud = key;
-  riskV.textContent = value;
-  riskBox.className = `pl-risk t-${tone}`;
-  riskS.textContent = sub;
   clockV.textContent = String(Math.floor(m));
-  fill.style.width = railX(m);
-  fill.className = `pl-fill t-${tone}`;
-  markAlert.classList.toggle('on', r.alert.fired);
-  if (r.alert.fired) markAlert.style.left = railX(r.alert.minute!);
-  markScan.classList.toggle('on', r.received !== null);
-  if (r.received !== null) markScan.style.left = railX(r.received);
+  ring.style.strokeDashoffset = String(100 - Math.min(100, (m / W) * 100));
+  root.classList.toggle('late', m >= W && r.phase === 'silent');
+  meter.className = `pl-meter t-${tone}`;
+  meterFill.style.width = pctOf(fill);
 }
 
 // ---------- the director ----------
 const params = new URLSearchParams(location.search);
-let story = Math.min(STORIES.length - 1, Math.max(0, Number(params.get('scene') ?? 1) - 1 || 0));
+let story = Math.min(SCENES.length - 1, Math.max(0, Number(params.get('scene') ?? 1) - 1 || 0));
+let fate: FateId = SCENES[story].fate;
+let minute = 0;
+let shown: Shown = read(fate, 0);
 let phase: 'intro' | 'run' | 'hold' | 'outro' | 'switch' = 'intro';
 let phaseLeft = 0;
 let beat = 0;
-let paused = params.has('paused');
+const paused = params.has('paused');
 let runToken = 0;
-const INTRO_SEC = 2.8;
-const OUTRO_SEC = 4.2;
-const MIN_SPEED = 4;
-const MAX_SPEED = 16;
-
-function setPaused(on: boolean): void {
-  paused = on;
-  pauseBtn.textContent = on ? '▶' : '❚❚';
-  pauseBtn.setAttribute('aria-label', on ? 'Play' : 'Pause');
-  root.classList.toggle('paused', on);
-}
-pauseBtn.addEventListener('click', () => setPaused(!paused));
 
 function place(i: number, m: number): void {
   story = i;
-  fate = STORIES[i].fate;
+  fate = SCENES[i].fate;
   minute = m;
-  beat = STORIES[i].beats.findIndex((b) => b.at > m - 0.001);
-  if (beat < 0) beat = STORIES[i].beats.length;
-  pills.forEach((p, k) => {
-    p.classList.toggle('on', k === i);
-    p.classList.toggle('done', k < i);
-  });
-  root.dataset.tone = STORIES[i].tone;
-  lastCaption = '';
-  captionEl.classList.remove('show');
+  beat = SCENES[i].beats.findIndex((b) => b.at > m - 0.001);
+  if (beat < 0) beat = SCENES[i].beats.length;
+  tagEl.textContent = `${i + 1} of ${SCENES.length} · ${SCENES[i].title}`;
+  meterMark.style.left = pctOf(riskFill(NET.stories[fate].line));
+  root.dataset.tone = SCENES[i].card.tone;
+  hideCaption();
+  sound(false);
+  lastHud = '';
   stage.invalidateShadows();
 }
 
@@ -357,36 +204,26 @@ async function goTo(i: number, o: { first?: boolean; t?: number } = {}): Promise
   const token = ++runToken;
   phase = 'switch';
   hideCard();
-  if (!o.first) await stage.fade(1, 380, '#000');
+  if (!o.first) await stage.fade(1, (FADE_SEC * 1000) * 0.42, '#000');
   if (token !== runToken) return;
   place(i, o.t ?? 0);
-  const s = STORIES[i];
+  const s = SCENES[i];
   if (o.t !== undefined && o.t > 0) {
     // A linked moment: show the caption that moment would show.
     const prev = s.beats.filter((b) => b.at <= o.t!).pop();
-    if (prev) setCaption(prev.text(read(fate, prev.at)), prev.tone);
+    if (prev) setCaption(prev.text, prev.tone);
     phase = 'run';
   } else {
-    showCard(`${i + 1} of ${STORIES.length}`, s.title, s.intro, 'info');
+    showCard({ k: `${i + 1} of ${SCENES.length}`, n: s.title, tone: 'info', intro: true });
     phase = 'intro';
     phaseLeft = INTRO_SEC;
   }
-  await stage.fade(0, 520, '#000');
+  await stage.fade(0, (FADE_SEC * 1000) * 0.58, '#000');
 }
-
-function next(): void {
-  void goTo((story + 1) % STORIES.length);
-}
-
-window.addEventListener('keydown', (e) => {
-  if (e.code === 'Space') { e.preventDefault(); setPaused(!paused); }
-  if (e.key === 'ArrowRight') void goTo((story + 1) % STORIES.length);
-  if (e.key === 'ArrowLeft') void goTo((story + STORIES.length - 1) % STORIES.length);
-});
 
 function tick(dt: number): void {
   if (paused || phase === 'switch') return;
-  const s = STORIES[story];
+  const s = SCENES[story];
   if (phase === 'intro') {
     phaseLeft -= dt;
     if (phaseLeft <= 0) {
@@ -397,34 +234,36 @@ function tick(dt: number): void {
   }
   if (phase === 'hold') {
     phaseLeft -= dt;
-    if (phaseLeft <= 0) phase = 'run';
+    if (phaseLeft <= 0) {
+      phase = 'run';
+      root.classList.remove('alarming');
+    }
     return;
   }
   if (phase === 'outro') {
     phaseLeft -= dt;
-    if (phaseLeft <= 0) next();
+    if (phaseLeft <= 0) void goTo((story + 1) % SCENES.length);
     return;
   }
-  // Running: fire the beat we've reached, else move the clock, slowing near the next stop.
+  // Running: fire the beat we've reached, else move the clock, easing into the next stop.
   const b = s.beats[beat];
   if (b && minute >= b.at - 1e-6) {
     minute = b.at;
-    setCaption(b.text(read(fate, b.at)), b.tone);
+    setCaption(b.text, b.tone);
+    if (b.alarm) sound(true);
     beat++;
     phase = 'hold';
     phaseLeft = b.hold;
     return;
   }
-  const stop = b ? b.at : s.end;
   if (minute >= s.end) {
-    const r = read(fate, s.end);
-    showCard(`${story + 1} of ${STORIES.length}`, s.title, s.verdict(r), s.tone);
+    hideCaption();
+    endCard(s.card);
     phase = 'outro';
     phaseLeft = OUTRO_SEC;
     return;
   }
-  const speed = Math.min(MAX_SPEED, Math.max(MIN_SPEED, (stop - minute) / 1.4));
-  minute = Math.min(stop, minute + dt * speed);
+  minute = stepClock(minute, b ? b.at : s.end, dt);
 }
 
 // ---------- frame ----------
@@ -441,9 +280,11 @@ stage.onFrame((dt, elapsed) => {
   app.alertKnob.set(netAxis(shown.alertLine));
   app.windowKnob.set((W - 60) / 180);
   app.truthSwitch.set(1);
+  // The beacon lights with the alert and flares through the alert moment itself.
   const alarm = shown.alert.fired && shown.alert.clearedAt === null;
-  beaconOn += ((alarm ? 1 : 0) - beaconOn) * (1 - Math.exp(-dt * 5));
-  app.beaconLevel.value = beaconOn * (3.0 + 0.45 * Math.sin(elapsed * 2.2));
+  const flare = root.classList.contains('alarming');
+  beaconOn += ((alarm ? (flare ? 1.8 : 1) : 0) - beaconOn) * (1 - Math.exp(-dt * (flare ? 9 : 5)));
+  app.beaconLevel.value = beaconOn * (3.0 + (flare ? 1.4 : 0.45) * Math.sin(elapsed * (flare ? 7 : 2.2)));
   const near = f.received === null ? Infinity : Math.abs(minute - f.received);
   app.scanLevel.value = 0.55 + 4.5 * Math.max(0, 1 - near / 1.5);
 
@@ -467,20 +308,14 @@ stage.onFrame((dt, elapsed) => {
   lab.cutaway(camera);
   stage.uniforms.focusDistance.value = rig.focusDistance;
   stage.uniforms.focusBand.value = FOCUS_BAND + Math.max(0, rig.focusSpanDepth - 4) * 5;
-  labels.update(dt);
-  labels.render();
 });
-stage.onResize((w, h) => {
-  labels.setSize(w, h);
-  fitLens();
+stage.onResize(() => {
   rig.refit();
   hero = rig.heroPose('lab');
 });
 
 await stage.start();
-fitLens();
 rig.refit();
 hero = rig.heroPose('lab');
-setPaused(paused);
 const startT = params.has('t') ? Math.max(0, Math.min(MAX_T, Number(params.get('t')) || 0)) : undefined;
 void goTo(story, { first: true, t: startT });
