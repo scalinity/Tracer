@@ -1,8 +1,9 @@
 """The demo page in the three browser engines GitHub Pages visitors use (plan task P7).
 
 Chromium covers Chrome and Android, WebKit covers Safari on iPhone, Firefox covers Firefox. Each loads the page at
-a phone width and a laptop width, opens a timeline, moves the threshold and window controls and starts a round of Beat Tracer, served under /Tracer/ the way GitHub Pages serves the project (a page at
-/Tracer/demo/), so an address written as "/demo/..." instead of a relative one fails here and not at the talk.
+a phone width and a laptop width, taps the #warning picker and plays a round of Beat Tracer, served under /Tracer/
+the way GitHub Pages serves the project (a page at /Tracer/demo/), so an address written as "/demo/..." instead of
+a relative one fails here and not at the talk.
 A real phone is still Daniel's check; this is what can be checked without one. An engine that is not installed
 is skipped and says so: run `npx playwright install firefox webkit` in visuals/exhibit-3d to add it.
 """
@@ -22,7 +23,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 NODE = shutil.which("node")
 ENGINES = ("chromium", "firefox", "webkit")
-VIEWPORTS = ((390, 844), (1280, 800))
+VIEWPORTS = ((390, 844), (1440, 900))
 
 CHECK = """
 const { chromium, firefox, webkit } = require(PLAYWRIGHT);
@@ -43,29 +44,26 @@ const engines = { chromium, firefox, webkit };
       page.on("request", (r) => { const u = r.url(); if (!u.startsWith(BASE + "/Tracer/") && !u.startsWith("data:") && !u.startsWith("blob:")) run.foreign.push(u); });
       try {
         await page.goto(BASE + "/Tracer/demo/", { waitUntil: "load" });
-        await page.waitForSelector("#board-body tr[data-id]", { timeout: 20000 });
-        run.rows = await page.$$eval("#board-body tr[data-id]", (rows) => rows.length);
+        await page.waitForSelector("#w-bars .bar", { timeout: 20000 });
         run.overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-        await page.click("#board-body tr[data-id] .sid");
-        await page.waitForSelector("#timeline:not([hidden])", { timeout: 10000 });
-        run.timeline = true;
-        run.overflowOpen = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-        run.link = await page.$eval("#tl-3d", (a) => a.href).catch(() => null);
-        await page.focus("#th-point");
-        const sentence = await page.textContent("#th-sentence");
-        await page.keyboard.press("ArrowRight");
-        run.sentenceChanged = (await page.textContent("#th-sentence")) !== sentence;
-        await page.focus("#th-win");
-        const windowOut = await page.textContent("#th-win-out");
-        await page.keyboard.press("ArrowRight");
-        // the page applies a window on the next animation frame, so wait for the label rather than read it at once
-        run.windowChanged = await page.waitForFunction((was) => document.getElementById("th-win-out").textContent !== was, windowOut, { timeout: 3000 }).then(() => true, () => false);
+        // the links resolve inside the site
+        run.links = await page.$$eval("#watch .cta, #limits .more a", (as) => as.map((a) => a.href));
+        // the #warning picker changes the number
+        const minutes = await page.textContent("#w-min");
+        await page.click('#w-bars .bar[data-n="2"]');
+        run.picked = await page.textContent("#w-min");
+        run.pickerChanged = run.picked !== minutes;
+        // a round of Beat Tracer: one tap on Play, the round starts by itself, one tap on a card ends it
         await page.evaluate(() => { location.hash = "beat"; });
-        await page.waitForSelector("#game-go:not([disabled])", { state: "visible", timeout: 5000 });
+        await page.waitForSelector("#game-go:not([disabled])", { state: "visible", timeout: 10000 });
         await page.click("#game-go");
+        await page.waitForFunction(() => window.TracerDemo.game().phase === "running", null, { timeout: 10000 });
         const clock = await page.textContent("#game-clock");
         await page.waitForTimeout(1500);
         run.gameClockMoves = (await page.textContent("#game-clock")) !== clock;
+        await page.click("#game-feed .bt-card:not(:disabled)");
+        await page.waitForFunction(() => window.TracerDemo.game().phase === "result", null, { timeout: 5000 });
+        run.roundResult = await page.textContent("#game-status");
         run.overflowGame = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
         if (SHOTS) await page.screenshot({ path: SHOTS + "/" + name + "-" + width + ".png", fullPage: true });
       } catch (e) { run.failure = String(e.message).split("\\n")[0]; }
@@ -132,7 +130,8 @@ def test_the_page_works_in_the_engine_at_phone_and_laptop_widths_under_the_pages
         assert "failure" not in run, run
         assert run["messages"] == [] and run["errors"] == [], run
         assert run["foreign"] == [], f"{engine} asked for something outside the site: {run['foreign']}"
-        assert run["rows"] >= 3 and run["timeline"], run
-        assert run["overflow"] <= 0 and run["overflowOpen"] <= 0 and run["overflowGame"] <= 0, f"{engine} scrolls sideways at {run['width']} px: {run}"
-        assert run["sentenceChanged"] and run["windowChanged"] and run["gameClockMoves"], f"a control did nothing in {engine}: {run}"
-        assert "/Tracer/demo/exhibit/index.html?" in run["link"], f"the 3D link does not point into the site: {run['link']}"
+        assert run["overflow"] <= 0 and run["overflowGame"] <= 0, f"{engine} scrolls sideways at {run['width']} px: {run}"
+        assert run["pickerChanged"] and run["picked"] == "8.2" and run["gameClockMoves"], f"a control did nothing in {engine}: {run}"
+        assert "Tracer" in run["roundResult"], run
+        base = run["links"][0].split("/Tracer/")[0]
+        assert run["links"] == [base + "/Tracer/demo/play/", base + "/Tracer/explained/short/", "https://github.com/scalinity/Tracer"], run["links"]

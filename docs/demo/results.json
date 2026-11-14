@@ -1,0 +1,30 @@
+{
+ "source": "results/neural/test_fresh/evaluation.json",
+ "sha256": "d3e42257e0b39218f38bf772e030b87c94398f6f3cfe52eabd583fba5726f480",
+ "method": "tracernet",
+ "weights": "3-2-1",
+ "scenarios": 776,
+ "default_alerts_per_shift": 6,
+ "budgets": [
+  {
+   "alerts_per_shift": 1,
+   "warning_min": 3.111477618760152,
+   "false_alarms_per_shift": 0.198658157421044
+  },
+  {
+   "alerts_per_shift": 2,
+   "warning_min": 8.220824008511576,
+   "false_alarms_per_shift": 0.573821796759941
+  },
+  {
+   "alerts_per_shift": 4,
+   "warning_min": 16.38146331050906,
+   "false_alarms_per_shift": 1.5966494845360826
+  },
+  {
+   "alerts_per_shift": 6,
+   "warning_min": 23.279341086693325,
+   "false_alarms_per_shift": 2.900384552446408
+  }
+ ]
+}

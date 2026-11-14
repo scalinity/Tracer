@@ -8,8 +8,10 @@ alert while the specimen can still be recovered.
 Course project for CAI 5724, AI in Health Design Studio I (University of Florida).
 Team: Daniel Escalante and Karissa Kocourek.
 
-The demo is a static page on GitHub Pages, <https://scalinity.github.io/Tracer/demo/> (the QR code is `docs/demo/qr.png`). It reads
-its data files in the browser and makes no other request, so it needs no key and no server.
+The demo is a static phone page on GitHub Pages, <https://scalinity.github.io/Tracer/demo/> (the QR code is `docs/demo/qr.png`):
+a link to the 3D demo, the Beat Tracer game, TracerNet's minutes of warning at 1, 2, 4 or 6 alerts a shift, and the
+limits. It shows TracerNet's stored results and runs no model. It reads two small data files in the browser and makes
+no other request, so it needs no key and no server.
 
 A self-playing version of the 3D bench for the projector, four specimens on time, stalled, lost and never sent, with TracerNet's risk and alerts on held-out specimens like them, is at <https://scalinity.github.io/Tracer/demo/play/> (`docs/demo/play/`, built from `visuals/exhibit-3d` with `npm run build:play`).
 
@@ -72,7 +74,8 @@ TracerNet is Tracer's primary risk model: an ensemble of three neural networks i
 misses its window, reading the whole laboratory as well as the specimen: how busy it is, what is waiting and what
 traveled together. Alerts go to the specimens with the highest expected harm (that probability times the urgency
 tier's weight) within a budget of alerts per shift. The analytic mixture-survival model it replaced is now a
-baseline, and it is the model the demo's board runs live in the browser; the location filter is unchanged.
+baseline, and its browser code is kept in `docs/demo/survival.js` (tested, not loaded by the demo page); the location
+filter is unchanged.
 
 It learns from a second dataset: OpenAI models wrote laboratory-week configurations, frozen in
 `datasets/scenarios-v2.jsonl.gz`, and seeded code in `src/sim/` plays each week out into scan events and labels under
@@ -125,7 +128,7 @@ starts a look of its own. The fresh set's one look keeps its lock, run log and e
 | `datasets/` | The frozen synthetic dataset and its manifest (model, hashes, seed, counts, cost) |
 | `src/` | `generator/` (briefs, prompt, validator, batch runs), `pipeline/` (store, fit, evaluate, triage), `models/` (risk, location), `api/` |
 | `tests/` | `pytest`: the policy and config loaders, the generator and its validator, the store, the fit, the models, the evaluation and the midterm snapshot |
-| `docs/demo/` | The public demo, published by GitHub Pages from `docs/`: `index.html` (the board, the specimen timeline, the threshold control, Beat Tracer and the link to the 3D bench in `exhibit/`), `qr.png` (the QR code for the address, written by `python -m src.api.qr`), and the data it reads: `bundle.json` (the held-out specimens with their risk, alerts and truth, and a grid of 20 operating points) with its `bundle.schema.json`, `briefs.json` (a template and a Claude search brief for each alert) and `heroes.json` (the showcase stories); `python -m src.api.export`, `python -m src.api.search_briefs` and `python -m src.api.heroes` write them |
+| `docs/demo/` | The public demo, published by GitHub Pages from `docs/`: `index.html` (the phone page: a link to the 3D demo in `play/`, Beat Tracer, TracerNet's warning at four alert budgets and the limits), `qr.png` (the QR code for the address, written by `python -m src.api.qr`), the two files the page reads, `results.json` (TracerNet's minutes of warning and false alarms at 1, 2, 4 and 6 alerts a shift, from `results/neural/test_fresh/evaluation.json`, written by `python scripts/build_demo_results.py`) and `game.json` (Beat Tracer's specimens and TracerNet's stored alerts, written by `python scripts/build_demo_game.py`), `survival.js` (the survival model's browser code, which the page no longer runs), the 3D bench copy in `exhibit/`, and the data behind them: `bundle.json` (the held-out specimens with their risk, alerts and truth, and a grid of 20 operating points) with its `bundle.schema.json`, `briefs.json` (a template and a Claude search brief for each alert) and `heroes.json` (the showcase stories); `python -m src.api.export`, `python -m src.api.search_briefs` and `python -m src.api.heroes` write them |
 | `docs/talk/` | The talk on December 9: the run of show, the slides and speaker notes in `README.md`, Karissa's outline in `karissa-outline.md`, and the slide deck `index.html`, published at <https://scalinity.github.io/Tracer/talk/> |
 | `results/` | Fitted parameters, the evaluation, the alert list, the location scores, the recovery plot and the midterm snapshot `mvp-nov8.json` |
 | `notes/` | Working notes, questions, meeting capture; kept local, not in the repository |
