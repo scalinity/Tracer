@@ -658,6 +658,13 @@ The history holds the design documents, system map and milestone submissions (Oc
 - **Went wrong:** in early runs the phone's risk bar collapsed to zero height, the edge glow was too faint to notice, and a caption could overlap the end card; screenshots of full loops at 390 and 1440 caught each one.
 - **Assumed:** the alert captions name the place the forward filter rates most likely at that minute (the tube station), even when the specimen is really lost or still at the ward, because that is what Tracer would say; the next caption corrects it. The stalled specimen's scan shows at 68 minutes, the bench's scripted truth, where TracerNet's held-out specimen was scanned at 67.
 
+### Nov 16 · Audience redo · Slide 7 says its number is an average (this pull request)
+
+- **Agent:** added one line under slide 7's bars, "Averaged over every late specimen. Most get none.", and a matching sentence in Daniel's notes and the script, tying the 3D demo's catches of about 90 minutes to the 23.3-minute average. The slide stays within its word budget and its numbers are unchanged. Checked against `docs/neural/results-v2.md`: the 23.3 counts a miss as 0, and every method's median warning at 6 alerts a shift is 0.
+- **Daniel:** asked for the line on slide 7 on Nov 14, after the gap between the demo's warnings and the result slide was pointed out.
+- **Went wrong:** nothing caught. The slide was not looked at in a browser, since no headless browser could be installed in the session.
+- **Assumed:** Karissa's outline is unchanged, since slide 7 is Daniel's.
+
 ## The Claude API jobs
 
 The dataset jobs (D4 to J2) call `claude-haiku-5-5` at low effort with thinking off. The demo's specimen stories (J3) and search briefs (J4) call `claude-sonnet-5-5`, the model for text a person reads. The reply must match a JSON schema, so replies parse and retries stay rare. Bulk jobs run through the Batch API at half price, and every call is logged to `data/claude/usage.jsonl` (kept local). The order for each job is a token count, a pilot, then the batch, and a job's estimate must be under the plan's gate before it starts.
