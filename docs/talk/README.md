@@ -183,13 +183,13 @@ Now you get to compete with it. Scan this second code. Everyone in the room gets
 
 ### Slide 7 · Does it work · 9:30 to 10:30 · Daniel · hands-on
 
-**Screen:** "TracerNet gives the most warning." One chart: minutes of warning per late specimen, at 6 alerts a shift. TracerNet 23.3, our survival model 13.6, a simple deadline rule 7.6. 776 fresh synthetic lab weeks, scored once.
+**Screen:** "TracerNet gives the most warning." One chart: minutes of warning per late specimen, at 6 alerts a shift. TracerNet 23.3, our survival model 13.6, a simple deadline rule 7.6. Under the bars: "Averaged over every late specimen. Most get none." 776 fresh synthetic lab weeks, scored once.
 
 **Daniel:**
 
-So does it work? We measured what a lab would feel: minutes of warning per late specimen, at six alerts a shift. TracerNet, our neural network, gave twenty-three minutes. Our survival model gave about fourteen, and a simple deadline rule under eight. We wrote down the rule TracerNet had to pass before these test weeks existed, then scored them once. [The room: on the phone page, tap How much warning?] Tap one alert a shift, then six. At one, TracerNet gives about three minutes. At six, twenty-three. More alerts buy more warning, but about half of them, about three a shift, go to specimens that arrive in time. That is the trade.
+So does it work? We measured what a lab would feel: minutes of warning per late specimen, at six alerts a shift. TracerNet, our neural network, gave twenty-three minutes. Our survival model gave about fourteen, and a simple deadline rule under eight. We wrote down the rule TracerNet had to pass before these test weeks existed, then scored them once. The 3D demo showed catches of about ninety minutes. This chart averages every late specimen, a miss counting as zero, and most get no warning. [The room: on the phone page, tap How much warning?] Tap one alert a shift, then six. At one, TracerNet gives about three minutes. At six, twenty-three. More alerts buy more warning, but about half of them, about three a shift, go to specimens that arrive in time. That is the trade.
 
-[About 105 words, over the room tapping.]
+[About 130 words, over the room tapping.]
 
 ### Slide 8 · Limits · 10:30 to 11:30 · Karissa
 
